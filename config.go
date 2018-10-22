@@ -63,7 +63,7 @@ func (cfg *Config) LoadJsonConfiguration(configFile string) {
 
 // Dump our configuration data
 func (cfg *Config) DumpConfig() {
-	l := log.GetLogger()
+	l := GetLogger()
 	l.Trace("Config:")
 	l.Trace("--------------------------")
 	for k, v := range *cfg {
@@ -76,14 +76,14 @@ func (cfg *Config) DumpConfig() {
 func LoadJsonOrPanic(jsonFile string, target interface{}) {
 	err := LoadJson(jsonFile, target)
         if err == nil { return }
-	l := log.GetLogger()
+	l := GetLogger()
 	msg := fmt.Sprintf("Config: LoadJsonOrPanic(): %s", err.Error())
 	l.Fatal(msg)
 	panic(msg)
 }
 
 // Generic JSON load (into ANY interface)
-// Ref: https://blog.golang.org/json-and-go
+// Ref: https://blogger.golang.org/json-and-go
 func LoadJson(jsonFile string, target interface{}) error {
         file, err := os.Open(jsonFile)
         if nil == err {

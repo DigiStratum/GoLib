@@ -1,5 +1,5 @@
 // DigiStratum GoLib - Logger
-package logger
+package golib
 
 /*
 
@@ -46,7 +46,7 @@ var loggerInstance logger
 
 // Automagically set up our singleton
 func init() {
-	loggerInstance = NewLogger()
+	loggerInstance = *NewLogger()
 }
 
 // Get our singleton instance
@@ -57,7 +57,8 @@ func GetLogger() *logger {
 // Get a new instance
 func NewLogger() *logger {
 	// We would be galactically unlucky to get two threads that start at the same nano-second...
-	threadId := base64.StdEncoding.EncodeToString(strconv.itoa(time.Now().UTC().UnixNano()))
+	s := []byte(fmt.Sprintf("%d", time.Now().UTC().UnixNano()))
+	threadId := base64.StdEncoding.EncodeToString(s)
 	newLogger := logger {
 		threadId: threadId,
 		minLogLevel: INFO,
