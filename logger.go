@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 	"strings"
-	"encoding/base64"
 )
 
 type logLevel uint
@@ -57,10 +56,8 @@ func GetLogger() *logger {
 // Get a new instance
 func NewLogger() *logger {
 	// We would be galactically unlucky to get two threads that start at the same nano-second...
-	s := []byte(fmt.Sprintf("%d", time.Now().UTC().UnixNano()))
-	threadId := base64.StdEncoding.EncodeToString(s)
 	newLogger := logger {
-		threadId: threadId,
+		threadId: fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
 		minLogLevel: INFO,
 	}
 	return &newLogger
@@ -72,7 +69,7 @@ func (l *logger) SetThreadId(threadId string) {
 }
 
 // Set the minimum log level
-func (l *logger) SetMinlogLevel(level string) {
+func (l *logger) SetMinLogLevel(level string) {
 	switch (strings.ToLower(strings.TrimSpace(level))) {
 		case "crazy": l.minLogLevel = CRAZY; return
 		case "trace": l.minLogLevel = TRACE; return
@@ -82,7 +79,7 @@ func (l *logger) SetMinlogLevel(level string) {
 		case "error": l.minLogLevel = ERROR; return
 		case "fatal": l.minLogLevel = FATAL; return
 	}
-	l.Error(fmt.Sprintf("Logger: SetMinlogLevel(): Unrecognized Log Level requested: '%s'", level))
+	l.Error(fmt.Sprintf("Logger: SetMinLogLevel(): Unrecognized Log Level requested: '%s'", level))
 }
 
 // Log some output
@@ -99,7 +96,7 @@ func (l *logger) log(level logLevel, msg string) {
 		case ERROR: prefix = "ERROR"
 		case FATAL: prefix = "FATAL"
 	}
-	fmt.Printf("%s %s %5s %s\n", l.threadId, t.Format(time.RFC3339), prefix, msg)
+	fmt.Printf("%s thread:%s %5s %s\n", t.Format(time.RFC3339), l.threadId, prefix, msg)
 }
 
 // Log CRAZY output
