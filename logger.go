@@ -1,4 +1,4 @@
-// Our own logger; quasi-singleton
+// DigiStratum GoLib - Logger
 package logger
 
 /*
