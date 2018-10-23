@@ -5,8 +5,8 @@ import(
 	"regexp"
 	"errors"
 
-	lib "../../golib"
-	rest "../restapi"
+	lib "github.com/DigiStratum/GoLib"
+	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
 // These are stored in this sequence for expedient dispatching of a request

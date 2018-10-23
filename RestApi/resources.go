@@ -1,4 +1,4 @@
-package module
+package restapi
 
 // TODO: Convert this into an interface/struct, etc in line with the other abstract classes
 // TODO: Add LRU cache for this one

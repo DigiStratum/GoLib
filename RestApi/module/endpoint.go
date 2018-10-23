@@ -54,8 +54,8 @@ import (
 	"strings"
 	"strconv"
 
-	lib "../../golib"
-	rest "../restpai"
+	lib "github.com/DigiStratum/GoLib"
+	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
 var supportedMethods	[]string

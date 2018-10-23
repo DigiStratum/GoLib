@@ -1,7 +1,7 @@
 package module
 
 import (
-	rest "../restapi"
+	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
 type SecurityPolicy struct {

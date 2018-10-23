@@ -5,8 +5,6 @@ import(
 	"sync"
 	"errors"
 	"github.com/DigiStratum/Go-cbroglie-mustache"
-
-	res "./module/resources"
 )
 
 type TemplateCache	map[string]*mustache.Template
@@ -66,7 +64,7 @@ func (hlpr *helper) getCachedTemplate(templateFile string) (*mustache.Template, 
 	}
 
 	// Use our own resource locator to find and ready the template file from disk
-	var templateString, err = res.ReadResourceAsString("templates/" + templateFile + ".mustache")
+	var templateString, err = ReadResourceAsString("templates/" + templateFile + ".mustache")
 	if nil != err {
 		return nil, errors.New("Template file not in resource tree")
 	}

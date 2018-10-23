@@ -35,8 +35,8 @@ same place.
 import(
 	"fmt"
 
-	lib "../../golib"
-	rest "../restapi"
+	lib "github.com/DigiStratum/GoLib"
+	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
 type ModulePath	string
