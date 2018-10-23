@@ -70,7 +70,7 @@ type EndpointPattern		string
 type EndpointVersion		string
 type EndpointName		string
 
-type AbstractEndpointIfc interface {
+type EndpointIfc interface {
 	Configure(serverConfig lib.Config, moduleConfig lib.Config)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
@@ -78,10 +78,10 @@ type AbstractEndpointIfc interface {
 	GetMethods() []string
 	GetPattern() string
 	SetPattern(pattern string)
-	HandleRequest(request rest.HttpRequest, endpoint *AbstractEndpointIfc) *rest.HttpResponse
+	HandleRequest(request rest.HttpRequest, endpoint *EndpointIfc) *rest.HttpResponse
 }
 
-type AbstractEndpoint struct {
+type Endpoint struct {
         serverConfig    lib.Config		// Server configuration copy
         moduleConfig    lib.Config		// Module configuration copy
         name            string			// Unique name of this Endpoint
@@ -92,7 +92,7 @@ type AbstractEndpoint struct {
 }
 
 // Initialize
-func (ep *AbstractEndpoint) Init(endpoint AbstractEndpointIfc, name string, version string, pattern string) {
+func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, pattern string) {
 
 	// Capture basic properties
 	ep.SetName(name)
@@ -125,25 +125,25 @@ func (ep *AbstractEndpoint) Init(endpoint AbstractEndpointIfc, name string, vers
 // Does the supplied Endpoint implement the interface for the specified Method?
 func implementsMethod(method string, endpoint interface{}) bool {
 	switch (method) {
-		case "get": if _, ok := endpoint.(AbstractGetEndpointIfc); ok { return true }
-		case "post": if _, ok := endpoint.(AbstractPostEndpointIfc); ok { return true }
-		case "put": if _, ok := endpoint.(AbstractPutEndpointIfc); ok { return true }
-		case "options": if _, ok := endpoint.(AbstractOptionsEndpointIfc); ok { return true }
-		case "head": if _, ok := endpoint.(AbstractHeadEndpointIfc); ok { return true }
-		case "delete": if _, ok := endpoint.(AbstractPatchEndpointIfc); ok { return true }
-		case "patch": if _, ok := endpoint.(AbstractDeleteEndpointIfc); ok { return true }
+		case "get": if _, ok := endpoint.(GetEndpointIfc); ok { return true }
+		case "post": if _, ok := endpoint.(PostEndpointIfc); ok { return true }
+		case "put": if _, ok := endpoint.(PutEndpointIfc); ok { return true }
+		case "options": if _, ok := endpoint.(OptionsEndpointIfc); ok { return true }
+		case "head": if _, ok := endpoint.(HeadEndpointIfc); ok { return true }
+		case "delete": if _, ok := endpoint.(PatchEndpointIfc); ok { return true }
+		case "patch": if _, ok := endpoint.(DeleteEndpointIfc); ok { return true }
 	}
 	return false
 }
 
 // Capture the configuration data for this endpoint
-func (ep *AbstractEndpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
+func (ep *Endpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
 	ep.serverConfig = serverConfig
 	ep.moduleConfig = moduleConfig
 }
 
 // Endpoint needs to be able to access its own Security Policy
-func (ep *AbstractEndpoint) GetSecurityPolicy() *SecurityPolicy {
+func (ep *Endpoint) GetSecurityPolicy() *SecurityPolicy {
 	return &ep.securityPolicy
 }
 
@@ -151,7 +151,7 @@ func (ep *AbstractEndpoint) GetSecurityPolicy() *SecurityPolicy {
 // This is used by Module to override our path in the case that we don't have a default defined;
 // This is useful for endpoints which are generally useful in many Modules, and may need to be
 // mapped differently, depending on the application
-func (ep *AbstractEndpoint) SetPattern(pattern string) {
+func (ep *Endpoint) SetPattern(pattern string) {
 	// We only allow the Module to set our pattern if one is not already set
 	if "" == ep.pattern {
 		// TODO: Validate this somehow? Module is responsible for capturing this change for itself and passing on to us
@@ -165,39 +165,39 @@ func (ep *AbstractEndpoint) SetPattern(pattern string) {
 }
 
 // Return our pattern
-func (ep *AbstractEndpoint) GetPattern() string {
+func (ep *Endpoint) GetPattern() string {
 	return ep.pattern
 }
 
 // Return our version
-func (ep *AbstractEndpoint) GetVersion() string {
+func (ep *Endpoint) GetVersion() string {
 	return ep.version
 }
 
 // Set the version
-func (ep *AbstractEndpoint) SetVersion(version string) {
+func (ep *Endpoint) SetVersion(version string) {
 	ep.version = version
 }
 
 // Return our name
-func (ep *AbstractEndpoint) GetName() string {
+func (ep *Endpoint) GetName() string {
 	return ep.name
 }
 
 // Set the name
-func (ep *AbstractEndpoint) SetName(name string) {
+func (ep *Endpoint) SetName(name string) {
 	ep.name = name
 }
 
 // Return our list of methods
 // This is used by the Controller to add us to the map to send us requests.
-func (ep *AbstractEndpoint) GetMethods() []string {
+func (ep *Endpoint) GetMethods() []string {
 	return ep.methods
 }
 
 // Request handler
 // TODO: Pass around request as a pointer to minimize the memory copying for a potentially large data structure
-func (ep *AbstractEndpoint) HandleRequest(request rest.HttpRequest, endpoint *AbstractEndpointIfc) *rest.HttpResponse {
+func (ep *Endpoint) HandleRequest(request rest.HttpRequest, endpoint *EndpointIfc) *rest.HttpResponse {
 
 	// Will our SecurityPolicy reject this Request?
 	epsp := ep.GetSecurityPolicy()
@@ -236,99 +236,99 @@ func (ep *AbstractEndpoint) HandleRequest(request rest.HttpRequest, endpoint *Ab
 }
 
 // Default Options handler for endpoints
-func (endpoint *AbstractEndpoint) HandleOptions(request rest.HttpRequest) *rest.HttpResponse {
+func (endpoint *Endpoint) HandleOptions(request rest.HttpRequest) *rest.HttpResponse {
 	hdrs := rest.HttpHeaders{}
 	hdrs.Set("allow", strings.Join(endpoint.methods, ","))
 	hlpr := rest.GetHelper()
 	return hlpr.ResponseWithHeaders(rest.STATUS_OK, "", hdrs)
 }
 
-type AbstractGetEndpointIfc interface {
+type GetEndpointIfc interface {
 	HandleGet(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractPostEndpointIfc interface {
+type PostEndpointIfc interface {
 	HandlePost(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractPutEndpointIfc interface {
+type PutEndpointIfc interface {
 	HandlePut(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractOptionsEndpointIfc interface {
+type OptionsEndpointIfc interface {
 	HandleOptions(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractHeadEndpointIfc interface {
+type HeadEndpointIfc interface {
 	HandleHead(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractDeleteEndpointIfc interface {
+type DeleteEndpointIfc interface {
 	HandleDelete(request rest.HttpRequest) *rest.HttpResponse
 }
 
-type AbstractPatchEndpointIfc interface {
+type PatchEndpointIfc interface {
 	HandlePatch(request rest.HttpRequest) *rest.HttpResponse
 }
 
 func handleGet(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractGetEndpointIfc); ok {
+	if handler, ok := ep.(GetEndpointIfc); ok {
 		return handler.HandleGet(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractGetEndpointIfc!?",
+		"[%s] Endpoint doesn't implement GetEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handlePost(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractPostEndpointIfc); ok {
+	if handler, ok := ep.(PostEndpointIfc); ok {
 		return handler.HandlePost(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractPostEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PostEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handlePut(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractPutEndpointIfc); ok {
+	if handler, ok := ep.(PutEndpointIfc); ok {
 		return handler.HandlePut(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractPutEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PutEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handleOptions(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractOptionsEndpointIfc); ok {
+	if handler, ok := ep.(OptionsEndpointIfc); ok {
 		return handler.HandleOptions(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractOptionsEndpointIfc!?",
+		"[%s] Endpoint doesn't implement OptionsEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handleHead(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractHeadEndpointIfc); ok {
+	if handler, ok := ep.(HeadEndpointIfc); ok {
 		return handler.HandleHead(request)
 	}
 	// The endpoint doesn't implement Head directly, but we can call GET and modify
-	if handler, ok := ep.(AbstractGetEndpointIfc); ok {
+	if handler, ok := ep.(GetEndpointIfc); ok {
 		// Any endpoint with an expensive Get call should override this default
 		// handling with something better tuned to skip expensive steps if possible
 		response := handler.HandleGet(request)
@@ -343,33 +343,33 @@ func handleHead(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractHeadEndpointIfc!?",
+		"[%s] Endpoint doesn't implement HeadEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handleDelete(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractDeleteEndpointIfc); ok {
+	if handler, ok := ep.(DeleteEndpointIfc); ok {
 		return handler.HandleDelete(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractDeleteEndpointIfc!?",
+		"[%s] Endpoint doesn't implement DeleteEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil
 }
 
 func handlePatch(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
-	if handler, ok := ep.(AbstractPatchEndpointIfc); ok {
+	if handler, ok := ep.(PatchEndpointIfc); ok {
 		return handler.HandlePatch(request)
 	}
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement AbstractPatchEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PatchEndpointIfc!?",
 		ctx.GetRequestId(),
 	))
 	return nil

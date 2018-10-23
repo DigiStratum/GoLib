@@ -22,13 +22,13 @@ type controllerEPPVMap		map[EndpointPattern]controllerEPVMap
 type controllerEPMPVMap		map[EndpointMethod]controllerEPPVMap
 type regexpCache		map[string]*regexp.Regexp
 
-type AbstractControllerIfc interface {
+type ControllerIfc interface {
 	Configure(serverConfig lib.Config, moduleConfig lib.Config)
-	AddEndpoint(endpoint AbstractEndpointIfc)
+	AddEndpoint(endpoint EndpointIfc)
 	HandleRequest(request rest.HttpRequest) rest.HttpResponse
 }
 
-type AbstractController struct {
+type Controller struct {
 	securityPolicy		SecurityPolicy	// Module-wide SecurityPolicy
 	serverConfig		lib.Config		// Server configuration cache
 	moduleConfig		lib.Config		// Module configuration cache
@@ -36,20 +36,20 @@ type AbstractController struct {
 	patternCache	regexpCache		// Compiled Regex Endpoint pattern cache
 }
 
-var controller AbstractController
+var controller Controller
 
 func init() {
 	controller = *NewController()
 }
 
 // Get the singleton instance
-func GetController() *AbstractController {
+func GetController() *Controller {
 	return &controller
 }
 
 // Make a new one!
-func NewController() *AbstractController {
-	ctrlr := AbstractController{
+func NewController() *Controller {
+	ctrlr := Controller{
 		serverConfig:		lib.NewConfig(),
 		moduleConfig:		lib.NewConfig(),
 		endpoints:		make(controllerEPMPVMap),
@@ -59,12 +59,12 @@ func NewController() *AbstractController {
 }
 
 // Module passes its own SecurityPolicy to us for reference
-func (ctrlr *AbstractController) SetSecurityPolicy(securityPolicy SecurityPolicy) {
+func (ctrlr *Controller) SetSecurityPolicy(securityPolicy SecurityPolicy) {
 	ctrlr.securityPolicy = securityPolicy
 }
 
 // Module initializes a Controller
-func (ctrlr *AbstractController) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
+func (ctrlr *Controller) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Controller: Configure")
 
@@ -76,10 +76,10 @@ func (ctrlr *AbstractController) Configure(serverConfig lib.Config, moduleConfig
 	for _, patterns := range ctrlr.endpoints {
 		for _, versions := range patterns {
 			for _, endpoint := range versions {
-				if ep, ok := endpoint.(AbstractEndpointIfc); ok {
+				if ep, ok := endpoint.(EndpointIfc); ok {
 					ep.Configure(serverConfig, moduleConfig)
 				} else {
-					// wot? Not an AbstractEndpoint!
+					// wot? Not an Endpoint!
 					l.Error(fmt.Sprintf(
 						"Controller: Non-Endpoint given to Controller in Module '%s'",
 						ctrlr.moduleConfig.Get("module.name"),
@@ -91,7 +91,7 @@ func (ctrlr *AbstractController) Configure(serverConfig lib.Config, moduleConfig
 }
 
 // Add a single Endpoint to this Controller
-func (ctrlr *AbstractController) AddEndpoint(endpoint AbstractEndpointIfc) {
+func (ctrlr *Controller) AddEndpoint(endpoint EndpointIfc) {
 	// Get the Endpoint's Pattern/Version
 	epp := EndpointPattern(endpoint.GetPattern())
 	epv := EndpointVersion(endpoint.GetVersion())
@@ -118,7 +118,7 @@ func (ctrlr *AbstractController) AddEndpoint(endpoint AbstractEndpointIfc) {
 }
 
 // Do any request pre-processing needed...
-func (ctrlr *AbstractController) HandleRequest(request rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *Controller) HandleRequest(request rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 
 	// Is the request method in our Endpoint registry?
@@ -134,7 +134,7 @@ func (ctrlr *AbstractController) HandleRequest(request rest.HttpRequest) *rest.H
 }
 
 // Dispatch the request to an Endpoint
-func (ctrlr *AbstractController) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 	l := lib.GetLogger()
 	// Strip the server/module components off the beginning of the URI
@@ -177,7 +177,7 @@ func (ctrlr *AbstractController) dispatchRequest(request *rest.HttpRequest) *res
 func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
-	if ep, ok := endpoint.(AbstractEndpointIfc); ok {
+	if ep, ok := endpoint.(EndpointIfc); ok {
 		l.Trace(fmt.Sprintf(
 			"[%s] Controller: Selected Endpoint: '%s'",
 			ctx.GetRequestId(),
@@ -186,7 +186,7 @@ func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *res
 		return ep.HandleRequest(*request, &ep)
 	}
 	l.Error(fmt.Sprintf(
-		"[%s] Controller: Unexpected error converting to Abstract Endpoint",
+		"[%s] Controller: Unexpected error converting to  Endpoint",
 		ctx.GetRequestId(),
 	))
 	hlpr := rest.GetHelper()
@@ -194,7 +194,7 @@ func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *res
 }
 
 // Use a pattern cache of compiled RegExp's to match the URI
-func (ctrlr *AbstractController) matchesURI(pattern string, URI string) (bool, error) {
+func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
 	// Find the Regexp in the pattern cache
 	var rxp	*regexp.Regexp
 	var ok bool

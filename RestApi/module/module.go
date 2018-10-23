@@ -40,9 +40,9 @@ import(
 )
 
 type ModulePath	string
-type ModuleSet	map[ModulePath]AbstractModuleIfc
+type ModuleSet	map[ModulePath]ModuleIfc
 
-type AbstractModuleIfc interface {
+type ModuleIfc interface {
 	Configure(serverConfig lib.Config)
 	GetPath() ModulePath
 	GetName() string
@@ -50,23 +50,23 @@ type AbstractModuleIfc interface {
 }
 
 // TODO: Privatize all this stuff with proper accessor functions
-type AbstractModule struct {
-	Controller	AbstractController
+type Module struct {
+	Controller	Controller
 	ServerConfig	lib.Config
 	ModuleConfig	lib.Config
 	securityPolicy	SecurityPolicy
 }
 
 // Make a new one!
-func NewModule() AbstractModule {
-	mod := AbstractModule{
+func NewModule() Module {
+	mod := Module{
 		securityPolicy:	NewSecurityPolicy(),
 	}
 	return mod
 }
 
 // Server needs to initialize this Module with its own configuration data for reference
-func (module *AbstractModule) Configure(serverConfig lib.Config) {
+func (module *Module) Configure(serverConfig lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Module: Configure")
 	// Copy over the server configuration data
@@ -78,23 +78,23 @@ func (module *AbstractModule) Configure(serverConfig lib.Config) {
 }
 
 // Module/Controller need to be able to access their own Security Policy
-func (module *AbstractModule) GetSecurityPolicy() *SecurityPolicy {
+func (module *Module) GetSecurityPolicy() *SecurityPolicy {
 	return &module.securityPolicy
 }
 
 // Server needs to know our module's path which it will use to map requests to us
-func (module AbstractModule) GetPath() ModulePath {
+func (module Module) GetPath() ModulePath {
 	// http://hostname/server.path/module.path/endpoint.pattern
 	return ModulePath(module.ModuleConfig.Get("module.path"))
 }
 
 // Server wants to know our module's name
-func (module AbstractModule) GetName() string {
+func (module Module) GetName() string {
 	return module.ModuleConfig.Get("module.name")
 }
 
 // Server wants to send us requests to be handled
-func (module *AbstractModule) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
+func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf(
