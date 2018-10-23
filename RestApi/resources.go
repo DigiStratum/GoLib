@@ -1,7 +1,13 @@
 package restapi
 
-// TODO: Convert this into an interface/struct, etc in line with the other abstract classes
-// TODO: Add LRU cache for this one
+/*
+
+Find and retrieve static resources for a given HttpRequestContext
+
+TODO: Convert this into an interface/struct, etc in line with the other abstract classes
+TODO: Add LRU cache for this one
+
+*/
 
 import(
 	"io/ioutil"
