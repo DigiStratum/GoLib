@@ -8,8 +8,7 @@ import(
 	"fmt"
 	"net/url"
 
-	//"github.com/DigiStratum/GoLib"
-	"../golib"
+	lib "github.com/DigiStratum/GoLib"
 )
 
 // TODO: Add more interesting properties such as which User is logged
@@ -100,7 +99,7 @@ func (request *HttpRequest) GetURL() string {
 func (request *HttpRequest) SetURL(urlStr string) {
 	u, err := url.Parse(urlStr)
 	if nil != err {
-		l := golib.GetLogger()
+		l := lib.GetLogger()
 		l.Warn(fmt.Sprintf("HttpRequest.SetUrl() - failed to parse as a URL: '%s'", u))
 	}
 	request.url = u
