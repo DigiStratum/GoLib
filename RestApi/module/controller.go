@@ -36,6 +36,17 @@ type AbstractController struct {
 	patternCache	regexpCache		// Compiled Regex Endpoint pattern cache
 }
 
+var controller AbstractController
+
+func init() {
+	controller = *NewController()
+}
+
+// Get the singleton instance
+func GetController() *AbstractController {
+	return &controller
+}
+
 // Make a new one!
 func NewController() *AbstractController {
 	ctrlr := AbstractController{
