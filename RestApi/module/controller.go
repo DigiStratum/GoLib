@@ -29,10 +29,10 @@ type ControllerIfc interface {
 }
 
 type Controller struct {
-	securityPolicy		SecurityPolicy	// Module-wide SecurityPolicy
-	serverConfig		lib.Config		// Server configuration cache
-	moduleConfig		lib.Config		// Module configuration cache
-	endpoints		controllerEPMPVMap	// Registry of all our Endpoints
+	securityPolicy	SecurityPolicy		// Module-wide SecurityPolicy
+	serverConfig	lib.Config		// Server configuration cache
+	moduleConfig	lib.Config		// Module configuration cache
+	endpoints	controllerEPMPVMap	// Registry of all our Endpoints
 	patternCache	regexpCache		// Compiled Regex Endpoint pattern cache
 }
 
