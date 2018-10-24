@@ -23,13 +23,13 @@ import(
 type Config map[string]string
 
 // Make a new one
-func NewConfig() Config {
-	return Config{}
+func NewConfig() *Config {
+	return &Config{}
 }
 
 // Merge some additional configuration data on top of our own
-func (cfg *Config) Merge(inbound Config) {
-	for k, v := range inbound { (*cfg)[k] = v }
+func (cfg *Config) Merge(inbound *Config) {
+	for k, v := range *inbound { (*cfg)[k] = v }
 }
 
 // Set a single configuration element key to the specified value
@@ -45,13 +45,13 @@ func (cfg *Config) Get(key string) string {
 }
 
 //  Get configuration datum whose keys begin with the base string...
-func (cfg *Config) GetSubset(base string) Config {
+func (cfg *Config) GetSubset(base string) *Config {
 	res := make(Config)
 	for k, v := range *cfg {
 		if ! strings.HasPrefix(k, base) { continue }
 		res[k] = v
 	}
-	return res
+	return &res
 }
 
 // Load our JSON configuration data from a file on disk
@@ -73,6 +73,7 @@ func (cfg *Config) DumpConfig() {
 }
 
 // Generic JSON load or panic
+// TODO: Can target interface{} be a pointer?
 func LoadJsonOrPanic(jsonFile string, target interface{}) {
 	err := LoadJson(jsonFile, target)
         if err == nil { return }
@@ -84,6 +85,7 @@ func LoadJsonOrPanic(jsonFile string, target interface{}) {
 
 // Generic JSON load (into ANY interface)
 // Ref: https://blogger.golang.org/json-and-go
+// TODO: Can target interface{} be a pointer?
 func LoadJson(jsonFile string, target interface{}) error {
         file, err := os.Open(jsonFile)
         if nil == err {

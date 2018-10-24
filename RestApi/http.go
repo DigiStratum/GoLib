@@ -24,7 +24,7 @@ type HttpRequestContext struct {
 type HttpHeaders map[string]string
 
 // Name/value set for HTTP response data for Request (typically form-encoded data)
-type httpBodyData map[string][]string
+type HttpBodyData map[string][]string
 
 type HttpRequest struct {
 	protocol	string
@@ -35,28 +35,30 @@ type HttpRequest struct {
 	method		string
 	uri		string
 	queryString	string
-	headers		HttpHeaders
-	body		string
-	bodyData	httpBodyData
-	context		HttpRequestContext
+	headers		*HttpHeaders
+	body		*string
+	bodyData	*HttpBodyData
+	context		*HttpRequestContext
 }
 
 type HttpStatus int
 
 type HttpResponse struct {
 	status		HttpStatus
-	headers		HttpHeaders
-	body		string
+	headers		*HttpHeaders
+	body		*string
 }
 
 // -------------------------------------------
 // HTTP Request
 
-func NewRequest() HttpRequest {
-	return HttpRequest{
-		headers: make(HttpHeaders),
-		bodyData: make(httpBodyData),
-		context: HttpRequestContext{},
+func NewRequest() *HttpRequest {
+	hdrs := make(HttpHeaders)
+	bodyData := make(HttpBodyData)
+	return &HttpRequest{
+		headers: &hdrs,
+		bodyData: &bodyData,
+		context: NewHttpRequestContext(),
 	}
 }
 
@@ -129,19 +131,19 @@ func (request *HttpRequest) SetQueryString(queryString string) {
 	request.queryString = queryString
 }
 
-func (request *HttpRequest) GetBody() string {
+func (request *HttpRequest) GetBody() *string {
 	return request.body
 }
 
-func (request *HttpRequest) SetBody(body string) {
+func (request *HttpRequest) SetBody(body *string) {
 	request.body = body
 }
 
-func (request *HttpRequest) GetBodyData() httpBodyData {
+func (request *HttpRequest) GetBodyData() *HttpBodyData {
 	return request.bodyData
 }
 
-func (request *HttpRequest) SetBodyData(bodyData httpBodyData) {
+func (request *HttpRequest) SetBodyData(bodyData *HttpBodyData) {
 	request.bodyData = bodyData
 }
 
@@ -149,17 +151,17 @@ func (request *HttpRequest) SetBodyData(bodyData httpBodyData) {
 
 // Get the Request Context
 func (request *HttpRequest) GetContext() *HttpRequestContext {
-	return &request.context
+	return request.context
 }
 
 // Set the Request Context
-func (request *HttpRequest) SetContext(context HttpRequestContext) {
+func (request *HttpRequest) SetContext(context *HttpRequestContext) {
 	request.context = context
 }
 
 // Get the Request Headers
 func (request *HttpRequest) GetHeaders() *HttpHeaders {
-	return &request.headers
+	return request.headers
 }
 
 // -------------------------------------------
@@ -177,14 +179,18 @@ func (hdrs *HttpHeaders) Set(name string, value string) {
 }
 
 // Merge an HttpHeaders set into our own
-func (hdrs *HttpHeaders) Merge(headers HttpHeaders) {
-	for name, value := range headers {
+func (hdrs *HttpHeaders) Merge(headers *HttpHeaders) {
+	for name, value := range *headers {
 		(*hdrs)[name] = value
 	}
 }
 
 // -------------------------------------------
 // HTTP Request Context
+
+func NewHttpRequestContext() *HttpRequestContext {
+	return &HttpRequestContext{}
+}
 
 func (context *HttpRequestContext) SetServerPath(serverPath string) {
 	context.serverPath = serverPath
@@ -221,17 +227,19 @@ func (context *HttpRequestContext) GetRequestId() string {
 // -------------------------------------------
 // HTTP Response
 
-func NewResponse() HttpResponse {
-	res := HttpResponse{}
-	res.headers = make(HttpHeaders)
-	return res
+func NewResponse() *HttpResponse {
+	hdrs := make(HttpHeaders)
+	res := HttpResponse{
+		headers: &hdrs,
+	}
+	return &res
 }
 
-func (response *HttpResponse) GetBody() string {
+func (response *HttpResponse) GetBody() *string {
 	return response.body
 }
 
-func (response *HttpResponse) SetBody(body string) {
+func (response *HttpResponse) SetBody(body *string) {
 	response.body = body
 }
 
@@ -244,7 +252,7 @@ func (response *HttpResponse) SetStatus(status HttpStatus) {
 }
 
 // Get the Response Headers
-func (response *HttpResponse) GetHeaders() HttpHeaders {
+func (response *HttpResponse) GetHeaders() *HttpHeaders {
 	return response.headers
 }
 

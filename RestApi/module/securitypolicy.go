@@ -8,11 +8,11 @@ type SecurityPolicy struct {
 	requireAuthentication	bool
 }
 
-func NewSecurityPolicy() SecurityPolicy {
+func NewSecurityPolicy() *SecurityPolicy {
 	sp := SecurityPolicy{
 		requireAuthentication:	false,
 	}
-	return sp
+	return &sp
 }
 
 // Set whether authentication is required
@@ -26,7 +26,7 @@ func (sp *SecurityPolicy) RequiresAuthentication() bool {
 }
 
 // How to handle rejection: Get an appropriate HttpResponse for any SecurityPolicy rejection; nil if ok
-func (sp SecurityPolicy) HandleRejection(request rest.HttpRequest) *rest.HttpResponse {
+func (sp SecurityPolicy) HandleRejection(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 
 	// If authentication is required...

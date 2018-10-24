@@ -23,48 +23,49 @@ type controllerEPMPVMap		map[EndpointMethod]controllerEPPVMap
 type regexpCache		map[string]*regexp.Regexp
 
 type ControllerIfc interface {
-	Configure(serverConfig lib.Config, moduleConfig lib.Config)
-	AddEndpoint(endpoint EndpointIfc)
-	HandleRequest(request rest.HttpRequest) rest.HttpResponse
+	Configure(serverConfig *lib.Config, moduleConfig *lib.Config)
+	AddEndpoint(endpoint *EndpointIfc)
+	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type Controller struct {
-	securityPolicy	SecurityPolicy		// Module-wide SecurityPolicy
-	serverConfig	lib.Config		// Server configuration cache
-	moduleConfig	lib.Config		// Module configuration cache
-	endpoints	controllerEPMPVMap	// Registry of all our Endpoints
-	patternCache	regexpCache		// Compiled Regex Endpoint pattern cache
+	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
+	serverConfig	*lib.Config		// Server configuration cache
+	moduleConfig	*lib.Config		// Module configuration cache
+	endpoints	*controllerEPMPVMap	// Registry of all our Endpoints
+	patternCache	*regexpCache		// Compiled Regex Endpoint pattern cache
 }
 
-var controller Controller
+var controller *Controller
 
 func init() {
-	controller = *NewController()
+	controller = NewController()
 }
 
 // Get the singleton instance
 func GetController() *Controller {
-	return &controller
+	return controller
 }
 
 // Make a new one!
 func NewController() *Controller {
-	ctrlr := Controller{
-		serverConfig:		lib.NewConfig(),
-		moduleConfig:		lib.NewConfig(),
-		endpoints:		make(controllerEPMPVMap),
-		patternCache:	make(regexpCache),
+	c := make(controllerEPMPVMap)
+	r := make(regexpCache)
+	return &Controller{
+		serverConfig:	lib.NewConfig(),
+		moduleConfig:	lib.NewConfig(),
+		endpoints:	&c,
+		patternCache:	&r,
 	}
-	return &ctrlr
 }
 
 // Module passes its own SecurityPolicy to us for reference
-func (ctrlr *Controller) SetSecurityPolicy(securityPolicy SecurityPolicy) {
+func (ctrlr *Controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
 	ctrlr.securityPolicy = securityPolicy
 }
 
 // Module initializes a Controller
-func (ctrlr *Controller) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
+func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Controller: Configure")
 
@@ -73,7 +74,7 @@ func (ctrlr *Controller) Configure(serverConfig lib.Config, moduleConfig lib.Con
 	ctrlr.moduleConfig = moduleConfig
 
 	// Configure the endpoints
-	for _, patterns := range ctrlr.endpoints {
+	for _, patterns := range *ctrlr.endpoints {
 		for _, versions := range patterns {
 			for _, endpoint := range versions {
 				if ep, ok := endpoint.(EndpointIfc); ok {
@@ -99,38 +100,38 @@ func (ctrlr *Controller) AddEndpoint(endpoint EndpointIfc) {
 	// See that the registry has an entry for each method/pattern/version for this Endpoint
 	methods := endpoint.GetMethods()
 	for _, method := range methods {
-		// If this method isn't registered yet, add it now
+		// If this method isn't registered for this Controller, add it now
 		epm := EndpointMethod(method)
-		if _, ok := ctrlr.endpoints[epm]; !ok {
-			ctrlr.endpoints[epm] = make(controllerEPPVMap)
+		if _, ok := (*ctrlr.endpoints)[epm]; !ok {
+			(*ctrlr.endpoints)[epm] = make(controllerEPPVMap)
 		}
 
 		// If this pattern isn't registered yet, add it now
-		if _, ok := ctrlr.endpoints[epm][epp]; !ok {
-			ctrlr.endpoints[epm][epp] = make(controllerEPVMap)
+		if _, ok := (*ctrlr.endpoints)[epm][epp]; !ok {
+			(*ctrlr.endpoints)[epm][epp] = make(controllerEPVMap)
 		}
 
 		// If this version isn't registered yet, add it now
-		if _, ok := ctrlr.endpoints[epm][epp][epv]; !ok {
-			ctrlr.endpoints[epm][epp][epv] = endpoint
+		if _, ok := (*ctrlr.endpoints)[epm][epp][epv]; !ok {
+			(*ctrlr.endpoints)[epm][epp][epv] = endpoint
 		}
 	}
 }
 
 // Do any request pre-processing needed...
-func (ctrlr *Controller) HandleRequest(request rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 
 	// Is the request method in our Endpoint registry?
 	epm := EndpointMethod(request.GetMethod())
-	if _, ok := ctrlr.endpoints[epm]; !ok {
+	if _, ok := (*ctrlr.endpoints)[epm]; !ok {
 		return hlpr.ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
 
 	// Will our Module SecurityPolicy reject this Request?
-	if rej := ctrlr.securityPolicy.HandleRejection(request); nil != rej { return rej } // REJECT!
+	if rej := ctrlr.securityPolicy.HandleRejection(request); nil != rej { return rej }
 
-	return ctrlr.dispatchRequest(&request)
+	return ctrlr.dispatchRequest(request)
 }
 
 // Dispatch the request to an Endpoint
@@ -150,7 +151,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	// Find which Endpoint's pattern matches this request URI
 	// TODO: Test more specific patterns before more general ones
 	epm := EndpointMethod(request.GetMethod())
-	for pattern, versions := range ctrlr.endpoints[epm] {
+	for pattern, versions := range (*ctrlr.endpoints)[epm] {
 		// Test the pattern
 		// ref: https://golang.org/pkg/regexp/#example_MatchString
 		//l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
@@ -183,7 +184,7 @@ func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *res
 			ctx.GetRequestId(),
 			ep.GetName(),
 		))
-		return ep.HandleRequest(*request, &ep)
+		return ep.HandleRequest(request, ep)
 	}
 	l.Error(fmt.Sprintf(
 		"[%s] Controller: Unexpected error converting to  Endpoint",
@@ -198,7 +199,7 @@ func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
 	// Find the Regexp in the pattern cache
 	var rxp	*regexp.Regexp
 	var ok bool
-	if rxp, ok = ctrlr.patternCache[pattern]; !ok {
+	if rxp, ok = (*ctrlr.patternCache)[pattern]; !ok {
 		// No!? Well then... Compile it and ADD it to the cache!
 		var err error
 		rxp, err = regexp.Compile(pattern)
@@ -208,7 +209,7 @@ func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
 				pattern,
 			))
 		}
-		ctrlr.patternCache[pattern] = rxp
+		(*ctrlr.patternCache)[pattern] = rxp
 	}
 	return rxp.MatchString(URI), nil
 }

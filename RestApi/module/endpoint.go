@@ -71,24 +71,24 @@ type EndpointVersion		string
 type EndpointName		string
 
 type EndpointIfc interface {
-	Configure(serverConfig lib.Config, moduleConfig lib.Config)
+	Configure(serverConfig *lib.Config, moduleConfig *lib.Config)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
 	GetVersion() string
 	GetMethods() []string
 	GetPattern() string
 	SetPattern(pattern string)
-	HandleRequest(request rest.HttpRequest, endpoint *EndpointIfc) *rest.HttpResponse
+	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
 type Endpoint struct {
-        serverConfig    lib.Config		// Server configuration copy
-        moduleConfig    lib.Config		// Module configuration copy
-        name            string			// Unique name of this Endpoint
-        version         string			// Version of this Endpoint
-        pattern         string			// Pattern which matches URI's to us (relative to Module)
-        methods         []string		// List of HTTP request methods that we respond to
-	securityPolicy	SecurityPolicy	// Security Policy for this Endpoint
+        serverConfig    *lib.Config	// Server configuration copy
+        moduleConfig    *lib.Config	// Module configuration copy
+        name            string		// Unique name of this Endpoint
+        version         string		// Version of this Endpoint
+        pattern         string		// Pattern which matches URI's to us (relative to Module)
+        methods         []string	// List of HTTP request methods that we respond to
+	securityPolicy	*SecurityPolicy	// Security Policy for this Endpoint
 }
 
 // Initialize
@@ -137,14 +137,14 @@ func implementsMethod(method string, endpoint interface{}) bool {
 }
 
 // Capture the configuration data for this endpoint
-func (ep *Endpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config) {
+func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
 	ep.serverConfig = serverConfig
 	ep.moduleConfig = moduleConfig
 }
 
 // Endpoint needs to be able to access its own Security Policy
 func (ep *Endpoint) GetSecurityPolicy() *SecurityPolicy {
-	return &ep.securityPolicy
+	return ep.securityPolicy
 }
 
 // Override the default path matching pattern
@@ -197,7 +197,7 @@ func (ep *Endpoint) GetMethods() []string {
 
 // Request handler
 // TODO: Pass around request as a pointer to minimize the memory copying for a potentially large data structure
-func (ep *Endpoint) HandleRequest(request rest.HttpRequest, endpoint *EndpointIfc) *rest.HttpResponse {
+func (ep *Endpoint) HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse {
 
 	// Will our SecurityPolicy reject this Request?
 	epsp := ep.GetSecurityPolicy()
@@ -215,13 +215,13 @@ func (ep *Endpoint) HandleRequest(request rest.HttpRequest, endpoint *EndpointIf
 	// Note that checking requestMethod against ep.methods would be redundant
 	// because Controller should already be doing this for us via ep.GetMethods()
 	switch (method) {
-		case "get": return handleGet(request, *endpoint)
-		case "head": return handleHead(request, *endpoint)
-		case "post": return handlePost(request, *endpoint)
-		case "put": return handlePut(request, *endpoint)
-		case "options": return handleOptions(request, *endpoint)
-		case "delete": return handleDelete(request, *endpoint)
-		case "patch": return handlePatch(request, *endpoint)
+		case "get": return handleGet(request, endpoint)
+		case "head": return handleHead(request, endpoint)
+		case "post": return handlePost(request, endpoint)
+		case "put": return handlePut(request, endpoint)
+		case "options": return handleOptions(request, endpoint)
+		case "delete": return handleDelete(request, endpoint)
+		case "patch": return handlePatch(request, endpoint)
 	}
 	l.Error(fmt.Sprintf(
 		"[%s] Endpoint (%s): Controller passed us a non-implemented Request Method '%s'",
@@ -236,45 +236,46 @@ func (ep *Endpoint) HandleRequest(request rest.HttpRequest, endpoint *EndpointIf
 }
 
 // Default Options handler for endpoints
-func (endpoint *Endpoint) HandleOptions(request rest.HttpRequest) *rest.HttpResponse {
+func (endpoint *Endpoint) HandleOptions(request *rest.HttpRequest) *rest.HttpResponse {
 	hdrs := rest.HttpHeaders{}
 	hdrs.Set("allow", strings.Join(endpoint.methods, ","))
 	hlpr := rest.GetHelper()
-	return hlpr.ResponseWithHeaders(rest.STATUS_OK, "", hdrs)
+	return hlpr.ResponseWithHeaders(rest.STATUS_OK, nil, &hdrs)
 }
 
 type GetEndpointIfc interface {
-	HandleGet(request rest.HttpRequest) *rest.HttpResponse
+	HandleGet(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type PostEndpointIfc interface {
-	HandlePost(request rest.HttpRequest) *rest.HttpResponse
+	HandlePost(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type PutEndpointIfc interface {
-	HandlePut(request rest.HttpRequest) *rest.HttpResponse
+	HandlePut(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type OptionsEndpointIfc interface {
-	HandleOptions(request rest.HttpRequest) *rest.HttpResponse
+	HandleOptions(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type HeadEndpointIfc interface {
-	HandleHead(request rest.HttpRequest) *rest.HttpResponse
+	HandleHead(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type DeleteEndpointIfc interface {
-	HandleDelete(request rest.HttpRequest) *rest.HttpResponse
+	HandleDelete(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type PatchEndpointIfc interface {
-	HandlePatch(request rest.HttpRequest) *rest.HttpResponse
+	HandlePatch(request *rest.HttpRequest) *rest.HttpResponse
 }
 
-func handleGet(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handleGet(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(GetEndpointIfc); ok {
 		return handler.HandleGet(request)
 	}
+	// TODO: Move this common error routine to a separate func
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
@@ -284,7 +285,7 @@ func handleGet(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return nil
 }
 
-func handlePost(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handlePost(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PostEndpointIfc); ok {
 		return handler.HandlePost(request)
 	}
@@ -297,7 +298,7 @@ func handlePost(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return nil
 }
 
-func handlePut(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handlePut(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PutEndpointIfc); ok {
 		return handler.HandlePut(request)
 	}
@@ -310,7 +311,7 @@ func handlePut(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return nil
 }
 
-func handleOptions(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handleOptions(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(OptionsEndpointIfc); ok {
 		return handler.HandleOptions(request)
 	}
@@ -323,7 +324,7 @@ func handleOptions(request rest.HttpRequest, ep interface{}) *rest.HttpResponse 
 	return nil
 }
 
-func handleHead(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(HeadEndpointIfc); ok {
 		return handler.HandleHead(request)
 	}
@@ -334,8 +335,11 @@ func handleHead(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 		response := handler.HandleGet(request)
 		if nil != response {
 			hdrs := response.GetHeaders()
-			hdrs.Set("content-length", strconv.Itoa(len(response.GetBody())))
-			response.SetBody("")
+			body := response.GetBody()
+			bodyLen := 0
+			if nil != body { bodyLen = len(*body) }
+			hdrs.Set("content-length", strconv.Itoa(bodyLen))
+			response.SetBody(nil)
 		}
 		return response
 	}
@@ -349,7 +353,7 @@ func handleHead(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return nil
 }
 
-func handleDelete(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handleDelete(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(DeleteEndpointIfc); ok {
 		return handler.HandleDelete(request)
 	}
@@ -362,7 +366,7 @@ func handleDelete(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return nil
 }
 
-func handlePatch(request rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+func handlePatch(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PatchEndpointIfc); ok {
 		return handler.HandlePatch(request)
 	}

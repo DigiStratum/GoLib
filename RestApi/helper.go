@@ -5,6 +5,8 @@ import(
 	"sync"
 	"errors"
 	"github.com/DigiStratum/Go-cbroglie-mustache"
+
+	lib "github.com/DigiStratum/GoLib"
 )
 
 type TemplateCache	map[string]*mustache.Template
@@ -30,28 +32,36 @@ func GetHelper() *helper {
 func (hlpr *helper) ResponseError(status HttpStatus) *HttpResponse {
 	hdrs := HttpHeaders{}
 	hdrs.Set("content-type", "text/plain")
-	response := hlpr.ResponseWithHeaders(status, hlpr.GetHttpStatusText(status), hdrs)
+	body := hlpr.GetHttpStatusText(status)
+	response := hlpr.ResponseWithHeaders(status, &body, &hdrs)
 	return response
 }
 
 // Produce an HTTP response with standard headers
-func (hlpr *helper) Response(status HttpStatus, body string, contentType string) *HttpResponse {
+func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) *HttpResponse {
 	hdrs := HttpHeaders{}
 	hdrs.Set("content-type", contentType)
-	response := hlpr.ResponseWithHeaders(status, body, hdrs)
+	response := hlpr.ResponseWithHeaders(status, body, &hdrs)
 	return response
 }
 
 // Produce an HTTP response with custom headers
-func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body string, headers HttpHeaders) *HttpResponse {
+func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers *HttpHeaders) *HttpResponse {
 	response := NewResponse()
+
+if nil == response {
+	l := lib.GetLogger()
+	l.Fatal("NewResponse() is nil!")
+	panic("nope!")
+}
+
 	response.SetStatus(status)
 	response.SetBody(body)
-	if len(headers) > 0 {
+	if len(*headers) > 0 {
 		hdrs := response.GetHeaders()
 		hdrs.Merge(headers)
 	}
-	return &response
+	return response
 }
 
 // Provide read-through cache of named mustache templates
@@ -92,9 +102,9 @@ func (hlpr *helper) HydrateTemplate(templateFile string, data map[string]string)
 
 // Scan over the body data and, for each unique name, scrub out any duplicates
 // TODO: refactor or make some variant which creates a value SET instead oftraching the dupes
-func (hlpr *helper) SingularizePostData(bodyData map[string][]string) (map[string]string) {
+func (hlpr *helper) SingularizePostData(bodyData *HttpBodyData) map[string]string {
 	var data = make(map[string]string)
-	for name, values := range bodyData {
+	for name, values := range *bodyData {
 		if len(values) > 0 { data[name] = values[0] }
 	}
 	return data

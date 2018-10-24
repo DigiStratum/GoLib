@@ -43,54 +43,59 @@ type ModulePath	string
 type ModuleSet	map[ModulePath]ModuleIfc
 
 type ModuleIfc interface {
-	Configure(serverConfig lib.Config)
+	Configure(serverConfig *lib.Config)
 	GetPath() ModulePath
 	GetName() string
 	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
 
-// TODO: Privatize all this stuff with proper accessor functions
 type Module struct {
-	Controller	Controller
-	ServerConfig	lib.Config
-	ModuleConfig	lib.Config
-	securityPolicy	SecurityPolicy
+	controller	*Controller
+	serverConfig	*lib.Config
+	moduleConfig	*lib.Config
+	securityPolicy	*SecurityPolicy
 }
 
 // Make a new one!
-func NewModule() Module {
-	mod := Module{
+func NewModule() *Module {
+	return &Module{
+		controller: GetController(),
+		moduleConfig: lib.NewConfig(),
 		securityPolicy:	NewSecurityPolicy(),
 	}
-	return mod
 }
 
 // Server needs to initialize this Module with its own configuration data for reference
-func (module *Module) Configure(serverConfig lib.Config) {
+func (module *Module) Configure(serverConfig *lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Module: Configure")
 	// Copy over the server configuration data
-	module.ServerConfig = serverConfig
+	module.serverConfig = serverConfig
 
 	// Initialize our controller
-	module.Controller.SetSecurityPolicy(*module.GetSecurityPolicy())
-	module.Controller.Configure(module.ServerConfig, module.ModuleConfig)
+	module.controller.SetSecurityPolicy(module.GetSecurityPolicy())
+	module.controller.Configure(module.serverConfig, module.moduleConfig)
+}
+
+// Module need to be able to set our configuration
+func (module *Module) GetConfig() *lib.Config {
+	return module.moduleConfig
 }
 
 // Module/Controller need to be able to access their own Security Policy
 func (module *Module) GetSecurityPolicy() *SecurityPolicy {
-	return &module.securityPolicy
+	return module.securityPolicy
 }
 
 // Server needs to know our module's path which it will use to map requests to us
 func (module Module) GetPath() ModulePath {
 	// http://hostname/server.path/module.path/endpoint.pattern
-	return ModulePath(module.ModuleConfig.Get("module.path"))
+	return ModulePath(module.moduleConfig.Get("module.path"))
 }
 
 // Server wants to know our module's name
 func (module Module) GetName() string {
-	return module.ModuleConfig.Get("module.name")
+	return module.moduleConfig.Get("module.name")
 }
 
 // Server wants to send us requests to be handled
@@ -100,10 +105,10 @@ func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpRespons
 	l.Trace(fmt.Sprintf(
 		"[%s] Module (%s): %s %s",
 		ctx.GetRequestId(),
-		module.ModuleConfig.Get("module.name"),
+		module.moduleConfig.Get("module.name"),
 		request.GetMethod(),
 		request.GetURL(),
 	))
-	return module.Controller.HandleRequest(*request)
+	return module.controller.HandleRequest(request)
 }
 
