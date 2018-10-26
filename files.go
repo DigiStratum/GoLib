@@ -16,7 +16,8 @@ import(
 func ReadFileString(path string) (*string, error) {
 	tbuf, err := ReadFileBytes(path)
 	if nil != err { return nil, err }
-	return string(*tbuf), nil
+	s := string(*tbuf)
+	return &s, nil
 }
 
 func ReadFileBytes(path string) (*[]byte, error) {
