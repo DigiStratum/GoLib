@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"encoding/base64"
 	lib "github.com/DigiStratum/GoLib"
 )
 
@@ -18,22 +19,35 @@ func NewResource() *Resource {
 
 func NewResourceFromString(content string) *Resource {
 	r := NewResource()
-	r.SetContentFromString(content)
+	r.SetContentFromString(&content)
+	return r
 }
 
 func NewResourceFromFile(path string) *Resource {
 	r := NewResource()
 	r.SetContentFromFile(path)
+	return r
 }
 
 func (r *Resource) SetContentFromString(content *string) {
-	// FIXME: Encode the content!
-	r.content = content
+	// ref: https://golang.org/pkg/encoding/base64/#pkg-examples
+	encodedContent := base64.StdEncoding.EncodeToString([]byte(*content))
+	r.content = &encodedContent
 }
 
 func (r *Resource) SetContentFromFile(path string) error {
 	s, err := lib.ReadFileString(path)
 	if nil != err { return err }
 	r.SetContentFromString(s)
+	return nil
+}
+
+func (r *Resource) GetContent() *string {
+	return r.content
+}
+
+func (r *Resource) GetDecodedContent() *string {
+	// FIXME: Decode the content!
+	return r.content
 }
 
