@@ -48,7 +48,13 @@ func (r *Resource) GetContent() *string {
 }
 
 func (r *Resource) GetDecodedContent() *string {
-	// FIXME: Decode the content!
-	return r.content
+	decodedContentBytes, err := base64.StdEncoding.DecodeString(*r.content)
+	if nil != err {
+		// TODO: Handle errors
+		s := ""
+		return &s
+	}
+	decodedContent := string(decodedContentBytes)
+	return &decodedContent
 }
 
