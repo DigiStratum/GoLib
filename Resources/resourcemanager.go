@@ -9,7 +9,7 @@ to 0 will override everything higher.
 
 type ResourceManager struct {
 	// Ordered list of Resource Repositories to find resources within:
-	resourceRepositories	[]ResourceRepository,
+	resourceRepositories	[]ResourceRepository
 }
 
 // Make a new one of these!
@@ -23,7 +23,7 @@ func NewResourceManager() *ResourceManager {
 // Add a Resource repository to the set
 // Remember: each addition is lower in priority than the previous!
 func (rm *ResourceManager) AddResourceRepository(rr *ResourceRepository) {
-	*rm.resourceRepositories = append(*rm.resourceRepositories, *rr)
+	rm.resourceRepositories = append(rm.resourceRepositories, *rr)
 }
 
 // Get a Resource with the specified path from our set of Resource repositories
