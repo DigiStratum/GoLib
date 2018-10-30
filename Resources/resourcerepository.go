@@ -68,7 +68,8 @@ func (rr *ResourceRepository) GetResource(path string) *Resource {
 	switch (rr.type) {
 		case REPO_TYPE_MAP:
 			return rr.resourceMap.GetResource(path)
-		// TODO: Add support for the other repository types
+		// TODO: Add support for the other repository types (use an
+		// LRU cache to capture the content of these others in memory)
 	}
 	return nil
 }
