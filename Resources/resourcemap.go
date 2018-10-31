@@ -26,10 +26,15 @@ TODO: Add some supporting funcs to Resource to get a list of Resources below a g
 
 type ResourceMap map[string]*Resource
 
+// Get a Resource by a unique path identifier
 func (rm ResourceMap) GetResource(path string) *Resource {
-	if r, ok := rm[path]; ok {
-		return r
-	}
+	if rm.HasResource(path) { return rm[path] }
 	return nil
+}
+
+// Check whether we have a Resource with the unique path identifier
+func (rm ResourceMap) HasResource(path string) bool {
+	_, ok := rm[path]
+	return ok
 }
 

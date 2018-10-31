@@ -1,29 +1,20 @@
 package restapi
 
 import(
-	"bytes"
 	"sync"
-	"errors"
-	"github.com/DigiStratum/Go-cbroglie-mustache"
-
-	lib "github.com/DigiStratum/GoLib"
 )
 
-type TemplateCache	map[string]*mustache.Template
-
-type helper struct {
-	templates	TemplateCache
-}
+type helper struct { }
 
 var instance *helper
 
+// TODO: Make this the same as we do other "singletons"; this sync.Once thing may
+// only be needed for multithreaded confusion that we don't need (or do we?)
 // Get the singleton instance of our helper
 func GetHelper() *helper {
 	var once sync.Once
 	once.Do(func() {
-		instance = &helper{
-			templates: make(TemplateCache),
-		}
+		instance = &helper{ }
 	})
 	return instance
 }
@@ -48,13 +39,6 @@ func (hlpr *helper) Response(status HttpStatus, body *string, contentType string
 // Produce an HTTP response with custom headers
 func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers *HttpHeaders) *HttpResponse {
 	response := NewResponse()
-
-if nil == response {
-	l := lib.GetLogger()
-	l.Fatal("NewResponse() is nil!")
-	panic("nope!")
-}
-
 	response.SetStatus(status)
 	response.SetBody(body)
 	if len(*headers) > 0 {
@@ -62,42 +46,6 @@ if nil == response {
 		hdrs.Merge(headers)
 	}
 	return response
-}
-
-// Provide read-through cache of named mustache templates
-func (hlpr *helper) getCachedTemplate(templateFile string) (*mustache.Template, error) {
-
-	// If it's already in the cache, just return it!
-	cachedTemplate, ok := hlpr.templates[templateFile]
-	if ok {
-		return cachedTemplate, nil
-	}
-
-	// Use our own resource locator to find and ready the template file from disk
-	var templateString, err = ReadResourceAsString("templates/" + templateFile + ".mustache")
-	if nil != err {
-		return nil, errors.New("Template file not in resource tree")
-	}
-
-	// Parse it
-	var template *mustache.Template
-	template, err = mustache.ParseString(templateString)
-	if nil != err {
-
-		// Cache it
-		hlpr.templates[templateFile] = template
-	}
-
-	return template, err
-}
-
-// Hydrate a named mustache template with the supplied data
-func (hlpr *helper) HydrateTemplate(templateFile string, data map[string]string) (string,  error) {
-	var template, err = hlpr.getCachedTemplate(templateFile)
-	if nil != err { return "", err }
-	var renderedTemplate bytes.Buffer
-	template.FRender(&renderedTemplate, data)
-	return renderedTemplate.String(), nil
 }
 
 // Scan over the body data and, for each unique name, scrub out any duplicates

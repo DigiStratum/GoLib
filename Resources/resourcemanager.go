@@ -36,3 +36,32 @@ func (rm *ResourceManager) GetResource(path string) *Resource {
 	return nil
 }
 
+// Find a scoped ("private"/"public") resource, facet on language (default="default")
+// Returns the Resource or nil
+func (rm *ResourceManager) GetScopedResource(scope string, relPath string, language string) *Resource {
+	possibilities := [...]string{ language, "default" }
+	for _, possibility := range possibilities {
+		resource := rm.GetResource(scope + "/" + possibility + "/" + relPath)
+		if nil != resource { return resource }
+	}
+	return nil
+}
+
+// Find a private resource, facet on language (default="default")
+// Returns the Resource or nil
+func (rm *ResourceManager) GetPrivateResource(relPath string, language string) *Resource {
+	return rm.GetScopedResource("private", relPath, language)
+}
+
+// Find a public resource, facet on language (default="default")
+// Returns the Resource or nil
+func (rm *ResourceManager) GetPublicResource(relPath string, language string) *Resource {
+	return rm.GetScopedResource("public", relPath, language)
+}
+
+// Find a (mustache) template type resource, facet on language (default="default")
+// Returns the Resource or nil
+func (rm *ResourceManager) GetTemplate(name string, language string) *Resource {
+	return rm.GetPrivateResource("templates/" + name + ".mustache", language)
+}
+

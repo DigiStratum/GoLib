@@ -74,3 +74,12 @@ func (rr *ResourceRepository) GetResource(path string) *Resource {
 	return nil
 }
 
+func (rr *ResourceRepository) HasResource(path string) bool {
+	switch (rr.repoType) {
+		case REPO_TYPE_MAP:
+			return rr.resourceMap.HasResource(path)
+		// TODO: Add support for the other repository types
+	}
+	return false
+}
+
