@@ -1,5 +1,12 @@
 package resources
 
+/*
+
+TODO: Isolate the encode/decode so that other tools can build against it and have a function that
+properly interacts with the same encoding scheme as us using our *Encoded* accessor methods.
+
+*/
+
 import (
 	"encoding/base64"
 	lib "github.com/DigiStratum/GoLib"
@@ -27,12 +34,22 @@ func NewResourceFromFile(path string) *Resource {
 	return r
 }
 
+// Set the Resource Content from a plain text string (it will be encoded!)
 func (r *Resource) SetContentFromString(content *string) {
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(*content))
 	r.content = &encodedContent
 	r.isEncoded = true
 }
 
+// Set the Resource Content from a text string which is already endcoded
+// (This is used by callers such as res2go that know how to pre-encode)
+func (r *Resource) SetEncodedContentFromString(encodedContent *string) {
+	r.content = encodedContent
+	r.isEncoded = true
+}
+
+// Set the Resource Content from a source file path (it will be encoded!)
+// (This is used to anything froma simple text file to full binary assets)
 func (r *Resource) SetContentFromFile(path string) error {
 	s, err := lib.ReadFileString(path)
 	if nil != err { return err }
@@ -40,6 +57,7 @@ func (r *Resource) SetContentFromFile(path string) error {
 	return nil
 }
 
+// Get the Resource Content as a string (could be anything!)
 func (r *Resource) GetContent() *string {
 	// For non-encoded, raw content (probably loaded from disk, DB, service, etc)
 	if ! r.isEncoded { return r.content }
@@ -55,7 +73,8 @@ func (r *Resource) GetContent() *string {
 	return &decodedContent
 }
 
-func (r *Resource) GetRawContent() *string {
+// Get the Resource Content as an Encoded string (you better know what to do with it!)
+func (r *Resource) GetEncodedContent() *string {
 	return r.content
 }
 
