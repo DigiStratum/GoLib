@@ -111,6 +111,7 @@ func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, patt
 			ep.methods = append(ep.methods, method)
 			implemented = true
 		}
+		l.Crazy(fmt.Sprintf("Endpoint (%s): Implements method %s?: %t", name, method, implemented))
 		implementedMethods[method] = implemented
 	}
 
@@ -119,7 +120,7 @@ func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, patt
 		ep.methods = append(ep.methods, "head")
 	}
 
-	l.Trace(fmt.Sprintf("Endpoint: Methods Implemented: [%s]", strings.Join(ep.methods, ",")))
+	l.Trace(fmt.Sprintf("Endpoint (%s): Methods Implemented: [%s]", name, strings.Join(ep.methods, ",")))
 }
 
 // Does the supplied Endpoint implement the interface for the specified Method?
