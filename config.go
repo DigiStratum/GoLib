@@ -73,7 +73,7 @@ func (cfg *Config) DumpConfig() {
 }
 
 // Generic JSON load or panic
-// TODO: Can target interface{} be a pointer?
+// The provided target should be a pointer to where we will dump the decoded JSON result
 func LoadJsonOrPanic(jsonFile string, target interface{}) {
 	err := LoadJson(jsonFile, target)
         if err == nil { return }
@@ -84,8 +84,7 @@ func LoadJsonOrPanic(jsonFile string, target interface{}) {
 }
 
 // Generic JSON load (into ANY interface)
-// Ref: https://blogger.golang.org/json-and-go
-// TODO: Can target interface{} be a pointer?
+// The provided target should be a pointer to where we will dump the decoded JSON result
 func LoadJson(jsonFile string, target interface{}) error {
         file, err := os.Open(jsonFile)
         if nil == err {
