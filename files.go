@@ -9,8 +9,10 @@ File handling library functions
 import(
 	"os"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"errors"
+	"path"
 )
 
 // Write the contents of a string to a file
@@ -52,5 +54,44 @@ func IsFile(path string) bool {
 	if nil != err { return false } // Who knows?
 	mode := fi.Mode();
 	return mode.IsRegular()
+}
+
+// Copy a file (src) to the destination (dst)
+func CopyFile(src, dst string) error {
+	// Source must be a file
+	if ! IsFile(src) {
+		return errors.New(fmt.Sprintf(
+			"Files.CopyFile(): src (%s) is not a file", src,
+		))
+	}
+
+	// Destination must either be a file (to be replaced) or a dir (to drop the file into)
+	var destPath string
+	if IsFile(dst) {
+		destPath = dst
+	} else if IsDir(dst) {
+		// Keep the source filename, just send it to a new destination dir
+		srcDir := path.Dir(src)
+		srcFile := src[len(srcDir):]
+		destPath = dst + "/" + srcFile
+	} else {
+		return errors.New(fmt.Sprintf(
+			"Files.CopyFile(): dst (%s) is neither a file, nor a dir", dst,
+		))
+	}
+
+	// Do the actual file copying bits
+	in, err := os.Open(src)
+	if err != nil { return err }
+	defer in.Close()
+	out, err := os.Create(destPath)
+	if err != nil { return err }
+	defer func() {
+		cerr := out.Close()
+		if err == nil { err = cerr }
+	}()
+	if _, err = io.Copy(out, in); err != nil { return err }
+	err = out.Sync()
+	return err
 }
 
