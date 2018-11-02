@@ -95,6 +95,7 @@ func (request *HttpRequest) SetScheme(scheme string) {
 }
 
 func (request *HttpRequest) GetURL() string {
+	if nil == request.url { return "" }
 	return request.url.String()
 }
 
