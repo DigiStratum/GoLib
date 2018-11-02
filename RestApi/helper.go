@@ -49,7 +49,7 @@ func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers
 }
 
 // Scan over the body data and, for each unique name, scrub out any duplicates
-// TODO: refactor or make some variant which creates a value SET instead oftraching the dupes
+// TODO: refactor or make some variant which creates a value SET instead of tracking the dupes
 func (hlpr *helper) SingularizePostData(bodyData *HttpBodyData) map[string]string {
 	var data = make(map[string]string)
 	for name, values := range *bodyData {
