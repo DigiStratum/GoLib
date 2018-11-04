@@ -22,14 +22,14 @@ type TemplateData	map[string]string
 
 type Templates struct {
 	cache		templateCache
-	resourceManager	*ResourceManager
+	repositoryManager	*RepositoryManager
 }
 
 // Make a new one of these
-func NewTemplates(rm *ResourceManager) *Templates {
+func NewTemplates(rm *RepositoryManager) *Templates {
 	t := Templates{
 		cache:			make(templateCache),
-		resourceManager:	rm,
+		repositoryManager:	rm,
 	}
 	return &t
 }
@@ -56,7 +56,7 @@ func (tpl *Templates) getCachedTemplate(templateName string, language string) (*
 	}
 
 	// Resolve template Resource
-	resource := tpl.resourceManager.GetTemplate(templateName, language)
+	resource := tpl.repositoryManager.GetTemplate(templateName, language)
 	if nil == resource {
 		return nil, errors.New(fmt.Sprintf("Template (%s) not in resource tree", templateName))
 	}

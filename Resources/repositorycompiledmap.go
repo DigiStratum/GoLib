@@ -9,9 +9,7 @@ with read-only access.
 
 */
 
-type RepositoryCompiledMap {
-	ResourceMap	// Inherit the properties and functions of ResourceMap
-}
+type RepositoryCompiledMap ResourceMap	// Inherit the properties and functions of ResourceMap
 
 // Satisfies ReadableRepositoryIfc
 func (rcm RepositoryCompiledMap) GetResource(path string) *Resource {

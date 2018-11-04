@@ -44,6 +44,22 @@ func (cfg *Config) Get(key string) string {
 	return str
 }
 
+// Check whether we have a configuration element by key name
+func (cfg *Config) Has(key string) bool {
+	_, ok := (*cfg)[key];
+	return ok
+}
+
+// Check whether we have configuration elements for all the key names
+func (cfg *Config) HasAll(keys *[]string) bool {
+	if nil == keys { return false }
+	for _, key := range *keys {
+		_, ok := (*cfg)[key];
+		if ! ok { return false }
+	}
+	return true
+}
+
 //  Get configuration datum whose keys begin with the base string...
 func (cfg *Config) GetSubset(base string) *Config {
 	res := make(Config)

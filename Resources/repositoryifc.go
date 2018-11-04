@@ -9,8 +9,6 @@ TODO: Add some supporting funcs to Resource to get a list of Resources below a g
 */
 
 import (
-	"errors"
-
 	lib "github.com/DigiStratum/GoLib"
 )
 
