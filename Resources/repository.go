@@ -30,7 +30,9 @@ type Repository struct {
 
 // Make a new one of these
 func NewRepository() *Repository {
-	repository := Repository{}
+	repository := Repository{
+		collection: NewResourceCollection(),
+	}
 	return &repository
 }
 
@@ -44,18 +46,18 @@ func NewRepositoryPreloaded(collection *ResourceCollection) *Repository {
 
 // Satisfies RepositoryIfc
 // Any Repository implementation should override this as needed
-func (r Repository) Configure(repoConfig *lib.Config) error {
+func (r *Repository) Configure(repoConfig *lib.Config) error {
 	// There is no configuration data required for this repository type
 	return nil
 }
 
 // Satisfies RepositoryIfc
-func (r Repository) GetResource(path string) *Resource {
+func (r *Repository) GetResource(path string) *Resource {
 	return r.collection.GetResource(path)
 }
 
 // Satisfies RepositoryIfc
-func (r Repository) HasResource(path string) bool {
+func (r *Repository) HasResource(path string) bool {
 	return r.collection.HasResource(path)
 }
 

@@ -34,9 +34,9 @@ func NewRepositoryManager() *RepositoryManager {
 // Ref: https://stackoverflow.com/questions/24422810/golang-convert-struct-pointer-to-interface#
 func (rm *RepositoryManager) AddRepository(repository interface{}) error {
 	l := lib.GetLogger()
-	if repo, ok := repository.(*RepositoryIfc); ok {
+	if repo, ok := repository.(RepositoryIfc); ok {
 		l.Trace("Adding Resource Repository")
-		rm.repositories = append(rm.repositories, repo)
+		rm.repositories = append(rm.repositories, &repo)
 		return nil
 	}
 	msg := "Supplied Repository does not satisfy RepositoryIfc"
