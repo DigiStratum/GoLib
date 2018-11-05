@@ -39,13 +39,13 @@ type RepositoryS3 struct {
 	awsSession	*session.Session
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
-	readCache	ResourceMap
+	readCache	*MutableRepository
 }
 
 // Make a new one of these!
 func NewRepositoryS3() *RepositoryS3 {
 	r := RepositoryS3{
-		readCache: make(ResourceMap),
+		readCache: NewMutableRepository(),
 	}
 	return &r
 }
@@ -58,9 +58,7 @@ func (r *RepositoryS3) Configure(config *lib.Config) error {
 	if ! (config.HasAll(&requiredConfig)) {
 		return errors.New("Incomplete RepositoryS3 configuration provided")
 	}
-
 	r.repoConfig = config
-
 	return nil
 }
 
@@ -68,7 +66,7 @@ func (r *RepositoryS3) Configure(config *lib.Config) error {
 // Ref: https://stackoverflow.com/questions/41645377/golang-s3-download-to-buffer-using-s3manager-downloader
 func (r *RepositoryS3) GetResource(path string) *Resource {
 	// If it's not yet in the cache
-	if _, ok := r.readCache[path]; !ok {
+	if ! r.readCache.HasResource(path) {
 		// Read the Resource from our S3 bucket into cache
 		buff := &aws.WriteAtBuffer{}
 		downloader := r.getS3Downloader()
@@ -81,15 +79,15 @@ func (r *RepositoryS3) GetResource(path string) *Resource {
 		)
 		// Error = no Resource!
 		if nil != err { return nil }
-		r.readCache[path] = NewResourceFromString(string(buff.Bytes()))
+		r.readCache.PutResource(path, NewResourceFromString(string(buff.Bytes())))
 	}
-	return r.readCache[path]
+	return r.readCache.GetResource(path)
 }
 
 // Satisfies RepositoryIfc
 func (r *RepositoryS3) HasResource(path string) bool {
 	// If it's already in the cache, then we know we have it!
-	if _, ok := r.readCache[path]; ok { return true }
+	if r.readCache.HasResource(path) { return true }
 
 	// If there's S3 metadata with no error, then there's a Resource!
 	// ref: github.com/aws/aws-sdk-go/service/s3/examples_test.go ("HeadObject")
@@ -103,7 +101,7 @@ func (r *RepositoryS3) HasResource(path string) bool {
 }
 
 // Satisfies WritableRepositoryIfc
-func (r *RepositoryS3) PutResource(resource *Resource, path string) error {
+func (r *RepositoryS3) PutResource(path string, resource *Resource) error {
 	// TODO: Actually implement WRITE operation to S3 here
 	return errors.New("Not Yet Implemented!")
 }

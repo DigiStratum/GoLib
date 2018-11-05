@@ -9,30 +9,46 @@ to 0 will override everything higher.
 
 */
 
+import (
+	"errors"
+
+	lib "github.com/DigiStratum/GoLib"
+)
+
 type RepositoryManager struct {
 	// Ordered list of Resource Repositories to find resources within:
-	repositories	[]RepositoryIfc
+	repositories	[]*RepositoryIfc
 }
 
 // Make a new one of these!
 func NewRepositoryManager() *RepositoryManager {
 	rm := RepositoryManager{
-		repositories:	make([]RepositoryIfc, 0),
+		repositories:	make([]*RepositoryIfc, 0),
 	}
 	return &rm
 }
 
 // Add a Resource repository to the set
 // Remember: each addition is lower in priority than the previous!
-func (rm *RepositoryManager) AddRepository(repository *RepositoryIfc) {
-	rm.repositories = append(rm.repositories, *repository)
+// repository parameter must be a pointer to a concrete implementation of a RepositoryIfc
+// Ref: https://stackoverflow.com/questions/24422810/golang-convert-struct-pointer-to-interface#
+func (rm *RepositoryManager) AddRepository(repository interface{}) error {
+	l := lib.GetLogger()
+	if repo, ok := repository.(*RepositoryIfc); ok {
+		l.Trace("Adding Resource Repository")
+		rm.repositories = append(rm.repositories, repo)
+		return nil
+	}
+	msg := "Supplied Repository does not satisfy RepositoryIfc"
+	l.Error(msg)
+	return errors.New(msg)
 }
 
 // Get a Resource with the specified path from our set of Resource repositories
 func (rm *RepositoryManager) GetResource(path string) *Resource {
 	// Scan UP the list of Resource repositories in the search for this Resource by path
 	for _, repo := range rm.repositories {
-		res := repo.GetResource(path)
+		res := (*repo).GetResource(path)
 		if nil != res { return res }
 	}
 	return nil
