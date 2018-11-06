@@ -71,33 +71,58 @@ func (cfg *Config) GetSubset(prefix string) *Config {
 	return &res
 }
 
+// Dump our configuration data
+func (cfg *Config) DumpConfig() {
+	l := GetLogger()
+	l.Crazy("Config:")
+	l.Crazy("--------------------------")
+	for k, v := range *cfg {
+		l.Crazy(fmt.Sprintf("\t'%s': '%s'", k, v))
+	}
+	l.Crazy("--------------------------")
+}
+
+// Load our JSON configuration data from a string
+// JSON data may only be in the form of an object with named properties with string values
+func (cfg *Config) LoadFromJsonString(configJson string) {
+	loadFromStringOrPanic(configJson, cfg)
+	cfg.DumpConfig()
+}
+
+func loadFromStringOrPanic(configJson string, target interface{}) {
+	if err := loadFromString(configJson, target); nil != err {
+		l := GetLogger()
+		msg := fmt.Sprintf("Config.loadFromStringOrPanic(): %s", err.Error())
+		l.Fatal(msg)
+		panic(msg)
+	}
+}
+
+func loadFromString(configJson string, target interface{}) error {
+	return json.Unmarshal([]byte(configJson), &target);
+}
+
 // Load our JSON configuration data from a file on disk
 // JSON data may only be in the form of an object with named properties with string values
-func (cfg *Config) LoadJsonConfiguration(configFile string) {
+func (cfg *Config) LoadFromJsonFile(configFile string) {
 	LoadJsonOrPanic(configFile, cfg)
 	cfg.DumpConfig()
 }
 
-// Dump our configuration data
-func (cfg *Config) DumpConfig() {
-	l := GetLogger()
-	l.Trace("Config:")
-	l.Trace("--------------------------")
-	for k, v := range *cfg {
-		l.Trace(fmt.Sprintf("\t'%s': '%s'", k, v))
-	}
-	l.Trace("--------------------------")
+// TODO: DEPRECATED; replace calls with LoadFromJsonFile() above
+func (cfg *Config) LoadJsonConfiguration(configFile string) {
+	cfg.LoadFromJsonFile(configFile)
 }
 
 // Generic JSON load or panic
 // The provided target should be a pointer to where we will dump the decoded JSON result
 func LoadJsonOrPanic(jsonFile string, target interface{}) {
-	err := LoadJson(jsonFile, target)
-        if err == nil { return }
-	l := GetLogger()
-	msg := fmt.Sprintf("Config: LoadJsonOrPanic(): %s", err.Error())
-	l.Fatal(msg)
-	panic(msg)
+	if err := LoadJson(jsonFile, target); err != nil {
+		l := GetLogger()
+		msg := fmt.Sprintf("Config: LoadJsonOrPanic(): %s", err.Error())
+		l.Fatal(msg)
+		panic(msg)
+	}
 }
 
 // Generic JSON load (into ANY interface)
