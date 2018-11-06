@@ -60,12 +60,13 @@ func (cfg *Config) HasAll(keys *[]string) bool {
 	return true
 }
 
-//  Get configuration datum whose keys begin with the base string...
-func (cfg *Config) GetSubset(base string) *Config {
+// Get configuration datum whose keys begin with the prefix...
+// We also strip the prefix off leaving just the interesting parts
+func (cfg *Config) GetSubset(prefix string) *Config {
 	res := make(Config)
 	for k, v := range *cfg {
-		if ! strings.HasPrefix(k, base) { continue }
-		res[k] = v
+		if ! strings.HasPrefix(k, prefix) { continue }
+		res[k] = v[len(prefix):]
 	}
 	return &res
 }
