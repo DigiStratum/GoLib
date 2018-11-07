@@ -100,7 +100,7 @@ func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, patt
 	ep.SetPattern(pattern)
 
 	ep.securityPolicy = NewSecurityPolicy()
-	ep.methods = []string{}
+	p.methods = []string{}
 
 	// Find which methods this Endpoint actually implements
 	l := lib.GetLogger()
@@ -159,7 +159,7 @@ func (ep *Endpoint) SetPattern(pattern string) {
 		ep.pattern = pattern
 		return
 	}
-	ident := fmt.Sprintf("Module: '%s', Endpoint: '%s'", ep.moduleConfig.Get("module.name"), ep.name)
+	ident := fmt.Sprintf("Module: '%s', Endpoint: '%s'", ep.moduleConfig.Get("name"), ep.name)
 	message := fmt.Sprintf("Cannot set pattern for Endpoint (%s) to (%s) as it is already set to (%s)", ident, pattern, ep.pattern)
 	l := lib.GetLogger()
 	l.Warn(message)

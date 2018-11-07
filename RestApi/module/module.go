@@ -90,12 +90,12 @@ func (module *Module) GetSecurityPolicy() *SecurityPolicy {
 // Server needs to know our module's path which it will use to map requests to us
 func (module Module) GetPath() ModulePath {
 	// http://hostname/server.path/module.path/endpoint.pattern
-	return ModulePath(module.moduleConfig.Get("module.path"))
+	return ModulePath(module.moduleConfig.Get("path"))
 }
 
 // Server wants to know our module's name
 func (module Module) GetName() string {
-	return module.moduleConfig.Get("module.name")
+	return module.moduleConfig.Get("name")
 }
 
 // Server wants to send us requests to be handled
@@ -105,7 +105,7 @@ func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpRespons
 	l.Trace(fmt.Sprintf(
 		"[%s] Module (%s): %s %s",
 		ctx.GetRequestId(),
-		module.moduleConfig.Get("module.name"),
+		module.moduleConfig.Get("name"),
 		request.GetMethod(),
 		request.GetURL(),
 	))
