@@ -100,7 +100,7 @@ func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, patt
 	ep.SetPattern(pattern)
 
 	ep.securityPolicy = NewSecurityPolicy()
-	p.methods = []string{}
+	ep.methods = []string{}
 
 	// Find which methods this Endpoint actually implements
 	l := lib.GetLogger()

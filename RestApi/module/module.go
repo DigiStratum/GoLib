@@ -36,6 +36,7 @@ import(
 	"fmt"
 
 	lib "github.com/DigiStratum/GoLib"
+	res "github.com/DigiStratum/GoLib/Resources"
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
@@ -54,14 +55,47 @@ type Module struct {
 	serverConfig	*lib.Config
 	moduleConfig	*lib.Config
 	securityPolicy	*SecurityPolicy
+	staticRepo	*res.Repository
 }
 
 // Make a new one!
-func NewModule() *Module {
+func NewModule(staticRepo *res.Repository) *Module {
+
+	// Load Module Config from static Resource Repository
+	configResource := staticRepo.GetResource("config/config.json")
+	if nil == configResource {
+		l := lib.GetLogger()
+		l.Error("Module.NewModule() - No Module Config at res/config/config.json")
+		return nil
+	}
+	configJson := configResource.GetContent()
+	if nil == configJson {
+		l := lib.GetLogger()
+		l.Error("Module.NewModule() - Failed to retrieve Module Config JSON content")
+		return nil
+	}
+
+	// Validate that the Config has what we need for a Module!
+	config := lib.NewConfig()
+	config.LoadFromJsonString(*configJson)
+	requiredConfig := []string{ "name", "version", "path" }
+	if ! (config.HasAll(&requiredConfig)) {
+		l := lib.GetLogger()
+		l.Error("Module.NewModule() - Incomplete Module Config provided")
+		return nil
+	}
+
+	// Adjust our SecurityPolicy (affects all Endpoints under this Module)
+	sp := NewSecurityPolicy()
+	if "true" == config.Get("requireauth") {
+		sp.SetRequireAuthentication(true)
+	}
+
 	return &Module{
-		controller: GetController(),
-		moduleConfig: lib.NewConfig(),
-		securityPolicy:	NewSecurityPolicy(),
+		controller:	GetController(),
+		moduleConfig:	config,
+		securityPolicy:	sp,
+		staticRepo:	staticRepo,
 	}
 }
 
