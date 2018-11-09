@@ -104,7 +104,7 @@ func (module *Module) Configure(serverConfig *lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Module: Configure")
 	// Copy over the server configuration data
-	module.serverConfig = serverConfig
+	module.serverConfig = serverConfig.GetCopy()
 
 	// Initialize our controller
 	module.controller.SetSecurityPolicy(module.GetSecurityPolicy())

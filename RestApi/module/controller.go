@@ -22,12 +22,6 @@ type controllerEPPVMap		map[EndpointPattern]controllerEPVMap
 type controllerEPMPVMap		map[EndpointMethod]controllerEPPVMap
 type regexpCache		map[string]*regexp.Regexp
 
-type ControllerIfc interface {
-	Configure(serverConfig *lib.Config, moduleConfig *lib.Config)
-	AddEndpoint(endpoint *EndpointIfc)
-	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
-}
-
 type Controller struct {
 	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
 	serverConfig	*lib.Config		// Server configuration cache
@@ -83,7 +77,7 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 					// wot? Not an Endpoint!
 					l.Error(fmt.Sprintf(
 						"Controller: Non-Endpoint given to Controller in Module '%s'",
-						ctrlr.moduleConfig.Get("module.name"),
+						ctrlr.moduleConfig.Get("name"),
 					))
 				}
 			}
@@ -91,11 +85,15 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	}
 }
 
-// Add a single Endpoint to this Controller
-func (ctrlr *Controller) AddEndpoint(endpoint EndpointIfc) {
-	// Get the Endpoint's Pattern/Version
+// Add an Endpoint to this Controller
+func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, version string) {
+
+	// Initialize the endpoint
+	endpoint := concreteEndpoint.(EndpointIfc)
+	endpoint.Init(concreteEndpoint, name, version)
+
+	// Get the Endpoint's Pattern
 	epp := EndpointPattern(endpoint.GetPattern())
-	epv := EndpointVersion(endpoint.GetVersion())
 
 	// See that the registry has an entry for each method/pattern/version for this Endpoint
 	methods := endpoint.GetMethods()
@@ -112,8 +110,8 @@ func (ctrlr *Controller) AddEndpoint(endpoint EndpointIfc) {
 		}
 
 		// If this version isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpoints)[epm][epp][epv]; !ok {
-			(*ctrlr.endpoints)[epm][epp][epv] = endpoint
+		if _, ok := (*ctrlr.endpoints)[epm][epp][EndpointVersion(version)]; !ok {
+			(*ctrlr.endpoints)[epm][epp][EndpointVersion(version)] = endpoint
 		}
 	}
 }

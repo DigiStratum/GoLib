@@ -72,18 +72,20 @@ type EndpointName		string
 
 type EndpointIfc interface {
 	Configure(serverConfig *lib.Config, moduleConfig *lib.Config)
+	Init(concreteEndpoint interface{}, name string, version string)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
 	GetVersion() string
-	GetMethods() []string
 	GetPattern() string
-	SetPattern(pattern string)
+	GetMethods() []string
+	//SetPattern(pattern string)
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
 type Endpoint struct {
         serverConfig    *lib.Config	// Server configuration copy
         moduleConfig    *lib.Config	// Module configuration copy
+	endpointConfig	*lib.Config	// Endpoint configuration
         name            string		// Unique name of this Endpoint
         version         string		// Version of this Endpoint
         pattern         string		// Pattern which matches URI's to us (relative to Module)
@@ -92,22 +94,26 @@ type Endpoint struct {
 }
 
 // Initialize
-func (ep *Endpoint) Init(endpoint EndpointIfc, name string, version string, pattern string) {
+func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version string) {
+	l := lib.GetLogger()
+	l.Trace(fmt.Sprintf("Endpoint (%s): Init()", name))
+
+	// TODO: Verify that concreteEndpoint implements EndpointIfc
 
 	// Capture basic properties
-	ep.SetName(name)
-	ep.SetVersion(version)
-	ep.SetPattern(pattern)
+	ep.name = name
+	ep.version = version
+
 
 	ep.securityPolicy = NewSecurityPolicy()
 	ep.methods = []string{}
 
 	// Find which methods this Endpoint actually implements
-	l := lib.GetLogger()
 	implementedMethods := make(map[string]bool)
 	for _, method := range supportedMethods {
 		implemented := false
-		if implementsMethod(method, endpoint) {
+		//if implementsMethod(method, endpoint) {
+		if implementsMethod(method, concreteEndpoint) {
 			ep.methods = append(ep.methods, method)
 			implemented = true
 		}
@@ -138,9 +144,17 @@ func implementsMethod(method string, endpoint interface{}) bool {
 }
 
 // Capture the configuration data for this endpoint
+// We are going to make a copy of the configuration to remove the
+// temptation for an Endpoint to modify the Server/Module config
 func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
-	ep.serverConfig = serverConfig
-	ep.moduleConfig = moduleConfig
+	l := lib.GetLogger()
+	l.Trace(fmt.Sprintf("Endpoint (%s): Configure()", ep.name))
+	ep.serverConfig = serverConfig.GetCopy()
+	ep.moduleConfig = moduleConfig.GetCopy()
+
+	// The Endpoint's Config is the subset of the Module Config beginning with Endpoint's name
+	ep.endpointConfig = moduleConfig.GetSubset(ep.name)
+	ep.pattern = ep.endpointConfig.Get("pattern")
 }
 
 // Endpoint needs to be able to access its own Security Policy
@@ -153,6 +167,8 @@ func (ep *Endpoint) GetSecurityPolicy() *SecurityPolicy {
 // This is useful for endpoints which are generally useful in many Modules, and may need to be
 // mapped differently, depending on the application
 func (ep *Endpoint) SetPattern(pattern string) {
+	l := lib.GetLogger()
+	l.Trace(fmt.Sprintf("Endpoint (%s): SetPattern('%s')", ep.name, pattern))
 	// We only allow the Module to set our pattern if one is not already set
 	if "" == ep.pattern {
 		// TODO: Validate this somehow? Module is responsible for capturing this change for itself and passing on to us
@@ -160,8 +176,7 @@ func (ep *Endpoint) SetPattern(pattern string) {
 		return
 	}
 	ident := fmt.Sprintf("Module: '%s', Endpoint: '%s'", ep.moduleConfig.Get("name"), ep.name)
-	message := fmt.Sprintf("Cannot set pattern for Endpoint (%s) to (%s) as it is already set to (%s)", ident, pattern, ep.pattern)
-	l := lib.GetLogger()
+	message := fmt.Sprintf("Cannot set pattern for (%s) to (%s) as it is already set to (%s)", ident, pattern, ep.pattern)
 	l.Warn(message)
 }
 
@@ -175,21 +190,23 @@ func (ep *Endpoint) GetVersion() string {
 	return ep.version
 }
 
+/*
 // Set the version
 func (ep *Endpoint) SetVersion(version string) {
 	ep.version = version
 }
-
+*/
 // Return our name
 func (ep *Endpoint) GetName() string {
 	return ep.name
 }
 
+/*
 // Set the name
 func (ep *Endpoint) SetName(name string) {
 	ep.name = name
 }
-
+*/
 // Return our list of methods
 // This is used by the Controller to add us to the map to send us requests.
 func (ep *Endpoint) GetMethods() []string {

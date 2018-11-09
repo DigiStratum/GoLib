@@ -71,6 +71,14 @@ func (cfg *Config) GetSubset(prefix string) *Config {
 	return &res
 }
 
+// Get a full copy of this Config
+// This is so that we can give away a copy to someone else without allowing them to tamper with us
+func (cfg *Config) GetCopy() *Config {
+	res := make(Config)
+	for k, v := range *cfg { res[k] = v }
+	return &res
+}
+
 // Dump our configuration data
 func (cfg *Config) DumpConfig() {
 	l := GetLogger()
