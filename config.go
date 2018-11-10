@@ -24,8 +24,6 @@ import(
 	"fmt"
 	"encoding/json"
 	"errors"
-
-	res "github.com/DigiStratum/GoLib/Resources"
 )
 
 type Config map[string]string
@@ -35,40 +33,14 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
-// Make a new one of these from a JSON Repository Resource
-func NewConfigFromRepositoryJson(repository *res.Repository, resourcePath string) *Config, err {
+// Check whether this Config is empty (has no properties)
+func (cfg *Config) IsEmpty() bool {
+	return 0 == cfg.Size()
+}
 
-	// Check the Repository
-	if nil == repository {
-		err := errors.New("Config: Repository was nil")
-		GetLogger().Error(err.Error())
-		return nil, err
-	}
-
-	// Request the JSON Resource
-	configResource := repository.GetResource(resourcePath)
-	if nil == configResource {
-		err := errors.New(fmt.Sprintf("Config: Repository does not have Resource with path: '%s'", resourcePath))
-		GetLogger().Error(err.Error())
-		return nil, err
-	}
-
-	// Get the JSON Resource content
-	configJson := configResource.GetContent()
-	if nil == configJson {
-		err := errors.New(fmt.Sprintf("Config: Repository gave no data for Resource with path: '%s'", resourcePath))
-		GetLogger().Error(err.Error())
-		return nil, err
-	}
-
-	// Load up a Config structure from the JSON
-	config := NewConfig()
-	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
-		GetLogger().Error(err.Error())
-		return nil, err
-	}
-
-	return config, nil
+// Get the number of properties in this Config
+func (cfg *Config) Size() int {
+	return len(*cfg)
 }
 
 // Merge some additional configuration data on top of our own
