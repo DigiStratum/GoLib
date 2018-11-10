@@ -65,7 +65,7 @@ type Module struct {
 func NewModule(repository *res.Repository, name string) *Module {
 
 	// Load Module Config from Resource Repository
-	allConfig, err := lib.Config.NewFromRepositoryJson(repository, "config/config.json")
+	allConfig, err := res.NewRepositoryConfig(repository, "config/config.json")
 
 	// Validate that the Config has what we need for a Module!
 	config := allConfig.GetSubset("module." + name + ".")
