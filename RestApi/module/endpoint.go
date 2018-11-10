@@ -47,6 +47,8 @@ of the server, not to give the client a choice - that is done at the Module laye
 
 ref: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
 
+TODO: Document the initialization sequence, pasing of Config data, etc.
+
 */
 
 import (
@@ -110,7 +112,6 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 	implementedMethods := make(map[string]bool)
 	for _, method := range supportedMethods {
 		implemented := false
-		//if implementsMethod(method, endpoint) {
 		if implementsMethod(method, concreteEndpoint) {
 			ep.methods = append(ep.methods, method)
 			implemented = true
@@ -125,6 +126,12 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 	}
 
 	l.Trace(fmt.Sprintf("Endpoint (%s): Methods Implemented: [%s]", name, strings.Join(ep.methods, ",")))
+
+	// If this Endpoint is Configurable...
+	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
+		// Hit the Configure method!
+		configurableEndpoint.Configure(ep.serverConfig, ep.moduleConfig, ep.endpointConfig)
+	}
 }
 
 // Does the supplied Endpoint implement the interface for the specified Method?
@@ -270,6 +277,10 @@ func (endpoint *Endpoint) HandleOptions(request *rest.HttpRequest) *rest.HttpRes
 	hdrs.Set("allow", strings.Join(endpoint.methods, ","))
 	hlpr := rest.GetHelper()
 	return hlpr.ResponseWithHeaders(rest.STATUS_OK, nil, &hdrs)
+}
+
+type ConfigurableEndpointIfc interface {
+	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, endpointConfig *lib.Config)
 }
 
 type GetEndpointIfc interface {
