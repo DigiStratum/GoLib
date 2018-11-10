@@ -71,7 +71,7 @@ type EndpointVersion		string
 type EndpointName		string
 
 type EndpointIfc interface {
-	Configure(serverConfig *lib.Config, moduleConfig *lib.Config)
+	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config)
 	Init(concreteEndpoint interface{}, name string, version string)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
@@ -146,7 +146,7 @@ func implementsMethod(method string, endpoint interface{}) bool {
 // Capture the configuration data for this endpoint
 // We are going to make a copy of the configuration to remove the
 // temptation for an Endpoint to modify the Server/Module config
-func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
+func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
 
 	// Endpoint-specific Config properties have prefix: "endpoint.{Endpoint name}."
 	configPrefix := "endpoint." + ep.name + "."
@@ -156,8 +156,16 @@ func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config
 	ep.serverConfig = serverConfig.GetCopy()
 	ep.moduleConfig = moduleConfig.GetCopy()
 
-	// The Endpoint's Config is the subset of the Module Config
-	ep.endpointConfig = moduleConfig.GetSubset(configPrefix)
+	// The Endpoint's Config is the subset of the extra Config
+	ep.endpointConfig = extraConfig.GetSubset(configPrefix)
+	requiredConfig := []string{ "version", "pattern" }
+	if ! (ep.endpointConfig.HasAll(&requiredConfig)) {
+		l := lib.GetLogger()
+		l.Error(fmt.Sprintf("Endpoint{%s}.Configure() - Incomplete Endpoint Config provided", ep.name))
+		return nil
+	}
+	config.Set("name", name) // Reflect name into Module Config for reference
+
 	ep.pattern = ep.endpointConfig.Get("pattern")
 }
 

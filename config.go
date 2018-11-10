@@ -79,10 +79,28 @@ func (cfg *Config) HasAll(keys *[]string) bool {
 // Get configuration datum whose keys begin with the prefix...
 // We also strip the prefix off leaving just the interesting parts
 func (cfg *Config) GetSubset(prefix string) *Config {
+	return cfg.getSubset(prefix, true)
+}
+
+// Get configuration datum whose keys DO NOT begin with the prefix...
+// We also strip the prefix off leaving just the interesting parts
+func (cfg *Config) GetInverseSubset(prefix string) *Config {
+	return cfg.getSubset(prefix, false)
+}
+
+// Get configuration datum whose keys Do/Don't begin with the prefix...
+// Return the matches if keepMatches, else return the NON-matches
+func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 	res := make(Config)
 	for k, v := range *cfg {
-		if ! strings.HasPrefix(k, prefix) { continue }
-		res[k] = v[len(prefix):]
+		matches := strings.HasPrefix(k, prefix)
+		if (matches) {
+			if ! keepMatches { continue }
+			res[k] = v[len(prefix):]
+		} else {
+			if keepMatches { continue }
+			res[k] = v
+		}
 	}
 	return &res
 }

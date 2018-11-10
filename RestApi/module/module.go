@@ -52,8 +52,9 @@ type ModuleIfc interface {
 
 type Module struct {
 	controller	*Controller
-	serverConfig	*lib.Config
-	moduleConfig	*lib.Config
+	serverConfig	*lib.Config	// Config passed to use from the Server
+	moduleConfig	*lib.Config	// Our own Config that we initialize with
+	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
 	securityPolicy	*SecurityPolicy
 	repository	*res.Repository
 }
@@ -68,7 +69,8 @@ func NewModule(repository *res.Repository, name string) *Module {
 	allConfig, err := res.NewRepositoryConfig(repository, "config/config.json")
 
 	// Validate that the Config has what we need for a Module!
-	config := allConfig.GetSubset("module." + name + ".")
+	modulePrefix := "module." + name + "."
+	config := allConfig.GetSubset(modulePrefix)
 	requiredConfig := []string{ "version", "path" }
 	if ! (config.HasAll(&requiredConfig)) {
 		l := lib.GetLogger()
@@ -80,6 +82,7 @@ func NewModule(repository *res.Repository, name string) *Module {
 	return &Module{
 		controller:	GetController(),
 		moduleConfig:	config,
+		extraConfig:	allConfig.GetInverseSubset(modulePrefix),
 		securityPolicy:	NewSecurityPolicy(config.GetSubset("auth")),
 		repository:	repository,
 	}
@@ -89,12 +92,13 @@ func NewModule(repository *res.Repository, name string) *Module {
 func (module *Module) Configure(serverConfig *lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Module: Configure")
-	// Copy over the server configuration data
+
+	// Copy Server configuration data for reference
 	module.serverConfig = serverConfig.GetCopy()
 
 	// Initialize our controller
 	module.controller.SetSecurityPolicy(module.GetSecurityPolicy())
-	module.controller.Configure(module.serverConfig, module.moduleConfig)
+	module.controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
 }
 
 // Module need to be able to set our configuration

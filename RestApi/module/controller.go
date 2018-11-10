@@ -26,6 +26,7 @@ type Controller struct {
 	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
 	serverConfig	*lib.Config		// Server configuration cache
 	moduleConfig	*lib.Config		// Module configuration cache
+	extraConfig	*lib.Config		// Extra configuration for Endpoints
 	endpoints	*controllerEPMPVMap	// Registry of all our Endpoints
 	patternCache	*regexpCache		// Compiled Regex Endpoint pattern cache
 }
@@ -48,6 +49,7 @@ func NewController() *Controller {
 	return &Controller{
 		serverConfig:	lib.NewConfig(),
 		moduleConfig:	lib.NewConfig(),
+		extraConfig:	lib.NewConfig(),
 		endpoints:	&c,
 		patternCache:	&r,
 	}
@@ -59,25 +61,27 @@ func (ctrlr *Controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
 }
 
 // Module initializes a Controller
-func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
+func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
+	moduleName := ctrlr.moduleConfig.Get("name")
 	l := lib.GetLogger()
-	l.Trace("Controller: Configure")
+	l.Trace(fmt.Sprintf("Controller{%s}.Configure()", moduleName))
 
 	// Capture the server and module configuration data for future reference
 	ctrlr.serverConfig = serverConfig
 	ctrlr.moduleConfig = moduleConfig
+	ctrlr.extraConfig = extraConfig
 
 	// Configure the endpoints
 	for _, patterns := range *ctrlr.endpoints {
 		for _, versions := range patterns {
 			for _, endpoint := range versions {
 				if ep, ok := endpoint.(EndpointIfc); ok {
-					ep.Configure(serverConfig, moduleConfig)
+					ep.Configure(serverConfig, moduleConfig, extraConfig)
 				} else {
 					// wot? Not an Endpoint!
 					l.Error(fmt.Sprintf(
-						"Controller: Non-Endpoint given to Controller in Module '%s'",
-						ctrlr.moduleConfig.Get("name"),
+						"Controller{%s}.Configure(): Non-Endpoint given to Controller",
+						moduleName,
 					))
 				}
 			}
