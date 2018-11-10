@@ -147,13 +147,17 @@ func implementsMethod(method string, endpoint interface{}) bool {
 // We are going to make a copy of the configuration to remove the
 // temptation for an Endpoint to modify the Server/Module config
 func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config) {
+
+	// Endpoint-specific Config properties have prefix: "endpoint.{Endpoint name}."
+	configPrefix := "endpoint." + ep.name + "."
+
 	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Endpoint (%s): Configure()", ep.name))
+	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(); Prefix: '%s'", ep.name, configPrefix))
 	ep.serverConfig = serverConfig.GetCopy()
 	ep.moduleConfig = moduleConfig.GetCopy()
 
-	// The Endpoint's Config is the subset of the Module Config beginning with Endpoint's name
-	ep.endpointConfig = moduleConfig.GetSubset(ep.name)
+	// The Endpoint's Config is the subset of the Module Config
+	ep.endpointConfig = moduleConfig.GetSubset(configPrefix)
 	ep.pattern = ep.endpointConfig.Get("pattern")
 }
 

@@ -55,47 +55,33 @@ type Module struct {
 	serverConfig	*lib.Config
 	moduleConfig	*lib.Config
 	securityPolicy	*SecurityPolicy
-	staticRepo	*res.Repository
+	repository	*res.Repository
 }
 
-// Make a new one!
-func NewModule(staticRepo *res.Repository) *Module {
+// Make a new one of these!
+// repository is where we can retrieve all our Module-specific assets (like configuration data)
+// name is the unique name of this Module which allows the Server to separate it from others
+// TODO: Validate name; non-empty, prefer [a-zA-Z0-9_-.]+ (not starting or ending with '.'!)
+func NewModule(repository *res.Repository, name string) *Module {
 
-	// Load Module Config from static Resource Repository
-	configResource := staticRepo.GetResource("config/config.json")
-	if nil == configResource {
-		l := lib.GetLogger()
-		l.Error("Module.NewModule() - No Module Config at res/config/config.json")
-		return nil
-	}
-	configJson := configResource.GetContent()
-	if nil == configJson {
-		l := lib.GetLogger()
-		l.Error("Module.NewModule() - Failed to retrieve Module Config JSON content")
-		return nil
-	}
+	// Load Module Config from Resource Repository
+	allConfig, err := lib.Config.NewFromRepositoryJson(repository, "config/config.json")
 
 	// Validate that the Config has what we need for a Module!
-	config := lib.NewConfig()
-	config.LoadFromJsonString(*configJson)
-	requiredConfig := []string{ "name", "version", "path" }
+	config := allConfig.GetSubset("module." + name + ".")
+	requiredConfig := []string{ "version", "path" }
 	if ! (config.HasAll(&requiredConfig)) {
 		l := lib.GetLogger()
 		l.Error("Module.NewModule() - Incomplete Module Config provided")
 		return nil
 	}
-
-	// Adjust our SecurityPolicy (affects all Endpoints under this Module)
-	sp := NewSecurityPolicy()
-	if "true" == config.Get("requireauth") {
-		sp.SetRequireAuthentication(true)
-	}
+	config.Set("name", name) // Reflect name into Module Config for reference
 
 	return &Module{
 		controller:	GetController(),
 		moduleConfig:	config,
-		securityPolicy:	sp,
-		staticRepo:	staticRepo,
+		securityPolicy:	NewSecurityPolicy(config.GetSubset("auth")),
+		repository:	repository,
 	}
 }
 

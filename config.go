@@ -7,6 +7,12 @@ This Config class associates basic helper functions to a simple name/value strin
 easier for dealing with simple configuration data. There you can load configuration data from JSON
 files, Get/Set individual configuration values, merge additional configuration data in, and more.
 
+JSON Config data may only be in the form of an object with named properties with string values. We
+generally pass around JSON strings as a pointer whenever we can to avoid copying potentially large
+JSON strings unnecessarily. As long as we are in a trusted code/library scope, this is fine; when
+we get into an untrusted code/library scope, we must revert to pass by value as needed to prevent
+unauthorized tampering.
+
 In addition to the explicit imports below, we also leverage the following classes from here:
  * Logger
 
@@ -18,13 +24,51 @@ import(
 	"fmt"
 	"encoding/json"
 	"errors"
+
+	res "github.com/DigiStratum/GoLib/Resources"
 )
 
 type Config map[string]string
 
-// Make a new one
+// Make a new one of these!
 func NewConfig() *Config {
 	return &Config{}
+}
+
+// Make a new one of these from a JSON Repository Resource
+func NewConfigFromRepositoryJson(repository *res.Repository, resourcePath string) *Config, err {
+
+	// Check the Repository
+	if nil == repository {
+		err := errors.New("Config: Repository was nil")
+		GetLogger().Error(err.Error())
+		return nil, err
+	}
+
+	// Request the JSON Resource
+	configResource := repository.GetResource(resourcePath)
+	if nil == configResource {
+		err := errors.New(fmt.Sprintf("Config: Repository does not have Resource with path: '%s'", resourcePath))
+		GetLogger().Error(err.Error())
+		return nil, err
+	}
+
+	// Get the JSON Resource content
+	configJson := configResource.GetContent()
+	if nil == configJson {
+		err := errors.New(fmt.Sprintf("Config: Repository gave no data for Resource with path: '%s'", resourcePath))
+		GetLogger().Error(err.Error())
+		return nil, err
+	}
+
+	// Load up a Config structure from the JSON
+	config := NewConfig()
+	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
+		GetLogger().Error(err.Error())
+		return nil, err
+	}
+
+	return config, nil
 }
 
 // Merge some additional configuration data on top of our own
@@ -91,33 +135,45 @@ func (cfg *Config) DumpConfig() {
 }
 
 // Load our JSON configuration data from a string
-// JSON data may only be in the form of an object with named properties with string values
-func (cfg *Config) LoadFromJsonString(configJson string) {
-	loadFromStringOrPanic(configJson, cfg)
+func (cfg *Config) LoadFromJsonString(configJson *string) {
+	loadFromJsonStringOrPanic(configJson, cfg)
 	cfg.DumpConfig()
 }
 
-func loadFromStringOrPanic(configJson string, target interface{}) {
-	if err := loadFromString(configJson, target); nil != err {
-		l := GetLogger()
-		msg := fmt.Sprintf("Config.loadFromStringOrPanic(): %s", err.Error())
-		l.Fatal(msg)
-		panic(msg)
-	}
+func loadFromJsonStringOrPanic(configJson *string, target interface{}) {
+	if err := loadFromJsonString(configJson, target); nil != err { panic(err.Error()) }
 }
 
-func loadFromString(configJson string, target interface{}) error {
-	return json.Unmarshal([]byte(configJson), &target);
+// Load our JSON configuration data from a string (or return an error)
+func (cfg *Config) LoadFromJsonStringOrError(configJson *string) error {
+	if err := loadFromJsonString(configJson, cfg); nil != err {
+		return err
+	}
+	cfg.DumpConfig()
+	return nil
+}
+
+func loadFromJsonString(configJson *string, target interface{}) error {
+	if nil == configJson {
+		msg := "Config.loadFromJsonString(): We were given nil for the Config JSON"
+		GetLogger().Error(msg)
+		return  errors.New(msg)
+	}
+	if err := json.Unmarshal([]byte(*configJson), &target); err != nil {
+		msg := fmt.Sprintf("Config.loadFromJsonString(): Failed to unmarshall JSON: %s", err.Error())
+		GetLogger().Error(msg)
+		return errors.New(msg)
+	}
+	return nil
 }
 
 // Load our JSON configuration data from a file on disk
-// JSON data may only be in the form of an object with named properties with string values
 func (cfg *Config) LoadFromJsonFile(configFile string) {
 	LoadJsonOrPanic(configFile, cfg)
 	cfg.DumpConfig()
 }
 
-// TODO: DEPRECATED; replace calls with LoadFromJsonFile() above
+// FIXME: DEPRECATED; replace calls with LoadFromJsonFile() above
 func (cfg *Config) LoadJsonConfiguration(configFile string) {
 	cfg.LoadFromJsonFile(configFile)
 }
@@ -126,15 +182,15 @@ func (cfg *Config) LoadJsonConfiguration(configFile string) {
 // The provided target should be a pointer to where we will dump the decoded JSON result
 func LoadJsonOrPanic(jsonFile string, target interface{}) {
 	if err := LoadJson(jsonFile, target); err != nil {
-		l := GetLogger()
-		msg := fmt.Sprintf("Config: LoadJsonOrPanic(): %s", err.Error())
-		l.Fatal(msg)
+		msg := fmt.Sprintf("Config.LoadJsonOrPanic(): %s", err.Error())
+		GetLogger().Fatal(msg)
 		panic(msg)
 	}
 }
 
 // Generic JSON load (into ANY interface)
 // The provided target should be a pointer to where we will dump the decoded JSON result
+// TODO: relocate this to a general purpose JSON library as it is not Config-specific
 func LoadJson(jsonFile string, target interface{}) error {
         file, err := os.Open(jsonFile)
         if nil == err {

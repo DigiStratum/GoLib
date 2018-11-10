@@ -1,5 +1,13 @@
 package module
 
+/*
+
+SecurityPolicy - enforce HTTP request/response secuirty based on configured constraints
+
+TODO: Expand to actually check HttpRequest auth with configured authenticator(s)
+
+*/
+
 import (
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
@@ -8,10 +16,21 @@ type SecurityPolicy struct {
 	requireAuthentication	bool
 }
 
-func NewSecurityPolicy() *SecurityPolicy {
+// Make a new one of these!
+func NewSecurityPolicy(config *lib.Config) *SecurityPolicy {
+
+	// By default we do nothing
 	sp := SecurityPolicy{
 		requireAuthentication:	false,
 	}
+
+	// By configuration, we start enabling things...
+	if len(config) > 0 {
+		if "true" == config.Get("isrequired") {
+			sp.SetRequireAuthentication(true)
+		}
+	}
+
 	return &sp
 }
 
