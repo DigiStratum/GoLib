@@ -71,6 +71,7 @@ type EndpointVersion		string
 type EndpointName		string
 
 type EndpointIfc interface {
+	// TODO: Add error return value for Configure()
 	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config)
 	Init(concreteEndpoint interface{}, name string, version string)
 	GetSecurityPolicy() *SecurityPolicy
@@ -103,9 +104,6 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 	// Capture basic properties
 	ep.name = name
 	ep.version = version
-
-
-	ep.securityPolicy = NewSecurityPolicy()
 	ep.methods = []string{}
 
 	// Find which methods this Endpoint actually implements
@@ -162,11 +160,12 @@ func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config
 	if ! (ep.endpointConfig.HasAll(&requiredConfig)) {
 		l := lib.GetLogger()
 		l.Error(fmt.Sprintf("Endpoint{%s}.Configure() - Incomplete Endpoint Config provided", ep.name))
-		return nil
+		return
 	}
-	config.Set("name", name) // Reflect name into Module Config for reference
+	ep.endpointConfig.Set("name", ep.name) // Reflect name into Module Config for reference
 
 	ep.pattern = ep.endpointConfig.Get("pattern")
+	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
 }
 
 // Endpoint needs to be able to access its own Security Policy

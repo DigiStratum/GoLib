@@ -67,6 +67,11 @@ func NewModule(repository *res.Repository, name string) *Module {
 
 	// Load Module Config from Resource Repository
 	allConfig, err := res.NewRepositoryConfig(repository, "config/config.json")
+	if nil != err {
+		l := lib.GetLogger()
+		l.Error(fmt.Sprintf("Module.NewModule() - Error loading JSON Config from Repository: %s", err.Error()))
+		return nil
+	}
 
 	// Validate that the Config has what we need for a Module!
 	modulePrefix := "module." + name + "."
