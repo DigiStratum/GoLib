@@ -96,7 +96,8 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 		matches := strings.HasPrefix(k, prefix)
 		if (matches) {
 			if ! keepMatches { continue }
-			res[k] = v[len(prefix):]
+			strippedKey := k[len(prefix):]
+			res[strippedKey] = v
 		} else {
 			if keepMatches { continue }
 			res[k] = v
