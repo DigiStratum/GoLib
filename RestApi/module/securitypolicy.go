@@ -9,6 +9,7 @@ TODO: Expand to actually check HttpRequest auth with configured authenticator(s)
 */
 
 import (
+	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
@@ -25,7 +26,7 @@ func NewSecurityPolicy(config *lib.Config) *SecurityPolicy {
 	}
 
 	// By configuration, we start enabling things...
-	if len(config) > 0 {
+	if ! config.IsEmpty() {
 		if "true" == config.Get("isrequired") {
 			sp.SetRequireAuthentication(true)
 		}
