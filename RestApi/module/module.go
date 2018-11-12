@@ -44,7 +44,7 @@ type ModulePath	string
 type ModuleSet	map[ModulePath]ModuleIfc
 
 type ModuleIfc interface {
-	Configure(serverConfig *lib.Config)
+	Configure(serverConfig lib.Config)
 	GetPath() ModulePath
 	GetName() string
 	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
@@ -52,10 +52,9 @@ type ModuleIfc interface {
 
 type Module struct {
 	controller	*Controller
-	serverConfig	*lib.Config	// Config passed to use from the Server
+	serverConfig	*lib.Config	// Server Config passed to us
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
-	securityPolicy	*SecurityPolicy
 	repository	*res.Repository
 }
 
@@ -84,36 +83,34 @@ func NewModule(repository *res.Repository, name string) *Module {
 	}
 	config.Set("name", name) // Reflect name into Module Config for reference
 
+	// Set up our Controller singleton
+	controller := GetController()
+	controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
+
 	return &Module{
-		controller:	GetController(),
+		controller:	controller,
 		moduleConfig:	config,
 		extraConfig:	allConfig.GetInverseSubset(modulePrefix),
-		securityPolicy:	NewSecurityPolicy(config.GetSubset("auth")),
 		repository:	repository,
 	}
 }
 
 // Server needs to initialize this Module with its own configuration data for reference
-func (module *Module) Configure(serverConfig *lib.Config) {
+// Server Config is passed by value so that we can have a copy, but not tamper with original
+func (module *Module) Configure(serverConfig lib.Config) {
 	l := lib.GetLogger()
 	l.Trace("Module: Configure")
 
 	// Copy Server configuration data for reference
-	module.serverConfig = serverConfig.GetCopy()
+	module.serverConfig = &serverConfig
 
 	// Initialize our controller
-	module.controller.SetSecurityPolicy(module.GetSecurityPolicy())
 	module.controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
 }
 
 // Module need to be able to set our configuration
 func (module *Module) GetConfig() *lib.Config {
 	return module.moduleConfig
-}
-
-// Module/Controller need to be able to access their own Security Policy
-func (module *Module) GetSecurityPolicy() *SecurityPolicy {
-	return module.securityPolicy
 }
 
 // Server needs to know our module's path which it will use to map requests to us
@@ -128,6 +125,7 @@ func (module Module) GetName() string {
 }
 
 // Server wants to send us requests to be handled
+// TODO: Eliminate this hop: got from Server directly to Module Controller
 func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()

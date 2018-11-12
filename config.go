@@ -109,6 +109,11 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 // Get a full copy of this Config
 // This is so that we can give away a copy to someone else without allowing them to tamper with us
 func (cfg *Config) GetCopy() *Config {
+	if nil == cfg {
+		l := GetLogger()
+		l.Warn("Config.GetCopy() - *Config is nil!")
+		return nil
+	}
 	res := make(Config)
 	for k, v := range *cfg { res[k] = v }
 	return &res

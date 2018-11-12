@@ -42,7 +42,7 @@ func GetController() *Controller {
 	return controller
 }
 
-// Make a new one!
+// Make a new one of these!
 func NewController() *Controller {
 	c := make(controllerEPMPVMap)
 	r := make(regexpCache)
