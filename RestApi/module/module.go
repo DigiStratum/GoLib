@@ -40,12 +40,11 @@ import(
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
-type ModulePath	string
-type ModuleSet	map[ModulePath]ModuleIfc
+type ModuleSet	map[string]ModuleIfc
 
 type ModuleIfc interface {
 	Configure(serverConfig lib.Config)
-	GetPath() ModulePath
+	GetPath() string
 	GetName() string
 	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
@@ -114,9 +113,9 @@ func (module *Module) GetConfig() *lib.Config {
 }
 
 // Server needs to know our module's path which it will use to map requests to us
-func (module Module) GetPath() ModulePath {
+func (module Module) GetPath() string {
 	// http://hostname/server.path/module.path/endpoint.pattern
-	return ModulePath(module.moduleConfig.Get("path"))
+	return module.moduleConfig.Get("path")
 }
 
 // Server wants to know our module's name

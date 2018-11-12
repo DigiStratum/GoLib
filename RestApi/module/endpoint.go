@@ -74,7 +74,7 @@ type EndpointName		string
 
 type EndpointIfc interface {
 	// TODO: Add error return value for Configure()
-	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config)
+	Configure(serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
 	Init(concreteEndpoint interface{}, name string, version string)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
@@ -134,11 +134,13 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 
 	l.Trace(fmt.Sprintf("Endpoint{%s}.Init(): Methods Implemented: [%s]", name, strings.Join(ep.methods, ",")))
 
+/*
 	// If this Endpoint is Configurable...
 	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
 		// Hit the Configure method!
-		configurableEndpoint.Configure(ep.serverConfig, ep.moduleConfig, ep.endpointConfig)
+		configurableEndpoint.ConfigureEndpoint(ep.endpointConfig)
 	}
+*/
 }
 
 // Does the supplied Endpoint implement the interface for the specified Method?
@@ -156,30 +158,37 @@ func implementsMethod(method string, endpoint interface{}) bool {
 }
 
 // Capture the configuration data for this endpoint
-// We are going to make a copy of the configuration to remove the
-// temptation for an Endpoint to modify the Server/Module config
-func (ep *Endpoint) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
+// Server/Module config passed by value (copy) to prevent tampering
+func (ep *Endpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config) {
 
 	// Endpoint-specific Config properties have prefix: "endpoint.{Endpoint name}."
 	configPrefix := "endpoint." + ep.name + "."
 
 	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(); Prefix: '%s'", ep.name, configPrefix))
-	ep.serverConfig = serverConfig.GetCopy()
-	ep.moduleConfig = moduleConfig.GetCopy()
+	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Prefix is: '%s'", ep.name, configPrefix))
+	ep.serverConfig = &serverConfig
+	ep.moduleConfig = &moduleConfig
 
 	// The Endpoint's Config is the subset of the extra Config
 	ep.endpointConfig = extraConfig.GetSubset(configPrefix)
 	requiredConfig := []string{ "version", "pattern" }
 	if ! (ep.endpointConfig.HasAll(&requiredConfig)) {
 		l := lib.GetLogger()
-		l.Error(fmt.Sprintf("Endpoint{%s}.Configure() - Incomplete Endpoint Config provided", ep.name))
+		l.Error(fmt.Sprintf("Endpoint{%s}.Configure(): Incomplete Endpoint Config provided", ep.name))
 		return
 	}
 	ep.endpointConfig.Set("name", ep.name) // Reflect name into Module Config for reference
 
 	ep.pattern = ep.endpointConfig.Get("pattern")
 	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
+
+	// If this Endpoint is Configurable...
+	if configurableEndpoint, ok := interface{}(*ep).(ConfigurableEndpointIfc); ok {
+		// Hit the Configure method!
+		configurableEndpoint.ConfigureEndpoint(ep.endpointConfig)
+	} else {
+		l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Not a ConfigurableEndpoint", ep.name))
+	}
 }
 
 // Endpoint needs to be able to access its own Security Policy
@@ -287,7 +296,7 @@ func (endpoint *Endpoint) HandleOptions(request *rest.HttpRequest) *rest.HttpRes
 }
 
 type ConfigurableEndpointIfc interface {
-	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, endpointConfig *lib.Config)
+	ConfigureEndpoint(endpointConfig *lib.Config)
 }
 
 type GetEndpointIfc interface {

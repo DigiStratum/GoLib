@@ -76,7 +76,7 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 		for _, versions := range patterns {
 			for _, endpoint := range versions {
 				if ep, ok := endpoint.(EndpointIfc); ok {
-					ep.Configure(serverConfig, moduleConfig, extraConfig)
+					ep.Configure(*serverConfig, *moduleConfig, *extraConfig)
 				} else {
 					// wot? Not an Endpoint!
 					l.Error(fmt.Sprintf(
