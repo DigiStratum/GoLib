@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 	"strings"
+	"errors"
 )
 
 type logLevel uint
@@ -83,9 +84,8 @@ func (l *logger) SetMinLogLevel(level string) {
 }
 
 // Log some output
-func (l *logger) log(level logLevel, msg string) {
-	if level < l.minLogLevel { return }
-	t := time.Now()
+// Wrap level+msg in an error as a code-reduction convenience to any caller wanting to return it
+func (l *logger) log(level logLevel, msg string) error {
 	var prefix string
 	switch (level) {
 		case CRAZY: prefix = "CRAZY"
@@ -96,41 +96,47 @@ func (l *logger) log(level logLevel, msg string) {
 		case ERROR: prefix = "ERROR"
 		case FATAL: prefix = "FATAL"
 	}
-	fmt.Printf("%s thread:%s %5s %s\n", t.Format(time.RFC3339), l.threadId, prefix, msg)
+	logMsg := fmt.Sprintf("%5s %s", prefix, msg)
+	if level >= l.minLogLevel {
+		// Send the log message to StdOut (for now...)
+		t := time.Now()
+		fmt.Printf("%s thread:%s %s\n", t.Format(time.RFC3339), l.threadId, logMsg)
+	}
+	return errors.New(logMsg)
 }
 
 // Log CRAZY output
-func (l *logger) Crazy(msg string) {
-	l.log(CRAZY, msg)
+func (l *logger) Crazy(msg string) error {
+	return l.log(CRAZY, msg)
 }
 
 // Log TRACE output
-func (l *logger) Trace(msg string) {
-	l.log(TRACE, msg)
+func (l *logger) Trace(msg string) error {
+	return l.log(TRACE, msg)
 }
 
 // Log DEBUG output
-func (l *logger) Debug(msg string) {
-	l.log(DEBUG, msg)
+func (l *logger) Debug(msg string) error {
+	return l.log(DEBUG, msg)
 }
 
 // Log INFO output
-func (l *logger) Info(msg string) {
-	l.log(INFO, msg)
+func (l *logger) Info(msg string) error {
+	return l.log(INFO, msg)
 }
 
 // Log WARN output
-func (l *logger) Warn(msg string) {
-	l.log(WARN, msg)
+func (l *logger) Warn(msg string) error {
+	return l.log(WARN, msg)
 }
 
 // Log ERROR output
-func (l *logger) Error(msg string) {
-	l.log(ERROR, msg)
+func (l *logger) Error(msg string) error {
+	return l.log(ERROR, msg)
 }
 
 // Log FATAL output (caller should exit/panic after this)
-func (l *logger) Fatal(msg string) {
-	l.log(FATAL, msg)
+func (l *logger) Fatal(msg string) error {
+	return l.log(FATAL, msg)
 }
 
