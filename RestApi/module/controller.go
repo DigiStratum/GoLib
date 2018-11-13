@@ -27,8 +27,9 @@ type Controller struct {
 	serverConfig	*lib.Config		// Server configuration cache
 	moduleConfig	*lib.Config		// Module configuration cache
 	extraConfig	*lib.Config		// Extra configuration for Endpoints
-	endpoints	*controllerEPMPVMap	// Registry of all our Endpoints
 	patternCache	*regexpCache		// Compiled Regex Endpoint pattern cache
+	endpointMap	*controllerEPMPVMap	// Map of all our Endpoints
+	endpoints	[]interface{}		// Collection of distinct concrete endpoints
 }
 
 var controller *Controller
@@ -50,8 +51,9 @@ func NewController() *Controller {
 		serverConfig:	lib.NewConfig(),
 		moduleConfig:	lib.NewConfig(),
 		extraConfig:	lib.NewConfig(),
-		endpoints:	&c,
 		patternCache:	&r,
+		endpointMap:	&c,
+		endpoints:	make([]interface{}, 0),
 	}
 }
 
@@ -71,28 +73,26 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	ctrlr.moduleConfig = moduleConfig
 	ctrlr.extraConfig = extraConfig
 
-	// Configure the endpoints
-	for _, patterns := range *ctrlr.endpoints {
-		for _, versions := range patterns {
-			for _, endpoint := range versions {
-				if ep, ok := endpoint.(EndpointIfc); ok {
-					ep.Configure(*serverConfig, *moduleConfig, *extraConfig)
-				} else {
-					// wot? Not an Endpoint!
-					l.Error(fmt.Sprintf(
-						"Controller{%s}.Configure(): Non-Endpoint given to Controller",
-						moduleName,
-					))
-				}
-			}
+	// Configure all the Endpoints
+	for _, endpoint := range (*ctrlr).endpoints {
+		if ep, ok := endpoint.(EndpointIfc); ok {
+			ep.Configure(endpoint, *serverConfig, *moduleConfig, *extraConfig)
+		} else {
+			// wot? Not an Endpoint!
+			l.Error(fmt.Sprintf(
+				"Controller{%s}.Configure(): Non-Endpoint given to Controller",
+				moduleName,
+			))
 		}
 	}
 }
 
 // Add an Endpoint to this Controller
+// Endpoint uses this to self-register Endpoints at init() time
 func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, version string) {
 
-	// Initialize the endpoint
+	// Initialize the Endpoint
+	ctrlr.endpoints = append(ctrlr.endpoints, concreteEndpoint)
 	endpoint := concreteEndpoint.(EndpointIfc)
 	endpoint.Init(concreteEndpoint, name, version)
 
@@ -104,18 +104,18 @@ func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, 
 	for _, method := range methods {
 		// If this method isn't registered for this Controller, add it now
 		epm := EndpointMethod(method)
-		if _, ok := (*ctrlr.endpoints)[epm]; !ok {
-			(*ctrlr.endpoints)[epm] = make(controllerEPPVMap)
+		if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
+			(*ctrlr.endpointMap)[epm] = make(controllerEPPVMap)
 		}
 
 		// If this pattern isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpoints)[epm][epp]; !ok {
-			(*ctrlr.endpoints)[epm][epp] = make(controllerEPVMap)
+		if _, ok := (*ctrlr.endpointMap)[epm][epp]; !ok {
+			(*ctrlr.endpointMap)[epm][epp] = make(controllerEPVMap)
 		}
 
 		// If this version isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpoints)[epm][epp][EndpointVersion(version)]; !ok {
-			(*ctrlr.endpoints)[epm][epp][EndpointVersion(version)] = endpoint
+		if _, ok := (*ctrlr.endpointMap)[epm][epp][EndpointVersion(version)]; !ok {
+			(*ctrlr.endpointMap)[epm][epp][EndpointVersion(version)] = endpoint
 		}
 	}
 }
@@ -126,7 +126,7 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 
 	// Is the request method in our Endpoint registry?
 	epm := EndpointMethod(request.GetMethod())
-	if _, ok := (*ctrlr.endpoints)[epm]; !ok {
+	if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
 		return hlpr.ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
 
@@ -153,7 +153,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	// Find which Endpoint's pattern matches this request URI
 	// TODO: Test more specific patterns before more general ones
 	epm := EndpointMethod(request.GetMethod())
-	for pattern, versions := range (*ctrlr.endpoints)[epm] {
+	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
 		// Test the pattern
 		// ref: https://golang.org/pkg/regexp/#example_MatchString
 		//l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))

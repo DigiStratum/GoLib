@@ -74,7 +74,7 @@ type EndpointName		string
 
 type EndpointIfc interface {
 	// TODO: Add error return value for Configure()
-	Configure(serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
+	Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
 	Init(concreteEndpoint interface{}, name string, version string)
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
@@ -133,14 +133,6 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 	}
 
 	l.Trace(fmt.Sprintf("Endpoint{%s}.Init(): Methods Implemented: [%s]", name, strings.Join(ep.methods, ",")))
-
-/*
-	// If this Endpoint is Configurable...
-	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
-		// Hit the Configure method!
-		configurableEndpoint.ConfigureEndpoint(ep.endpointConfig)
-	}
-*/
 }
 
 // Does the supplied Endpoint implement the interface for the specified Method?
@@ -159,7 +151,7 @@ func implementsMethod(method string, endpoint interface{}) bool {
 
 // Capture the configuration data for this endpoint
 // Server/Module config passed by value (copy) to prevent tampering
-func (ep *Endpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config) {
+func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config) {
 
 	// Endpoint-specific Config properties have prefix: "endpoint.{Endpoint name}."
 	configPrefix := "endpoint." + ep.name + "."
@@ -183,7 +175,7 @@ func (ep *Endpoint) Configure(serverConfig lib.Config, moduleConfig lib.Config, 
 	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
 
 	// If this Endpoint is Configurable...
-	if configurableEndpoint, ok := interface{}(*ep).(ConfigurableEndpointIfc); ok {
+	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
 		// Hit the Configure method!
 		configurableEndpoint.ConfigureEndpoint(ep.endpointConfig)
 	} else {
