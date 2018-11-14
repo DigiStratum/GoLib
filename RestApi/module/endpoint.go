@@ -154,15 +154,15 @@ func implementsMethod(method string, endpoint interface{}) bool {
 func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config) {
 
 	// Endpoint-specific Config properties have prefix: "endpoint.{Endpoint name}."
-	configPrefix := "endpoint." + ep.name + "."
+	configPrefix := fmt.Sprintf("endpoint.%s.", ep.name)
 
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Prefix is: '%s'", ep.name, configPrefix))
 	ep.serverConfig = &serverConfig
 	ep.moduleConfig = &moduleConfig
 
-	// The Endpoint's Config is the subset of the extra Config
-	ep.endpointConfig = extraConfig.GetSubset(configPrefix)
+	// The Endpoint's Config is a subset of the Module Config
+	ep.endpointConfig = moduleConfig.GetSubset(configPrefix)
 	requiredConfig := []string{ "version", "pattern" }
 	if ! (ep.endpointConfig.HasAll(&requiredConfig)) {
 		l := lib.GetLogger()
@@ -181,6 +181,12 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 	} else {
 		l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Not a ConfigurableEndpoint", ep.name))
 	}
+
+        // See if there are any overrides for this Endpoint hiding in extra Module Config
+        overrides := extraConfig.GetSubset(configPrefix)
+        if ! overrides.IsEmpty() {
+                ep.endpointConfig.Merge(overrides)
+        }
 }
 
 // Endpoint needs to be able to access its own Security Policy

@@ -43,14 +43,14 @@ import(
 type ModuleSet	map[string]ModuleIfc
 
 type ModuleIfc interface {
-	Configure(serverConfig lib.Config)
+	Configure(serverConfig lib.Config, extraConfig lib.Config)
 	GetPath() string
 	GetName() string
 	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type Module struct {
-	controller	*Controller
+	moduleName	string
 	serverConfig	*lib.Config	// Server Config passed to us
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
@@ -62,54 +62,58 @@ type Module struct {
 // name is the unique name of this Module which allows the Server to separate it from others
 // TODO: Validate name; non-empty, prefer [a-zA-Z0-9_-.]+ (not starting or ending with '.'!)
 func NewModule(repository *res.Repository, name string) *Module {
-
-	// Load Module Config from Resource Repository
-	allConfig, err := res.NewRepositoryConfig(repository, "config/config.json")
-	if nil != err {
-		l := lib.GetLogger()
-		l.Error(fmt.Sprintf("Module.NewModule() - Error loading JSON Config from Repository: %s", err.Error()))
-		return nil
-	}
-
-	// Validate that the Config has what we need for a Module!
-	modulePrefix := "module." + name + "."
-	config := allConfig.GetSubset(modulePrefix)
-	requiredConfig := []string{ "version", "path" }
-	if ! (config.HasAll(&requiredConfig)) {
-		l := lib.GetLogger()
-		l.Error("Module.NewModule() - Incomplete Module Config provided")
-		return nil
-	}
-	config.Set("name", name) // Reflect name into Module Config for reference
-
-	// Set up our Controller singleton
-	controller := GetController()
-	controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
-
 	return &Module{
-		controller:	controller,
-		moduleConfig:	config,
-		extraConfig:	allConfig.GetInverseSubset(modulePrefix),
+		moduleName:	name,
 		repository:	repository,
 	}
 }
 
 // Server needs to initialize this Module with its own configuration data for reference
-// Server Config is passed by value so that we can have a copy, but not tamper with original
-func (module *Module) Configure(serverConfig lib.Config) {
+// Config is passed by value so that we can have a copy, but not tamper with original
+func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) {
 	l := lib.GetLogger()
-	l.Trace("Module: Configure")
+	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.moduleName))
 
 	// Copy Server configuration data for reference
 	module.serverConfig = &serverConfig
 
-	// Initialize our controller
-	module.controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
-}
+	// Load Module Config from Resource Repository
+	config, err := res.NewRepositoryConfig(module.repository, "config/config.json")
+	if nil != err {
+		l.Error(fmt.Sprintf(
+			"Module{%s}.Configure(): Error loading JSON Config from Repository: %s",
+			module.moduleName,
+			err.Error(),
+		))
+		return
+	}
 
-// Module need to be able to set our configuration
-func (module *Module) GetConfig() *lib.Config {
-	return module.moduleConfig
+	// Validate that the Config has what we need for a Module!
+	configPrefix := "module." + module.moduleName + "."
+	module.moduleConfig = config.GetSubset(configPrefix)
+	requiredConfig := []string{ "version", "path" }
+	if ! (module.moduleConfig.HasAll(&requiredConfig)) {
+		l.Error(fmt.Sprintf(
+			"Module{%s}.Configure(): Incomplete Module Config provided",
+			module.moduleName,
+		))
+		return
+	}
+	module.moduleConfig.Set("name", module.moduleName) // Reflect name into Module Config
+
+	// See if there are any overrides for this Module hiding in extra Server Config
+	overrides := extraConfig.GetSubset(configPrefix)
+	if ! overrides.IsEmpty() {
+		module.moduleConfig.Merge(overrides)
+	}
+
+	// Capture any extra configuration
+	module.extraConfig = config.GetInverseSubset(configPrefix)
+
+	// Initialize our controller
+	controller := GetController()
+	controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
+	controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
 }
 
 // Server needs to know our module's path which it will use to map requests to us
@@ -118,9 +122,9 @@ func (module Module) GetPath() string {
 	return module.moduleConfig.Get("path")
 }
 
-// Server wants to know our module's name
+// Server wants to know our name
 func (module Module) GetName() string {
-	return module.moduleConfig.Get("name")
+	return module.moduleName
 }
 
 // Server wants to send us requests to be handled
@@ -131,10 +135,10 @@ func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpRespons
 	l.Trace(fmt.Sprintf(
 		"[%s] Module (%s): %s %s",
 		ctx.GetRequestId(),
-		module.moduleConfig.Get("name"),
+		module.moduleName,
 		request.GetMethod(),
 		request.GetURL(),
 	))
-	return module.controller.HandleRequest(request)
+	return GetController().HandleRequest(request)
 }
 
