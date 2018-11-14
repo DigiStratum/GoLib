@@ -185,6 +185,11 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
         // See if there are any overrides for this Endpoint hiding in extra Module Config
         overrides := extraConfig.GetSubset(configPrefix)
         if ! overrides.IsEmpty() {
+		l.Trace(fmt.Sprintf(
+			"Endpoint{%s}.Configure(): Applying overrides from extra Module Config",
+			ep.name,
+		))
+		overrides.DumpConfig()
                 ep.endpointConfig.Merge(overrides)
         }
 }

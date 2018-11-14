@@ -50,7 +50,7 @@ type ModuleIfc interface {
 }
 
 type Module struct {
-	moduleName	string
+	name	string
 	serverConfig	*lib.Config	// Server Config passed to us
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
@@ -63,7 +63,7 @@ type Module struct {
 // TODO: Validate name; non-empty, prefer [a-zA-Z0-9_-.]+ (not starting or ending with '.'!)
 func NewModule(repository *res.Repository, name string) *Module {
 	return &Module{
-		moduleName:	name,
+		name:		name,
 		repository:	repository,
 	}
 }
@@ -72,7 +72,7 @@ func NewModule(repository *res.Repository, name string) *Module {
 // Config is passed by value so that we can have a copy, but not tamper with original
 func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) {
 	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.moduleName))
+	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.name))
 
 	// Copy Server configuration data for reference
 	module.serverConfig = &serverConfig
@@ -82,28 +82,33 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	if nil != err {
 		l.Error(fmt.Sprintf(
 			"Module{%s}.Configure(): Error loading JSON Config from Repository: %s",
-			module.moduleName,
+			module.name,
 			err.Error(),
 		))
 		return
 	}
 
 	// Validate that the Config has what we need for a Module!
-	configPrefix := "module." + module.moduleName + "."
+	configPrefix := "module." + module.name + "."
 	module.moduleConfig = config.GetSubset(configPrefix)
 	requiredConfig := []string{ "version", "path" }
 	if ! (module.moduleConfig.HasAll(&requiredConfig)) {
 		l.Error(fmt.Sprintf(
 			"Module{%s}.Configure(): Incomplete Module Config provided",
-			module.moduleName,
+			module.name,
 		))
 		return
 	}
-	module.moduleConfig.Set("name", module.moduleName) // Reflect name into Module Config
+	module.moduleConfig.Set("name", module.name) // Reflect name into Module Config
 
 	// See if there are any overrides for this Module hiding in extra Server Config
 	overrides := extraConfig.GetSubset(configPrefix)
 	if ! overrides.IsEmpty() {
+		l.Trace(fmt.Sprintf(
+			"Module{%s}.Configure(): Applying overrides from extra Server Config",
+			module.name,
+		))
+		overrides.DumpConfig()
 		module.moduleConfig.Merge(overrides)
 	}
 
@@ -124,7 +129,7 @@ func (module Module) GetPath() string {
 
 // Server wants to know our name
 func (module Module) GetName() string {
-	return module.moduleName
+	return module.name
 }
 
 // Server wants to send us requests to be handled
@@ -135,7 +140,7 @@ func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpRespons
 	l.Trace(fmt.Sprintf(
 		"[%s] Module (%s): %s %s",
 		ctx.GetRequestId(),
-		module.moduleName,
+		module.name,
 		request.GetMethod(),
 		request.GetURL(),
 	))
