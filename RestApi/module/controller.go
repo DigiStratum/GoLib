@@ -17,9 +17,9 @@ import(
 // end up ALWAYS only being one version because we are awesome at ensuring non-breaking changes then
 // we can remove versioning support at some point), so if there is only one, we will deliver it,
 // even if the request specifies some version which may/may not match. 
-type controllerEPVMap		map[EndpointVersion]interface{}
-type controllerEPPVMap		map[EndpointPattern]controllerEPVMap
-type controllerEPMPVMap		map[EndpointMethod]controllerEPPVMap
+type controllerEPVMap		map[string]interface{}		// Endpoint Version map
+type controllerEPPVMap		map[string]controllerEPVMap	// Endpoint Pattern map
+type controllerEPMPVMap		map[string]controllerEPPVMap	// Endpoint Method map
 type regexpCache		map[string]*regexp.Regexp
 
 type Controller struct {
@@ -77,6 +77,7 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	for _, endpoint := range (*ctrlr).endpoints {
 		if endpointIfc, ok := endpoint.(EndpointIfc); ok {
 			endpointIfc.Configure(endpoint, *serverConfig, *moduleConfig, *extraConfig)
+			ctrlr.mapEndpoint(endpointIfc)
 		} else {
 			// wot? Not an Endpoint!
 			l.Error(fmt.Sprintf(
@@ -87,23 +88,15 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	}
 }
 
-// Add an Endpoint to this Controller
-// Endpoint uses this to self-register Endpoints at init() time
-func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, version string) {
-
-	// Initialize the Endpoint
-	ctrlr.endpoints = append(ctrlr.endpoints, concreteEndpoint)
-	endpoint := concreteEndpoint.(EndpointIfc)
-	endpoint.Init(concreteEndpoint, name, version)
-
+// See that the map has an entry for each method/pattern/version for this Endpoint
+func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 	// Get the Endpoint's Pattern
-	epp := EndpointPattern(endpoint.GetPattern())
-
-	// See that the registry has an entry for each method/pattern/version for this Endpoint
+	epp := endpoint.GetPattern()
 	methods := endpoint.GetMethods()
+	version := endpoint.GetVersion()
 	for _, method := range methods {
 		// If this method isn't registered for this Controller, add it now
-		epm := EndpointMethod(method)
+		epm := method
 		if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
 			(*ctrlr.endpointMap)[epm] = make(controllerEPPVMap)
 		}
@@ -114,10 +107,18 @@ func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, 
 		}
 
 		// If this version isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpointMap)[epm][epp][EndpointVersion(version)]; !ok {
-			(*ctrlr.endpointMap)[epm][epp][EndpointVersion(version)] = endpoint
+		if _, ok := (*ctrlr.endpointMap)[epm][epp][version]; !ok {
+			(*ctrlr.endpointMap)[epm][epp][version] = endpoint
 		}
 	}
+}
+
+// Add an Endpoint to this Controller
+// Endpoint uses this to self-register Endpoints at init() time
+func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, version string) {
+	ctrlr.endpoints = append(ctrlr.endpoints, concreteEndpoint)
+	endpointIfc := concreteEndpoint.(EndpointIfc)
+	endpointIfc.Init(concreteEndpoint, name, version)
 }
 
 // Do any request pre-processing needed...
@@ -125,7 +126,7 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 	hlpr := rest.GetHelper()
 
 	// Is the request method in our Endpoint registry?
-	epm := EndpointMethod(request.GetMethod())
+	epm := request.GetMethod()
 	if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
 		return hlpr.ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
@@ -152,12 +153,12 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 
 	// Find which Endpoint's pattern matches this request URI
 	// TODO: Test more specific patterns before more general ones
-	epm := EndpointMethod(request.GetMethod())
+	epm := request.GetMethod()
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
 		// Test the pattern
 		// ref: https://golang.org/pkg/regexp/#example_MatchString
-		//l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
-		matches, err := ctrlr.matchesURI(string(pattern), relativeURI)
+		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
+		matches, err := ctrlr.matchesURI(pattern, relativeURI)
 		if nil != err {
 			l.Error(err.Error())
 			return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
@@ -204,7 +205,7 @@ func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
 	if rxp, ok = (*ctrlr.patternCache)[pattern]; !ok {
 		// No!? Well then... Compile it and ADD it to the cache!
 		var err error
-		rxp, err = regexp.Compile(pattern)
+		rxp, err = regexp.Compile("^" + pattern + "$")
 		if nil != err {
 			return false, errors.New(fmt.Sprintf(
 				"Controller: Unexpected error compiling Regex pattern '%s'",

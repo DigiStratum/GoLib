@@ -66,12 +66,6 @@ func init() {
 	supportedMethods = []string{ "get", "post", "put", "options", "head", "patch", "delete" }
 }
 
-// TODO: Apply these types to other properties below...
-type EndpointMethod		string
-type EndpointPattern		string
-type EndpointVersion		string
-type EndpointName		string
-
 type EndpointIfc interface {
 	// TODO: Add error return value for Configure()
 	Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
@@ -227,23 +221,11 @@ func (ep *Endpoint) GetVersion() string {
 	return ep.version
 }
 
-/*
-// Set the version
-func (ep *Endpoint) SetVersion(version string) {
-	ep.version = version
-}
-*/
 // Return our name
 func (ep *Endpoint) GetName() string {
 	return ep.name
 }
 
-/*
-// Set the name
-func (ep *Endpoint) SetName(name string) {
-	ep.name = name
-}
-*/
 // Return our list of methods
 // This is used by the Controller to add us to the map to send us requests.
 func (ep *Endpoint) GetMethods() []string {
@@ -338,7 +320,7 @@ func handleGet(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement GetEndpointIfc!?",
+		"[%s] Endpoint doesn't implement GetEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -351,7 +333,7 @@ func handlePost(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PostEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PostEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -364,7 +346,7 @@ func handlePut(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PutEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PutEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -377,7 +359,7 @@ func handleOptions(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement OptionsEndpointIfc!?",
+		"[%s] Endpoint doesn't implement OptionsEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -406,7 +388,7 @@ func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement HeadEndpointIfc!?",
+		"[%s] Endpoint doesn't implement HeadEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -419,7 +401,7 @@ func handleDelete(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse 
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement DeleteEndpointIfc!?",
+		"[%s] Endpoint doesn't implement DeleteEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
@@ -432,7 +414,7 @@ func handlePatch(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PatchEndpointIfc!?",
+		"[%s] Endpoint doesn't implement PatchEndpointIfc (should not be mapped)",
 		ctx.GetRequestId(),
 	))
 	return nil
