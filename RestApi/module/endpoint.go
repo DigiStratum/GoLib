@@ -47,8 +47,6 @@ of the server, not to give the client a choice - that is done at the Module laye
 
 ref: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
 
-TODO: Document the initialization sequence, pasing of Config data, etc.
-
 */
 
 import (
@@ -75,7 +73,6 @@ type EndpointIfc interface {
 	GetVersion() string
 	GetPattern() string
 	GetMethods() []string
-	//SetPattern(pattern string)
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
@@ -193,24 +190,6 @@ func (ep *Endpoint) GetSecurityPolicy() *SecurityPolicy {
 	return ep.securityPolicy
 }
 
-// Override the default path matching pattern
-// This is used by Module to override our path in the case that we don't have a default defined;
-// This is useful for endpoints which are generally useful in many Modules, and may need to be
-// mapped differently, depending on the application
-func (ep *Endpoint) SetPattern(pattern string) {
-	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Endpoint (%s): SetPattern('%s')", ep.name, pattern))
-	// We only allow the Module to set our pattern if one is not already set
-	if "" == ep.pattern {
-		// TODO: Validate this somehow? Module is responsible for capturing this change for itself and passing on to us
-		ep.pattern = pattern
-		return
-	}
-	ident := fmt.Sprintf("Module: '%s', Endpoint: '%s'", ep.moduleConfig.Get("name"), ep.name)
-	message := fmt.Sprintf("Cannot set pattern for (%s) to (%s) as it is already set to (%s)", ident, pattern, ep.pattern)
-	l.Warn(message)
-}
-
 // Return our pattern
 func (ep *Endpoint) GetPattern() string {
 	return ep.pattern
@@ -233,7 +212,6 @@ func (ep *Endpoint) GetMethods() []string {
 }
 
 // Request handler
-// TODO: Pass around request as a pointer to minimize the memory copying for a potentially large data structure
 func (ep *Endpoint) HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse {
 
 	// Will our SecurityPolicy reject this Request?
@@ -312,57 +290,41 @@ type PatchEndpointIfc interface {
 	HandlePatch(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+func handleImpossible(unmatchedIfc string, requestId string) *rest.HttpResponse {
+	lib.GetLogger().Error(fmt.Sprintf(
+		"[%s] Endpoint doesn't implement %s (should not be mapped)",
+		unmatchedIfc,
+		requestId,
+	))
+	return nil
+}
+
 func handleGet(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(GetEndpointIfc); ok {
 		return handler.HandleGet(request)
 	}
-	// TODO: Move this common error routine to a separate func
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement GetEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("GetEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handlePost(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PostEndpointIfc); ok {
 		return handler.HandlePost(request)
 	}
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PostEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("PostEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handlePut(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PutEndpointIfc); ok {
 		return handler.HandlePut(request)
 	}
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PutEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("PutEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handleOptions(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(OptionsEndpointIfc); ok {
 		return handler.HandleOptions(request)
 	}
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement OptionsEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("OptionsEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
@@ -384,39 +346,20 @@ func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 		}
 		return response
 	}
-
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement HeadEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("HeadEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handleDelete(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(DeleteEndpointIfc); ok {
 		return handler.HandleDelete(request)
 	}
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement DeleteEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("DeleteEndpointIfc", request.GetContext().GetRequestId())
 }
 
 func handlePatch(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PatchEndpointIfc); ok {
 		return handler.HandlePatch(request)
 	}
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Error(fmt.Sprintf(
-		"[%s] Endpoint doesn't implement PatchEndpointIfc (should not be mapped)",
-		ctx.GetRequestId(),
-	))
-	return nil
+	return handleImpossible("PatchEndpointIfc", request.GetContext().GetRequestId())
 }
 
