@@ -19,7 +19,13 @@ type MutableRepository struct {
 
 // Make a new one of these!
 func NewMutableRepository() *MutableRepository {
-	repository := MutableRepository{}
+	// Ref: https://travix.io/type-embedding-in-go-ba40dd4264df
+	// Repository is embedded into MutableRepository;
+	// we pass a Repository in to leverage its own initializer
+	repo := NewRepository()
+	repository := MutableRepository{
+		*repo,
+	}
 	return &repository
 }
 
