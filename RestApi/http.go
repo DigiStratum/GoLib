@@ -193,36 +193,36 @@ func NewHttpRequestContext() *HttpRequestContext {
 	return &HttpRequestContext{}
 }
 
-func (context *HttpRequestContext) SetServerPath(serverPath string) {
-	context.serverPath = serverPath
+func (ctx *HttpRequestContext) SetServerPath(serverPath string) {
+	ctx.serverPath = serverPath
 }
 
-func (context *HttpRequestContext) GetServerPath() string {
-	return context.serverPath
+func (ctx *HttpRequestContext) GetServerPath() string {
+	return ctx.serverPath
 }
 
-func (context *HttpRequestContext) SetModulePath(modulePath string) {
-	context.modulePath = modulePath
+func (ctx *HttpRequestContext) SetModulePath(modulePath string) {
+	ctx.modulePath = modulePath
 }
 
-func (context *HttpRequestContext) GetModulePath() string {
-	return context.modulePath
+func (ctx *HttpRequestContext) GetModulePath() string {
+	return ctx.modulePath
 }
 
-func (context *HttpRequestContext) SetPrefixPath(prefixPath string) {
-	context.prefixPath = prefixPath
+func (ctx *HttpRequestContext) SetPrefixPath(prefixPath string) {
+	ctx.prefixPath = prefixPath
 }
 
-func (context *HttpRequestContext) GetPrefixPath() string {
-	return context.prefixPath
+func (ctx *HttpRequestContext) GetPrefixPath() string {
+	return ctx.prefixPath
 }
 
-func (context *HttpRequestContext) SetRequestId(requestId string) {
-	context.requestId = requestId
+func (ctx *HttpRequestContext) SetRequestId(requestId string) {
+	ctx.requestId = requestId
 }
 
-func (context *HttpRequestContext) GetRequestId() string {
-	return context.requestId
+func (ctx *HttpRequestContext) GetRequestId() string {
+	return ctx.requestId
 }
 
 // -------------------------------------------
