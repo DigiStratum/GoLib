@@ -2,6 +2,10 @@ package restapi
 
 import(
 	"sync"
+	"strings"
+	"mime"
+
+	res "github.com/DigiStratum/GoLib/Resources"
 )
 
 type helper struct { }
@@ -36,6 +40,11 @@ func (hlpr *helper) Response(status HttpStatus, body *string, contentType string
 	return response
 }
 
+// Produce an HTTP response from a Resource (200 OK)
+func (hlpr *helper) ResponseResource(resource *res.Resource, uri string) *HttpResponse {
+	return hlpr.Response(STATUS_OK, resource.GetContent(), hlpr.GetMimetype(uri))
+}
+
 // Produce an HTTP response with custom headers
 func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers *HttpHeaders) *HttpResponse {
 	response := NewResponse()
@@ -56,6 +65,20 @@ func (hlpr *helper) SingularizePostData(bodyData *HttpBodyData) map[string]strin
 		if len(values) > 0 { data[name] = values[0] }
 	}
 	return data
+}
+
+// ref: https://golang.org/pkg/mime/#TypeByExtension
+func (hlpr *helper) GetMimetype(uri string) string {
+	dotpos := strings.LastIndex(uri, ".")
+	if -1 == dotpos {
+		return "application/octet-stream"
+	}
+	extension := uri[dotpos:]
+	mimetype := mime.TypeByExtension(extension)
+	if "" == mimetype {
+		return "application/octet-stream"
+	}
+	return mimetype
 }
 
 const (
