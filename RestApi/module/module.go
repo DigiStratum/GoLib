@@ -37,20 +37,23 @@ import(
 
 	lib "github.com/DigiStratum/GoLib"
 	res "github.com/DigiStratum/GoLib/Resources"
-	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
-type ModuleSet	map[string]ModuleIfc
+type ModuleController struct {
+	Module		ModuleIfc
+	Controller	*Controller
+}
+
+type ModuleSet map[string]*ModuleController
 
 type ModuleIfc interface {
 	Configure(serverConfig lib.Config, extraConfig lib.Config)
 	GetPath() string
 	GetName() string
-	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 type Module struct {
-	name	string
+	name		string
 	serverConfig	*lib.Config	// Server Config passed to us
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
@@ -130,20 +133,5 @@ func (module Module) GetPath() string {
 // Server wants to know our name
 func (module Module) GetName() string {
 	return module.name
-}
-
-// Server wants to send us requests to be handled
-// TODO: Eliminate this hop: got from Server directly to Module Controller
-func (module *Module) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
-	ctx := request.GetContext()
-	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf(
-		"[%s] Module (%s): %s %s",
-		ctx.GetRequestId(),
-		module.name,
-		request.GetMethod(),
-		request.GetURL(),
-	))
-	return GetController().HandleRequest(request)
 }
 

@@ -123,12 +123,18 @@ func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, 
 
 // Do any request pre-processing needed...
 func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
-	hlpr := rest.GetHelper()
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"[%s] Controller{%s)}.HandleRequest(): %s %s",
+		request.GetContext().GetRequestId(),
+		ctrlr.moduleConfig.Get("name"),
+		request.GetMethod(),
+		request.GetURL(),
+	))
 
 	// Is the request method in our Endpoint registry?
 	epm := request.GetMethod()
 	if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
-		return hlpr.ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
+		return rest.GetHelper().ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
 
 	// Will our Module SecurityPolicy reject this Request?
