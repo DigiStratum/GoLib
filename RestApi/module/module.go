@@ -47,7 +47,7 @@ type ModuleController struct {
 type ModuleSet map[string]*ModuleController
 
 type ModuleIfc interface {
-	Configure(serverConfig lib.Config, extraConfig lib.Config)
+	Configure(serverConfig lib.Config, extraConfig lib.Config) error
 	GetPath() string
 	GetName() string
 }
@@ -73,7 +73,7 @@ func NewModule(repository *res.Repository, name string) *Module {
 
 // Server needs to initialize this Module with its own configuration data for reference
 // Config is passed by value so that we can have a copy, but not tamper with original
-func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) {
+func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) error {
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.name))
 
@@ -83,12 +83,11 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	// Load Module Config from Resource Repository
 	config, err := res.NewRepositoryConfig(module.repository, "config/config.json")
 	if nil != err {
-		l.Error(fmt.Sprintf(
+		return l.Error(fmt.Sprintf(
 			"Module{%s}.Configure(): Error loading JSON Config from Repository: %s",
 			module.name,
 			err.Error(),
 		))
-		return
 	}
 
 	// Validate that the Config has what we need for a Module!
@@ -96,11 +95,10 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	module.moduleConfig = config.GetSubset(configPrefix)
 	requiredConfig := []string{ "version", "path" }
 	if ! (module.moduleConfig.HasAll(&requiredConfig)) {
-		l.Error(fmt.Sprintf(
+		return l.Error(fmt.Sprintf(
 			"Module{%s}.Configure(): Incomplete Module Config provided",
 			module.name,
 		))
-		return
 	}
 	module.moduleConfig.Set("name", module.name) // Reflect name into Module Config
 
@@ -122,6 +120,7 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	controller := GetController()
 	controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
 	controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
+	return nil
 }
 
 // Server needs to know our module's path which it will use to map requests to us
