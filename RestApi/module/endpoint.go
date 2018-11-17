@@ -114,7 +114,7 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 			ep.methods = append(ep.methods, method)
 			implemented = true
 		}
-		l.Crazy(fmt.Sprintf("Endpoint{%s}.Init(): Implements method %s?: %t", name, method, implemented))
+		//l.Crazy(fmt.Sprintf("Endpoint{%s}.Init(): Implements method %s?: %t", name, method, implemented))
 		implementedMethods[method] = implemented
 	}
 
