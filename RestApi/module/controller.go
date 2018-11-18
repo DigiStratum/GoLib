@@ -32,17 +32,6 @@ type Controller struct {
 	endpoints	[]interface{}		// Collection of distinct concrete endpoints
 }
 
-var controller *Controller
-
-func init() {
-	controller = NewController()
-}
-
-// Get the singleton instance
-func GetController() *Controller {
-	return controller
-}
-
 // Make a new one of these!
 func NewController() *Controller {
 	c := make(controllerEPMPVMap)
@@ -74,8 +63,11 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	ctrlr.extraConfig = extraConfig
 
 	// Configure all the Endpoints
+	endpoints := GetRegistry().DrainEndpoints()
+	ctrlr.endpoints = *endpoints
 	for _, endpoint := range (*ctrlr).endpoints {
 		if endpointIfc, ok := endpoint.(EndpointIfc); ok {
+			endpointIfc.Init(endpoint)
 			endpointIfc.Configure(endpoint, *serverConfig, *moduleConfig, *extraConfig)
 			ctrlr.mapEndpoint(endpointIfc)
 		} else {
@@ -111,14 +103,6 @@ func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 			(*ctrlr.endpointMap)[epm][epp][version] = endpoint
 		}
 	}
-}
-
-// Add an Endpoint to this Controller
-// Endpoint uses this to self-register Endpoints at init() time
-func (ctrlr *Controller) AddEndpoint(concreteEndpoint interface{}, name string, version string) {
-	ctrlr.endpoints = append(ctrlr.endpoints, concreteEndpoint)
-	endpointIfc := concreteEndpoint.(EndpointIfc)
-	endpointIfc.Init(concreteEndpoint, name, version)
 }
 
 // Do any request pre-processing needed...
@@ -159,6 +143,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 
 	// Find which Endpoint's pattern matches this request URI
 	// TODO: Test more specific patterns before more general ones
+	// ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
 	epm := request.GetMethod()
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
 		// Test the pattern

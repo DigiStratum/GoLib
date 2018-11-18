@@ -67,7 +67,7 @@ func init() {
 type EndpointIfc interface {
 	// TODO: Add error return value for Configure()
 	Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
-	Init(concreteEndpoint interface{}, name string, version string)
+	Init(concreteEndpoint interface{})
 	GetSecurityPolicy() *SecurityPolicy
 	GetName() string
 	GetVersion() string
@@ -87,23 +87,32 @@ type Endpoint struct {
 	securityPolicy	*SecurityPolicy	// Security Policy for this Endpoint
 }
 
+// Make a new one of these (typically embedded as the superclass of some subclass)
+func NewEndpoint(name string, version string) Endpoint {
+	return Endpoint{
+		name:		name,
+		version:	version,
+	}
+}
+
 // Initialize
 // concreteEndpoint is a sub-class of Endpoint; it needs to be passed in for inspection because
 // inspecting the super-class (Endpoint) will not expose the properties of the sub-class
 // TODO: Support an error response? Needed to knock out the mapping? Is having no methods enough?
-func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version string) {
+func (ep *Endpoint) Init(concreteEndpoint interface{}) {
 	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Endpoint{%s}: Init()", name))
+	l.Trace(fmt.Sprintf("Endpoint{%s}: Init()", ep.name))
 
 	// Verify that concreteEndpoint implements EndpointIfc
 	if _, ok := concreteEndpoint.(EndpointIfc); ! ok {
-		l.Error(fmt.Sprintf("Endpoint{%s}.Init(): Object supplied is not an EndpointIfc", name))
+		l.Error(fmt.Sprintf(
+			"Endpoint{%s}.Init(): Object supplied is not an EndpointIfc",
+			ep.name,
+		))
 		return
 	}
 
 	// Capture basic properties
-	ep.name = name
-	ep.version = version
 	ep.methods = []string{}
 
 	// Find which methods this Endpoint actually implements
@@ -114,7 +123,6 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 			ep.methods = append(ep.methods, method)
 			implemented = true
 		}
-		//l.Crazy(fmt.Sprintf("Endpoint{%s}.Init(): Implements method %s?: %t", name, method, implemented))
 		implementedMethods[method] = implemented
 	}
 
@@ -123,7 +131,10 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}, name string, version stri
 		ep.methods = append(ep.methods, "head")
 	}
 
-	l.Trace(fmt.Sprintf("Endpoint{%s}.Init(): Methods Implemented: [%s]", name, strings.Join(ep.methods, ",")))
+	l.Trace(fmt.Sprintf(
+		"Endpoint{%s}.Init(): Methods Implemented: [%s]",
+		ep.name, strings.Join(ep.methods, ","),
+	))
 }
 
 // Does the supplied Endpoint implement the interface for the specified Method?

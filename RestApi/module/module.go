@@ -39,12 +39,7 @@ import(
 	res "github.com/DigiStratum/GoLib/Resources"
 )
 
-type ModuleController struct {
-	Module		ModuleIfc
-	Controller	*Controller
-}
-
-type ModuleSet map[string]*ModuleController
+type ModuleSet map[string]*Module
 
 type ModuleIfc interface {
 	Configure(serverConfig lib.Config, extraConfig lib.Config) error
@@ -58,6 +53,7 @@ type Module struct {
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
 	repository	*res.Repository
+	controller	*Controller
 }
 
 // Make a new one of these!
@@ -73,6 +69,7 @@ func NewModule(repository *res.Repository, name string) *Module {
 
 // Server needs to initialize this Module with its own configuration data for reference
 // Config is passed by value so that we can have a copy, but not tamper with original
+// TODO: Break this into smaller, testable functions
 func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) error {
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.name))
@@ -116,14 +113,14 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	// Capture any extra configuration
 	module.extraConfig = config.GetInverseSubset(configPrefix)
 
-	// Initialize our controller
-	controller := GetController()
-	controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
-	controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
+	// Initialize our Controller
+	module.controller = NewController()
+	module.controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
+	module.controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
 	return nil
 }
 
-// Server needs to know our module's path which it will use to map requests to us
+// Server needs to know our Module's path which it will use to map Requests to us
 func (module Module) GetPath() string {
 	// http://hostname/server.path/module.path/endpoint.pattern
 	return module.moduleConfig.Get("path")
@@ -132,5 +129,10 @@ func (module Module) GetPath() string {
 // Server wants to know our name
 func (module Module) GetName() string {
 	return module.name
+}
+
+// Server wants to send Requests to our Controller
+func (module Module) GetController() *Controller {
+	return module.controller
 }
 
