@@ -13,11 +13,37 @@ ref: https://github.com/goccmack/gocc
 ref: http://matt.might.net/articles/implementation-of-regular-expression-matching-in-scheme-with-derivatives/
 ref: https://stackoverflow.com/questions/265457/regex-grammar
 
-
 ref: https://hackthology.com/writing-a-lexer-in-go-with-lexmachine.html
-ref: http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html <- has BNF for Perl regex
+
+-----------
+
+BNF Grammar of Regular Expressions
+Following the precedence rules given previously, a BNF grammar for Perl-style regular expressions can be constructed as follows.
+ref: http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
+
+<RE>	::=	<union> | <simple-RE>
+<union>	::=	<RE> "|" <simple-RE>
+<simple-RE>	::=	<concatenation> | <basic-RE>
+<concatenation>	::=	<simple-RE> <basic-RE>
+<basic-RE>	::=	<star> | <plus> | <elementary-RE>
+<star>	::=	<elementary-RE> "*"
+<plus>	::=	<elementary-RE> "+"
+<elementary-RE>	::=	<group> | <any> | <eos> | <char> | <set>
+<group>	::=	"(" <RE> ")"
+<any>	::=	"."
+<eos>	::=	"$"
+<char>	::=	any non metacharacter | "\" metacharacter
+<set>	::=	<positive-set> | <negative-set>
+<positive-set>	::=	"[" <set-items> "]"
+<negative-set>	::=	"[^" <set-items> "]"
+<set-items>	::=	<set-item> | <set-item> <set-items>
+<set-items>	::=	<range> | <char>
+<range>	::=	<char> "-" <char>
 
 */
+
+
+
 
 import (
 
