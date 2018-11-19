@@ -1,49 +1,80 @@
 package golib
 
+/*
+A general purpose lexer
+
+This is a learning experiment. Maybe it will turn into something useful? The ones out there seem to
+be more complex than we need for our purposes.
+
+ref: https://github.com/AdamColton/parlex/blob/master/lexer/simplelexer/lexer.go
+ref: http://matt.might.net/articles/grammars-bnf-ebnf/
+ref: https://github.com/goccmack/gocc
+
+ref: http://matt.might.net/articles/implementation-of-regular-expression-matching-in-scheme-with-derivatives/
+ref: https://stackoverflow.com/questions/265457/regex-grammar
+
+
+ref: https://hackthology.com/writing-a-lexer-in-go-with-lexmachine.html
+ref: http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html <- has BNF for Perl regex
+
+*/
+
 import (
 
 )
 
-type encapsulation struct {
-	opener	string
-	closer	string
-}
-
-type Token struct {
+type Lexeme struct {
 	name	string
 	value	string
 }
 
-type TokenSequence []*Token
-
-type Lexer struct {
-	encapsulations		[]*encapsulation
+type LexemeSpec struct {
+	name	string
+	pattern	string
 }
 
-func NewLexer() *Lexer {
+type Lexemes []*Lexeme
+type LexemeSpecs []*LexemeSpec
+
+type Lexer struct {
+	lexemeSpecs	[]LexemeSpec
+	processed	bool
+	lexemeSequence	*Lexemes
+	content		*string
+}
+
+func newLexemes() *Lexemes {
+	lexemeSequence := make([]*Lexeme, 0)
+	return &lexemeSequence
+}
+
+func NewLexer(content *string) *Lexer {
 	lexer := Lexer{
-		encapsulations:	make([]*encapsualtion, 0)
+		parser_encapsulations:	make([]*encapsualtion, 0),
+		lexemeSequence:		newLexemes(),
+		content:		content,
 	}
 	return &lexer
 }
 
-func (lex *Lexer) AddEncapsulation(opener string, closer string) {
-	lex.encapsulations = append(
-		lex.encapsulations,
-		newEncapsulation(opener, closer),
+// Add a LexemeSpec for this Lexer
+func (lex *Lexer) AddLexemeSpec(name string, pattern string) {
+	lex.parser_lexemeSpecs = append(
+		lex.parser_lexemeSpecs,
+		&LexemeSpec{ name: name, pattern: pattern },
 	)
 }
 
-func newEncapsualtion(opener string, closer string) *encapsulation {
-	return &encapsulation{
-		opener:	opener,
-		closer: closer,
+func newLexemeSpec(name string, pattern string) *LexemeSpec {
+	return &LexemeSpec{
+		name:		name,
+		pattern:	pattern,
 	}
 }
 
-func (lex *Lexer) Tokenize(content string) *TokenSequence {
-	tokenSequence := make([]*Token, 0)
+func (lex *Lexer) Lexemeize() {
+	if lex.processed { return }
 	// TODO: Do some parsing here!
-	return &tokenSequence
+	lex.processed := true
 }
 
