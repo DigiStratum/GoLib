@@ -11,7 +11,6 @@ ref: http://matt.might.net/articles/grammars-bnf-ebnf/
 ref: https://github.com/goccmack/gocc
 
 ref: http://matt.might.net/articles/implementation-of-regular-expression-matching-in-scheme-with-derivatives/
-ref: https://stackoverflow.com/questions/265457/regex-grammar
 
 ref: https://hackthology.com/writing-a-lexer-in-go-with-lexmachine.html
 
@@ -19,7 +18,9 @@ ref: https://hackthology.com/writing-a-lexer-in-go-with-lexmachine.html
 
 BNF Grammar of Regular Expressions
 Following the precedence rules given previously, a BNF grammar for Perl-style regular expressions can be constructed as follows.
+ref: https://stackoverflow.com/questions/265457/regex-grammar
 ref: http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
+ref: https://web.archive.org/web/20090129224504/http://faqts.com/knowledge_base/view.phtml/aid/25718/fid/200
 
 <RE>	::=	<union> | <simple-RE>
 <union>	::=	<RE> "|" <simple-RE>
