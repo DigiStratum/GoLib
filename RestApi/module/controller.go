@@ -1,5 +1,13 @@
 package module
 
+/*
+
+The Controller is where Module-specific HTTP Request handling takes place.
+
+TODO: Test more specific patterns before more general ones
+ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
+*/
+
 import(
 	"fmt"
 	"regexp"
@@ -82,7 +90,7 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 
 // See that the map has an entry for each method/pattern/version for this Endpoint
 func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
-	// Get the Endpoint's Pattern
+	// Get the Endpoint's Pattern; we force it to match entire URI following Module prefix
 	epp := endpoint.GetPattern()
 	methods := endpoint.GetMethods()
 	version := endpoint.GetVersion()
@@ -142,29 +150,45 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	))
 
 	// Find which Endpoint's pattern matches this request URI
-	// TODO: Test more specific patterns before more general ones
-	// ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
+	// Note: we will find the BEST match, not just any match
 	epm := request.GetMethod()
+	bestScore := 0
+	var bestVersions controllerEPVMap
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
-		// Test the pattern
-		// ref: https://golang.org/pkg/regexp/#example_MatchString
 		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
-		matches, err := ctrlr.matchesURI(pattern, relativeURI)
+		matches, err := ctrlr.getUriMatches(pattern, relativeURI)
 		if nil != err {
 			l.Error(err.Error())
 			return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
 		}
-		if ! matches { continue }
+		if (nil == matches) || (len(matches) == 0) { continue }
 
+		// Calculate a score for this pattern to determine how well it matches
+		score := 0
+		for _, match := range matches { score += len(match) }
+
+		// If the current pattern scores better than the best pattern thus far...
+		if score > bestScore {
+			// then make this pattern the new best pattern!
+			bestScore = score
+			bestVersions = versions
+			// TODO: Capture the matches into the Request Context;
+			// it will have Endpoint specific parametric breakdown!
+		}
+	}
+
+	// Use the versions of the best pattern we've found, if any
+	if nil != bestVersions {
 		// Dispatch this request!
-		for _, endpoint := range versions {
+		for _, endpoint := range bestVersions {
 			// TODO: scan versions for version specified in X-Version header
 			// Default to first listed version
 			return endpointHandleRequest(endpoint, request)
 		}
 		return nil // UNHANDLED BY US
 	}
-	// If we fell through without finding a handler (Endpoint), then we're done for!
+
+	// If we fell through without finding a handler then we're done for!
 	return hlpr.ResponseError(rest.STATUS_NOT_FOUND)
 }
 
@@ -189,7 +213,7 @@ func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *res
 }
 
 // Use a pattern cache of compiled RegExp's to match the URI
-func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
+func (ctrlr *Controller) getUriMatches(pattern string, URI string) ([]string, error) {
 	// Find the Regexp in the pattern cache
 	var rxp	*regexp.Regexp
 	var ok bool
@@ -198,13 +222,13 @@ func (ctrlr *Controller) matchesURI(pattern string, URI string) (bool, error) {
 		var err error
 		rxp, err = regexp.Compile("^" + pattern + "$")
 		if nil != err {
-			return false, errors.New(fmt.Sprintf(
+			return nil, errors.New(fmt.Sprintf(
 				"Controller: Unexpected error compiling Regex pattern '%s'",
 				pattern,
 			))
 		}
 		(*ctrlr.patternCache)[pattern] = rxp
 	}
-	return rxp.MatchString(URI), nil
+	return rxp.FindStringSubmatch(URI), nil
 }
 
