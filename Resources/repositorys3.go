@@ -24,6 +24,7 @@ Configuration:
 */
 
 import (
+	"fmt"
 	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -70,11 +71,18 @@ func (r *RepositoryS3) GetResource(path string) *Resource {
 		// Read the Resource from our S3 bucket into cache
 		buff := &aws.WriteAtBuffer{}
 		downloader := r.getS3Downloader()
+
+		// The S3 key is the path prefixed with our configured folder for this repo, if any
+		s3Folder := r.repoConfig.Get("s3folder")
+		key := path
+		if len(s3Folder) > 0 { key = fmt.Sprintf("%s/%s", s3Folder, path) }
+
+		// Now try to download the resource from S3
 		_, err := downloader.Download(
 			buff,
 			&s3.GetObjectInput{
 				Bucket:	aws.String(r.repoConfig.Get("s3bucket")),
-				Key:	aws.String(r.repoConfig.Get("s3folder") + "/" + path),
+				Key:	aws.String(key),
 			},
 		)
 		// Error = no Resource!
