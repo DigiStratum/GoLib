@@ -1,11 +1,14 @@
 package restapi
 
+// TODO: Refactor into separate files for each of the data structures/method collections
+
 // TODO: Add support for builder pattern, or chaining, or "functional options":
 // ref: https://www.calhoun.io/using-functional-options-instead-of-method-chaining-in-go/
 // ref: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
 
 import(
 	"fmt"
+	"strings"
 	"net/url"
 
 	lib "github.com/DigiStratum/GoLib"
@@ -163,6 +166,53 @@ func (request *HttpRequest) SetContext(context *HttpRequestContext) {
 // Get the Request Headers
 func (request *HttpRequest) GetHeaders() *HttpHeaders {
 	return request.headers
+}
+
+// Extract a list of languages from the Accept-Language header (if any)
+// ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
+func (request *HttpRequest) GetAcceptableLanguages() *[]string {
+	languages := request.getWeightedHeaderList("Accept-Language")
+	// TODO: filter results according to what we support
+	// (i.e. code, code-locale, code-locale-orthography); remove orthography/anything after locale
+	// TODO: convert "*" into "default"
+	return languages
+}
+
+// Extract a list of values from headers, ordered by preference expressed as quality value
+// ref: https://developer.mozilla.org/en-US/docs/Glossary/Quality_values
+func (request *HttpRequest) getWeightedHeaderList(headerName string) *[]string {
+
+	// Get the value of the header we're after
+	headerValue := request.GetHeaders().Get(headerName)
+	if len(headerValue)  == 0 {
+		// no header, no list!
+		values := make([]string, 0)
+		return &values
+	}
+
+	// Split the header on "," in case it has multiple values
+	headerValues := strings.Split(headerValue, ",")
+	values := make([]string, len(headerValues))
+
+	// For each value we found...
+	kept := 0
+	for _, value := range headerValues {
+		// If it has a ";", then there are extra details attached to split off
+		if strings.Index(value, ";") > -1 {
+			valueParts := strings.Split(value, ";")
+			// Keep the first part, the rest is metadata
+			values[kept] = valueParts[0]
+			kept++
+			// TODO: Check out the other parts; they should be formatted as "name=value"
+			// TODO: If the name = "q" and the value is a float from 0.0 to 1.0, use it to sort
+			// TODO: If ANY value has a "q" specified, then sort must be performed, assume 1.0 for unspecified q
+		} else {
+			// Keep this value
+			values[kept] = value
+			kept++
+		}
+	}
+	return &values
 }
 
 // -------------------------------------------
