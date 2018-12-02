@@ -19,10 +19,42 @@ TODO: Add support to connect log output to a file, database, or API (event strea
 
 import (
 	"fmt"
+	"log"
 	"time"
 	"strings"
 	"errors"
 )
+
+// LogWriter interface
+type LogWriter interface {
+	Log(message string)
+}
+
+// DStdOut LogWriter
+type stdOutLogWriter struct {}
+
+// Make a new LogWriter for StdOut
+func NewStdOutLogWriter() LogWriter {
+	return stdOutLogWriter{}
+}
+
+//  Satisfies LogWriter interface
+func (lw stdOutLogWriter) Log(message string) {
+	fmt.Println(message)
+}
+
+// Default LogWriter
+type defaultLogWriter struct {}
+
+// Make a new LogWriter for default golang logger
+func NewDefaultLogWriter() LogWriter {
+	return defaultLogWriter{}
+}
+
+//  Satisfies LogWriter interface
+func (lw defaultLogWriter) Log(message string) {
+	log.Println(message)
+}
 
 type logLevel uint
 
@@ -38,8 +70,9 @@ const (
 )
 
 type logger struct {
-	threadId	string	// Quasi-distinct threadId to filter log output by thread
-	minLogLevel	logLevel// The minimum logging level 
+	threadId	string		// Quasi-distinct threadId to filter log output by thread
+	minLogLevel	logLevel	// The minimum logging level
+	logWriter	LogWriter	// The LogWriter we are going to use (TODO: Add support for multiple)
 }
 
 var loggerInstance logger
@@ -58,8 +91,9 @@ func GetLogger() *logger {
 func NewLogger() *logger {
 	// We would be galactically unlucky to get two threads that start at the same nano-second...
 	newLogger := logger {
-		threadId: fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
-		minLogLevel: INFO,
+		threadId:	fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
+		minLogLevel:	INFO,
+		logWriter:	NewStdOutLogWriter(),
 	}
 	return &newLogger
 }
@@ -83,6 +117,12 @@ func (l *logger) SetMinLogLevel(level string) {
 	l.Error(fmt.Sprintf("Logger: SetMinLogLevel(): Unrecognized Log Level requested: '%s'", level))
 }
 
+// Replace the current LogWriter with something more to our liking
+// TODO: Add support for multiple LogWriter's so that we can send logs to more than one place
+func (l *logger) SetLogWriter(logWriter LogWriter) {
+	l.logWriter = logWriter
+}
+
 // Log some output
 // Wrap level+msg in an error as a code-reduction convenience to any caller wanting to return it
 func (l *logger) log(level logLevel, msg string) error {
@@ -98,9 +138,14 @@ func (l *logger) log(level logLevel, msg string) error {
 	}
 	logMsg := fmt.Sprintf("%5s %s", prefix, msg)
 	if level >= l.minLogLevel {
-		// Send the log message to StdOut (for now...)
+		// Send the log message to our LogWriter
 		t := time.Now()
-		fmt.Printf("%s thread:%s %s\n", t.Format(time.RFC3339), l.threadId, logMsg)
+		l.logWriter.Log(fmt.Sprintf(
+			"%s thread:%s %s",
+			t.Format(time.RFC3339),
+			l.threadId,
+			logMsg,
+		))
 	}
 	return errors.New(logMsg)
 }
