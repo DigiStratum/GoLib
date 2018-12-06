@@ -5,7 +5,7 @@ import(
 	"strings"
 	"mime"
 
-	res "github.com/DigiStratum/GoLib/Resources"
+	obj "github.com/DigiStratum/GoLib/Objects"
 )
 
 type helper struct { }
@@ -40,9 +40,9 @@ func (hlpr *helper) Response(status HttpStatus, body *string, contentType string
 	return response
 }
 
-// Produce an HTTP response from a Resource (200 OK)
-func (hlpr *helper) ResponseResource(resource *res.Resource, uri string) *HttpResponse {
-	return hlpr.Response(STATUS_OK, resource.GetContent(), hlpr.GetMimetype(uri))
+// Produce an HTTP response from a Object (200 OK)
+func (hlpr *helper) ResponseObject(object *obj.Object, uri string) *HttpResponse {
+	return hlpr.Response(STATUS_OK, object.GetContent(), hlpr.GetMimetype(uri))
 }
 
 // Produce an HTTP response with custom headers

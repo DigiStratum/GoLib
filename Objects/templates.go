@@ -1,4 +1,4 @@
-package resources
+package objects
 
 /*
 
@@ -22,14 +22,14 @@ type TemplateData	map[string]string
 
 type Templates struct {
 	cache		templateCache
-	repositoryManager	*RepositoryManager
+	objectStoreManager	*ObjectStoreManager
 }
 
 // Make a new one of these
-func NewTemplates(rm *RepositoryManager) *Templates {
+func NewTemplates(rm *ObjectStoreManager) *Templates {
 	t := Templates{
 		cache:			make(templateCache),
-		repositoryManager:	rm,
+		objectStoreManager:	rm,
 	}
 	return &t
 }
@@ -55,14 +55,14 @@ func (tpl *Templates) getCachedTemplate(templateName string, language string) (*
 		return cachedTemplate, nil
 	}
 
-	// Resolve template Resource
-	resource := tpl.repositoryManager.GetTemplate(templateName, language)
-	if nil == resource {
-		return nil, errors.New(fmt.Sprintf("Template (%s) not in resource tree", templateName))
+	// Resolve template Object
+	object := tpl.objectStoreManager.GetTemplate(templateName, language)
+	if nil == object {
+		return nil, errors.New(fmt.Sprintf("Template (%s) not in object tree", templateName))
 	}
 
 	// Parse it
-	templateContent := resource.GetContent()
+	templateContent := object.GetContent()
 	template, err := mustache.ParseString(*templateContent)
 	if nil == err { tpl.cache[templateKey] = template }
 	return template, err
