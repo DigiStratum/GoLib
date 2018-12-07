@@ -17,17 +17,19 @@ get a 404 response).
 
 An Object path follows the general structure:
 
-scope/language/object_relative_path_and_filename
+SCOPE/CONTEXT/LANGUAGE/object_relative_path_and_filename
 
 Such that:
-
-scope = "public" (for things that a client may request directly), or "private" (internal use only)
-language = "xxx_YY" where xxx=country code and YY=territory/locale (e.g. "en-US") or "default" for any mismatch
-object_relative_path_and_filename = as described, a customary, relative path and filename
+* SCOPE = "public" (for things that a client may request directly), or "private" (internal use only)
+* CONTEXT = Any contextualization path component between the scope and the language-specific
+objects; (may be empty)
+* LANGUAGE = "xxx_YY" where xxx=country code and YY=territory/locale (e.g. "en-US") or "default"
+for any mismatch object_relative_path_and_filename = as described, a customary, relative path and
+filename; the \_YY suffix is optional (e.g. "en" is acceptable)
 
 We could potentially supply additional scopes other than public and private, but those would be on
 the implementation to structure (ObjectManager.GetScopedObject() supports this). We could also
-support any language identifier scheme, but we stick to xxx_YY (or just xx_YY) to standardize.
+support any language identifier scheme, but we stick to xxx_YY (or just xx_YY, or xx) to standardize.
 
 ref: https://tools.ietf.org/html/rfc5646
 ref: http://cldr.unicode.org/
