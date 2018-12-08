@@ -56,7 +56,7 @@ func (tpl *Templates) getCachedTemplate(templateName string, language string) (*
 	}
 
 	// Resolve template Object
-	object := tpl.objectStoreManager.GetTemplate(templateName, language)
+	object := tpl.objectStoreManager.FindTemplate(language, templateName)
 	if nil == object {
 		return nil, errors.New(fmt.Sprintf("Template (%s) not in object tree", templateName))
 	}

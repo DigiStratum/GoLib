@@ -11,7 +11,6 @@ closest to index 0 will return immediately without consideration for anything de
 
 import (
 	"fmt"
-	"errors"
 
 	lib "github.com/DigiStratum/GoLib"
 )
@@ -34,19 +33,17 @@ func NewObjectStoreManager() *ObjectStoreManager {
 // objectStore parameter must be a pointer to a concrete implementation of an ObjectStoreIfc
 // Ref: https://stackoverflow.com/questions/24422810/golang-convert-struct-pointer-to-interface#
 func (osm *ObjectStoreManager) AddObjectStore(objectStore interface{}) error {
-	l := lib.GetLogger()
 	if store, ok := objectStore.(ObjectStoreIfc); ok {
-		l.Trace("Adding Object ObjectStore")
+		lib.GetLogger().Trace("Adding Object ObjectStore")
 		osm.objectStores = append(osm.objectStores, &store)
 		return nil
 	}
-	msg := "Supplied ObjectStore does not satisfy ObjectStoreIfc"
-	l.Error(msg)
-	return errors.New(msg)
+	return lib.GetLogger().Error("Supplied ObjectStore does not satisfy ObjectStoreIfc")
 }
 
 // Get an Object with the specified path from our set of ObjectStores
 func (osm *ObjectStoreManager) GetObject(path string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf("ObjectStoreManager.GetObject('%s')", path))
 	// Scan UP the list of ObjectStores in the search for this Object by path
 	for _, store := range osm.objectStores {
 		res := (*store).GetObject(path)
@@ -55,39 +52,71 @@ func (osm *ObjectStoreManager) GetObject(path string) *Object {
 	return nil
 }
 
-// Find a scoped ("private"/"public") Object, facet on language (default="default")
+// Find an Object relative to base path, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetMultilingualObject(base string, languages *[]string, relPath string) *Object {
+func (osm *ObjectStoreManager) FindMultilingualObject(base string, languages *[]string, relPath string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"ObjectStoreManager.FindMultilingualObject('%s', [%d]string, '%s')",
+		base,
+		len(*languages),
+		relPath,
+	))
 	for _, language := range *languages {
 		object := osm.GetObject(fmt.Sprintf("%s/%s/%s", base, language, relPath))
 		if nil != object { return object }
 	}
+	// One last try for "default" language
+	return osm.GetObject(fmt.Sprintf("%s/%s/%s", base, "default", relPath))
 	return nil
 }
 
-// Find a contextualized Object, facet on language (default="default")
+// Find a scoped (public/private), contextualized Object, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetContextualizedObject(context string, languages *[]string, relPath string) *Object {
-	return osm.GetMultilingualObject(fmt.Sprintf("public/%s", context), languages, relPath)
+func (osm *ObjectStoreManager) FindContextualizedObject(scope string, context string, languages *[]string, relPath string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"ObjectStoreManager.FindContextualizedObject('%s', '%s', [%d]string, '%s')",
+		scope,
+		context,
+		len(*languages),
+		relPath,
+	))
+	base := scope
+	if len(context) > 0 { base = fmt.Sprintf("%s/%s", scope, context) }
+	return osm.FindMultilingualObject(base, languages, relPath)
 }
 
-// Find a scoped ("private"/"public") Object for language or default
+// Find a scoped ("private"/"public") Object for language
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetScopedObject(scope string, language string, relPath string) *Object {
-	languages := [2]string{ language, "default" }
-	langSlice := languages[:]
-	return osm.GetMultilingualObject(scope, &langSlice, relPath)
+func (osm *ObjectStoreManager) FindScopedObject(scope string, language string, relPath string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"ObjectStoreManager.FindScopedObject('%s', '%s', '%s')",
+		scope,
+		language,
+		relPath,
+	))
+	languages := []string{ language }
+	return osm.FindContextualizedObject(scope, "", &languages, relPath)
 }
 
 // Find a private Object, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetPrivateObject(language string, relPath string) *Object {
-	return osm.GetScopedObject("private", language, relPath)
+func (osm *ObjectStoreManager) FindPrivateObject(language string, relPath string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"ObjectStoreManager.FindPrivateObject('%s', '%s')",
+		language,
+		relPath,
+	))
+	return osm.FindScopedObject("private", language, relPath)
 }
 
-// Find a (mustache) template type Object, facet on language (default="default")
+// Find a named (mustache) template type Object, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetTemplate(name string, language string) *Object {
-	return osm.GetPrivateObject(language, fmt.Sprintf("templates/%s.mustache", name))
+func (osm *ObjectStoreManager) FindTemplate(language string, name string) *Object {
+	lib.GetLogger().Trace(fmt.Sprintf(
+		"ObjectStoreManager.FindTemplate('%s', '%s')",
+		language,
+		name,
+	))
+	return osm.FindPrivateObject(language, fmt.Sprintf("templates/%s.mustache", name))
 }
 
