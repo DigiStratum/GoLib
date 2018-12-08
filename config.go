@@ -174,6 +174,26 @@ func (cfg *Config) LoadJsonConfiguration(configFile string) {
 	cfg.LoadFromJsonFile(configFile)
 }
 
+// Dereference any values we have that %reference% keys in the referenceConfig
+func (cfg *Config) Dereference(referenceConfig *Config) {
+	GetLogger().Trace("Config.Dereference()")
+	// For each of our key/values...
+	for ck, cv := range *cfg {
+		// For each of the referenceConfig's key/values...
+		for rck, rcv := range *referenceConfig {
+			// A reference looks like '%key%'...
+			reference := fmt.Sprintf("%%%s%%", rck)
+
+			// And if our value doesn't have the reference, move on...
+			if ! strings.Contains(cv, reference) { continue }
+
+			// Replace the reference(s) in our value with the values referenced
+			GetLogger().Trace(fmt.Sprintf("\tReplaced '%s' with '%s' in '%s'", reference, rcv, cv))
+			(*cfg)[ck] = strings.Replace(cv, reference, rcv, -1)
+		}
+	}
+}
+
 // Generic JSON load or panic
 // The provided target should be a pointer to where we will dump the decoded JSON result
 func LoadJsonOrPanic(jsonFile string, target interface{}) {

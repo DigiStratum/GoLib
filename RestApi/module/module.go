@@ -110,6 +110,9 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 		module.moduleConfig.Merge(overrides)
 	}
 
+	// Dereference any Server Config references
+	module.moduleConfig.Dereference(module.serverConfig)
+
 	// Capture any extra configuration
 	module.extraConfig = config.GetInverseSubset(configPrefix)
 
