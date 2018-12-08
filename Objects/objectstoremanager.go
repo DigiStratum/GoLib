@@ -10,6 +10,7 @@ closest to index 0 will return immediately without consideration for anything de
 */
 
 import (
+	"fmt"
 	"errors"
 
 	lib "github.com/DigiStratum/GoLib"
@@ -56,30 +57,37 @@ func (osm *ObjectStoreManager) GetObject(path string) *Object {
 
 // Find a scoped ("private"/"public") Object, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetScopedObject(scope string, relPath string, language string) *Object {
-	possibilities := [...]string{ language, "default" }
-	for _, possibility := range possibilities {
-		object := osm.GetObject(scope + "/" + possibility + "/" + relPath)
+func (osm *ObjectStoreManager) GetMultilingualObject(base string, languages *[]string, relPath string) *Object {
+	for _, language := range *languages {
+		object := osm.GetObject(fmt.Sprintf("%s/%s/%s", base, language, relPath))
 		if nil != object { return object }
 	}
 	return nil
 }
 
-// Find a private Object, facet on language (default="default")
+// Find a contextualized Object, facet on language (default="default")
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetPrivateObject(relPath string, language string) *Object {
-	return osm.GetScopedObject("private", relPath, language)
+func (osm *ObjectStoreManager) GetContextualizedObject(context string, languages *[]string, relPath string) *Object {
+	return osm.GetMultilingualObject(fmt.Sprintf("public/%s", context), languages, relPath)
 }
 
-// Find a public Object, facet on language (default="default")
+// Find a scoped ("private"/"public") Object for language or default
 // Returns the Object or nil
-func (osm *ObjectStoreManager) GetPublicObject(relPath string, language string) *Object {
-	return osm.GetScopedObject("public", relPath, language)
+func (osm *ObjectStoreManager) GetScopedObject(scope string, language string, relPath string) *Object {
+	languages := [2]string{ language, "default" }
+	langSlice := languages[:]
+	return osm.GetMultilingualObject(scope, &langSlice, relPath)
+}
+
+// Find a private Object, facet on language (default="default")
+// Returns the Object or nil
+func (osm *ObjectStoreManager) GetPrivateObject(language string, relPath string) *Object {
+	return osm.GetScopedObject("private", language, relPath)
 }
 
 // Find a (mustache) template type Object, facet on language (default="default")
 // Returns the Object or nil
 func (osm *ObjectStoreManager) GetTemplate(name string, language string) *Object {
-	return osm.GetPrivateObject("templates/" + name + ".mustache", language)
+	return osm.GetPrivateObject(language, fmt.Sprintf("templates/%s.mustache", name))
 }
 
