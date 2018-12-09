@@ -215,6 +215,11 @@ func (request *HttpRequest) getWeightedHeaderList(headerName string) *[]string {
 	return &values
 }
 
+func (request *HttpRequest) IsIdempotentMethod() bool {
+	if request.method == "post" { return false }
+	return true
+}
+
 // -------------------------------------------
 // HTTP Headers
 

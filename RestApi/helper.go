@@ -28,19 +28,22 @@ func (hlpr *helper) ResponseError(status HttpStatus) *HttpResponse {
 	hdrs := HttpHeaders{}
 	hdrs.Set("content-type", "text/plain")
 	body := hlpr.GetHttpStatusText(status)
-	response := hlpr.ResponseWithHeaders(status, &body, &hdrs)
-	return response
+	return hlpr.ResponseWithHeaders(status, &body, &hdrs)
 }
 
 // Produce an HTTP response with standard headers
 func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) *HttpResponse {
 	hdrs := HttpHeaders{}
 	hdrs.Set("content-type", contentType)
-	response := hlpr.ResponseWithHeaders(status, body, &hdrs)
-	return response
+	return hlpr.ResponseWithHeaders(status, body, &hdrs)
 }
 
-// Produce an HTTP response from a Object (200 OK)
+// Produce an OK HTTP response with standard headers
+func (hlpr *helper) ResponseOk(body *string, contentType string) *HttpResponse {
+	return hlpr.Response(STATUS_OK, body, contentType)
+}
+
+// Produce an HTTP response from an Object (200 OK)
 func (hlpr *helper) ResponseObject(object *obj.Object, uri string) *HttpResponse {
 	return hlpr.Response(STATUS_OK, object.GetContent(), hlpr.GetMimetype(uri))
 }
@@ -55,6 +58,14 @@ func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers
 		hdrs.Merge(headers)
 	}
 	return response
+}
+
+// Product an HTTP redirect response to the supplied URL
+func (hlpr *helper) ResponseRedirect(URL string) *HttpResponse {
+	hdrs := HttpHeaders{}
+	hdrs.Set("location", URL)
+	body := ""
+	return hlpr.ResponseWithHeaders(STATUS_TEMPORARY_REDIRECT, &body, &hdrs)
 }
 
 // Scan over the body data and, for each unique name, scrub out any duplicates

@@ -10,6 +10,8 @@ ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-r
 
 import(
 	"fmt"
+	"path"
+	"strings"
 	"regexp"
 	"errors"
 
@@ -132,7 +134,45 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 	// Will our Module SecurityPolicy reject this Request?
 	if rej := ctrlr.securityPolicy.HandleRejection(request); nil != rej { return rej }
 
-	return ctrlr.dispatchRequest(request)
+	response := ctrlr.dispatchRequest(request)
+
+	// If the response was 404, see if an alternate 
+	if response.GetStatus() == rest.STATUS_NOT_FOUND {
+		altResponse := ctrlr.alternateRequest(request)
+		if nil != altResponse { return altResponse }
+	}
+
+	// Otherwise, use the original response
+	return response
+}
+
+// Retry requests with missing trailing slash
+func (ctrlr *Controller) alternateRequest(request *rest.HttpRequest) *rest.HttpResponse {
+	// If the last component of the request URI is empty, then it already trails a '/'
+	_, fileName := path.Split(request.GetURI())
+	if len(fileName) == 0 { return nil }
+
+	// If the last component of the request URI has a file extension then assume not a dir
+	pos := strings.LastIndex(fileName, ".")
+	if 0 <= pos { return nil }
+
+	// Try again witih a trailing '/'
+	request.SetURI(fmt.Sprintf("%s/", request.GetURI()))
+	request.SetURL(fmt.Sprintf("%s/", request.GetURL()))
+	response := ctrlr.dispatchRequest(request)
+
+	// If the response is still an error, then things not improving so keep original response
+	if response.GetStatus() >= rest.STATUS_BAD_REQUEST { return nil }
+
+	// If the request method was idempotent then redirect, otherwise return trhe response we got
+	if request.IsIdempotentMethod() {
+		// Redirect to the new location so that everything will
+		// relativize correctly. This happens when the user types
+		// In a directory, but doesn't put the trailing slash on it.
+		hlpr := rest.GetHelper()
+		return hlpr.ResponseRedirect(request.GetURL())
+	}
+	return response
 }
 
 // Dispatch the request to an Endpoint
