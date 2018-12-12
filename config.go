@@ -3,9 +3,10 @@ package golib
 
 /*
 
-This Config class associates basic helper functions to a simple name/value string map to make life
-easier for dealing with simple configuration data. There you can load configuration data from JSON
-files, Get/Set individual configuration values, merge additional configuration data in, and more.
+This Config class extends (embeds) our own HashMap with additional capabilities specific to the
+needs of managing simple configuration data for our purposes. You can load configuration data from
+JSON files, Get/Set individual configuration values, merge additional configuration data in, and
+more.
 
 JSON Config data may only be in the form of an object with named properties with string values. We
 generally pass around JSON strings as a pointer whenever we can to avoid copying potentially large
@@ -14,6 +15,7 @@ we get into an untrusted code/library scope, we must revert to pass by value as 
 unauthorized tampering.
 
 In addition to the explicit imports below, we also leverage the following classes from here:
+ * HashMap
  * Logger
 
 */
@@ -26,54 +28,16 @@ import(
 	"errors"
 )
 
-type Config map[string]string
+// Config embeds a HashMap so that we can extend it
+// ref: https://stackoverflow.com/questions/28800672/how-to-add-new-methods-to-an-existing-type-in-go
+type Config struct {
+	HashMap
+}
 
 // Make a new one of these!
 func NewConfig() *Config {
-	return &Config{}
-}
-
-// Check whether this Config is empty (has no properties)
-func (cfg *Config) IsEmpty() bool {
-	return 0 == cfg.Size()
-}
-
-// Get the number of properties in this Config
-func (cfg *Config) Size() int {
-	return len(*cfg)
-}
-
-// Merge some additional configuration data on top of our own
-func (cfg *Config) Merge(inbound *Config) {
-	for k, v := range *inbound { (*cfg)[k] = v }
-}
-
-// Set a single configuration element key to the specified value
-func (cfg *Config) Set(key string, value string) {
-	(*cfg)[key] = value
-}
-
-// Get a single configuration element by key name
-func (cfg *Config) Get(key string) string {
-	str := ""
-	if val, ok := (*cfg)[key]; ok { str = val }
-	return str
-}
-
-// Check whether we have a configuration element by key name
-func (cfg *Config) Has(key string) bool {
-	_, ok := (*cfg)[key];
-	return ok
-}
-
-// Check whether we have configuration elements for all the key names
-func (cfg *Config) HasAll(keys *[]string) bool {
-	if nil == keys { return false }
-	for _, key := range *keys {
-		_, ok := (*cfg)[key];
-		if ! ok { return false }
-	}
-	return true
+	hash := NewHashMap()
+	return &Config{ HashMap: *hash }
 }
 
 // Get configuration datum whose keys begin with the prefix...
@@ -91,32 +55,19 @@ func (cfg *Config) GetInverseSubset(prefix string) *Config {
 // Get configuration datum whose keys Do/Don't begin with the prefix...
 // Return the matches if keepMatches, else return the NON-matches
 func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
-	res := make(Config)
-	for k, v := range *cfg {
-		matches := strings.HasPrefix(k, prefix)
+	res := NewConfig()
+	for pair := range cfg.IterateChannel() {
+		matches := strings.HasPrefix(pair.Key, prefix)
 		if (matches) {
 			if ! keepMatches { continue }
-			strippedKey := k[len(prefix):]
-			res[strippedKey] = v
+			strippedKey := pair.Key[len(prefix):]
+			res.Set(strippedKey, pair.Value)
 		} else {
 			if keepMatches { continue }
-			res[k] = v
+			res.Set(pair.Key, pair.Value)
 		}
 	}
-	return &res
-}
-
-// Get a full copy of this Config
-// This is so that we can give away a copy to someone else without allowing them to tamper with us
-func (cfg *Config) GetCopy() *Config {
-	if nil == cfg {
-		l := GetLogger()
-		l.Warn("Config.GetCopy() - *Config is nil!")
-		return nil
-	}
-	res := make(Config)
-	for k, v := range *cfg { res[k] = v }
-	return &res
+	return res
 }
 
 // Dump our configuration data
@@ -124,8 +75,8 @@ func (cfg *Config) DumpConfig() {
 	l := GetLogger()
 	l.Crazy("Config:")
 	l.Crazy("--------------------------")
-	for k, v := range *cfg {
-		l.Crazy(fmt.Sprintf("\t'%s': '%s'", k, v))
+	for pair := range cfg.IterateChannel() {
+		l.Crazy(fmt.Sprintf("\t'%s': '%s'", pair.Key, pair.Value))
 	}
 	l.Crazy("--------------------------")
 }
@@ -177,19 +128,25 @@ func (cfg *Config) LoadJsonConfiguration(configFile string) {
 // Dereference any values we have that %reference% keys in the referenceConfig
 func (cfg *Config) Dereference(referenceConfig *Config) {
 	GetLogger().Trace("Config.Dereference()")
-	// For each of our key/values...
-	for ck, cv := range *cfg {
-		// For each of the referenceConfig's key/values...
-		for rck, rcv := range *referenceConfig {
+	// For each of our key/value pairs...
+	for cpair := range cfg.IterateChannel() {
+		// For each of the referenceConfig's key/value pairs...
+		for rcpair := range cfg.IterateChannel() {
 			// A reference looks like '%key%'...
-			reference := fmt.Sprintf("%%%s%%", rck)
+			reference := fmt.Sprintf("%%%s%%", rcpair.Key)
 
 			// And if our value doesn't have the reference, move on...
-			if ! strings.Contains(cv, reference) { continue }
+			if ! strings.Contains(cpair.Value, reference) { continue }
 
 			// Replace the reference(s) in our value with the values referenced
-			GetLogger().Trace(fmt.Sprintf("\tReplaced '%s' with '%s' in '%s'", reference, rcv, cv))
-			(*cfg)[ck] = strings.Replace(cv, reference, rcv, -1)
+			GetLogger().Trace(fmt.Sprintf(
+				"\tReplaced '%s' with '%s' in '%s'",
+				reference, rcpair.Value, cpair.Value,
+			))
+			cfg.Set(
+				cpair.Key,
+				strings.Replace(cpair.Value, reference, rcpair.Value, -1),
+			)
 		}
 	}
 }
