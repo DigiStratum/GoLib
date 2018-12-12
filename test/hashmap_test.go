@@ -1,5 +1,12 @@
 package golib_test
 
+/*
+
+Unit Tests for HasMap
+
+ref: https://blog.alexellis.io/golang-writing-unit-tests/
+
+*/
 import(
 	"testing"
 
