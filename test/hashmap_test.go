@@ -395,3 +395,57 @@ func TestThat_HashMap_IterateCallback_MakesOneCallPerKey_WhenNonEmpty(t *testing
 
 // TODO: Add HashMap.IterateChannel() coverage
 
+func TestThat_HashMap_IterateChannel_Panics_WhenNil(t *testing.T) {
+	// Setup
+	defer ExpectPanic(t)
+	var sut *lib.HashMap	// nil
+
+	// Test
+	for _ = range sut.IterateChannel() {}
+}
+
+func TestThat_HashMap_IterateChannel_YieldsNoEntries_WhenEmpty(t *testing.T) {
+	// Setup
+	sut := lib.NewHashMap()
+	entryCounter := 0
+
+	// Test
+	for _ = range sut.IterateChannel() { entryCounter++ }
+
+	// Verify
+	ExpectInt(0, entryCounter, t)
+}
+
+func TestThat_HashMap_IterateChannel_YieldsOneEntryPerKey_WhenNonEmpty(t *testing.T) {
+	// Setup
+	sut := lib.NewHashMap()
+	num := 25
+	keys := make([]string, num)
+	for i := 0; i < num; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		value := fmt.Sprintf("value-%d", i)
+		sut.Set(key, value)
+		keys[i] = key
+	}
+	type kvpdata struct {
+		Value	string
+		Num	int
+	}
+	entries := make(map[string]*kvpdata)
+
+	// Test
+	for kvp := range sut.IterateChannel() {
+		if _, ok := entries[kvp.Key]; ! ok {
+			entries[kvp.Key] = &kvpdata{ Value: kvp.Value, Num: 0 }
+		}
+		(*entries[kvp.Key]).Num++
+	}
+
+	// Verify
+	ExpectInt(num, len(entries), t)
+	for i := 0; i < num; i++ {
+		ExpectInt(1, entries[keys[i]].Num, t)
+		ExpectString(sut.Get(keys[i]), entries[keys[i]].Value, t)
+	}
+}
+
