@@ -14,18 +14,16 @@ JSON strings unnecessarily. As long as we are in a trusted code/library scope, t
 we get into an untrusted code/library scope, we must revert to pass by value as needed to prevent
 unauthorized tampering.
 
-In addition to the explicit imports below, we also leverage the following classes from here:
+In addition to the explicit imports below, we use the following classes from this same package:
  * HashMap
  * Logger
+ * Json
 
 */
 
 import(
 	"strings"
-	"os"
 	"fmt"
-	"encoding/json"
-	"errors"
 )
 
 // Config embeds a HashMap so that we can extend it
@@ -83,46 +81,21 @@ func (cfg *Config) DumpConfig() {
 
 // Load our JSON configuration data from a string
 func (cfg *Config) LoadFromJsonString(configJson *string) {
-	loadFromJsonStringOrPanic(configJson, cfg)
+	NewJson(configJson).LoadOrPanic(cfg)
 	cfg.DumpConfig()
-}
-
-func loadFromJsonStringOrPanic(configJson *string, target interface{}) {
-	if err := loadFromJsonString(configJson, target); nil != err { panic(err.Error()) }
 }
 
 // Load our JSON configuration data from a string (or return an error)
 func (cfg *Config) LoadFromJsonStringOrError(configJson *string) error {
-	if err := loadFromJsonString(configJson, cfg); nil != err {
-		return err
-	}
+	if err := NewJson(configJson).Load(cfg); nil == err { return err }
 	cfg.DumpConfig()
-	return nil
-}
-
-func loadFromJsonString(configJson *string, target interface{}) error {
-	if nil == configJson {
-		msg := "Config.loadFromJsonString(): We were given nil for the Config JSON"
-		GetLogger().Error(msg)
-		return  errors.New(msg)
-	}
-	if err := json.Unmarshal([]byte(*configJson), &target); err != nil {
-		msg := fmt.Sprintf("Config.loadFromJsonString(): Failed to unmarshall JSON: %s", err.Error())
-		GetLogger().Error(msg)
-		return errors.New(msg)
-	}
 	return nil
 }
 
 // Load our JSON configuration data from a file on disk
 func (cfg *Config) LoadFromJsonFile(configFile string) {
-	LoadJsonOrPanic(configFile, cfg)
+	NewJsonFromFile(configFile).LoadOrPanic(cfg)
 	cfg.DumpConfig()
-}
-
-// FIXME: DEPRECATED; replace calls with LoadFromJsonFile() above
-func (cfg *Config) LoadJsonConfiguration(configFile string) {
-	cfg.LoadFromJsonFile(configFile)
 }
 
 // Dereference any values we have that %reference% keys in the referenceConfig
@@ -149,31 +122,5 @@ func (cfg *Config) Dereference(referenceConfig *Config) {
 			)
 		}
 	}
-}
-
-// Generic JSON load or panic
-// The provided target should be a pointer to where we will dump the decoded JSON result
-func LoadJsonOrPanic(jsonFile string, target interface{}) {
-	if err := LoadJson(jsonFile, target); err != nil {
-		msg := fmt.Sprintf("Config.LoadJsonOrPanic(): %s", err.Error())
-		GetLogger().Fatal(msg)
-		panic(msg)
-	}
-}
-
-// Generic JSON load (into ANY interface)
-// The provided target should be a pointer to where we will dump the decoded JSON result
-// TODO: relocate this to a general purpose JSON library as it is not Config-specific
-func LoadJson(jsonFile string, target interface{}) error {
-        file, err := os.Open(jsonFile)
-        if nil == err {
-		decoder := json.NewDecoder(file)
-		err = decoder.Decode(target)
-		file.Close()
-		if nil == err { return nil }
-	}
-	// Decorate the errror with a little more context
-	msg := fmt.Sprintf("LoadJson(): file='%s': '%s'", jsonFile, err.Error())
-	return errors.New(msg)
 }
 
