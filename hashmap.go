@@ -12,6 +12,8 @@ TODO: Put some multi-threaded protections around the accessors here
 
 */
 
+import "sync"
+
 type KeyValuePair struct {
 	Key	string
 	Value	string
@@ -85,15 +87,21 @@ func (hash *HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
 // Iterate over the keys for this HashMap and send all the KeyValuePairs to a channel
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 // ref: https://blog.golang.org/pipelines
+// ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
 func (hash *HashMap) IterateChannel() <-chan KeyValuePair {
 	ch := make(chan KeyValuePair, len(*hash))
 	defer close(ch)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	// Fire off a go routine to fill up the channel
 	go func() {
 		for k, v := range *hash {
 			ch <- KeyValuePair{ Key: k, Value: v }
 		}
+		wg.Done()
 	}()
+	wg.Wait()
 	return ch
 }
 
