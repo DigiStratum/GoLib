@@ -20,26 +20,15 @@ to remove the LRU items from the list, we can just pop them off the back.
 
 ref: https://golang.org/pkg/container/list/
 
-TODO:
- * Add thread-safe mutex access controls
- * Add limit checks for size/count
-
 */
 
 import (
+	"sync"
 	"container/list"
 )
 
-type cacheItem struct {
-	Key, Content		string
-}
 
-type lruCache struct {
-	count, countLimit	int
-	size, sizeLimit		int
-	ageList			List
-	elements		map[string]*Element
-}
+// Public Interface
 
 // Make a new one of these
 func NewLRUCache() {
@@ -50,10 +39,55 @@ func NewLRUCache() {
 		sizeLimit:	0,
 		ageList:	list.New(),
 		elements:	make(map[string]*Element),
+		mutex:		&sync.Mutex{},
 	}
 }
 
-// THREAD SAFE:
+// Check whether we have an item in the cache with the supplied key
+func (lru *lruCache) Has(key string) bool {
+	lru.Lock()
+	defer lru.Unlock()
+	return (nil != lru.find(key, true))
+}
+
+// Add a content item to the cache with the supplied key
+func (lru *lruCache) Set(key, content string) {
+	lru.Lock()
+	defer lru.Unlock()
+	lru.set(key, content)
+}
+
+// Retrieve an item from the cache with the supplied key (or nil if there isn't one)
+func (lru *lruCache) Get(key string) interface{} {
+	lru.Lock()
+	defer lru.Unlock()
+	if element := lru.find(key, true); nil != element {
+		return element.Value()
+	}
+	return nil
+}
+
+// Drop an item from the cache with the supplied key
+func (lru *lruCache) Drop(key string) {
+	lru.Lock()
+	defer lru.Unlock()
+	lru.drop(key)
+}
+
+
+// Private Implementation
+
+type cacheItem struct {
+	Key, Content		string
+}
+
+type lruCache struct {
+	count, countLimit	int
+	size, sizeLimit		int
+	ageList			List
+	elements		map[string]*Element
+	mutex			*sync.Mutex
+}
 
 // Check if this item will even fit within our cache limits
 // If should also not displace more than some threshold of current cache elements
@@ -70,7 +104,8 @@ func (lru *lruCache) pruneToFit(key string, int size) bool {
 	elementsToPrune := 0
 
 	// TODO: Account for there already being a cacheItem with this key:
-	// subract the existing item's size from consideration and deduct one from the total count for limits checks
+	// subract the existing item's size from consideration and deduct
+	// one from the total count for limits checks
 
 	// If there is a size limit in effect...
 	if (lru.sizeLimit > 0) && ((lru.size + size) >= lru.sizeLimit) {
@@ -129,24 +164,11 @@ func (lru *lruCache) find(key string, bump bool) *Element {
 	return nil
 }
 
-// UNSAFE!
-func (lru *lruCache) Has(key string) bool {
-	element := lru.find(key, true)
-	return (nil != element)
+func (lru *lruCache) lock() {
+	lru.mutex.Lock()
 }
 
-func (lru *lruCache) Set(key, content string) interface{} {
-	lru.set(key, content)
-}
-
-func (lru *lruCache) Get(key string) interface{} {
-	if element := lru.find(key, true); nil != element {
-		return element.Value()
-	}
-	return nil
-}
-
-func (lru *lruCache) Drop(key string) {
-	lru.drop(key)
+func (lru *lruCache) unlock() {
+	lru.mutex.Unlock()
 }
 
