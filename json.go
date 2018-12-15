@@ -10,29 +10,29 @@ Dealing with JSON at a level of abstraction above encoding/json.
 import(
 	"os"
 	"fmt"
-	"encoding/json"
+	gojson "encoding/json"
 	"errors"
 )
 
-type Json struct {
+type json struct {
 	source	string
 	path	string
 	json	*string
 }
 
 // Make a new one of these (from string)!
-func NewJson(json *string) *Json {
-	return &Json{ json: json, source: "string" }
+func NewJson(jsonString *string) *json {
+	return &json{ json: jsonString, source: "string" }
 }
 
 // Make a new one of these (from file)!
-func NewJsonFromFile(path string) *Json {
-	return &Json{ path: path, source: "file" }
+func NewJsonFromFile(path string) *json {
+	return &json{ path: path, source: "file" }
 }
 
 // Generic JSON load (into ANY interface)
 // The provided target should be a pointer to where we will dump the decoded JSON result
-func (j *Json) Load(target interface{}) error {
+func (j *json) Load(target interface{}) error {
 	switch (j.source) {
 		case "string":
 			if nil == j.json {
@@ -40,7 +40,7 @@ func (j *Json) Load(target interface{}) error {
 					"Json.Load(): We were given nil for the JSON (string)",
 				)
 			}
-			if err := json.Unmarshal([]byte(*(j.json)), &target); err != nil {
+			if err := gojson.Unmarshal([]byte(*(j.json)), &target); err != nil {
 				return errors.New(fmt.Sprintf(
 					"Json.Load(): Failed to unmarshall JSON (string): %s",
 					err.Error(),
@@ -51,8 +51,8 @@ func (j *Json) Load(target interface{}) error {
 		case "file":
 			file, err := os.Open(j.path)
 			defer file.Close()
-			if nil != err {
-				decoder := json.NewDecoder(file)
+			if nil == err {
+				decoder := gojson.NewDecoder(file)
 				err = decoder.Decode(target)
 				if nil == err { return nil }
 			}
@@ -67,7 +67,7 @@ func (j *Json) Load(target interface{}) error {
 
 // Generic JSON load (or panic)
 // The provided target should be a pointer to where we will dump the decoded JSON result
-func (j *Json) LoadOrPanic(target interface{}) {
+func (j *json) LoadOrPanic(target interface{}) {
 	if err := j.Load(target); nil != err { panic(err.Error()) }
 }
 
