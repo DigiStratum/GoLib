@@ -18,8 +18,11 @@ As far as implementation, we're going to use a double-linked list and keep the o
 back of the list and push everything to the front each time it's accessed. This way, when we want
 to remove the LRU items from the list, we can just pop them off the back.
 
-In addition to the explicit imports below, we use the following classes from this same package:
- * Logger
+ref: https://golang.org/pkg/container/list/
+
+TODO:
+ * Add thread-safe mutex access controls
+ * Add limit checks for size/count
 
 */
 
@@ -27,17 +30,23 @@ import (
 	"container/list"
 )
 
+type cacheItem struct {
+	Key, Content		string
+}
+
 type lruCache struct {
-	countLimit	int
-	sizeLimit	int
-	ageList		List
-	elements	map[string]*Element
+	count, countLimit	int
+	size, sizeLimit		int
+	ageList			List
+	elements		map[string]*Element
 }
 
 // Make a new one of these
 func NewLRUCache() {
 	return &lruCache{
+		count:		0,
 		countLimit:	0,
+		size:		0,
 		sizeLimit:	0,
 		ageList:	list.New(),
 		elements:	make(map[string]*Element),
@@ -46,25 +55,75 @@ func NewLRUCache() {
 
 // THREAD SAFE:
 
-func (lru *lruCache) set(key string, content string) {
+// Check if this item will even fit within our cache limits
+// If should also not displace more than some threshold of current cache elements
+// TODO: Merge with prune function below?
+func (lru *lruCache) isCacheable(key string, int size) bool {
+	return true
+}
+
+// Prune the currently cached element collection to fit the new element within limits
+func (lru *lruCache) pruneToFit(key string, int size) bool {
+	if ! lru.isCacheable(key, size) { return false }
+
+	// Based on limits, how many elements would we need to prune to fit this new thing?
+	elementsToPrune := 0
+
+	// TODO: Account for there already being a cacheItem with this key:
+	// subract the existing item's size from consideration and deduct one from the total count for limits checks
+
+	// If there is a size limit in effect...
+	if (lru.sizeLimit > 0) && ((lru.size + size) >= lru.sizeLimit) {
+		pruneSize := (lru.size + size) - lru.sizeLimit
+		if pruneSize > elementsToPrune { elementsToPrune = pruneSize }
+	}
+
+	// If there is a count limit in effect...
+	if (lru.countLimit > 0) && ((lru.count + 1) >= lru.countLimit) {
+		pruneCount := (lru.count + 1) - lru.countLimit
+		if pruneCount > elmentsToPrune { elementsToPrune = pruneCount }
+	}
+
+	// What percentage of our cache needs to be pruned?
+	if 0 == elementsToPrune { return true } // No pruning needed to fit!
+
+	// TODO: Make sure we're not pruning more than some percentage threshold
+	// (to minimize performance hits due to statistical outliers)
+
+	// Prune starting at the back of the age list for the count we need to prune
+	element := lru.ageList.Back()
+	for i := 0; i < elementsToPrune; i++ {
+		key := element.Value().Key	// get the key for this element
+		element := element.Next()	// get the next element
+		lru.drop(key)			// drop this one from the cache
+	}
+	return true
+}
+
+func (lru *lruCache) set(key, content string) {
+	if ! lru.pruneToFit(key, len(content)) { return }
 	// Drop if exists already
 	lru.drop(key)
 	// Add content to front of age List and remember it by key in elements map
-	*lru.elements[key] = lru.ageList.PushFront(content)
+	*lru.elements[key] = lru.ageList.PushFront(cacheItem{ Key: key, Content: content })
+	(*lru).size += len(content)
+	(*lru).count++
 }
 
 func (lru *lruCache) drop(key string) {
-	// Drop if exists
-	if element := lru.find(key); nil != element {
+	// Drop if exists (don't bump on the find since we're going to drop it!)
+	if element := lru.find(key, false); nil != element {
+		(*lru).size -= len(element.value().Content)
+		(*lru).count--
 		lru.ageList.Remove(element)
 		delete(lru.elements, key)
 	}
 }
 
-func (lru *lruCache) find(key string) *Element {
+func (lru *lruCache) find(key string, bump bool) *Element {
 	if element, ok := *lru.elements[key]; ok {
-		// Just got bumped; move to front of age List
-		lru.ageList.MoveToFront(element)
+		// If we got bumped, move to front of age List
+		if bump { lru.ageList.MoveToFront(element) }
 		return element
 	}
 	return nil
@@ -72,16 +131,16 @@ func (lru *lruCache) find(key string) *Element {
 
 // UNSAFE!
 func (lru *lruCache) Has(key string) bool {
-	element := lru.find(key)
+	element := lru.find(key, true)
 	return (nil != element)
 }
 
-func (lru *lruCache) Set(key string, content string) interface{} {
+func (lru *lruCache) Set(key, content string) interface{} {
 	lru.set(key, content)
 }
 
 func (lru *lruCache) Get(key string) interface{} {
-	if element := lru.find(key); nil != element {
+	if element := lru.find(key, true); nil != element {
 		return element.Value()
 	}
 	return nil
