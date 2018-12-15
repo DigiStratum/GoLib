@@ -2,7 +2,7 @@ package golib_test
 
 /*
 
-Unit Tests for HasMap
+Unit Tests for HashMap
 
 ref: https://blog.alexellis.io/golang-writing-unit-tests/
 
