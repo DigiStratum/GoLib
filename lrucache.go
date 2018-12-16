@@ -74,6 +74,27 @@ func (lru *lruCache) Drop(key string) {
 	lru.drop(key)
 }
 
+// Return the data size currently being held in this cache
+func (lru *lruCache) Size() int {
+	lru.lock()
+	defer lru.unlock()
+	return lru.size
+}
+
+// Return the count of entries currently being held in this cache
+func (lru *lruCache) Count() int {
+	lru.lock()
+	defer lru.unlock()
+	return lru.count
+}
+
+// Set the limits for size/count on this cache; 0 means unlimited (default for both)
+func (lru *lruCache) Limit(sizeLimit, countLimit int) {
+	lru.lock()
+	defer lru.unlock()
+	lru.sizeLimit = sizeLimit
+	lru.countLimit = countLimit
+}
 
 // Private Implementation
 
