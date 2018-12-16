@@ -58,11 +58,12 @@ func (lru *lruCache) Set(key, content string) {
 }
 
 // Retrieve an item from the cache with the supplied key (or nil if there isn't one)
-func (lru *lruCache) Get(key string) interface{} {
+func (lru *lruCache) Get(key string) *string {
 	lru.lock()
 	defer lru.unlock()
 	if element := lru.find(key, true); nil != element {
-		return element.Value
+		content := element.Value.(cacheItem).Content
+		return &content
 	}
 	return nil
 }
