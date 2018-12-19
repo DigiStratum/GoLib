@@ -107,9 +107,9 @@ func TestThat_LRUCache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 	sut := lib.NewLRUCache()
 
 	// Test
-	sizeLimit := 0
 	countLimit := 5
-	sut.SetLimits(sizeLimit, countLimit)
+	sizeLimit := 0
+	sut.SetLimits(sizeLimit, countLimit - 1) // count limit is one less than we want
 	for i := 0; i < countLimit; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content%d", i)
@@ -117,6 +117,14 @@ func TestThat_LRUCache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 	}
 
 	// Verify
-	ExpectFalse(sut.Set("extrakey", "this attempt to add an entry should be blocked by the limit"), t)
+	ExpectInt(countLimit - 1, sut.Count(), t) // should only have count limit less one
+	ExpectFalse(sut.Has("key0"), t)
+	for i := 1; i < countLimit; i++ { // We expect the lowest (oldest one) is replaced with the newest
+		key := fmt.Sprintf("key%d", i)
+		content := fmt.Sprintf("content%d", i)
+		ExpectTrue(sut.Has(key), t)
+		res := sut.Get(key)
+		ExpectString(content, *res, t)
+	}
 }
 
