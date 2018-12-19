@@ -205,3 +205,45 @@ func TestThat_LRUCache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testin
 	}
 }
 
+func TestThat_LRUCache_SetLimits_PreventsSet_WhenEntryAddsExceedsLimit(t *testing.T) {
+	// Setup
+	sut := lib.NewLRUCache()
+
+	// Test
+	sizeLimit := 5
+	sut.SetLimits(sizeLimit, 0)
+
+	// Verify
+	ExpectFalse(sut.Set("anykey", "1234567890"),t)
+}
+
+func TestThat_LRUCache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
+	// Setup
+	sut := lib.NewLRUCache()
+
+	// Test
+	sizeLimit := 5
+	sut.SetLimits(sizeLimit, 0)
+
+	// Verify
+	ExpectTrue(sut.Set("anykey", "12345"),t)
+}
+
+func TestThat_LRUCache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
+	// Setup
+	sut := lib.NewLRUCache()
+
+	// Test
+	key := "anykey"
+	sizeLimit := 5
+	sut.SetLimits(sizeLimit, 0)
+
+	// Verify
+	ExpectTrue(sut.Set(key, "12345"), t)
+	content := "54321"
+	ExpectTrue(sut.Set(key, content), t)
+	ExpectInt(1, sut.Count(), t)
+	res := sut.Get(key)
+	ExpectString(content, *res, t)
+}
+
