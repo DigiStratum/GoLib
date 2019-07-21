@@ -38,6 +38,12 @@ func NewConfig() *Config {
 	return &Config{ HashMap: *hash }
 }
 
+// Merge configuration data
+// Just because we embed HashMap doesn't mean data type casting works out for us
+func (cfg *Config) Merge(mergeCfg *Config) {
+	cfg.HashMap.Merge(&(mergeCfg.HashMap))
+}
+
 // Get configuration datum whose keys begin with the prefix...
 // We also strip the prefix off leaving just the interesting parts
 func (cfg *Config) GetSubset(prefix string) *Config {
