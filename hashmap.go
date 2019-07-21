@@ -12,7 +12,10 @@ TODO: Put some multi-threaded protections around the accessors here
 
 */
 
-import "sync"
+import (
+	"sync"
+	"fmt"
+)
 
 type KeyValuePair struct {
 	Key	string
@@ -103,5 +106,12 @@ func (hash *HashMap) IterateChannel() <-chan KeyValuePair {
 	}()
 	wg.Wait()
 	return ch
+}
+
+// Dump the contents of this HashMap to stdout for debug purposes
+func (hash *HashMap) Dump() {
+	for k, v := range *hash {
+		fmt.Printf("HashMap[%s]='%s'\n", k, v)
+	}
 }
 
