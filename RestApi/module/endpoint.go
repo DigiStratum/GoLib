@@ -191,7 +191,7 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 			"Endpoint{%s}.Configure(): Applying overrides from extra Module Config",
 			ep.name,
 		))
-		overrides.DumpConfig()
+		overrides.Dump()
                 ep.endpointConfig.Merge(overrides)
         }
 }

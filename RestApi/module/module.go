@@ -106,7 +106,7 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 			"Module{%s}.Configure(): Applying overrides from extra Server Config",
 			module.name,
 		))
-		overrides.DumpConfig()
+		overrides.Dump()
 		module.moduleConfig.Merge(overrides)
 	}
 

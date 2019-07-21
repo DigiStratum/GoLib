@@ -15,6 +15,7 @@ TODO: Put some multi-threaded protections around the accessors here
 import (
 	"sync"
 	"fmt"
+	"strings"
 )
 
 type KeyValuePair struct {
@@ -110,8 +111,8 @@ func (hash *HashMap) IterateChannel() <-chan KeyValuePair {
 
 // Dump the contents of this HashMap to stdout for debug purposes
 func (hash *HashMap) Dump() {
-	for k, v := range *hash {
-		fmt.Printf("HashMap[%s]='%s'\n", k, v)
-	}
+	var b strings.Builder
+	for k, v := range *hash { fmt.Fprintf(&b, "\t'%s': '%s'\n", k, v) }
+	GetLogger().Info(fmt.Sprintf("HashMap = {\n%s}\n", b.String()))
 }
 

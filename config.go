@@ -74,34 +74,23 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 	return res
 }
 
-// Dump our configuration data
-func (cfg *Config) DumpConfig() {
-	l := GetLogger()
-	l.Crazy("Config:")
-	l.Crazy("--------------------------")
-	for pair := range cfg.IterateChannel() {
-		l.Crazy(fmt.Sprintf("\t'%s': '%s'", pair.Key, pair.Value))
-	}
-	l.Crazy("--------------------------")
-}
-
 // Load our JSON configuration data from a string
 func (cfg *Config) LoadFromJsonString(configJson *string) {
 	NewJson(configJson).LoadOrPanic(cfg)
-	cfg.DumpConfig()
+	cfg.Dump()
 }
 
 // Load our JSON configuration data from a string (or return an error)
 func (cfg *Config) LoadFromJsonStringOrError(configJson *string) error {
 	if err := NewJson(configJson).Load(cfg); nil == err { return err }
-	cfg.DumpConfig()
+	cfg.Dump()
 	return nil
 }
 
 // Load our JSON configuration data from a file on disk
 func (cfg *Config) LoadFromJsonFile(configFile string) {
-	NewJsonFromFile(configFile).LoadOrPanic(cfg)
-	cfg.DumpConfig()
+	NewJsonFromFile(configFile).LoadOrPanic(&cfg.HashMap)
+	cfg.Dump()
 }
 
 // Dereference any values we have that %reference% keys in the referenceConfig
