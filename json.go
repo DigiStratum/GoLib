@@ -35,9 +35,9 @@ func NewJsonFromFile(path string) *json {
 func (j *json) Load(target interface{}) error {
 	switch (j.source) {
 		case "string":
-			if nil == j.json {
+			if (nil == j.json) || ("" == *(j.json)) {
 				return errors.New(
-					"Json.Load(): We were given nil for the JSON (string)",
+					"Json.Load(): We were given nil or empty string for the JSON (string)",
 				)
 			}
 			if err := gojson.Unmarshal([]byte(*(j.json)), &target); err != nil {
