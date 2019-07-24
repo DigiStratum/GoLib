@@ -46,7 +46,7 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (*lib.Con
 	// Load up a Config structure from the JSON
 	config := lib.NewConfig()
 	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
-		lib.GetLogger().Error(err.Error())
+		lib.GetLogger().Error(fmt.Sprintf("Config: Error parsing ObjectStore JSON ('%s'): %s", objectPath, err.Error()))
 		return nil, err
 	}
 
