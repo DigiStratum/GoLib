@@ -76,13 +76,13 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 
 // Load our JSON configuration data from a string
 func (cfg *Config) LoadFromJsonString(configJson *string) {
-	NewJson(configJson).LoadOrPanic(cfg)
+	NewJson(configJson).LoadOrPanic(&cfg.HashMap)
 	cfg.Dump()
 }
 
 // Load our JSON configuration data from a string (or return an error)
 func (cfg *Config) LoadFromJsonStringOrError(configJson *string) error {
-	if err := NewJson(configJson).Load(cfg); nil == err { return err }
+	if err := NewJson(configJson).Load(&cfg.HashMap); nil == err { return err }
 	cfg.Dump()
 	return nil
 }
