@@ -77,20 +77,20 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 // Load our JSON configuration data from a string
 func (cfg *Config) LoadFromJsonString(configJson *string) {
 	NewJson(configJson).LoadOrPanic(&cfg.HashMap)
-	cfg.Dump()
+	//cfg.Dump()
 }
 
 // Load our JSON configuration data from a string (or return an error)
 func (cfg *Config) LoadFromJsonStringOrError(configJson *string) error {
 	if err := NewJson(configJson).Load(&cfg.HashMap); nil == err { return err }
-	cfg.Dump()
+	//cfg.Dump()
 	return nil
 }
 
 // Load our JSON configuration data from a file on disk
 func (cfg *Config) LoadFromJsonFile(configFile string) {
 	NewJsonFromFile(configFile).LoadOrPanic(&cfg.HashMap)
-	cfg.Dump()
+	//cfg.Dump()
 }
 
 // Dereference any values we have that %reference% keys in the referenceConfig
