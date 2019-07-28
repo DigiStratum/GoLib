@@ -111,8 +111,13 @@ func (hash *HashMap) IterateChannel() <-chan KeyValuePair {
 
 // Dump the contents of this HashMap to stdout for debug purposes
 func (hash *HashMap) Dump() {
+	GetLogger().Info(hash.DumpString())
+}
+
+// Dump the contents of this HashMap to a string so that it can be captured/processed as needed by the caller
+func (hash *HashMap) DumpString() string {
 	var b strings.Builder
 	for k, v := range *hash { fmt.Fprintf(&b, "\t'%s': '%s'\n", k, v) }
-	GetLogger().Info(fmt.Sprintf("HashMap = {\n%s}\n", b.String()))
+	return fmt.Sprintf("HashMap = {\n%s}\n", b.String())
 }
 

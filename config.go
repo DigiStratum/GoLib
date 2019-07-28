@@ -96,14 +96,24 @@ func (cfg *Config) LoadFromJsonFile(configFile string) {
 // Dereference any values we have that %reference% keys in the referenceConfig
 func (cfg *Config) Dereference(referenceConfig *Config) {
 	GetLogger().Trace("Config.Dereference()")
+	GetLogger().Crazy(fmt.Sprintf(
+		"Dereferencing against Config: %s",
+		referenceConfig.DumpString(),
+	));
 	// For each of our key/value pairs...
 	for cpair := range cfg.IterateChannel() {
 		// For each of the referenceConfig's key/value pairs...
-		for rcpair := range cfg.IterateChannel() {
+		for rcpair := range referenceConfig.IterateChannel() {
 			// A reference looks like '%key%'...
 			reference := fmt.Sprintf("%%%s%%", rcpair.Key)
+			GetLogger().Crazy(fmt.Sprintf(
+				"Config.Dereference() -> config['%s'] = '%s' value has '%s' ... ?",
+				cpair.Key,
+				cpair.Value,
+				reference,
+			));
 
-			// And if our value doesn't have the reference, move on...
+			// If the referenceConfig value doesn't reference config key, move on...
 			if ! strings.Contains(cpair.Value, reference) { continue }
 
 			// Replace the reference(s) in our value with the values referenced
@@ -116,6 +126,17 @@ func (cfg *Config) Dereference(referenceConfig *Config) {
 				strings.Replace(cpair.Value, reference, rcpair.Value, -1),
 			)
 		}
+	}
+}
+
+// Dereference against a list of other referenceConfigs
+func (cfg *Config) DereferenceAll(referenceConfigs ...*Config) {
+	for _, referenceConfig := range referenceConfigs {
+		GetLogger().Crazy(fmt.Sprintf(
+			"DereferenceAll against Config: %s",
+			referenceConfig.DumpString(),
+		));
+		cfg.Dereference(referenceConfig)
 	}
 }
 

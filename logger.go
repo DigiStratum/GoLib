@@ -137,7 +137,7 @@ func (l *logger) log(level logLevel, msg string) error {
 		case FATAL: prefix = "FATAL"
 	}
 	logMsg := fmt.Sprintf("%5s %s", prefix, msg)
-	if l.WillLogForLevel(level) {
+	if level >= l.minLogLevel {
 		// Send the log message to our LogWriter
 		t := time.Now()
 		l.logWriter.Log(fmt.Sprintf(
@@ -149,12 +149,6 @@ func (l *logger) log(level logLevel, msg string) error {
 	}
 	return errors.New(logMsg)
 }
-
-// Will this logger log for the specified level?
-func (l *logger) WillLogForLevel(lvl logLevel) bool {
-	return lvl >= l.minLogLevel;
-}
-
 
 // Log CRAZY output
 func (l *logger) Crazy(msg string) error {

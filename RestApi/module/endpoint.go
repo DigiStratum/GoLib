@@ -205,6 +205,11 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 		ep.isDefault = false
 	}
 	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): isDefault? %t", ep.name, ep.isDefault))
+	l.Crazy(fmt.Sprintf(
+		"Endpoint{%s} Configuration: %s",
+		ep.name,
+		ep.endpointConfig.DumpString(),
+	));
 }
 
 // Endpoint needs to be able to access its own Security Policy

@@ -110,11 +110,23 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 		module.moduleConfig.Merge(overrides)
 	}
 
-	// Dereference any Server Config references
-	module.moduleConfig.Dereference(module.serverConfig)
+	// Dereference any Config references, descending from highest level config
+	module.moduleConfig.DereferenceAll(module.serverConfig, module.moduleConfig)
+	l.Crazy(fmt.Sprintf(
+		"Module{%s} Configuration: %s",
+		module.name,
+		module.moduleConfig.DumpString(),
+	));
 
 	// Capture any extra configuration
 	module.extraConfig = config.GetInverseSubset(configPrefix)
+	module.extraConfig.DereferenceAll(module.serverConfig, module.moduleConfig, module.extraConfig)
+	l.Crazy(fmt.Sprintf(
+		"Module{%s} Extra Configuration: %s",
+		module.name,
+		module.extraConfig.DumpString(),
+	));
+
 
 	// Initialize our Controller
 	module.controller = NewController()
