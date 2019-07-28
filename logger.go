@@ -73,6 +73,7 @@ type logger struct {
 	threadId	string		// Quasi-distinct threadId to filter log output by thread
 	minLogLevel	logLevel	// The minimum logging level
 	logWriter	LogWriter	// The LogWriter we are going to use (TODO: Add support for multiple)
+	logTimestamp	bool		// Conditionally disable timestamps on the log output (consumer may do this for us)
 }
 
 var loggerInstance logger
@@ -94,6 +95,7 @@ func NewLogger() *logger {
 		threadId:	fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
 		minLogLevel:	INFO,
 		logWriter:	NewStdOutLogWriter(),
+		logTimestamp:	true,
 	}
 	return &newLogger
 }
@@ -123,6 +125,11 @@ func (l *logger) SetLogWriter(logWriter LogWriter) {
 	l.logWriter = logWriter
 }
 
+// Set the logTimestamp state (defaults to true to enable timestamps in logger output)
+func (l *logger) LogTimestamp(logTimestamp bool) {
+	l.logTimestamp = logTimestamp
+}
+
 // Log some output
 // Wrap level+msg in an error as a code-reduction convenience to any caller wanting to return it
 func (l *logger) log(level logLevel, msg string) error {
@@ -139,10 +146,13 @@ func (l *logger) log(level logLevel, msg string) error {
 	logMsg := fmt.Sprintf("%5s %s", prefix, msg)
 	if level >= l.minLogLevel {
 		// Send the log message to our LogWriter
-		t := time.Now()
+		timestamp := ""
+		if l.logTimestamp {
+			timestamp = fmt.Sprintf("%s ", time.Now().Format(time.RFC3339))
+		}
 		l.logWriter.Log(fmt.Sprintf(
-			"%s thread:%s %s",
-			t.Format(time.RFC3339),
+			"%sthread:%s %s",
+			timestamp,
 			l.threadId,
 			logMsg,
 		))
