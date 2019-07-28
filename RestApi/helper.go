@@ -60,12 +60,20 @@ func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers
 	return response
 }
 
-// Product an HTTP redirect response to the supplied URL
+// Produce an HTTP redirect (TEMPORARY) response to the supplied URL
 func (hlpr *helper) ResponseRedirect(URL string) *HttpResponse {
 	hdrs := HttpHeaders{}
 	hdrs.Set("location", URL)
 	body := ""
 	return hlpr.ResponseWithHeaders(STATUS_TEMPORARY_REDIRECT, &body, &hdrs)
+}
+
+// Produce an HTTP redirect (PERMANENT) response to the supplied URL
+func (hlpr *helper) ResponseRedirectPermanent(URL string) *HttpResponse {
+	hdrs := HttpHeaders{}
+	hdrs.Set("location", URL)
+	body := ""
+	return hlpr.ResponseWithHeaders(STATUS_MOVED_PERMANENTLY, &body, &hdrs)
 }
 
 // Scan over the body data and, for each unique name, scrub out any duplicates
@@ -90,6 +98,12 @@ func (hlpr *helper) GetMimetype(uri string) string {
 		return "application/octet-stream"
 	}
 	return mimetype
+}
+
+// Is the supplied HttpStatus a 2xx?
+func (hlpr *helper) IsStatus2xx(httpStatus HttpStatus) bool {
+	statusCode := hlpr.GetHttpStatusCode(httpStatus)
+	return (hlpr.GetHttpStatusCode(STATUS_OK) <= statusCode) && (hlpr.GetHttpStatusCode(STATUS_MULTIPLE_CHOICES) > statusCode)
 }
 
 const (
