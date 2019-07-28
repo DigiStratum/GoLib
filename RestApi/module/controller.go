@@ -195,25 +195,38 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	bestScore := 0
 	var bestVersions controllerEPVMap
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
-		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
-		matches, err := ctrlr.getUriMatches(pattern, relativeURI)
-		if nil != err {
-			l.Error(err.Error())
-			return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
-		}
-		if (nil == matches) || (len(matches) == 0) { continue }
+		// If the URI is empty (root of the server/module)...
+		if len(relativeURI) == 0 {
+			// Then the only way an endpoint can qualify is if it is marked as default for the module
+			for _, endpoint := range versions {
+				// So, if any endpoint in this set is marked as default...
+				ep := endpoint.(EndpointIfc)
+				if ep.IsDefault() {
+					// ... waste no more time: this is the handler!
+					return endpointHandleRequest(endpoint, request)
+				}
+			}
+		} else {
+			l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
+			matches, err := ctrlr.getUriMatches(pattern, relativeURI)
+			if nil != err {
+				l.Error(err.Error())
+				return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
+			}
+			if (nil == matches) || (len(matches) == 0) { continue }
 
-		// Calculate a score for this pattern to determine how well it matches
-		score := 0
-		for _, match := range matches { score += len(match) }
+			// Calculate a score for this pattern to determine how well it matches
+			score := 0
+			for _, match := range matches { score += len(match) }
 
-		// If the current pattern scores better than the best pattern thus far...
-		if score > bestScore {
-			// then make this pattern the new best pattern!
-			bestScore = score
-			bestVersions = versions
-			// TODO: Capture the matches into the Request Context;
-			// it will have Endpoint specific parametric breakdown!
+			// If the current pattern scores better than the best pattern thus far...
+			if score > bestScore {
+				// then make this pattern the new best pattern!
+				bestScore = score
+				bestVersions = versions
+				// TODO: Capture the matches into the Request Context;
+				// it will have Endpoint specific parametric breakdown!
+			}
 		}
 	}
 

@@ -72,6 +72,7 @@ type EndpointIfc interface {
 	GetName() string
 	GetVersion() string
 	GetPattern() string
+	IsDefault() bool
 	GetMethods() []string
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
@@ -85,6 +86,7 @@ type Endpoint struct {
         pattern         string		// Pattern which matches URI's to us (relative to Module)
         methods         []string	// List of HTTP request methods that we respond to
 	securityPolicy	*SecurityPolicy	// Security Policy for this Endpoint
+	isDefault	bool		// Is this endpoint configured as a default?
 }
 
 // Make a new one of these (typically embedded as the superclass of some subclass)
@@ -194,6 +196,15 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 		overrides.Dump()
                 ep.endpointConfig.Merge(overrides)
         }
+
+	// See if this endpoint is configured as a default
+	if ep.endpointConfig.Has("isdefault") {
+		isDefault := ep.endpointConfig.Get("isdefault")
+		ep.isDefault = (isDefault == "true")
+	} else {
+		ep.isDefault = false
+	}
+	l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): isDefault? %t", ep.name, ep.isDefault))
 }
 
 // Endpoint needs to be able to access its own Security Policy
@@ -214,6 +225,11 @@ func (ep *Endpoint) GetVersion() string {
 // Return our name
 func (ep *Endpoint) GetName() string {
 	return ep.name
+}
+
+// Get our defaultness
+func (ep *Endpoint) IsDefault() bool {
+	return ep.isDefault
 }
 
 // Return our list of methods
