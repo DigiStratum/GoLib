@@ -224,6 +224,7 @@ func (request *HttpRequest) IsIdempotentMethod() bool {
 // HTTP Headers
 
 // Get a single header
+// TODO: Change this to return nil (string pointer instead of string) if the value is not set - the difference between unset and set-but-empty
 func (hdrs *HttpHeaders) Get(name string) string {
 	if value, ok := (*hdrs)[name]; ok { return value }
 	return ""
