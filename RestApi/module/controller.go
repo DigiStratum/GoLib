@@ -209,7 +209,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 		for _, match := range matches { score += len(match) }
 
 		// If the current pattern scores better than the best pattern thus far...
-		if score > bestScore {
+		if score >= bestScore {
 			// then make this pattern the new best pattern!
 			bestScore = score
 			bestVersions = versions
