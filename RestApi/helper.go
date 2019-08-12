@@ -1,6 +1,7 @@
 package restapi
 
 import(
+	"fmt"
 	"sync"
 	"strings"
 	"mime"
@@ -46,6 +47,15 @@ func (hlpr *helper) ResponseOk(body *string, contentType string) *HttpResponse {
 // Produce an HTTP response from an Object (200 OK)
 func (hlpr *helper) ResponseObject(object *obj.Object, uri string) *HttpResponse {
 	return hlpr.Response(STATUS_OK, object.GetContent(), hlpr.GetMimetype(uri))
+}
+
+// Produce an HTTP response from an Object (200 OK)
+func (hlpr *helper) ResponseObjectCacheable(object *obj.Object, uri string, maxAgeSeconds int) *HttpResponse {
+	hdrs := HttpHeaders{}
+	hdrs.Set("content-type", hlpr.GetMimetype(uri))
+	// ref: https://varvy.com/pagespeed/cache-control.html
+	hdrs.Set("cache-control", fmt.Sprintf("max-age=%d,public", maxAgeSeconds))
+	return hlpr.ResponseWithHeaders(STATUS_OK, object.GetContent(), &hdrs)
 }
 
 // Produce an HTTP response with custom headers
