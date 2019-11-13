@@ -254,9 +254,7 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *re
 			ep.GetName(),
 		))
 		res := ep.HandleRequest(request, ep)
-
-		// TODO: Bolt-on standard response headers here (if not already supplied)
-
+		ctrlr.mergeDefaultResponseHeaders(res)
 		return res
 	}
 	l.Error(fmt.Sprintf(
@@ -265,6 +263,46 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *re
 	))
 	hlpr := rest.GetHelper()
 	return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
+}
+
+// Merge default response headers into OK responses if not already supplied
+func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse) {
+	// If response status is not OK, then there's nothing to do
+	if response.GetStatus() != rest.STATUS_OK {
+		return
+	}
+
+	// Snag the response headers to check and modify
+	headers := response.GetHeaders()
+
+	// Define default response header set
+	// TODO: Make digistratum.com reporting URLs configurable
+	// TODO: Add etag support (file fingerprint - MD5 ok?)
+	// TODO: Add Last-Modified and Expires timestamp support
+	// ref: https://www.keycdn.com/blog/http-security-headers
+	// ref: https://www.keycdn.com/support/content-security-policy
+	// ref: https://www.keycdn.com/blog/http-cache-headers
+	defaultResponseHeaders := map[string]string{
+		"cache-control": "max-age=43200,public,must-revalidate,no-transform",
+		"x-frame-options": "SAMEORIGIN",
+		"x-content-type-options": "nosniff",
+		"x-xss-protection": "1; mode=block",
+		"vary": "Accept-Encoding",
+		"strict-transport-security": "max-age=31536000; includeSubdomains; preload",
+		"access-control-allow-origin": "*",
+		"content-security-policy": "default-src 'self'",
+		"expect-ct": "max-age=604800, enforce, report-uri=\"https://www.digistratum.com/report\"",
+		"feature-policy": "autoplay 'none'; camera 'none'",
+	}
+
+	// For each of the default response headers...
+	for name, value := range defaultResponseHeaders {
+		// If this header is not already in the set...
+		if _, ok := (*headers)[name]; !ok {
+			// Add it with the default value!
+			(*headers)[name] = value
+		}
+	}
 }
 
 // Use a pattern cache of compiled RegExp's to match the URI
