@@ -224,7 +224,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 		for _, endpoint := range bestVersions {
 			// TODO: scan versions for version specified in X-Version header
 			// Default to first listed version
-			return endpointHandleRequest(endpoint, request)
+			return ctrlr.endpointHandleRequest(endpoint, request)
 		}
 		return nil // UNHANDLED BY US
 	}
@@ -244,7 +244,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 }
 
 // Pass this request to the supplied Endpoint
-func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
 	if ep, ok := endpoint.(EndpointIfc); ok {
@@ -253,7 +253,11 @@ func endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *res
 			ctx.GetRequestId(),
 			ep.GetName(),
 		))
-		return ep.HandleRequest(request, ep)
+		res := ep.HandleRequest(request, ep)
+
+		// TODO: Bolt-on standard response headers here (if not already supplied)
+
+		return res
 	}
 	l.Error(fmt.Sprintf(
 		"[%s] Controller: Unexpected error converting to  Endpoint",
