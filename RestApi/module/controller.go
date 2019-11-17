@@ -254,7 +254,7 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *re
 			ep.GetName(),
 		))
 		res := ep.HandleRequest(request, ep)
-		ctrlr.mergeDefaultResponseHeaders(res)
+		ctrlr.mergeDefaultResponseHeaders(res, ctx.GetRequestId())
 		return res
 	}
 	l.Error(fmt.Sprintf(
@@ -266,9 +266,11 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *re
 }
 
 // Merge default response headers into OK responses if not already supplied
-func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse) {
+// TODO: Make this more granular to be endpoint-specific (override)
+func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse, requestId string) {
 	// If response status is not OK, then there's nothing to do
-	if response.GetStatus() != rest.STATUS_OK {
+	responseStatus := response.GetStatus()
+	if (responseStatus != rest.STATUS_OK) && (responseStatus != rest.STATUS_NOT_MODIFIED) {
 		return
 	}
 
@@ -276,27 +278,25 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 	headers := response.GetHeaders()
 
 	// Define default response header set
-	// TODO: Make digistratum.com reporting URLs configurable
-	// TODO: Add etag support (file fingerprint - MD5 ok?)
-	// TODO: Add Last-Modified and Expires timestamp support
-	// ref: https://www.keycdn.com/blog/http-security-headers
-	// ref: https://www.keycdn.com/support/content-security-policy
-	// ref: https://www.keycdn.com/blog/http-cache-headers
-	defaultResponseHeaders := map[string]string{
-		"cache-control": "max-age=43200,public,must-revalidate,no-transform",
-		"x-frame-options": "SAMEORIGIN",
-		"x-content-type-options": "nosniff",
-		"x-xss-protection": "1; mode=block",
-		"vary": "Accept-Encoding",
-		"strict-transport-security": "max-age=31536000; includeSubdomains; preload",
-		"access-control-allow-origin": "*",
-		"content-security-policy": "default-src 'self'",
-		"expect-ct": "max-age=604800, enforce, report-uri=\"https://www.digistratum.com/report\"",
-		"feature-policy": "autoplay 'none'; camera 'none'",
+	mergeHeaders := ctrlr.getDefaultResponseHeaders()
+
+	// Override default endpoints with module-specific configured response headers
+	moduleHeaders := ctrlr.moduleConfig.GetSubset("headers.")
+
+	l := lib.GetLogger()
+	// For each of the default response headers...
+	for kvp := range moduleHeaders.IterateChannel() {
+		l.Trace(fmt.Sprintf(
+			"[%s] Controller: Override Response Header: '%s' = '%s'",
+			requestId,
+			kvp.Key,
+			kvp.Value,
+		))
+		(*mergeHeaders)[kvp.Key] = kvp.Value
 	}
 
 	// For each of the default response headers...
-	for name, value := range defaultResponseHeaders {
+	for name, value := range *mergeHeaders {
 		// If this header is not already in the set...
 		if _, ok := (*headers)[name]; !ok {
 			// Add it with the default value!
@@ -304,6 +304,30 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 		}
 	}
 }
+
+// Get the default response header set
+// TODO: Add etag support (file fingerprint - MD5 ok?)
+// TODO: Add Last-Modified and Expires timestamp support
+// ref: https://www.keycdn.com/blog/http-security-headers
+// ref: https://www.keycdn.com/support/content-security-policy
+// ref: https://www.keycdn.com/blog/http-cache-headers
+// ref: https://content-security-policy.com/
+// ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
+func (ctrlr *Controller) getDefaultResponseHeaders() *map[string]string {
+	headers := map[string]string{
+		"cache-control": "max-age=43200,public,must-revalidate,no-transform",
+		"x-frame-options": "SAMEORIGIN",
+		"x-content-type-options": "nosniff",
+		"x-xss-protection": "1; mode=block",
+		"vary": "Accept-Encoding, Origin",
+		"strict-transport-security": "max-age=31536000; includeSubdomains; preload",
+		"access-control-allow-origin": "*",
+		"content-security-policy": "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';",
+		"feature-policy": "autoplay 'none'; camera 'none'",
+	}
+	return &headers
+}
+
 
 // Use a pattern cache of compiled RegExp's to match the URI
 func (ctrlr *Controller) getUriMatches(pattern string, URI string) ([]string, error) {
