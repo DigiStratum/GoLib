@@ -274,9 +274,6 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 		return
 	}
 
-	// Snag the response headers to check and modify
-	headers := response.GetHeaders()
-
 	// Define default response header set
 	mergeHeaders := ctrlr.getDefaultResponseHeaders()
 
@@ -295,9 +292,12 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 		(*mergeHeaders)[kvp.Key] = kvp.Value
 	}
 
+	// Snag the response headers to check and modify
+	headers := response.GetHeaders()
+
 	// For each of the default response headers...
 	for name, value := range *mergeHeaders {
-		// If this header is not already in the set...
+		// If this header is not already in the set (i.e. endpoint's version wins)...
 		if _, ok := (*headers)[name]; !ok {
 			// Add it with the default value!
 			(*headers)[name] = value
