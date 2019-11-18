@@ -322,7 +322,7 @@ func (ctrlr *Controller) getDefaultResponseHeaders() *map[string]string {
 		"vary": "Accept-Encoding, Origin",
 		"strict-transport-security": "max-age=31536000; includeSubdomains; preload",
 		"access-control-allow-origin": "*",
-		"content-security-policy": "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';",
+		"content-security-policy": "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; frame-ancestors 'none';",
 		"feature-policy": "autoplay 'none'; camera 'none'",
 	}
 	return &headers
