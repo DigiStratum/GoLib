@@ -26,6 +26,9 @@ import(
 	"fmt"
 )
 
+// Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
+const ABSOLUTE_MAX_LOOPS = 100
+
 // Config embeds a HashMap so that we can extend it
 // ref: https://stackoverflow.com/questions/28800672/how-to-add-new-methods-to-an-existing-type-in-go
 type Config struct {
@@ -140,6 +143,16 @@ func (cfg *Config) DereferenceAll(referenceConfigs ...*Config) {
 			referenceConfig.DumpString(),
 		));
 		cfg.Dereference(referenceConfig)
+	}
+}
+
+// Dereference until result comes back 0 or maxLoops iterations are completed
+func (cfg *Config) DereferenceLoop(maxLoops int, referenceConfig *Config) {
+	localMax := maxLoops
+	if localMax > ABSOLUTE_MAX_LOOPS { localMax = ABSOLUTE_MAX_LOOPS; }
+	for loop := 0; loop < localMax; loop++ {
+		subs := cfg.Dereference(referenceConfig)
+		if subs == 0 { break; }
 	}
 }
 
