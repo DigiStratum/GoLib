@@ -93,13 +93,14 @@ func (cfg *Config) LoadFromJsonFile(configFile string) {
 	//cfg.Dump()
 }
 
-// Dereference any values we have that %reference% keys in the referenceConfig
-func (cfg *Config) Dereference(referenceConfig *Config) {
+// Dereference any values we have that %reference% keys in the referenceConfig; returns count of references substituted
+func (cfg *Config) Dereference(referenceConfig *Config) int {
 	GetLogger().Trace("Config.Dereference()")
 	GetLogger().Crazy(fmt.Sprintf(
 		"Dereferencing against Config: %s",
 		referenceConfig.DumpString(),
 	));
+	subs := 0
 	// For each of our key/value pairs...
 	for cpair := range cfg.IterateChannel() {
 		// For each of the referenceConfig's key/value pairs...
@@ -125,8 +126,10 @@ func (cfg *Config) Dereference(referenceConfig *Config) {
 				cpair.Key,
 				strings.Replace(cpair.Value, reference, rcpair.Value, -1),
 			)
+			subs++;
 		}
 	}
+	return subs
 }
 
 // Dereference against a list of other referenceConfigs
