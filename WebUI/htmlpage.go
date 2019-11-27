@@ -16,7 +16,7 @@ type HtmlPage struct {
 	renderedDocument	string
 	Document		string
 	Scheme			*Scheme
-	Config			*Config
+	Config			*lib.Config
 }
 
 // Make a new one of these
@@ -39,10 +39,11 @@ func (page *HtmlPage) GetRenderedDocument() string {
 
 // Recursively hydrate the source Document into a final, rendered Document
 func (page *HtmlPage) renderDocument() {
-	// Initialize from the source Document
-	page.renderedDocument = page.Document
-
 	// Dereference Config against itself (up to 5 iterations for nested dereferencing)
+	// TODO: does this even make sense? Can any validreferences even survive a single pass?
 	page.Config.DereferenceAll(page.Config, 5)
+
+	// Dereference the renderedDocument against our Config
+	page.renderedDocument = page.Config.DereferenceString(page.Document)
 }
 
