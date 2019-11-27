@@ -96,7 +96,36 @@ func (cfg *Config) LoadFromJsonFile(configFile string) {
 	//cfg.Dump()
 }
 
-// Dereference any values we have that %reference% keys in the referenceConfig; returns count of references substituted
+// returns count of references substituted
+func (cfg *Config) DereferenceString(referenceConfig *Config, str string) *string {
+	if ! strings.ContainsRune(str, '%') { return nil }
+	log := GetLogger()
+	// For each of the referenceConfig's key/value pairs...
+	for rcpair := range referenceConfig.IterateChannel() {
+		// A reference looks like '%key%'...
+		reference := fmt.Sprintf("%%%s%%", rcpair.Key)
+		log.Crazy(fmt.Sprintf(
+			"Config.DereferenceString() -> '%s' value has '%s' ... ?",
+			str,
+			reference,
+		));
+
+		// If the referenceConfig value doesn't reference config key, move on...
+		if ! strings.Contains(str, reference) { continue }
+
+		// Replace the reference(s) in our value with the values referenced
+		tmp := strings.Replace(str, reference, rcpair.Value, -1)
+		log.Trace(fmt.Sprintf(
+			"\tReplaced '%s' with '%s'; was '%s', now '%s'",
+			reference, rcpair.Value, str, tmp,
+		))
+		str = tmp
+	}
+	return &str
+}
+
+// Dereference any values we have that %reference% keys in the referenceConfig
+// returns count of references substituted
 func (cfg *Config) Dereference(referenceConfig *Config) int {
 	GetLogger().Trace("Config.Dereference()")
 	GetLogger().Crazy(fmt.Sprintf(
@@ -106,31 +135,10 @@ func (cfg *Config) Dereference(referenceConfig *Config) int {
 	subs := 0
 	// For each of our key/value pairs...
 	for cpair := range cfg.IterateChannel() {
-		// For each of the referenceConfig's key/value pairs...
-		for rcpair := range referenceConfig.IterateChannel() {
-			// A reference looks like '%key%'...
-			reference := fmt.Sprintf("%%%s%%", rcpair.Key)
-			GetLogger().Crazy(fmt.Sprintf(
-				"Config.Dereference() -> config['%s'] = '%s' value has '%s' ... ?",
-				cpair.Key,
-				cpair.Value,
-				reference,
-			));
-
-			// If the referenceConfig value doesn't reference config key, move on...
-			if ! strings.Contains(cpair.Value, reference) { continue }
-
-			// Replace the reference(s) in our value with the values referenced
-			GetLogger().Trace(fmt.Sprintf(
-				"\tReplaced '%s' with '%s' in '%s'",
-				reference, rcpair.Value, cpair.Value,
-			))
-			cfg.Set(
-				cpair.Key,
-				strings.Replace(cpair.Value, reference, rcpair.Value, -1),
-			)
-			subs++;
-		}
+		tstr := cfg.DereferenceString(referenceConfig, cpair.Value)
+		if nil == tstr { continue }
+		cfg.Set(cpair.Key, *tstr)
+		subs++
 	}
 	return subs
 }
