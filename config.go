@@ -96,14 +96,17 @@ func (cfg *Config) LoadFromJsonFile(configFile string) {
 	//cfg.Dump()
 }
 
-// returns count of references substituted
-func (cfg *Config) DereferenceString(referenceConfig *Config, str string) *string {
-	if ! strings.ContainsRune(str, '%') { return nil }
+// Rereference any %key% references to our own keys in the supplied string
+// returns dereferenced string
+func (cfg *Config) DereferenceString(str string) *string {
 	log := GetLogger()
-	// For each of the referenceConfig's key/value pairs...
-	for rcpair := range referenceConfig.IterateChannel() {
+	// For each of our key/value pairs...
+	for cpair := range cfg.IterateChannel() {
+		// Exit if there are no references in the string
+		if ! strings.ContainsRune(str, '%') { break }
+
 		// A reference looks like '%key%'...
-		reference := fmt.Sprintf("%%%s%%", rcpair.Key)
+		reference := fmt.Sprintf("%%%s%%", cpair.Key)
 		log.Crazy(fmt.Sprintf(
 			"Config.DereferenceString() -> '%s' value has '%s' ... ?",
 			str,
@@ -114,10 +117,10 @@ func (cfg *Config) DereferenceString(referenceConfig *Config, str string) *strin
 		if ! strings.Contains(str, reference) { continue }
 
 		// Replace the reference(s) in our value with the values referenced
-		tmp := strings.Replace(str, reference, rcpair.Value, -1)
-		log.Trace(fmt.Sprintf(
+		tmp := strings.Replace(str, reference, cpair.Value, -1)
+		log.Crazy(fmt.Sprintf(
 			"\tReplaced '%s' with '%s'; was '%s', now '%s'",
-			reference, rcpair.Value, str, tmp,
+			reference, cpair.Value, str, tmp,
 		))
 		str = tmp
 	}
@@ -135,7 +138,7 @@ func (cfg *Config) Dereference(referenceConfig *Config) int {
 	subs := 0
 	// For each of our key/value pairs...
 	for cpair := range cfg.IterateChannel() {
-		tstr := cfg.DereferenceString(referenceConfig, cpair.Value)
+		tstr := referenceConfig.DereferenceString(cpair.Value)
 		if nil == tstr { continue }
 		cfg.Set(cpair.Key, *tstr)
 		subs++
