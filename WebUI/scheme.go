@@ -6,7 +6,7 @@ import(
 
 type Scheme struct {
 	layout		*Layout,
-	fragments	map[string]*Fragment,	// key is Fragment.name
+	fragmap		map[string]*Fragment,	// key is Fragment.name
 	stylesheet	[]*Style,
 }
 
@@ -15,7 +15,7 @@ func NewScheme() *Scheme {
 	lib.GetLogger().Trace("NewScheme()")
 	return &Scheme{
 		layout: nil,
-		fragments: make(map[string]*Fragment),
+		fragmap: make(map[string]*Fragment),
 		styles: make([]*Style),
 	}
 }
@@ -25,13 +25,23 @@ func (scheme *Scheme) SetLayout(layout *Layout) {
 	scheme.layout = layout
 }
 
+// Get the layout for this scheme
+func (scheme *Scheme) GetLayout() string {
+	return scheme.layout
+}
+
 // Add a fragment to this scheme (should be referenced either by the layout or another fragment)
 func (scheme *Scheme) AddFragment(fragment *Fragment) {
-	scheme.fragments[fragment.Name] = fragment
+	scheme.fragmap[fragment.Name] = fragment
+}
+
+// Get the map of fragments added
+func (scheme *Scheme) GetFragMap() map[string]*Fragment {
+	return scheme.fragmap
 }
 
 // Add a style to this scheme's stylesheet
 func (scheme *Scheme) AddStyle(style *Style) {
 	scheme.stylesheet = append(scheme.stylesheet, style)
-
+}
 
