@@ -5,24 +5,16 @@ import(
 )
 
 type Fragment struct {
-	name		string,
-	content		string,
+	Name		string,
+	Content		string,
 }
 
 // Make a new one of these
 func NewFragment() *Fragment {
 	lib.GetLogger().Trace("NewFragment()")
 	return &Fragment{
-		name: "",
-		content: "",
+		Name: "",
+		Content: "",
 	}
-}
-
-func (fragment *Fragment) SetName(name string) {
-	fragment.name = name
-}
-
-func (fragment *Fragment) SetContent(content string) {
-	fragment.content = content
 }
 

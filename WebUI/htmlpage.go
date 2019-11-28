@@ -15,8 +15,8 @@ import(
 type HtmlPage struct {
 	renderedDocument	string
 	Document		string
+	Config			*lib.Config	// Contextual/Configuration data available for injection into Document
 	Scheme			*Scheme
-	Config			*lib.Config
 }
 
 // Make a new one of these
@@ -39,6 +39,8 @@ func (page *HtmlPage) GetRenderedDocument() string {
 
 // Recursively hydrate the source Document into a final, rendered Document
 func (page *HtmlPage) renderDocument() {
+	// Load Fragments into Config
+
 	// Dereference Config against itself (up to 5 iterations for nested dereferencing)
 	// TODO: does this even make sense? Can any validreferences even survive a single pass?
 	page.Config.DereferenceAll(page.Config, 5)
