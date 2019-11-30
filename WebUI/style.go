@@ -5,24 +5,25 @@ import(
 )
 
 type Style struct {
-	selector	string,
-	definition	string,
+	selector	string
+	definition	string
+	flattened	*string
 }
 
 // Make a new one of these
-func NewStyle() *Style {
+func NewStyle(selector, definition string) *Style {
 	lib.GetLogger().Trace("NewStyle()")
 	return &Style{
-		selector: "",
-		definition: "",
+		selector: selector,
+		definition: definition,
 	}
 }
 
-func (style *Style) SetSelector(selector string) {
-	style.selector = selector
-}
-
-func (style *Style) SetDefinition(definition string) {
-	style.definition = definition
+// Flatten into a CSS string ready to use in an HtmlPage
+func (style *Style) ToString() string {
+	if nil == style.flattened {
+		style.flattened = &fmt.Sprintf("%s {\n%s\n}\n", style.selector, style.definition)
+	}
+	return *style.flattened
 }
 

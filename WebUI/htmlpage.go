@@ -9,56 +9,83 @@ package webui
 //	 instances using Configuration fingerprinting for differentiation
 
 import(
+	"fmt"
+
 	lib "github.com/DigiStratum/GoLib"
 )
 
+const DEREFERENCE_MAX_LOOPS = 5
+
 type HtmlPage struct {
-	config			*lib.Config	// Contextual/Configuration data available for injection into Document
-	scheme			*Scheme
-	document		string
+	context			*lib.Config	// Contextual/Configuration data available for injection into Document
+	scheme			*Scheme		// Page layout/styling/structural templating
+	document		*string		// Cached, final rendered document
 }
 
-// Make a new one of these
-func NewHtmlPage() *HtmlPage {
-	lib.GetLogger().Trace("NewHtmlPage()")
+// Make a new one of these; require a Scheme, but Context could be nil if there's nothing useful to inject
+func NewHtmlPage(scheme *Scheme, context *lib.Config) *HtmlPage {
+	log := lib.GetLogger()
+	log.Trace("NewHtmlPage()")
+	if nil == scheme {
+		log.Error("nil Scheme, impossible to render HtmlPage!");
+		return nil
+	}
 	return &HtmlPage{
-		document:		nil,
-		scheme:			nil,
-		config:			lib.NewConfig(),
+		document:	nil,
+		scheme:		scheme,
+		context:	context,
 	}
 }
 
+// Get the rendered document for a given page as specified by the Scheme and context data
 func (page *HtmlPage) GetRenderedDocument() string {
 	if nil == page.document {
-		page.renderDocument()
+		page.document = page.renderDocument()
 	}
-	return page.document
+	return *page.document
 }
 
-// Recursively hydrate the source Document into a final, rendered Document
-func (page *HtmlPage) renderDocument() {
+// Flatten the Scheme sources, and hydrate with context properties into a final, rendered Document
+func (page *HtmlPage) renderDocument() *string {
 
 	// Start our document with the layout content for the scheme
-	tmp := page.scheme.GetLayout().GetContent()
+	var tmp *string
+	tmp = &page.scheme.GetLayout().GetContent()
 
 	// Dereference layout fragments
-	fragments := lib.NewConfig()
-	fragmap := scheme.GetFragMap()
-	for fragname, fragment := range fragmap {
-		fragments[fragname] = fragment.Content
-	}
-	fragments.DereferenceLoop(fragments, 5)
-	ttmp = fragments.DereferenceString(tmp)
-	tmp = *ttmp
+	tmp = page.dereferenceFragments(tmp)
 
-	// TODO: Inject stylesheet into the document
+	// Inject Scheme stylesheet into the document
+	if nil == page.context {
+		page.context = lib.NewConfig()
+	}
+	page.context.Add("stylesheet", page.scheme.GetStylesheet())
+
 	// TODO: Any string translations needed?
 
-	// Dereference Config
-	page.Config.DereferenceLoop(page.Config, 5)
+	// Dereference Context/Config
+	page.Config.DereferenceLoop(page.Config, DEREFERENCE_MAX_LOOPS)
 	page.renderedDocument = page.Config.DereferenceString(page.Document)
 
-	// Capture the final, rendered document
-	page.document = tmp
+	// Return the final, rendered document
+	return tmp
+}
+
+// Dereference all the Scheme's page Fragments, then Dereference the supplied document against them
+func (page *htmlPage) dereferenceFragments(document *string) *string {
+	fragments := lib.NewConfig()
+	fragmap := page.scheme.GetFragMap()
+	for fragname, fragment := range fragmap {
+		// Fragment magic tags are as '%frag:fragment_name%'
+		fragments[fmt.Sprintf("frag:%s", fragname)] = fragment.Content
+	}
+	fullyResolved := fragments.DereferenceLoop(DEREFERENCE_MAX_LOOPS, fragments)
+	if ! fullyResolved {
+		lib.GetLogger().Warn(fmt.Sprintf(
+			"Possible incomplete dereferencing of page fragments with %d loops",
+			DEREFERENCE_MAX_LOOPS,
+		));
+	}
+	return &fragments.DereferenceString(*document
 }
 

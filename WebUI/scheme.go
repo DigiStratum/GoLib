@@ -45,3 +45,12 @@ func (scheme *Scheme) AddStyle(style *Style) {
 	scheme.stylesheet = append(scheme.stylesheet, style)
 }
 
+// Flatten the styles into a single, ordered, stylessheet (CSS)
+func (scheme *Scheme) GetStylesheet() string {
+	styles := ""
+	for style := range scheme.stylesheet {
+		styles += "\n" + scheme.stylesheet[style].ToString();
+	}
+	return styles
+}
+
