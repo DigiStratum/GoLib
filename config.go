@@ -158,12 +158,16 @@ func (cfg *Config) DereferenceAll(referenceConfigs ...*Config) {
 }
 
 // Dereference until result comes back 0 or maxLoops iterations are completed
-func (cfg *Config) DereferenceLoop(maxLoops int, referenceConfig *Config) {
+// Returns true if fully dereferenced, false, if more refereces may be hiding
+func (cfg *Config) DereferenceLoop(maxLoops int, referenceConfig *Config) bool {
 	localMax := maxLoops
 	if localMax > ABSOLUTE_MAX_LOOPS { localMax = ABSOLUTE_MAX_LOOPS; }
 	for loop := 0; loop < localMax; loop++ {
 		subs := cfg.Dereference(referenceConfig)
-		if subs == 0 { break; }
+		if subs == 0 { return true; }
 	}
+	// TODO: Figure out if new/additional references show up as a result
+	// of dereferencing, otherwise, we cant be sure, so return false
+	return false
 }
 
