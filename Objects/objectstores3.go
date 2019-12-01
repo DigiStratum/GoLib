@@ -28,19 +28,19 @@ import (
 	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	lib "github.com/DigiStratum/GoLib"
+	"github.com/DigiStratum/GoLib/Cloud"
 )
 
 type ObjectStoreS3 struct {
 	storeConfig	*lib.Config
-	awsSession	*session.Session
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
 	readCache	*MutableObjectStore
+	awsHelper	*cloud.AWSHelper
 }
 
 // Make a new one of these!
@@ -60,6 +60,9 @@ func (os *ObjectStoreS3) Configure(config *lib.Config) error {
 		return errors.New("Incomplete ObjectStoreS3 configuration provided")
 	}
 	os.storeConfig = config
+
+	// Light up our AWS Helper with the region from our configuration data
+	os.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
 	return nil
 }
 
@@ -108,32 +111,16 @@ func (os *ObjectStoreS3) HasObject(path string) bool {
 	return nil == err
 }
 
-// Satisfies WritableObjectStoreIfc
+// Satisfies MutableObjectStoreIfc
 func (os *ObjectStoreS3) PutObject(path string, object *Object) error {
 	// TODO: Actually implement WRITE operation to S3 here
 	return errors.New("Not Yet Implemented!")
 }
 
-// Get our AWS session
-func (os *ObjectStoreS3) getSession() *session.Session {
-	if nil == os.awsSession {
-		sess, err := session.NewSession(
-			&aws.Config{ Region: aws.String(os.storeConfig.Get("awsregion")) },
-		)
-		if nil != err {
-			l := lib.GetLogger()
-			l.Error("Failed to establish and AWS session")
-			return nil
-		}
-		os.awsSession = sess
-	}
-	return os.awsSession
-}
-
 // Get our S3 connection
 func (os *ObjectStoreS3) getS3() *s3.S3 {
 	if nil == os.awsS3 {
-		sess := os.getSession();
+		sess := os.awsHelper.GetSession();
 		if nil == sess { return nil }
 		os.awsS3 = s3.New(sess)
 	}
@@ -143,7 +130,7 @@ func (os *ObjectStoreS3) getS3() *s3.S3 {
 // Get our S3 Downloader
 func (os *ObjectStoreS3) getS3Downloader() *s3manager.Downloader {
 	if nil == os.awsS3Downloader {
-		sess := os.getSession();
+		sess := os.awsHelper.GetSession();
 		if nil == sess { return nil }
 		os.awsS3Downloader = s3manager.NewDownloader(sess)
 	}
