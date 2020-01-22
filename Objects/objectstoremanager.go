@@ -67,7 +67,6 @@ func (osm *ObjectStoreManager) FindMultilingualObject(base string, languages *[]
 	}
 	// One last try for "default" language
 	return osm.GetObject(fmt.Sprintf("%s/%s/%s", base, "default", relPath))
-	return nil
 }
 
 // Find a scoped (public/private), contextualized Object, facet on language (default="default")

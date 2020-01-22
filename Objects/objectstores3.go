@@ -89,7 +89,10 @@ func (os *ObjectStoreS3) GetObject(path string) *Object {
 			},
 		)
 		// Error = no Object!
-		if nil != err { return nil }
+		if nil != err {
+			lib.GetLogger().Error(fmt.Sprintf("ObjectStoreS3.GetObject(%s) Error : '%s'", path, err.Error()))
+			return nil
+		}
 		os.readCache.PutObject(path, NewObjectFromString(string(buff.Bytes())))
 	}
 	return os.readCache.GetObject(path)
