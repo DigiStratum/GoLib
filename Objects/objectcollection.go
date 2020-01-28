@@ -10,6 +10,7 @@ FIXME: Add some thread concurrency safety around this things accessor functions
 */
 
 import (
+	"sync"
 	lib "github.com/DigiStratum/GoLib"
 )
 
@@ -17,6 +18,11 @@ type objectMap map[string]*Object
 
 type ObjectCollection struct {
 	collection	*objectMap
+}
+
+type PathObjectPair struct {
+	Path	string
+	Obj	*Object
 }
 
 // Make a new one of these
@@ -47,5 +53,23 @@ func (oc *ObjectCollection) PutObject(path string, object *Object) error {
 	}
 	(*oc.collection)[path] = object
 	return nil
+}
+
+// Iterate over the objects for this collectino and send all the Path-Object Pairs to a channel
+func (oc *ObjectCollection) IterateChannel() <-chan PathObjectPair {
+	ch := make(chan PathObjectPair, len(*oc.collection))
+	defer close(ch)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Fire off a go routine to fill up the channel
+	go func() {
+		for p, o := range *oc.collection {
+			ch <- PathObjectPair{ Path: p, Obj: o }
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+	return ch
 }
 
