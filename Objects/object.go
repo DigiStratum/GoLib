@@ -8,7 +8,10 @@ file on disk, we can capture them in any number of places: files on disk, record
 representations in an API, even codified chunks of data within our own executable.
 
 TODO: Isolate the encode/decode so that other tools can build against it and have a function that
-properly interacts with the same encoding scheme as us using ouo *Encoded* accessor methods.
+      properly interacts with the same encoding scheme as us using ouo *Encoded* accessor methods.
+
+TODO: Add support for populating ObjectField.Value according to ObjectField.Type validation rules,
+      either individually or in sets (feed from JSON? CSV? MySQL? Other?)
 
 */
 
@@ -17,14 +20,52 @@ import (
 	lib "github.com/DigiStratum/GoLib"
 )
 
-// A static Object that we're going to codify
-type Object struct {
-	isEncoded	bool	// Is the content encoded?
-	content		*string
+type ObjectFieldType int
+
+const (
+	OFT_UNKNOWN ObjectFieldType = iota
+	OFT_NUMERIC	// Any base 10 numeric form
+	OFT_TEXTUAL	// Any string/text form
+	OFT_DATETIME	// Any valid date and/or time form
+	OFT_BOOLEAN	// Any boolean form
+	OFT_BYTE	// any 8 bit form
+	OFT_SHORT	// any 16 bit form
+	OFT_INT		// any 32 bit form
+	OFT_LONG	// any 64 but form
+	OFT_FLOAT	// any floating point "real" value
+	OFT_DOUBLE	// any double-precision "real" value
+	OFT_FIXED	// any fixed point "real" value
+	OFT_STRING	// any ASCII string
+	OFT_CHAR	// any ASCII single character
+	OFT_MBSTRING	// any multibyte string
+	OFT_MBCHAR	// any multibyte single character
+)
+
+type ObjectField struct {
+	Type		ObjectFieldType
+	Value		*string			// Significance varies with Type
 }
 
+type ObjectFieldMap	map[string]ObjectField  // Field name to value map - every value
+
+// A static Object that we're going to codify
+// We optionally support fields; if the fields map is empty, then they are not being used
+type Object struct {
+	isEncoded	bool			// Is the content encoded?
+	content		*string			// Non-fielded Object "BLOB" representation
+	fields		*ObjectFieldMap		// Field name to value map - every value
+}
+
+// Make a new one of these
 func NewObject() *Object {
 	return &Object{}
+}
+
+// Make a new one of these with mapped fields (yey!)
+func NewFIeldMappedObject(objectFieldMap *ObjectFieldMap) *Object {
+	return &Object{
+		fields:	objectFieldMap,
+	}
 }
 
 func NewObjectFromString(content string) *Object {

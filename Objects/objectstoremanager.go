@@ -310,3 +310,20 @@ func (osm *ObjectStoreManager) FindNamedObjectStoreTemplate(objectStoreName stri
 	return osm.FindNamedObjectStorePrivateObject(objectStoreName, language, fmt.Sprintf("templates/%s.mustache", name))
 }
 
+// -------------------------------------------------------------------------------------------------
+
+
+// Get an ObjectCollection filled with Objects matching the filter criteria
+
+// Scan method; fills the collection from the first ObjectStore where a match is found
+func (osm *ObjectStoreManager) GetObjectCollection(path string) *ObjectCollection {
+	// TODO - implement this!
+	return nil
+}
+
+// Name method; fills the collection from the named ObjectStore
+func (osm *ObjectStoreManager) GetNamedObjectStoreObjectCollection(objectStoreName string, path string) *ObjectCollection {
+	// TODO - implement this!
+	return nil
+}
+

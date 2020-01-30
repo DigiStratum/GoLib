@@ -25,10 +25,37 @@ type PathObjectPair struct {
 	Obj	*Object
 }
 
+type ObjectFieldCondition int
+
+const (
+        OFC_NOP ObjectFieldCondition = iota	// No Operation
+        OFC_EQ					// Equals
+	OFC_NE					// Not Equal
+	OFC_ISNULL				// Is Null
+	OFC_ISNOTNULL				// Is Not NUll
+	OFC_LT					// Less Than
+	OFC_LTE					// Less Than or Equal
+	OFC_GT					// Greater Than
+	OFC_GTE					// Greater Than or Equal
+	OFC_TRUTHY				// Represents true
+	OFC_FALSEY				// Represents false
+	OFC_SW					// string Starts With
+	OFC_EW					// string Ends With
+	OFC_CONTAINS				// string Contrains
+	OFC_NOTCONTAIN				// string does Not Contrain
+	OFC_EMPTY				// string is Empty (zero length)
+	OFC_NOTEMPTY				// string is Not Empty (non-zero length)
+)
+
+type ObjectFieldRule struct {
+	Condition	ObjectFieldCondition	// Must be one of the OFC_* constants
+	ControlValue	string			// Significance varies with Field and Condition
+}
+
 // Make a new one of these
 func NewObjectCollection() *ObjectCollection {
 	om := make(objectMap)
-	objectCollection := ObjectCollection{
+	objectCollection := ObjectCollection {
 		collection:	&om,
 	}
 	return &objectCollection
