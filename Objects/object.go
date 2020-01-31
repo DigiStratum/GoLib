@@ -16,6 +16,8 @@ TODO: Add support for populating ObjectField.Value according to ObjectField.Type
 */
 
 import (
+	"fmt"
+	"errors"
 	"encoding/base64"
 	lib "github.com/DigiStratum/GoLib"
 )
@@ -62,6 +64,7 @@ func NewObject() *Object {
 }
 
 // Make a new one of these with mapped fields (yey!)
+// Note that field map could be just names & types (spec), or could also include values (record)
 func NewFIeldMappedObject(objectFieldMap *ObjectFieldMap) *Object {
 	return &Object{
 		fields:	objectFieldMap,
@@ -122,5 +125,40 @@ func (o *Object) GetContent() *string {
 // Get the Object Content as an Encoded string (you better know what to do with it!)
 func (o *Object) GetEncodedContent() *string {
 	return o.content
+}
+
+// Set the named field to the specified value (including nil!)
+func (o *Object) SetFieldValue(name string, value *string) error {
+
+	// Object needs an ObjectFieldMap in place
+	if nil == o.fields {
+		return errors.New("Object has no field map")
+	}
+
+	// ObjectFieldMap needs a field with this name in place
+	if of, ok := (*o.fields)[name]; ok {
+
+		// Validate the new value against the field's type
+		if ! o.IsValueType(value, of.Type) {
+			return errors.New(fmt.Sprintf("Value does not match object field '%s' with type '%s'", name, o.GetObjectFieldTypeReadable(of.Type)))
+		}
+
+		// Set the value, yey!
+		of.Value = value
+		// TODO: verify that the above is all by reference and that changing the value here applies to original data
+	} else {
+		return errors.New(fmt.Sprintf("Object has no field named '%s'", name))
+	}
+	return nil
+}
+
+func (o *Object) IsValueType(value *string, fieldType ObjectFieldType) bool {
+	// TODO switch on type and run the value through the wringer here
+	return true
+}
+
+func (o *Object) GetObjectFieldTypeReadable(fieldType ObjectFieldType) string {
+	// TODO switch on type and return a readable string for each one
+	return "unknown"
 }
 
