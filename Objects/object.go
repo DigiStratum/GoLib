@@ -7,11 +7,10 @@ which can be managed via ObjectStore. By abstracting Objects as the data set ins
 file on disk, we can capture them in any number of places: files on disk, records in a database,
 representations in an API, even codified chunks of data within our own executable.
 
+Object optionally support fields; if the field map is nil, then they are not being used.
+
 TODO: Isolate the encode/decode so that other tools can build against it and have a function that
       properly interacts with the same encoding scheme as us using ouo *Encoded* accessor methods.
-
-TODO: Add support for populating ObjectField.Value according to ObjectField.Type validation rules,
-      either individually or in sets (feed from JSON? CSV? MySQL? Other?)
 
 */
 
@@ -43,19 +42,25 @@ const (
 	OFT_MBCHAR	// any multibyte single character
 )
 
+type ObjectTemplate map[string]ObjectFieldType
+
+// Association of Type and value for a single Object Field
 type ObjectField struct {
 	Type		ObjectFieldType
 	Value		*string			// Significance varies with Type
 }
 
-type ObjectFieldMap	map[string]ObjectField  // Field name to value map - every value
+// Map name to ObjectField
+type ObjectFieldMap	map[string]ObjectField
+
+// Map name to value which may be nil for a given field
+type ObjectFieldValues	map[string]*string
 
 // A static Object that we're going to codify
-// We optionally support fields; if the fields map is empty, then they are not being used
 type Object struct {
 	isEncoded	bool			// Is the content encoded?
 	content		*string			// Non-fielded Object "BLOB" representation
-	fields		*ObjectFieldMap		// Field name to value map - every value
+	fields		*ObjectFieldMap		// Field name to value map
 }
 
 // Make a new one of these
@@ -65,18 +70,34 @@ func NewObject() *Object {
 
 // Make a new one of these with mapped fields (yey!)
 // Note that field map could be just names & types (spec), or could also include values (record)
-func NewFIeldMappedObject(objectFieldMap *ObjectFieldMap) *Object {
+func NewObjectFromTemplate(objectTemplate *ObjectTemplate) *Object {
+
+	// No template makes this the same as a plain Object
+	if nil == objectTemplate {
+		return NewObject()
+	}
+
+	// Transfer the names/types of our Template to a new ObjectFieldMap
+	objectFieldMap := make(ObjectFieldMap)
+	for name := range *objectTemplate {
+		objectFieldMap[name] = ObjectField{
+			Type: (*objectTemplate)[name],
+		}
+	}
+
 	return &Object{
-		fields:	objectFieldMap,
+		fields:	&objectFieldMap,
 	}
 }
 
+// Make a new one of these from a simple string
 func NewObjectFromString(content string) *Object {
 	object := NewObject()
 	object.SetContentFromString(&content)
 	return object
 }
 
+// Make a new one of these from a file on disk
 func NewObjectFromFile(path string) *Object {
 	object := NewObject()
 	object.SetContentFromFile(path)
@@ -127,6 +148,26 @@ func (o *Object) GetEncodedContent() *string {
 	return o.content
 }
 
+// Reset the content of this object; preserves field map for fielded objects 
+func (o *Object) ResetObject() {
+	// For fielded objects...
+	if nil != o.fields {
+		// Reset all the field values to nil
+		for name := range (*o.fields) {
+			// Screwy golang workaround: can't index fields of structs in a map because
+			// they freak out about memory management, where things live and meaning
+			// ref: https://github.com/golang/go/issues/3117
+			objectField := (*o.fields)[name]	// So: grab the objectField...
+			objectField.Value = nil			// ... nil out the value...
+			(*o.fields)[name] = objectField		// ... and jam it back into place
+		}
+	} else {
+		// reset content for non-fielded objects
+		o.content = nil
+		o.isEncoded = false
+	}
+}
+
 // Set the named field to the specified value (including nil!)
 func (o *Object) SetFieldValue(name string, value *string) error {
 
@@ -155,6 +196,17 @@ func (o *Object) SetFieldValue(name string, value *string) error {
 	return nil
 }
 
+// Set all field values as supplied (they much match field map for this object!)
+func (o *Object) SetFieldValuesFromMap(fieldValues *ObjectFieldValues) {
+	// TODO: Implement Me; iterate over ObjectFieldValues; fail if any supplied field is not part of object fieldmap, use SetFieldValue() above for each
+}
+
+// Set all field values as supplied (they much match field map for this object!)
+func (o *Object) SetFieldValuesFromJson(fieldJson string) {
+	// TODO: IMplement Me; convert the json into ObjectFieldValues struct and call SetFieldValuesFromMap() above
+}
+
+// Determine whethere the value passes all the rules for the specified field type
 func (o *Object) IsValueType(value *string, fieldType ObjectFieldType) bool {
 	// TODO switch on type and run the value through the wringer here
 	return true
