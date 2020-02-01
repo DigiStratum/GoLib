@@ -140,12 +140,15 @@ func (o *Object) SetFieldValue(name string, value *string) error {
 
 		// Validate the new value against the field's type
 		if ! o.IsValueType(value, of.Type) {
-			return errors.New(fmt.Sprintf("Value does not match object field '%s' with type '%s'", name, o.GetObjectFieldTypeReadable(of.Type)))
+			return errors.New(fmt.Sprintf(
+				"Value does not match object field '%s' with type '%s'",
+				name, o.GetObjectFieldTypeReadable(of.Type),
+			))
 		}
 
 		// Set the value, yey!
 		of.Value = value
-		// TODO: verify that the above is all by reference and that changing the value here applies to original data
+		(*o.fields)[name] = of
 	} else {
 		return errors.New(fmt.Sprintf("Object has no field named '%s'", name))
 	}
@@ -157,8 +160,43 @@ func (o *Object) IsValueType(value *string, fieldType ObjectFieldType) bool {
 	return true
 }
 
+// Return a readable string for each one
 func (o *Object) GetObjectFieldTypeReadable(fieldType ObjectFieldType) string {
-	// TODO switch on type and return a readable string for each one
-	return "unknown"
+	switch (fieldType) {
+		case OFT_UNKNOWN:
+			return "unknown"
+		case OFT_NUMERIC:
+			return "numeric"
+		case OFT_TEXTUAL:
+			return "textual"
+		case OFT_DATETIME:
+			return "datetime"
+		case OFT_BOOLEAN:
+			return "boolean"
+		case OFT_BYTE:
+			return "byte"
+		case OFT_SHORT:
+			return "short"
+		case OFT_INT:
+			return "int"
+		case OFT_LONG:
+			return "long"
+		case OFT_FLOAT:
+			return "float"
+		case OFT_DOUBLE:
+			return "double"
+		case OFT_FIXED:
+			return "fixed"
+		case OFT_STRING:
+			return "string"
+		case OFT_CHAR:
+			return "char"
+		case OFT_MBSTRING:
+			return "mbstring"
+		case OFT_MBCHAR:
+			return "mbchar"
+		default:
+			return "unknown"
+	}
 }
 
