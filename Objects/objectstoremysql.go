@@ -19,6 +19,7 @@ import (
 	"net/url"
 
 	lib "github.com/DigiStratum/GoLib"
+	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 	cloud "github.com/DigiStratum/GoLib/Cloud"
 )
 
@@ -29,12 +30,21 @@ type pathSpec struct {
 	Keys			map[string]string
 }
 
+// The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
+// automatically. '???' expands to include enough placeholders (as with an IN () list for any count
+// of keys > min. max must be >= min unless max == 0.
+type querySpec struct {
+	Query			string	// The query to execute as prepared statement
+	MinKeys			int	// minimum num keys required to populate query; 0 = no min
+	MaxKeys			int	// maximum num keys required to populate query; 0 = no max
+}
+
 // A given database object spec couples access queries with matching field definitions
 type objectSpec struct {
 	template		ObjectTemplate
-	getQuery		string	// e.g. SELECT * FROM tablename WHERE ... LIMIT 1
-	hasQuery		string	// e.g. SELECT COUNT(*) FROM tablename WHERE ... LIMIT 1
-	putQuery		string	// e.g. INSERT INTO tablename SET name=value ... WHERE ... ON DUPLICATE KEY UPDATE tablename ...
+	getQuery		mysql.QuerySpec	// e.g. SELECT * FROM tablename WHERE ... LIMIT 1
+	hasQuery		mysql.QuerySpec	// e.g. SELECT COUNT(*) FROM tablename WHERE ... LIMIT 1
+	putQuery		mysql.QuerySpec	// e.g. INSERT INTO tablename SET name=value ... WHERE ... ON DUPLICATE KEY UPDATE tablename ...
 }
 
 type ObjectStoreMySQL struct {
@@ -98,7 +108,7 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	// Get our Object Spec for this path spec...
 	if objectSpec, ok := os.objectSpecs[ps.ObjectSpecName]; ok {
 	} else {
-		lib.GetLogger().Warn("Failed map requested  path '%s' to an Object Spec (undefined!)")
+		lib.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
 		return false
 	}
 
@@ -106,6 +116,9 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	// TODO: use the objectSpec.hasQuery, prepared statement, (feed args into Query method if
 	// possible? - this would prevent us from using arbitrary field ordering/spec in the path
 	// query string... alpha-sort the keys and require same sorting in prepared query?)
+
+	// ref: http://go-database-sql.org/prepared.html
+
 	return false
 }
 
