@@ -106,8 +106,8 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	}
 
 	// Get our Object Spec for this path spec...
-	if objectSpec, ok := os.objectSpecs[ps.ObjectSpecName]; ok {
-	} else {
+	objectSpec, ok := os.objectSpecs[ps.ObjectSpecName]
+	if ! ok {
 		lib.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
 		return false
 	}
@@ -176,6 +176,8 @@ func (os *ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 	return &ps, nil
 }
 
+// Parse a given "name=value" string such that name and.r value may be URL-encoded
+// Return the name and value decoded strings or an error if there was a problem
 func (os *ObjectStoreMySQL) parseURLKeyValuePair(keyValuePair string) (string, string, error) {
 	keyParts := strings.Split(keyValuePair, "=")
 	if len(keyParts) > 2 {
