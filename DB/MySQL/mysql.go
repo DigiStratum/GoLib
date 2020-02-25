@@ -29,14 +29,20 @@ import (
 // automatically. '???' expands to include enough placeholders (as with an IN () list for any count
 // of keys > min. max must be >= min unless max == 0.
 type QuerySpec struct {
-	Query		string	// The query to execute as prepared statement
-	FieldNum	int	// How many fields are we expecting the result row to contain?
-	MinKeys		int	// minimum num keys required to populate query; 0 = no min
-	MaxKeys		int	// maximum num keys required to populate query; 0 = no max
+	Query		string		// The query to execute as prepared statement
+	FieldNum	int		// How many fields are we expecting the result row to contain?
+	MinKeys		int		// minimum num keys required to populate query; 0 = no min
+	MaxKeys		int		// maximum num keys required to populate query; 0 = no max
 }
 
+// A query always results in a row of column data where each column has a name and a value as a map
 type QueryResultRow map[string]string
 
+// A query result may have an error during processing; this wrapper lets us combine data and error
+type QueryResult struct {
+	Row		*QueryResultRow
+	Err		error
+}
 
 // ------------------------------------------------------------------------------------------------
 // DB Connection
@@ -47,60 +53,58 @@ type DBConnection struct {
 	Conn		*sql.DB		// Read-Write DBConnection
 }
 
-// Execute a single query with varargs for substitutions
-// Iterate over the results for this query and send all the QueryResultRows to a channel
+// Execute a query with varargs for substitutions
+// Iterate over the results for this query and send all the QueryResult rows to a channel
 // TODO: How can we return an error in place of the channel if something goes wrong?
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 // ref: https://blog.golang.org/pipelines
 // ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
-// TODO: TBD: Accept a DBKey to determine which connection to execute against, or... attach this
-// function to DBConnection, and return connection to consumer by key so that all the connection-
-// specific operations (i.e. not related to connection management, therefore a different problem
-// domain) get associated with the connection itself?
-func (dbc *DBConnection) SQuery(querySpec QuerySpec, args ...string) <-chan QueryResultRow {
-	// TODO: Execute the query, check the result row count
+// ref: https://golang.org/pkg/database/sql/#example_DB_Query_multipleResultSets
+// ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
+func (dbc *DBConnection) Query(querySpec QuerySpec, args ...string) <-chan QueryResult {
 	protoQuery := querySpec.Query
 	// TODO: expand querySpec.Query '???' placeholders
 	finalQuery := protoQuery
 
-	// ref: https://golang.org/pkg/database/sql/#example_DB_Query_multipleResultSets
-	rows, err := dbc.Conn.Query(finalQuery, args...)
-	if err != nil {
-		lib.GetLogger().Error(fmt.Sprintf("Query: '%s' - Error: '%s'", finalQuery, err.Error())
-		// FIXME: get out of here, don't just keep running...
-	}
-	defer rows.Close()
+	var err error = nil
 
-	for rows.Next() {
-		// TODO: form a result set that matches the query
-		var (
-			id   int64
-			name string
-		)
-		if err := rows.Scan(&id, &name); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("id %d name is %s\n", id, name)
-	}
-
-	resultRowCount := 1
-
-	// Make a channel the size of the result row count
-	ch := make(chan QueryResultRow, resultRowCount)
+	// Make a result channel
+	ch := make(chan QueryResult)
 	defer close(ch)
-	var wg sync.WaitGroup
-	wg.Add(1)
 
-	// Fire off a go routine to fill up the channel
-	go func() {
-		// TODO: Iterate over and convert each Query Result to a QueryResultRow
-		for k, v := range *hash {
-			ch <- queryResultRow
-			ch <- KeyValuePair{ Key: k, Value: v }
+	rows, err := dbc.Conn.Query(finalQuery, args...)
+	defer rows.Close()
+	if (nil == err) {
+		resultCols, err := rows.Columns()
+		if (nil == err) {
+			for rows.Next() {
+				// Create a slice of interface{}'s to represent each column,
+				// and a second slice to contain pointers to each item in the columns slice.
+				columns := make([]interface{}, len(resultCols))
+				columnPointers := make([]interface{}, len(resultCols))
+
+				// Scan the result into the column pointers...
+				for i, _ := range columns { columnPointers[i] = &columns[i] }
+				if err = rows.Scan(columnPointers...); err == nil {
+
+					// Create our map, and retrieve the value for each column from the pointers
+					// slice, storing it in the map with the name of the column as the key.
+					qrr := make(QueryResultRow)
+					for i, colName := range cols {
+						qrr[colName] = fmt.Sprintf("%v", columnPointers[i].(*interface{}))
+					}
+					ch <- QueryResult{ Row: qrr, Err: nil }
+				}
+			}
 		}
-		wg.Done()
-	}()
-	wg.Wait()
+	}
+
+	// Any errors above get dumped into the channel as a single result here
+	if (nil != err) {
+		qrErr := lib.GetLogger().Error(fmt.Sprintf("Query: '%s' - Error: '%s'", finalQuery, err.Error()))
+		ch <- QueryResult{ Row:	nil, Err: qrErr }
+	}
+
 	return ch
 }
 
@@ -163,7 +167,7 @@ func (dbm *DBManager) IsConnected(dbKey DBKey) bool {
 	return false
 }
 
-func (dbm *DBManager) GetConnection(dbKey DBKey) *DBConnection, error {
+func (dbm *DBManager) GetConnection(dbKey DBKey) (*DBConnection, error) {
 	if conn, ok := dbm.connections[dbKey.Key]; ok {
 		return &conn, nil
 	}
