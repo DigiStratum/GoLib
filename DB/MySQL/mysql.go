@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"errors"
 	"database/sql"
-	//"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -65,14 +64,15 @@ func (dbc *DBConnection) Query(querySpec QuerySpec, args ...string) <-chan Query
 	protoQuery := querySpec.Query
 	// TODO: expand querySpec.Query '???' placeholders
 	finalQuery := protoQuery
-
-	var err error = nil
-
 	// Make a result channel
 	ch := make(chan QueryResult)
 	defer close(ch)
 
-	rows, err := dbc.Conn.Query(finalQuery, args...)
+	// Convert string args to interface{} for Query()
+	iArgs := make([]interface{}, len(args))
+	for i, v := range args { iArgs[i] = v }
+
+	rows, err := dbc.Conn.Query(finalQuery, iArgs...)
 	defer rows.Close()
 	if (nil == err) {
 		resultCols, err := rows.Columns()
@@ -90,10 +90,10 @@ func (dbc *DBConnection) Query(querySpec QuerySpec, args ...string) <-chan Query
 					// Create our map, and retrieve the value for each column from the pointers
 					// slice, storing it in the map with the name of the column as the key.
 					qrr := make(QueryResultRow)
-					for i, colName := range cols {
+					for i, colName := range resultCols {
 						qrr[colName] = fmt.Sprintf("%v", columnPointers[i].(*interface{}))
 					}
-					ch <- QueryResult{ Row: qrr, Err: nil }
+					ch <- QueryResult{ Row: &qrr, Err: nil }
 				}
 			}
 		}
@@ -134,30 +134,23 @@ func NewDBManager() *DBManager {
 
 // Get DB DBConnection Key from the supplied DSN
 // ref: https://en.wikipedia.org/wiki/Data_source_name
-func (dbm *DBManager) Connect(dsn string) (DBKey, error) {
-	dbKey := DBKey{
-		key: db.GetDSNHash(dsn),
-	}
+func (dbm *DBManager) Connect(dsn string) (*DBKey, error) {
 
 	// If we already have this dbKey...
-	if _, ok := dbm.connections[dbKey.Key]; ok {
-		// ... then it's because we already have a good connection
-		return dbKey, nil;
-	}
+	dbKey := DBKey{ Key: db.GetDSNHash(dsn) }
+	if _, ok := dbm.connections[dbKey.Key]; ! ok {
+		// Not connected yet - let's do this thing!
+		conn, err := sql.Open("mysql", dsn)
+		if err != nil { return nil, err }
 
-	// Not connected yet - let's do this thing!
-        conn, err := sql.Open("mysql", dsn)
-        if err != nil {
-		return nil, err
-        }
-
-	// Make a new connection record
-	dbm.connections[dbKey.Key] = DBConnection{
-		DSN:	dsn,
-		IsConnected:	true,
-		Conn:	conn,
+		// Make a new connection record
+		dbm.connections[dbKey.Key] = DBConnection{
+			DSN:		dsn,
+			IsConnected:	true,
+			Conn:		conn,
+		}
 	}
-	return dbKey, nil
+	return &dbKey, nil
 }
 
 func (dbm *DBManager) IsConnected(dbKey DBKey) bool {
@@ -175,7 +168,7 @@ func (dbm *DBManager) GetConnection(dbKey DBKey) (*DBConnection, error) {
 }
 
 func (dbm *DBManager) Disconnect(dbKey DBKey) error {
-	if ! dbm.IsDBConnectionOpen(dbKey.Key) {
+	if ! dbm.IsConnected(dbKey) {
 		return errors.New(fmt.Sprintf("The connection for '%s' is not open", dbKey.Key))
 	}
 	if conn, ok := dbm.connections[dbKey.Key]; ok {
@@ -187,8 +180,16 @@ func (dbm *DBManager) Disconnect(dbKey DBKey) error {
 	return nil
 }
 
-func (dbm *DBManager) SQuery(dbKey DBKey, querySpec QuerySpec, args ...string) <-chan QueryResultRow {
+func (dbm *DBManager) Query(dbKey DBKey, querySpec QuerySpec, args ...string) <-chan QueryResult {
 	conn, err := dbm.GetConnection(dbKey)
-	return conn.SQuery(querySpec, args...)
+	if (nil != err) {
+		qrErr := lib.GetLogger().Error(fmt.Sprintf("GetConnection(): '%s' - Error: '%s'", dbKey.Key, err.Error()))
+		// Make a result channel
+		ch := make(chan QueryResult)
+		defer close(ch)
+		ch <- QueryResult{ Row:	nil, Err: qrErr }
+		return ch
+	}
+	return conn.Query(querySpec, args...)
 }
 
