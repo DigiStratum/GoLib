@@ -42,9 +42,7 @@ type querySpec struct {
 // A given database object spec couples access queries with matching field definitions
 type objectSpec struct {
 	template		ObjectTemplate
-	getQuery		mysql.QuerySpec	// e.g. SELECT * FROM tablename WHERE ... LIMIT 1
-	hasQuery		mysql.QuerySpec	// e.g. SELECT COUNT(*) FROM tablename WHERE ... LIMIT 1
-	putQuery		mysql.QuerySpec	// e.g. INSERT INTO tablename SET name=value ... WHERE ... ON DUPLICATE KEY UPDATE tablename ...
+	queries			map[string]mysql.QuerySpec
 }
 
 type ObjectStoreMySQL struct {
@@ -113,7 +111,7 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	}
 
 	// TODO: look it up in the DB since it's not in the cache
-	// TODO: use the objectSpec.hasQuery, prepared statement, (feed args into Query method if
+	// TODO: use the objectSpec.queries["has"], prepared statement, (feed args into Query method if
 	// possible? - this would prevent us from using arbitrary field ordering/spec in the path
 	// query string... alpha-sort the keys and require same sorting in prepared query?)
 
