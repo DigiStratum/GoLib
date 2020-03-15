@@ -20,9 +20,9 @@ import (
 	db "github.com/DigiStratum/GoLib/DB"
 )
 
-
 // ------------------------------------------------------------------------------------------------
 // Query Bits
+
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
 // automatically. '???' expands to include enough placeholders (as with an IN () list for any count
