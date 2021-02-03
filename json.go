@@ -20,6 +20,10 @@ type json struct {
 	json	*string
 }
 
+type JSON struct {
+	Json	json
+}
+
 // Make a new one of these (from string)!
 func NewJson(jsonString *string) *json {
 	return &json{ json: jsonString, source: "string" }
@@ -28,6 +32,26 @@ func NewJson(jsonString *string) *json {
 // Make a new one of these (from file)!
 func NewJsonFromFile(path string) *json {
 	return &json{ path: path, source: "file" }
+}
+
+// Make a new one of these (from string)!
+func NewJSON(jsonString *string) *JSON {
+	return &JSON{
+		Json: json{
+			json: jsonString,
+			source: "string",
+		},
+	}
+}
+
+// Make a new one of these (from file)!
+func NewJSONFromFile(path string) *JSON {
+	return &JSON{
+		Json: json{
+			path: path,
+			source: "file",
+		},
+	}
 }
 
 // Generic JSON load (into ANY interface)
