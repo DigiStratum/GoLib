@@ -89,6 +89,8 @@ func (os *ObjectStoreMySQL) GetObject(path string) *Object {
 // Satisfies ObjectStoreIfc
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
 func (os *ObjectStoreMySQL) HasObject(path string) bool {
+/*
+	// TODO @HERE reactivate this; disabled for build
 	// If it's already in the cache, then we know we have it!
 	if os.readCache.HasObject(path) { return true }
 
@@ -109,7 +111,7 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 		lib.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
 		return false
 	}
-
+*/
 	// TODO: look it up in the DB since it's not in the cache
 	// TODO: use the objectSpec.queries["has"], prepared statement, (feed args into Query method if
 	// possible? - this would prevent us from using arbitrary field ordering/spec in the path
