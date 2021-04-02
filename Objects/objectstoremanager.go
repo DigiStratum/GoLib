@@ -170,6 +170,21 @@ func (osm *ObjectStoreManager) findMultilingualObject(objectStore *ObjectStoreIf
 
 // Find a scoped (public/private), contextualized Object, facet on language (default="default")
 
+func (osm *ObjectStoreManager) FindObject(scope string, possibleContexts *[]string, languages *[]string, relPath string) *Object {
+	for _, context := range *possibleContexts {
+                lib.GetLogger().Trace(fmt.Sprintf("Trying path: %s/{language}/%s", context, relPath))
+                object := osm.FindContextualizedObject(
+                        scope,
+                        context,
+                        languages,
+                        relPath,
+                )
+                if nil == object { continue }
+		return object
+        }
+	return nil
+}
+
 // Scan method; Returns the Object or nil
 func (osm *ObjectStoreManager) FindContextualizedObject(scope string, context string, languages *[]string, relPath string) *Object {
 	lib.GetLogger().Trace(fmt.Sprintf(
