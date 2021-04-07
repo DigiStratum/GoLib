@@ -132,6 +132,13 @@ func NewDBManager() *DBManager {
 	return &dbm
 }
 
+// Get a DNS for a given mysql host, user, password, and database name; host may optionally include a port as "hostname:port"
+func (dbm *DBManager)  GetDSN(host string, user string, pass string, name string) string {
+	// ref:https://en.wikipedia.org/wiki/Data_source_name
+	// ex: mysql://john:pass@localhost:3306/my_db
+	return fmt.Sprintf("mysql://%s:%s@%s/%s", user, pass, host, name)
+}
+
 // Get DB DBConnection Key from the supplied DSN
 // ref: https://en.wikipedia.org/wiki/Data_source_name
 func (dbm *DBManager) Connect(dsn string) (*DBKey, error) {
