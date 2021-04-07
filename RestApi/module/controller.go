@@ -27,10 +27,15 @@ import(
 // end up ALWAYS only being one version because we are awesome at ensuring non-breaking changes then
 // we can remove versioning support at some point), so if there is only one, we will deliver it,
 // even if the request specifies some version which may/may not match. 
-type controllerEPVMap		map[string]interface{}		// Endpoint Version map
-type controllerEPPVMap		map[string]controllerEPVMap	// Endpoint Pattern map
-type controllerEPMPVMap		map[string]controllerEPPVMap	// Endpoint Method map
-type regexpCache		map[string]*regexp.Regexp
+type endpointContainer struct {
+	endpointMPV	interface{}			// The endpoint itself
+	sequence	int				// Sequentialize mappings to ensure pattern matching sequencing
+}
+
+type controllerEPVMap	map[string]endpointContainer	// Endpoint Version map
+type controllerEPPVMap	map[string]controllerEPVMap	// Endpoint Pattern map
+type controllerEPMPVMap	map[string]controllerEPPVMap	// Endpoint Method map
+type regexpCache	map[string]*regexp.Regexp
 
 type Controller struct {
 	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
@@ -110,7 +115,10 @@ func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 
 		// If this version isn't registered yet, add it now
 		if _, ok := (*ctrlr.endpointMap)[epm][epp][version]; !ok {
-			(*ctrlr.endpointMap)[epm][epp][version] = endpoint
+			(*ctrlr.endpointMap)[epm][epp][version] = endpointContainer{
+				endpointMPV: endpoint,
+				sequence: len(*ctrlr.endpointMap),
+			}
 		}
 	}
 }
@@ -194,6 +202,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	// Note: we will find the BEST match, not just any match
 	epm := request.GetMethod()
 	bestScore := 0
+	bestSequence := 1000000
 	var bestVersions controllerEPVMap
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
 		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
@@ -207,24 +216,35 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 		// Calculate a score for this pattern to determine how well it matches
 		score := 0
 		for _, match := range matches { score += len(match) }
+		//l.Trace(fmt.Sprintf("\tscore: %d", score))
 
 		// If the current pattern scores better than the best pattern thus far...
 		if score >= bestScore {
-			// then make this pattern the new best pattern!
-			bestScore = score
-			bestVersions = versions
-			// TODO: Capture the matches into the Request Context;
-			// it will have Endpoint specific parametric breakdown!
+			// If one or more of the versions here is sequenced earlier than the best so far
+			// (this ensures that equal scores favor the earliest sequence)
+			for _, endpointVersion := range versions {
+				if endpointVersion.sequence < bestSequence {
+					// then make this pattern the new best pattern!
+					bestScore = score
+					bestVersions = versions
+					bestSequence = endpointVersion.sequence
+					break
+				}
+			}
 		}
 	}
+
+	// TODO: Capture the matches into the Request Context;
+	// it will have Endpoint specific parametric breakdown!
 
 	// Use the versions of the best pattern we've found, if any
 	if nil != bestVersions {
 		// Dispatch this request!
-		for _, endpoint := range bestVersions {
+		for _, endpointVersion := range bestVersions {
 			// TODO: scan versions for version specified in X-Version header
 			// Default to first listed version
-			return ctrlr.endpointHandleRequest(endpoint, request)
+			//l.Trace(fmt.Sprintf("\tpassing to endpointHandleRequest for sequence %d", endpointVersion.sequence))
+			return ctrlr.endpointHandleRequest(endpointVersion.endpointMPV, request)
 		}
 		return nil // UNHANDLED BY US
 	}
