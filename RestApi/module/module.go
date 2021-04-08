@@ -89,6 +89,11 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 
 	// Validate that the Config has what we need for a Module!
 	configPrefix := "module." + module.name + "."
+	l.Trace(fmt.Sprintf(
+		"Module{%s}/Cofigure(): Looking for config subset with prefix '%s'",
+		module.name,
+		configPrefix,
+	))
 	module.moduleConfig = config.GetSubset(configPrefix)
 	requiredConfig := []string{ "version", "path" }
 	if ! (module.moduleConfig.HasAll(&requiredConfig)) {

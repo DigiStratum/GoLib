@@ -74,6 +74,12 @@ func (cfg *Config) getSubset(prefix string, keepMatches bool) *Config {
 			res.Set(pair.Key, pair.Value)
 		}
 	}
+	GetLogger().Trace(fmt.Sprintf(
+		"Config.getSubset('%s') found %d keys from %d",
+		prefix,
+		res.Size(),
+		cfg.Size(),
+	))
 	return res
 }
 
