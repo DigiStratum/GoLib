@@ -97,24 +97,23 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 // See that the map has an entry for each method/pattern/version for this Endpoint
 func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 	// Get the Endpoint's Pattern; we force it to match entire URI following Module prefix
-	epp := endpoint.GetPattern()
+	pattern := endpoint.GetPattern()
 	methods := endpoint.GetMethods()
 	version := endpoint.GetVersion()
 	for _, method := range methods {
 		// If this method isn't registered for this Controller, add it now
-		epm := method
-		if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
-			(*ctrlr.endpointMap)[epm] = make(controllerEPPVMap)
+		if _, ok := (*ctrlr.endpointMap)[method]; !ok {
+			(*ctrlr.endpointMap)[method] = make(controllerEPPVMap)
 		}
 
 		// If this pattern isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpointMap)[epm][epp]; !ok {
-			(*ctrlr.endpointMap)[epm][epp] = make(controllerEPVMap)
+		if _, ok := (*ctrlr.endpointMap)[method][pattern]; !ok {
+			(*ctrlr.endpointMap)[method][pattern] = make(controllerEPVMap)
 		}
 
 		// If this version isn't registered yet, add it now
-		if _, ok := (*ctrlr.endpointMap)[epm][epp][version]; !ok {
-			(*ctrlr.endpointMap)[epm][epp][version] = endpointContainer{
+		if _, ok := (*ctrlr.endpointMap)[method][pattern][version]; !ok {
+			(*ctrlr.endpointMap)[method][pattern][version] = endpointContainer{
 				endpointMPV: endpoint,
 				sequence: len(*ctrlr.endpointMap),
 			}
@@ -133,8 +132,8 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 	))
 
 	// Is the request method in our Endpoint registry?
-	epm := request.GetMethod()
-	if _, ok := (*ctrlr.endpointMap)[epm]; !ok {
+	requestMethod := request.GetMethod()
+	if _, ok := (*ctrlr.endpointMap)[requestMethod]; !ok {
 		return rest.GetHelper().ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
 
@@ -199,11 +198,11 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 
 	// Find which Endpoint's pattern matches this request URI
 	// Note: we will find the BEST match, not just any match
-	epm := request.GetMethod()
+	requestMethod := request.GetMethod()
 	bestScore := 0
 	bestSequence := 1000000
 	var bestVersions controllerEPVMap
-	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
+	for pattern, versions := range (*ctrlr.endpointMap)[requestMethod] {
 		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
 		endpointVersion := versions["1.0"] // FIXME: get the first version (is the pattern the same for all versions?)
 		matches, err := endpointVersion.endpointMPV.GetRequestURIMatches(request)
