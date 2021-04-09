@@ -44,6 +44,12 @@ func (hlpr *helper) ResponseOk(body *string, contentType string) *HttpResponse {
 	return hlpr.Response(STATUS_OK, body, contentType)
 }
 
+// Produce an ERROR HTTP response with JSON message body and standard headers
+func (hlpr *helper) ResponseErrorJson(status HttpStatus, message string) *HttpResponse {
+	staticResponse := fmt.Sprintf("[ { \"error\": { \"msg\": \"%s\" } } ]", message)
+	return hlpr.Response(status, &staticResponse, "application/json")
+}
+
 // Produce an HTTP response from an Object (200 OK)
 func (hlpr *helper) ResponseObject(object *obj.Object, uri string) *HttpResponse {
 	return hlpr.Response(STATUS_OK, object.GetContent(), hlpr.GetMimetype(uri))
