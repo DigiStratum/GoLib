@@ -53,6 +53,7 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"regexp"
 
 	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
@@ -74,6 +75,7 @@ type EndpointIfc interface {
 	GetPattern() string
 	IsDefault() bool
 	GetMethods() []string
+	GetRequestURIMatches(request *rest.HttpRequest) ([]string, error)
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
@@ -84,6 +86,7 @@ type Endpoint struct {
         name            string		// Unique name of this Endpoint
         version         string		// Version of this Endpoint
         pattern         string		// Pattern which matches URI's to us (relative to Module)
+	patternRegexp	*regexp.Regexp	// Compiled Regular Expression for our pattern
         methods         []string	// List of HTTP request methods that we respond to
 	securityPolicy	*SecurityPolicy	// Security Policy for this Endpoint
 	isDefault	bool		// Is this endpoint configured as a default?
@@ -176,6 +179,12 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 	ep.endpointConfig.Set("name", ep.name) // Reflect name into Module Config for reference
 
 	ep.pattern = ep.endpointConfig.Get("pattern")
+	var err error
+	ep.patternRegexp, err = regexp.Compile("^" + ep.pattern + "$")
+	if nil != err {
+		l.Error(fmt.Sprintf("Endpoint{%s}.Configure(): Unexpected error compiling Regex pattern '%s'", ep.name, ep.pattern))
+		return
+	}
 	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
 
 	// If this Endpoint is Configurable...
@@ -241,6 +250,18 @@ func (ep *Endpoint) IsDefault() bool {
 // This is used by the Controller to add us to the map to send us requests.
 func (ep *Endpoint) GetMethods() []string {
 	return ep.methods
+}
+
+// Return the matches from the request URI against this endpoint's pattern
+func (ep *Endpoint) GetRequestURIMatches(request *rest.HttpRequest) ([]string, error) {
+	// Run the request URI through our endpoint pattern
+        ctx := request.GetContext()
+        requestUri := request.GetURI()
+        relativeURI := requestUri[len(ctx.GetPrefixPath()):]
+	// Strip the server/module components off the beginning of the URI
+	matches := ep.patternRegexp.FindStringSubmatch(relativeURI)
+
+	return matches, nil
 }
 
 // Request handler

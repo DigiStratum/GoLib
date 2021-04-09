@@ -13,7 +13,6 @@ import(
 	"path"
 	"strings"
 	"regexp"
-	"errors"
 
 	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
@@ -28,7 +27,7 @@ import(
 // we can remove versioning support at some point), so if there is only one, we will deliver it,
 // even if the request specifies some version which may/may not match. 
 type endpointContainer struct {
-	endpointMPV	interface{}			// The endpoint itself
+	endpointMPV	EndpointIfc			// The endpoint itself
 	sequence	int				// Sequentialize mappings to ensure pattern matching sequencing
 }
 
@@ -206,7 +205,8 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	var bestVersions controllerEPVMap
 	for pattern, versions := range (*ctrlr.endpointMap)[epm] {
 		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
-		matches, err := ctrlr.getUriMatches(pattern, relativeURI)
+		endpointVersion := versions["1.0"] // FIXME: get the first version (is the pattern the same for all versions?)
+		matches, err := endpointVersion.endpointMPV.GetRequestURIMatches(request)
 		if nil != err {
 			l.Error(err.Error())
 			return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
@@ -264,6 +264,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 }
 
 // Pass this request to the supplied Endpoint
+// TODO: pass endpoint as EndpointIfc insteaf of interface{} if possible
 func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	l := lib.GetLogger()
@@ -348,7 +349,7 @@ func (ctrlr *Controller) getDefaultResponseHeaders() *map[string]string {
 	return &headers
 }
 
-
+/*
 // Use a pattern cache of compiled RegExp's to match the URI
 func (ctrlr *Controller) getUriMatches(pattern string, URI string) ([]string, error) {
 	// Find the Regexp in the pattern cache
@@ -368,4 +369,5 @@ func (ctrlr *Controller) getUriMatches(pattern string, URI string) ([]string, er
 	}
 	return rxp.FindStringSubmatch(URI), nil
 }
+*/
 
