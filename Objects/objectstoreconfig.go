@@ -43,12 +43,16 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (*lib.Con
 		return nil, err
 	}
 
+// FIXME: validate that a non-empty string results in a non-empty config. It seems like even if Json unmarshal does not generate at error, it might not work. In this case we had a "pattern": "\d+" and it needed to be "\\d+" - withtou the double-escape, the entire JSON struct produced an empty config object, but no error.
+	//lib.GetLogger().Trace(fmt.Sprintf("configJson: %s", *configJson))
+
 	// Load up a Config structure from the JSON
 	config := lib.NewConfig()
 	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
 		lib.GetLogger().Error(fmt.Sprintf("Config: Error parsing ObjectStore JSON ('%s'): %s", objectPath, err.Error()))
 		return nil, err
 	}
+//config.Dump()
 
 	return config, nil
 }
