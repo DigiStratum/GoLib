@@ -185,13 +185,17 @@ func (ctrlr *Controller) alternateRequest(request *rest.HttpRequest) *rest.HttpR
 func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 	l := lib.GetLogger()
+	moduleName := ctrlr.moduleConfig.Get("name")
+        l.Trace(fmt.Sprintf("Controller{%s}.dispatchRequest()", moduleName))
+
 	// Strip the server/module components off the beginning of the URI
 	ctx := request.GetContext()
 	requestUri := request.GetURI()
 	relativeURI := requestUri[len(ctx.GetPrefixPath()):]
 	l.Trace(fmt.Sprintf(
-		"[%s] Controller: Dispatching: '%s' ('%s')",
+		"[%s] Controller{%s}: Dispatching: '%s' ('%s')",
 		ctx.GetRequestId(),
+		moduleName,
 		relativeURI,
 		requestUri,
 	))
@@ -200,35 +204,35 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	// Note: we will find the BEST match, not just any match
 	requestMethod := request.GetMethod()
 	bestScore := 0
-	bestSequence := 1000000
+	bestSequence := 0
 	var bestVersions controllerEPVMap
-	for pattern, versions := range (*ctrlr.endpointMap)[requestMethod] {
-		l.Trace(fmt.Sprintf("Controller: Checking Pattern: '%s'", pattern))
-		endpointVersion := versions["1.0"] // FIXME: get the first version (is the pattern the same for all versions?)
-		matches, err := endpointVersion.endpointMPV.GetRequestURIMatches(request)
-		if nil != err {
-			l.Error(err.Error())
-			return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
-		}
-		if (nil == matches) || (len(matches) == 0) { continue }
+	for _, versions := range (*ctrlr.endpointMap)[requestMethod] {
+		for version, endpoint := range versions {
+			l.Trace(fmt.Sprintf(
+				"Controller{%s}: Checking Pattern: '%s' for version '%s'",
+				moduleName,
+				endpoint.endpointMPV.GetPattern(),
+				version,
+			))
+			matches, err := endpoint.endpointMPV.GetRequestURIMatches(request)
+			if nil != err {
+				l.Error(err.Error())
+				return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
+			}
+			if (nil == matches) || (len(matches) == 0) { continue }
 
-		// Calculate a score for this pattern to determine how well it matches
-		score := 0
-		for _, match := range matches { score += len(match) }
-		//l.Trace(fmt.Sprintf("\tscore: %d", score))
+			// Calculate a score for this pattern to determine how well it matches
+			score := 0
+			for _, match := range matches { score += len(match) }
 
-		// If the current pattern scores better than the best pattern thus far...
-		if score >= bestScore {
-			// If one or more of the versions here is sequenced earlier than the best so far
+			// If current pattern scores better than best thus far,
+			// and this version sequenced earlier than best thus far
 			// (this ensures that equal scores favor the earliest sequence)
-			for _, endpointVersion := range versions {
-				if endpointVersion.sequence < bestSequence {
-					// then make this pattern the new best pattern!
-					bestScore = score
-					bestVersions = versions
-					bestSequence = endpointVersion.sequence
-					break
-				}
+			if (score >= bestScore) && ((bestSequence == 0) || (endpoint.sequence < bestSequence)) {
+				// then make this pattern the new best pattern!
+				bestScore = score
+				bestVersions = versions
+				bestSequence = endpoint.sequence
 			}
 		}
 	}

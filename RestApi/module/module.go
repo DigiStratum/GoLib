@@ -87,10 +87,12 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 		))
 	}
 
+//config.Dump()
+
 	// Validate that the Config has what we need for a Module!
 	configPrefix := "module." + module.name + "."
 	l.Trace(fmt.Sprintf(
-		"Module{%s}/Cofigure(): Looking for config subset with prefix '%s'",
+		"Module{%s}.Cofigure(): Looking for config subset with prefix '%s'",
 		module.name,
 		configPrefix,
 	))
