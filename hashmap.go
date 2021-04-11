@@ -6,8 +6,6 @@ package golib
 This HashMap class wraps a basic Go map with essential helper functions to make life easier for
 dealing with simple key/value pair data.
 
-We're going to let this thing panic if we are not initialized (nil). That's the caller's bad.
-
 TODO: Put some multi-threaded protections around the accessors here
 
 */
