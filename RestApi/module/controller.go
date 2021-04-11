@@ -6,6 +6,8 @@ The Controller is where Module-specific HTTP Request handling takes place.
 
 TODO: Test more specific patterns before more general ones
 ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
+TODO: Wrap the logger calls with something to help consistency and reduce function sizes bloated by log output
+
 */
 
 import(
@@ -67,7 +69,7 @@ func (ctrlr *Controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
 
 // Module initializes a Controller
 func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
-	moduleName := ctrlr.moduleConfig.Get("name")
+	moduleName := moduleConfig.Get("name")
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf("Controller{%s}.Configure()", moduleName))
 
@@ -132,8 +134,7 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 	))
 
 	// Is the request method in our Endpoint registry?
-	requestMethod := request.GetMethod()
-	if _, ok := (*ctrlr.endpointMap)[requestMethod]; !ok {
+	if _, ok := (*ctrlr.endpointMap)[request.GetMethod()]; !ok {
 		return rest.GetHelper().ResponseError(rest.STATUS_METHOD_NOT_ALLOWED)
 	}
 
@@ -185,85 +186,70 @@ func (ctrlr *Controller) alternateRequest(request *rest.HttpRequest) *rest.HttpR
 func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 	l := lib.GetLogger()
-	moduleName := ctrlr.moduleConfig.Get("name")
-        l.Trace(fmt.Sprintf("Controller{%s}.dispatchRequest()", moduleName))
 
 	// Strip the server/module components off the beginning of the URI
 	ctx := request.GetContext()
-	requestUri := request.GetURI()
-	relativeURI := requestUri[len(ctx.GetPrefixPath()):]
+	requestURI := request.GetURI()
+	moduleName := ctrlr.moduleConfig.Get("name")
 	l.Trace(fmt.Sprintf(
-		"[%s] Controller{%s}: Dispatching: '%s' ('%s')",
+		"[%s] Controller{%s}: Dispatching: '%s'",
 		ctx.GetRequestId(),
 		moduleName,
-		relativeURI,
-		requestUri,
+		requestURI,
 	))
 
-	// Find which Endpoint's pattern matches this request URI
-	// Note: we will find the BEST match, not just any match
-	requestMethod := request.GetMethod()
-	bestScore := 0
-	bestSequence := 0
-	var bestVersions controllerEPVMap
-	for _, versions := range (*ctrlr.endpointMap)[requestMethod] {
-		for version, endpoint := range versions {
-			l.Trace(fmt.Sprintf(
-				"Controller{%s}: Checking Pattern: '%s' for version '%s'",
-				moduleName,
-				endpoint.endpointMPV.GetPattern(),
-				version,
-			))
-			matches, err := endpoint.endpointMPV.GetRequestURIMatches(request)
-			if nil != err {
-				l.Error(err.Error())
-				return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
-			}
-			if (nil == matches) || (len(matches) == 0) { continue }
-
-			// Calculate a score for this pattern to determine how well it matches
-			score := 0
-			for _, match := range matches { score += len(match) }
-
-			// If current pattern scores better than best thus far,
-			// and this version sequenced earlier than best thus far
-			// (this ensures that equal scores favor the earliest sequence)
-			if (score >= bestScore) && ((bestSequence == 0) || (endpoint.sequence < bestSequence)) {
-				// then make this pattern the new best pattern!
-				bestScore = score
-				bestVersions = versions
-				bestSequence = endpoint.sequence
-			}
-		}
+	endpoint := ctrlr.findBestMatchingEndpointForURI(request)
+	if nil != endpoint {
+		//l.Trace(fmt.Sprintf("\tpassing to endpointHandleRequest for sequence %d", endpoint.sequence))
+		return ctrlr.endpointHandleRequest((*endpoint).endpointMPV, request)
 	}
 
-	// TODO: Capture the matches into the Request Context;
-	// it will have Endpoint specific parametric breakdown!
-
-	// Use the versions of the best pattern we've found, if any
-	if nil != bestVersions {
-		// Dispatch this request!
-		for _, endpointVersion := range bestVersions {
-			// TODO: scan versions for version specified in X-Version header
-			// Default to first listed version
-			//l.Trace(fmt.Sprintf("\tpassing to endpointHandleRequest for sequence %d", endpointVersion.sequence))
-			return ctrlr.endpointHandleRequest(endpointVersion.endpointMPV, request)
-		}
-		return nil // UNHANDLED BY US
-	}
-
-	// If we fell through to here... and if the RELATIVE URI is empty (root of the server/module)...
-	if len(relativeURI) == 0 {
-		// We can redirect if the full REQUEST URL does not end with '/'...
+	// We fell through without a match; last chance: if the REQUEST URI is root of the server/module...
+	if requestURI == ctx.GetPrefixPath() {
+		// ... and if the full REQUEST URL does not end with '/'...
 		requestURL := request.GetURL();
 		if ! strings.HasSuffix(requestURL, "/") {
-			// Yep: it's a non-conforming REQUEST URI; redirect to same, but with trailing '/'
+			// ... it's a non-conforming REQUEST URI; try again, but with trailing '/'
 			return hlpr.ResponseRedirectPermanent(requestURL + "/")
 		}
 	}
 
 	// If we fell through without finding a handler then we're done for!
 	return hlpr.ResponseError(rest.STATUS_NOT_FOUND)
+}
+
+// Find which Endpoint's pattern matches this request URI - the BEST match, not just ANY match
+func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpRequest) *endpointContainer {
+	bestScore := 0
+	var bestEndpoint *endpointContainer
+	for _, versions := range (*ctrlr.endpointMap)[request.GetMethod()] {
+		for version, endpoint := range versions {
+			// TODO: Add support for client to specify a version with X-Version header? Maybe we don't need versions at all?
+			lib.GetLogger().Trace(fmt.Sprintf(
+				"\tChecking Pattern: '%s' for version '%s'",
+				endpoint.endpointMPV.GetPattern(),
+				version,
+			))
+			matches := endpoint.endpointMPV.GetRequestMatches(request)
+			if (nil == matches) || (len(matches) == 0) { continue }
+
+			// Calculate a score for this pattern to determine how well it matches
+			// FIXME: if we calculate score as len(request.URI) - len(all matches), we should be able to get rid of sequence
+			score := 0
+			for _, match := range matches { score += len(match) }
+
+			// If current pattern scores better than best thus far,
+			// and this version sequenced earlier than best thus far
+			// (this ensures that equal scores favor the earliest sequence)
+			if (score >= bestScore) && ((nil == bestEndpoint) || (endpoint.sequence < (*bestEndpoint).sequence)) {
+				bestScore = score
+				bestEndpoint = &endpoint
+			}
+		}
+	}
+
+	// Note: Endpoint can call its own matches method to geth named path parameters 
+	return bestEndpoint
 }
 
 // Pass this request to the supplied Endpoint
@@ -351,26 +337,4 @@ func (ctrlr *Controller) getDefaultResponseHeaders() *map[string]string {
 	}
 	return &headers
 }
-
-/*
-// Use a pattern cache of compiled RegExp's to match the URI
-func (ctrlr *Controller) getUriMatches(pattern string, URI string) ([]string, error) {
-	// Find the Regexp in the pattern cache
-	var rxp	*regexp.Regexp
-	var ok bool
-	if rxp, ok = (*ctrlr.patternCache)[pattern]; !ok {
-		// No!? Well then... Compile it and ADD it to the cache!
-		var err error
-		rxp, err = regexp.Compile("^" + pattern + "$")
-		if nil != err {
-			return nil, errors.New(fmt.Sprintf(
-				"Controller: Unexpected error compiling Regex pattern '%s'",
-				pattern,
-			))
-		}
-		(*ctrlr.patternCache)[pattern] = rxp
-	}
-	return rxp.FindStringSubmatch(URI), nil
-}
-*/
 

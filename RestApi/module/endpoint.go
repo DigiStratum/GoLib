@@ -75,7 +75,7 @@ type EndpointIfc interface {
 	GetPattern() string
 	IsDefault() bool
 	GetMethods() []string
-	GetRequestURIMatches(request *rest.HttpRequest) ([]string, error)
+	GetRequestMatches(request *rest.HttpRequest) []string
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
@@ -252,16 +252,49 @@ func (ep *Endpoint) GetMethods() []string {
 	return ep.methods
 }
 
-// Return the matches from the request URI against this endpoint's pattern
-func (ep *Endpoint) GetRequestURIMatches(request *rest.HttpRequest) ([]string, error) {
-	// Run the request URI through our endpoint pattern
+// Get URI relative to this endpoint (strip server/module mappings from beginning)
+func (ep *Endpoint) GetRelativeURI(request *rest.HttpRequest) string {
+	// Strip the server/module components off the beginning of the URI
         ctx := request.GetContext()
         requestUri := request.GetURI()
-        relativeURI := requestUri[len(ctx.GetPrefixPath()):]
-	// Strip the server/module components off the beginning of the URI
+        return requestUri[len(ctx.GetPrefixPath()):]
+}
+
+// Return raw matches from request against our pattern
+func (ep *Endpoint) GetRequestMatches(request *rest.HttpRequest) []string {
+	return ep.GetRequestURIMatches(ep.GetRelativeURI(request))
+}
+
+// Return raw matches from relative URI against our pattern
+func (ep *Endpoint) GetRequestURIMatches(relativeURI string) []string {
+	return ep.patternRegexp.FindStringSubmatch(relativeURI)
+}
+
+// Return mapped path matches from request against our pattern
+func (ep *Endpoint) GetRequestPathMatches(request *rest.HttpRequest) *lib.HashMap {
+	return ep.GetRequestURIPathMatches(ep.GetRelativeURI(request))
+}
+
+// Return mapped path matches from relative URI against our pattern
+func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) *lib.HashMap {
+	// Run the relative URI through our regex pattern
 	matches := ep.patternRegexp.FindStringSubmatch(relativeURI)
 
-	return matches, nil
+	// Map any named path parameters to our results 
+	results := lib.NewHashMap()
+	for i, value := range matches {
+		// Get the name of the ith subexpression from the pattern
+		// ref: https://golang.org/pkg/regexp/#Regexp.SubexpNames
+		// ref: https://stackoverflow.com/questions/20750843/using-named-matches-from-go-regex/20751656
+		name := ep.patternRegexp.SubexpNames()[i]
+		// If name came up empty, then use i as the name instead
+		if 0 == len(name) {
+			name = string(i)
+		}
+		results.Set(name, value)
+	}
+
+	return results
 }
 
 // Request handler
