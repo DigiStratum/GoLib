@@ -79,8 +79,8 @@ type EndpointIfc interface {
 	GetRelativeURI(request *rest.HttpRequest) string
 	GetRequestMatches(request *rest.HttpRequest) []string
 	GetRequestURIMatches(relativeURI string) []string
-	GetRequestPathMatches(request *rest.HttpRequest) (*lib.HashMap, error)
-	GetRequestURIPathMatches(relativeURI string) (*lib.HashMap, error)
+	GetRequestPathParameters(request *rest.HttpRequest) (*lib.HashMap, error)
+	GetRequestURIPathParameters(relativeURI string) (*lib.HashMap, error)
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
@@ -291,16 +291,16 @@ func (ep *Endpoint) GetRequestURIMatches(relativeURI string) []string {
 	return ep.patternRegexp.FindStringSubmatch(relativeURI)
 }
 
-// Return mapped path matches from request against our pattern
-func (ep *Endpoint) GetRequestPathMatches(request *rest.HttpRequest) (*lib.HashMap, error) {
-	res, err := ep.GetRequestURIPathMatches(ep.GetRelativeURI(request))
+// Return mapped Path Parameters from request
+func (ep *Endpoint) GetRequestPathParameters(request *rest.HttpRequest) (*lib.HashMap, error) {
+	res, err := ep.GetRequestURIPathParameters(ep.GetRelativeURI(request))
 	return res, err
 }
 
-// Return mapped path matches from relative URI against our pattern
-func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) (*lib.HashMap, error) {
+// Return mapped Path Parameters from relative URI
+func (ep *Endpoint) GetRequestURIPathParameters(relativeURI string) (*lib.HashMap, error) {
 	// Run the relative URI through our regex pattern
-	matches := ep.patternRegexp.FindStringSubmatch(relativeURI)
+	matches := ep.GetRequestURIMatches(relativeURI)
 
 	// Let's check these against required/optional path parameters
 	errorMessages := []string{}
