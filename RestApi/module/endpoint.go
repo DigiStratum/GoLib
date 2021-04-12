@@ -54,6 +54,7 @@ import (
 	"strings"
 	"strconv"
 	"regexp"
+	"errors"
 
 	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
@@ -78,22 +79,25 @@ type EndpointIfc interface {
 	GetRelativeURI(request *rest.HttpRequest) string
 	GetRequestMatches(request *rest.HttpRequest) []string
 	GetRequestURIMatches(relativeURI string) []string
-	GetRequestPathMatches(request *rest.HttpRequest) *lib.HashMap
-	GetRequestURIPathMatches(relativeURI string) *lib.HashMap
+	GetRequestPathMatches(request *rest.HttpRequest) (*lib.HashMap, error)
+	GetRequestURIPathMatches(relativeURI string) (*lib.HashMap, error)
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
 type Endpoint struct {
-        serverConfig    *lib.Config	// Server configuration copy
-        moduleConfig    *lib.Config	// Module configuration copy
-	endpointConfig	*lib.Config	// Endpoint configuration
-        name            string		// Unique name of this Endpoint
-        version         string		// Version of this Endpoint
-        pattern         string		// Pattern which matches URI's to us (relative to Module)
-	patternRegexp	*regexp.Regexp	// Compiled Regular Expression for our pattern
-        methods         []string	// List of HTTP request methods that we respond to
-	securityPolicy	*SecurityPolicy	// Security Policy for this Endpoint
-	isDefault	bool		// Is this endpoint configured as a default?
+        serverConfig		*lib.Config	// Server configuration copy
+        moduleConfig		*lib.Config	// Module configuration copy
+	endpointConfig		*lib.Config	// Endpoint configuration
+        name			string		// Unique name of this Endpoint
+        version			string		// Version of this Endpoint
+        pattern			string		// Pattern which matches URI's to us (relative to Module)
+	patternRegexp		*regexp.Regexp	// Compiled Regular Expression for our pattern
+	requiredPathParameters	[]string	// If pattern includes path parameters, these MUST be provided
+	optionalPathParameters	[]string	// If pattern includes path parameters, these MAY be provided
+        methods			[]string	// List of HTTP request methods that we respond to
+	securityPolicy		*SecurityPolicy	// Security Policy for this Endpoint
+	isDefault		bool		// Is this endpoint configured as a default?
+
 }
 
 // Make a new one of these (typically embedded as the superclass of some subclass)
@@ -123,6 +127,8 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}) {
 
 	// Capture basic properties
 	ep.methods = []string{}
+	ep.requiredPathParameters = []string{}
+	ep.optionalPathParameters = []string{}
 
 	// Find which methods this Endpoint actually implements
 	implementedMethods := make(map[string]bool)
@@ -182,6 +188,7 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 	}
 	ep.endpointConfig.Set("name", ep.name) // Reflect name into Module Config for reference
 
+	// Set up the path pattern and parameters
 	ep.pattern = ep.endpointConfig.Get("pattern")
 	var err error
 	ep.patternRegexp, err = regexp.Compile("^" + ep.pattern + "$")
@@ -189,6 +196,16 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 		l.Error(fmt.Sprintf("Endpoint{%s}.Configure(): Unexpected error compiling Regex pattern '%s'", ep.name, ep.pattern))
 		return
 	}
+	requiredPathParameters := ep.endpointConfig.Get("pathparams.required")
+	if len(requiredPathParameters) > 0 {
+		ep.requiredPathParameters = strings.Split(requiredPathParameters, ",")
+	}
+	optionalPathParameters := ep.endpointConfig.Get("pathparams.optional")
+	if len(optionalPathParameters) > 0 {
+		ep.optionalPathParameters = strings.Split(optionalPathParameters, ",")
+	}
+
+	// Security policy
 	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
 
 	// If this Endpoint is Configurable...
@@ -275,14 +292,18 @@ func (ep *Endpoint) GetRequestURIMatches(relativeURI string) []string {
 }
 
 // Return mapped path matches from request against our pattern
-func (ep *Endpoint) GetRequestPathMatches(request *rest.HttpRequest) *lib.HashMap {
-	return ep.GetRequestURIPathMatches(ep.GetRelativeURI(request))
+func (ep *Endpoint) GetRequestPathMatches(request *rest.HttpRequest) (*lib.HashMap, error) {
+	res, err := ep.GetRequestURIPathMatches(ep.GetRelativeURI(request))
+	return res, err
 }
 
 // Return mapped path matches from relative URI against our pattern
-func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) *lib.HashMap {
+func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) (*lib.HashMap, error) {
 	// Run the relative URI through our regex pattern
 	matches := ep.patternRegexp.FindStringSubmatch(relativeURI)
+
+	// Let's check these against required/optional path parameters
+	errorMessages := []string{}
 
 	// Map any named path parameters to our results 
 	results := lib.NewHashMap()
@@ -298,10 +319,51 @@ func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) *lib.HashMap {
 		if 0 == len(name) {
 			name = strconv.Itoa(i)
 		}
+
+		// If the name is NOT in the list of known required/optional parameters
+		if ! (ep.IsRequiredPathParameter(name) || ep.IsOptionalPathParameter(name)) {
+			// ... then reject it as unknown!
+			errorMessages = append(errorMessages, fmt.Sprintf("Unknown Path Parameter: '%s'", name))
+			continue
+		}
 		results.Set(name, value)
 	}
 
-	return results
+	// Make sure that all required path parameters are accounted for
+	if (len(ep.requiredPathParameters) > 0) && (! results.HasAll(&ep.requiredPathParameters)) {
+		errorMessages = append(errorMessages, "Missing one or more required Path Parameters")
+	}
+
+	// If any error messages fell out of that, return only the combined error message
+	if len(errorMessages) > 0 {
+		return nil, errors.New(fmt.Sprintf(
+			"Errors getting Path Parameters from URI: %s",
+			strings.Join(errorMessages, "; "),
+		))
+	}
+
+	return results, nil
+}
+
+// Is the named parameter in the list of required path parameters?
+func (ep *Endpoint) IsOptionalPathParameter(parameterName string ) bool {
+	for _, optionalName := range ep.optionalPathParameters {
+		if optionalName == parameterName { return true; }
+		res := optionalName == parameterName
+		lib.GetLogger().Crazy(fmt.Sprintf("IsOptionalPathParameter(%s) == %s ? %b", parameterName, optionalName, res))
+		if res { return true; }
+	}
+	return false
+}
+
+// Is the named parameter in the list of required path parameters?
+func (ep *Endpoint) IsRequiredPathParameter(parameterName string) bool {
+	for _, requiredName := range ep.requiredPathParameters {
+		res := requiredName == parameterName
+		lib.GetLogger().Crazy(fmt.Sprintf("IsRequiredPathParameter(%s) == %s ? %b", parameterName, requiredName, res))
+		if res { return true; }
+	}
+	return false
 }
 
 // Request handler
