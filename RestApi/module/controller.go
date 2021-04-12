@@ -234,14 +234,22 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 			if (nil == matches) || (len(matches) == 0) { continue }
 
 			// Calculate a score for this pattern to determine how well it matches
-			// FIXME: if we calculate score as len(request.URI) - len(all matches), we should be able to get rid of sequence
-			score := 0
-			for _, match := range matches { score += len(match) }
+			// score is len(request.URI) - len(all matches)
+			penalty := 0
+			points := 0
+			for index, match := range matches {
+				if 0 == index {
+					// The first match in matches is the completely matched string
+					points = len(match)
+				} else {
+					// All other matches count against the score since they represent variability
+					penalty += len(match)
+				}
+			}
+			score := points - penalty
 
-			// If current pattern scores better than best thus far,
-			// and this version sequenced earlier than best thus far
-			// (this ensures that equal scores favor the earliest sequence)
-			if (score >= bestScore) && ((nil == bestEndpoint) || (endpoint.sequence < (*bestEndpoint).sequence)) {
+			// If current pattern scores better than best thus far
+			if score >= bestScore {
 				bestScore = score
 				bestEndpoint = &endpoint
 			}
