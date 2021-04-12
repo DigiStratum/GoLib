@@ -14,13 +14,14 @@ match the entire URI, the more specific matches will have fewer characters in th
 More thoughts are here:
 ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
 
+TODO: Do we really need/want version support for Endpoint?
+
 */
 
 import(
 	"fmt"
 	"path"
 	"strings"
-	"regexp"
 
 	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
@@ -42,14 +43,12 @@ type endpointContainer struct {
 type controllerEPVMap	map[string]endpointContainer	// Endpoint Version map
 type controllerEPPVMap	map[string]controllerEPVMap	// Endpoint Pattern map
 type controllerEPMPVMap	map[string]controllerEPPVMap	// Endpoint Method map
-type regexpCache	map[string]*regexp.Regexp
 
 type Controller struct {
 	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
 	serverConfig	*lib.Config		// Server configuration cache
 	moduleConfig	*lib.Config		// Module configuration cache
 	extraConfig	*lib.Config		// Extra configuration for Endpoints
-	patternCache	*regexpCache		// Compiled Regex Endpoint pattern cache
 	endpointMap	*controllerEPMPVMap	// Map of all our Endpoints
 	endpoints	[]interface{}		// Collection of distinct concrete endpoints
 }
@@ -57,12 +56,10 @@ type Controller struct {
 // Make a new one of these!
 func NewController() *Controller {
 	c := make(controllerEPMPVMap)
-	r := make(regexpCache)
 	return &Controller{
 		serverConfig:	lib.NewConfig(),
 		moduleConfig:	lib.NewConfig(),
 		extraConfig:	lib.NewConfig(),
-		patternCache:	&r,
 		endpointMap:	&c,
 		endpoints:	make([]interface{}, 0),
 	}
@@ -237,9 +234,10 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 			if (nil == matches) || (len(matches) == 0) { continue }
 
 			// Calculate a score for this pattern to determine how well it matches
-			// score is len(request.URI) - len(all matches)
 			penalty := 0
 			points := 0
+			// When scoring for specificity, static matches score points and variability is penalized
+			// May the best pattern win! Score = len(request.URI) - len(all matches)
 			for index, match := range matches {
 				if 0 == index {
 					// The first match in matches is the completely matched string
@@ -263,7 +261,7 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 	return bestEndpoint
 }
 
-// Pass this request to the supplied Endpoint
+// Wrap HTTP Request to send to Endpoint for handling
 func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	lib.GetLogger().Trace(ctrlr.wrapLog(fmt.Sprintf(
@@ -279,11 +277,8 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *re
 // Merge default response headers into OK responses if not already supplied
 // TODO: Make this more granular to be endpoint-specific (override)
 func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse, requestId string) {
-	// If response status is not OK, then there's nothing to do
-	responseStatus := response.GetStatus()
-	if (responseStatus != rest.STATUS_OK) && (responseStatus != rest.STATUS_NOT_MODIFIED) {
-		return
-	}
+	// Only OK (2xx) responses want default headers, else nothing to do
+	if rest.GetHelper().IsStatus2xx(response.GetStatus()) { return }
 
 	// Define default response header set
 	mergeHeaders := ctrlr.getDefaultResponseHeaders()
@@ -314,11 +309,12 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 			(*headers)[name] = value
 		}
 	}
+
+	// TODO: Add other response-dependent default headers here like e-tag, Last-Modified, etc.
 }
 
 // Get the default response header set
-// TODO: Add etag support (file fingerprint - MD5 ok?)
-// TODO: Add Last-Modified and Expires timestamp support
+// TODO: Make cache-control expiration configurable
 // ref: https://www.keycdn.com/blog/http-security-headers
 // ref: https://www.keycdn.com/support/content-security-policy
 // ref: https://www.keycdn.com/blog/http-cache-headers

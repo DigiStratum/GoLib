@@ -75,7 +75,11 @@ type EndpointIfc interface {
 	GetPattern() string
 	IsDefault() bool
 	GetMethods() []string
+	GetRelativeURI(request *rest.HttpRequest) string
 	GetRequestMatches(request *rest.HttpRequest) []string
+	GetRequestURIMatches(relativeURI string) []string
+	GetRequestPathMatches(request *rest.HttpRequest) *lib.HashMap
+	GetRequestURIPathMatches(relativeURI string) *lib.HashMap
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
@@ -313,6 +317,7 @@ func (ep *Endpoint) HandleRequest(request *rest.HttpRequest, endpoint EndpointIf
 		ep.name,
 		method,
 	))
+
 	// Note that checking requestMethod against ep.methods would be redundant
 	// because Controller should already be doing this for us via ep.GetMethods()
 	switch (method) {
@@ -344,38 +349,51 @@ func (endpoint *Endpoint) HandleOptions(request *rest.HttpRequest) *rest.HttpRes
 	return hlpr.ResponseWithHeaders(rest.STATUS_OK, nil, &hdrs)
 }
 
+// Implementation-Dependent Endpoint Interface: Configurability
 type ConfigurableEndpointIfc interface {
 	ConfigureEndpoint(endpointConfig *lib.Config)
 }
 
+// Implementation-Dependent Endpoint Interface: GET request handling
 type GetEndpointIfc interface {
 	HandleGet(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: POST request handling
 type PostEndpointIfc interface {
 	HandlePost(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: PUT request handling
 type PutEndpointIfc interface {
 	HandlePut(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: OPTIONS request handling
 type OptionsEndpointIfc interface {
 	HandleOptions(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: HEAD request handling
 type HeadEndpointIfc interface {
 	HandleHead(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: DELETE request handling
 type DeleteEndpointIfc interface {
 	HandleDelete(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Implementation-Dependent Endpoint Interface: PATCH request handling
 type PatchEndpointIfc interface {
 	HandlePatch(request *rest.HttpRequest) *rest.HttpResponse
 }
 
+// Log error and return empty Response for methods without request handling implemented
+// Note: this "should never happen" so is here as a logical catch-all; if request handling
+// is not implemented, then the setup stage should not add that request method to the map
+// for the endpoint and therefore execution should never get here. If it does, then there
+// is a logical error in the endpoint mapping/configuration stage.
 func handleImpossible(unmatchedIfc string, requestId string) *rest.HttpResponse {
 	lib.GetLogger().Error(fmt.Sprintf(
 		"[%s] Endpoint doesn't implement %s (should not be mapped)",
@@ -385,6 +403,7 @@ func handleImpossible(unmatchedIfc string, requestId string) *rest.HttpResponse 
 	return nil
 }
 
+// Wrap GET request handling
 func handleGet(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(GetEndpointIfc); ok {
 		return handler.HandleGet(request)
@@ -392,6 +411,7 @@ func handleGet(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return handleImpossible("GetEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap POST request handling
 func handlePost(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PostEndpointIfc); ok {
 		return handler.HandlePost(request)
@@ -399,6 +419,7 @@ func handlePost(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return handleImpossible("PostEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap PUT request handling
 func handlePut(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PutEndpointIfc); ok {
 		return handler.HandlePut(request)
@@ -406,6 +427,7 @@ func handlePut(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return handleImpossible("PutEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap OPTIONS request handling
 func handleOptions(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(OptionsEndpointIfc); ok {
 		return handler.HandleOptions(request)
@@ -413,13 +435,16 @@ func handleOptions(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse
 	return handleImpossible("OptionsEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap HEAD request handling
 func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+
+	// If Endpoint implements HEAD directly, then just use that
 	if handler, ok := ep.(HeadEndpointIfc); ok {
 		return handler.HandleHead(request)
 	}
-	// The endpoint doesn't implement Head directly, but we can call GET and modify
+	// Endpoint doesn't implement Head directly, but we can call GET and modify
 	if handler, ok := ep.(GetEndpointIfc); ok {
-		// Any endpoint with an expensive Get call should override this default
+		// Any endpoint with an expensive GET call should override this default
 		// handling with something better tuned to skip expensive steps if possible
 		response := handler.HandleGet(request)
 		if nil != response {
@@ -435,6 +460,7 @@ func handleHead(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	return handleImpossible("HeadEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap DELETE request handling
 func handleDelete(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(DeleteEndpointIfc); ok {
 		return handler.HandleDelete(request)
@@ -442,6 +468,7 @@ func handleDelete(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse 
 	return handleImpossible("DeleteEndpointIfc", request.GetContext().GetRequestId())
 }
 
+// Wrap PATCH request handling
 func handlePatch(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
 	if handler, ok := ep.(PatchEndpointIfc); ok {
 		return handler.HandlePatch(request)
