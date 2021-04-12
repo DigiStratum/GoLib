@@ -225,13 +225,15 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 	for _, versions := range (*ctrlr.endpointMap)[request.GetMethod()] {
 		for version, endpoint := range versions {
 			// TODO: Add support for client to specify a version with X-Version header? Maybe we don't need versions at all?
-			lib.GetLogger().Crazy(ctrlr.wrapLog(fmt.Sprintf(
-				"findBestMatchingEndpointForURI() - Checking Pattern: '%s' for version '%s'",
-				endpoint.endpointMPV.GetPattern(),
-				version,
-			)))
 			matches := endpoint.endpointMPV.GetRequestMatches(request)
-			if (nil == matches) || (len(matches) == 0) { continue }
+			if (nil == matches) || (len(matches) == 0) {
+				lib.GetLogger().Crazy(ctrlr.wrapLog(fmt.Sprintf(
+					"findBestMatchingEndpointForURI() - Pattern: '%s' for version '%s' - No Matches!",
+					endpoint.endpointMPV.GetPattern(),
+					version,
+				)))
+				continue
+			}
 
 			// Calculate a score for this pattern to determine how well it matches
 			penalty := 0
@@ -254,6 +256,16 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 				bestScore = score
 				bestEndpoint = &endpoint
 			}
+
+			lib.GetLogger().Crazy(ctrlr.wrapLog(fmt.Sprintf(
+				"findBestMatchingEndpointForURI() - Pattern: '%s' for version '%s', (matches: %d, points: %d, penalty: %d, score: %d)",
+				endpoint.endpointMPV.GetPattern(),
+				version,
+				len(matches),
+				points,
+				penalty,
+				score,
+			)))
 		}
 	}
 

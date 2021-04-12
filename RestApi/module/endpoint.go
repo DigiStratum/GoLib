@@ -287,13 +287,16 @@ func (ep *Endpoint) GetRequestURIPathMatches(relativeURI string) *lib.HashMap {
 	// Map any named path parameters to our results 
 	results := lib.NewHashMap()
 	for i, value := range matches {
+		// Skip the 0th match - it is the entire URI; we only want the path parameter parts
+		if 0 == i { continue; }
+
 		// Get the name of the ith subexpression from the pattern
 		// ref: https://golang.org/pkg/regexp/#Regexp.SubexpNames
 		// ref: https://stackoverflow.com/questions/20750843/using-named-matches-from-go-regex/20751656
 		name := ep.patternRegexp.SubexpNames()[i]
 		// If name came up empty, then use i as the name instead
 		if 0 == len(name) {
-			name = string(i)
+			name = strconv.Itoa(i)
 		}
 		results.Set(name, value)
 	}
