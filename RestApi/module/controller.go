@@ -4,9 +4,15 @@ package module
 
 The Controller is where Module-specific HTTP Request handling takes place.
 
-TODO: Test more specific patterns before more general ones
+Endpoints are mapped with regular expression patterns. Multiple regular expression patterns could
+potentially match the same string, in this case the request URI. For example a pattern matching ".*"
+could more generally match the same thing as "specific_thing/\d+". To counter this we use a scoring
+system that subtracts all regex-matched segmements from the complete URI match - if all patterns
+match the entire URI, the more specific matches will have fewer characters in the varigable segments
+,atched by the regex.
+
+More thoughts are here:
 ref: https://cs.stackexchange.com/questions/10786/how-to-find-specificity-of-a-regex-match
-TODO: Wrap the logger calls with something to help consistency and reduce function sizes bloated by log output
 
 */
 
@@ -67,11 +73,15 @@ func (ctrlr *Controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
 	ctrlr.securityPolicy = securityPolicy
 }
 
+// Wrap log messages with Controller context to reduce boilerplate elsewhere
+func (ctrlr *Controller) wrapLog(msg string) string {
+	return fmt.Sprintf("Controller{%s}.%s", ctrlr.moduleConfig.Get("name"), msg)
+}
+
 // Module initializes a Controller
 func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
-	moduleName := moduleConfig.Get("name")
 	l := lib.GetLogger()
-	l.Trace(fmt.Sprintf("Controller{%s}.Configure()", moduleName))
+	l.Trace(ctrlr.wrapLog("Configure()"))
 
 	// Capture the server and module configuration data for future reference
 	ctrlr.serverConfig = serverConfig
@@ -87,11 +97,7 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 			endpointIfc.Configure(endpoint, *serverConfig, *moduleConfig, *extraConfig)
 			ctrlr.mapEndpoint(endpointIfc)
 		} else {
-			// wot? Not an Endpoint!
-			l.Error(fmt.Sprintf(
-				"Controller{%s}.Configure(): Non-Endpoint given to Controller",
-				moduleName,
-			))
+			l.Error(ctrlr.wrapLog("Configure(): Non-Endpoint given to Controller"))
 		}
 	}
 }
@@ -125,13 +131,12 @@ func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 
 // Do any request pre-processing needed...
 func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
-	lib.GetLogger().Trace(fmt.Sprintf(
-		"[%s] Controller{%s)}.HandleRequest(): %s %s",
+	lib.GetLogger().Trace(ctrlr.wrapLog(fmt.Sprintf(
+		"[%s]HandleRequest(): %s %s",
 		request.GetContext().GetRequestId(),
-		ctrlr.moduleConfig.Get("name"),
 		request.GetMethod(),
 		request.GetURL(),
-	))
+	)))
 
 	// Is the request method in our Endpoint registry?
 	if _, ok := (*ctrlr.endpointMap)[request.GetMethod()]; !ok {
@@ -190,13 +195,11 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 	// Strip the server/module components off the beginning of the URI
 	ctx := request.GetContext()
 	requestURI := request.GetURI()
-	moduleName := ctrlr.moduleConfig.Get("name")
-	l.Trace(fmt.Sprintf(
-		"[%s] Controller{%s}: Dispatching: '%s'",
+	l.Trace(ctrlr.wrapLog(fmt.Sprintf(
+		"[%s]dispatchRequest() - Dispatching: '%s'",
 		ctx.GetRequestId(),
-		moduleName,
 		requestURI,
-	))
+	)))
 
 	endpoint := ctrlr.findBestMatchingEndpointForURI(request)
 	if nil != endpoint {
@@ -225,11 +228,11 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 	for _, versions := range (*ctrlr.endpointMap)[request.GetMethod()] {
 		for version, endpoint := range versions {
 			// TODO: Add support for client to specify a version with X-Version header? Maybe we don't need versions at all?
-			lib.GetLogger().Trace(fmt.Sprintf(
-				"\tChecking Pattern: '%s' for version '%s'",
+			lib.GetLogger().Crazy(ctrlr.wrapLog(fmt.Sprintf(
+				"findBestMatchingEndpointForURI() - Checking Pattern: '%s' for version '%s'",
 				endpoint.endpointMPV.GetPattern(),
 				version,
-			))
+			)))
 			matches := endpoint.endpointMPV.GetRequestMatches(request)
 			if (nil == matches) || (len(matches) == 0) { continue }
 
@@ -261,26 +264,16 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 }
 
 // Pass this request to the supplied Endpoint
-// TODO: pass endpoint as EndpointIfc insteaf of interface{} if possible
-func (ctrlr *Controller) endpointHandleRequest(endpoint interface{}, request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
-	l := lib.GetLogger()
-	if ep, ok := endpoint.(EndpointIfc); ok {
-		l.Trace(fmt.Sprintf(
-			"[%s] Controller: Selected Endpoint: '%s'",
-			ctx.GetRequestId(),
-			ep.GetName(),
-		))
-		res := ep.HandleRequest(request, ep)
-		ctrlr.mergeDefaultResponseHeaders(res, ctx.GetRequestId())
-		return res
-	}
-	l.Error(fmt.Sprintf(
-		"[%s] Controller: Unexpected error converting to  Endpoint",
+	lib.GetLogger().Trace(ctrlr.wrapLog(fmt.Sprintf(
+		"[%s]endpointHandleRequest() - Controller: Selected Endpoint: '%s'",
 		ctx.GetRequestId(),
-	))
-	hlpr := rest.GetHelper()
-	return hlpr.ResponseError(rest.STATUS_INTERNAL_SERVER_ERROR)
+		endpoint.GetName(),
+	)))
+	res := endpoint.HandleRequest(request, endpoint)
+	ctrlr.mergeDefaultResponseHeaders(res, ctx.GetRequestId())
+	return res
 }
 
 // Merge default response headers into OK responses if not already supplied
@@ -301,12 +294,12 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 	l := lib.GetLogger()
 	// For each of the default response headers...
 	for kvp := range moduleHeaders.IterateChannel() {
-		l.Trace(fmt.Sprintf(
-			"[%s] Controller: Override Response Header: '%s' = '%s'",
+		l.Crazy(ctrlr.wrapLog(fmt.Sprintf(
+			"[%s]mergeDefaultResponseHeaders() - Controller: Override Response Header: '%s' = '%s'",
 			requestId,
 			kvp.Key,
 			kvp.Value,
-		))
+		)))
 		(*mergeHeaders)[kvp.Key] = kvp.Value
 	}
 
