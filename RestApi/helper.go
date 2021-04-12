@@ -122,6 +122,24 @@ func (hlpr *helper) IsStatus2xx(httpStatus HttpStatus) bool {
 	return (hlpr.GetHttpStatusCode(STATUS_OK) <= statusCode) && (hlpr.GetHttpStatusCode(STATUS_MULTIPLE_CHOICES) > statusCode)
 }
 
+// Is the supplied HttpStatus a 3xx?
+func (hlpr *helper) IsStatus3xx(httpStatus HttpStatus) bool {
+	statusCode := hlpr.GetHttpStatusCode(httpStatus)
+	return (hlpr.GetHttpStatusCode(STATUS_MULTIPLE_CHOICES) <= statusCode) && (hlpr.GetHttpStatusCode(STATUS_BAD_REQUEST) > statusCode)
+}
+
+// Is the supplied HttpStatus a 4xx?
+func (hlpr *helper) IsStatus4xx(httpStatus HttpStatus) bool {
+	statusCode := hlpr.GetHttpStatusCode(httpStatus)
+	return (hlpr.GetHttpStatusCode(STATUS_BAD_REQUEST) <= statusCode) && (hlpr.GetHttpStatusCode(STATUS_INTERNAL_SERVER_ERROR) > statusCode)
+}
+
+// Is the supplied HttpStatus a 5xx?
+func (hlpr *helper) IsStatus5xx(httpStatus HttpStatus) bool {
+	statusCode := hlpr.GetHttpStatusCode(httpStatus)
+	return hlpr.GetHttpStatusCode(STATUS_INTERNAL_SERVER_ERROR) <= statusCode
+}
+
 const (
 	STATUS_CONTINUE	HttpStatus = iota
 	STATUS_SWITCHING_PROTOCOLS
