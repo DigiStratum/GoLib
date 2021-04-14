@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"errors"
 	"database/sql"
+	"reflect"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -52,7 +53,55 @@ type DBConnection struct {
 	Conn		*sql.DB		// Read-Write DBConnection
 }
 
-// Execute a query with varargs for substitutions
+// Execute a query with varargs for substitution and Structured results
+// ref: https://appliedgo.net/generics/
+// ref: https://stackoverflow.com/questions/37851500/how-to-copy-an-interface-value-in-go
+// ref: https://forum.golangbridge.org/t/database-rows-scan-unknown-number-of-columns-json/7378/2
+// ref: https://stackoverflow.com/questions/26744873/converting-map-to-struct/26746461
+// ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
+func (dbc *DBConnection) SQuery(template *interface{}, channel <-chan interface{}, querySpec QuerySpec, args ...string) error {
+	protoQuery := querySpec.Query
+	// TODO: expand querySpec.Query '???' placeholders
+	finalQuery := protoQuery
+
+	// Convert string args to interface{} for Query()
+	iArgs := make([]interface{}, len(args))
+	for i, v := range args { iArgs[i] = v }
+
+	// an array of JSON objects; key is the field name
+	var objects []map[string]interface{}
+
+	// Execute the Query
+	rows, err := dbc.Conn.Query(finalQuery, iArgs...)
+	if err != nil { return err }
+
+	// Process the result rows
+	for rows.Next() {
+
+		// figure out what columns were returned
+		// the column names will be the JSON object field keys
+		columns, err := rows.ColumnTypes()
+		if err != nil { return err }
+
+		// Scan needs an array of pointers to the values it is setting
+		// This creates the object and sets the values correctly
+		values := make([]interface{}, len(columns))
+		object := map[string]interface{}{}
+		for i, column := range columns {
+			object[column.Name()] = reflect.New(column.ScanType()).Interface()
+			values[i] = object[column.Name()]
+		}
+
+		err = rows.Scan(values...)
+		if err != nil { return err }
+
+		objects = append(objects, object)
+	}
+
+	return nil
+}
+
+// Execute a query with varargs for substitution and Mapped results
 // Iterate over the results for this query and send all the QueryResult rows to a channel
 // TODO: How can we return an error in place of the channel if something goes wrong?
 // ref: https://ewencp.org/blog/golang-iterators/index.html
@@ -60,7 +109,7 @@ type DBConnection struct {
 // ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
 // ref: https://golang.org/pkg/database/sql/#example_DB_Query_multipleResultSets
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func (dbc *DBConnection) Query(querySpec QuerySpec, args ...string) <-chan QueryResult {
+func (dbc *DBConnection) MQuery(querySpec QuerySpec, args ...string) <-chan QueryResult {
 	protoQuery := querySpec.Query
 	// TODO: expand querySpec.Query '???' placeholders
 	finalQuery := protoQuery
@@ -132,13 +181,6 @@ func NewDBManager() *DBManager {
 	return &dbm
 }
 
-// Get a DNS for a given mysql host, user, password, and database name; host may optionally include a port as "hostname:port"
-func (dbm *DBManager)  GetDSN(host string, user string, pass string, name string) string {
-	// ref:https://en.wikipedia.org/wiki/Data_source_name
-	// ex: mysql://john:pass@localhost:3306/my_db
-	return fmt.Sprintf("mysql://%s:%s@%s/%s", user, pass, host, name)
-}
-
 // Get DB DBConnection Key from the supplied DSN
 // ref: https://en.wikipedia.org/wiki/Data_source_name
 func (dbm *DBManager) Connect(dsn string) (*DBKey, error) {
@@ -197,6 +239,6 @@ func (dbm *DBManager) Query(dbKey DBKey, querySpec QuerySpec, args ...string) <-
 		ch <- QueryResult{ Row:	nil, Err: qrErr }
 		return ch
 	}
-	return conn.Query(querySpec, args...)
+	return conn.MQuery(querySpec, args...)
 }
 
