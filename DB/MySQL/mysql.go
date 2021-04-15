@@ -33,6 +33,7 @@ type QuerySpec struct {
 	FieldNum	int		// How many fields are we expecting the result row to contain?
 	MinKeys		int		// minimum num keys required to populate query; 0 = no min
 	MaxKeys		int		// maximum num keys required to populate query; 0 = no max
+	Template	interface{}	// Structure template that each row result is expected to match; makes FieldNum obsolete
 }
 
 // A query always results in a row of column data where each column has a name and a value as a map
@@ -59,7 +60,44 @@ type DBConnection struct {
 // ref: https://forum.golangbridge.org/t/database-rows-scan-unknown-number-of-columns-json/7378/2
 // ref: https://stackoverflow.com/questions/26744873/converting-map-to-struct/26746461
 // ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
-func (dbc *DBConnection) SQuery(template *interface{}, channel <-chan interface{}, querySpec QuerySpec, args ...string) error {
+func (dbc *DBConnection) SQuery(querySpec *QuerySpec, args ...string) (*[]interface{}, error) {
+	results := []interface{}{}
+
+	// Ref: https://stackoverflow.com/questions/18926303/iterate-through-the-fields-of-a-struct-in-go
+	numFields := reflect.TypeOf(querySpec.Template).NumField()
+	fmt.Printf("SQuery() QuerySpec.Template has %d Fields\n", numFields)
+	values := make([]interface{}, numFields)
+	templateValue := reflect.ValueOf(querySpec.Template)
+	tvType := templateValue.Type()
+	//templateValue := reflect.ValueOf(querySpec.Template).Elem()
+	for i := 0; i < numFields; i++ {
+		//fi := templateValue.Field(i).Interface()
+		//values[i] = &fi
+		// ref: https://stackoverflow.com/questions/27992821/how-get-pointer-of-structs-member-from-interface
+		//values[i] = templateValue.Field(i).Addr().Interface()
+		//values[i] = templateValue.Elem().FieldByIndex(i).Addr().Interface()
+		//values[i] = templateValue.Field(i).Addr()
+		//values[i] = templateValue.Field(i).Interface().Addr()
+		//values[i] = templateValue.Field(i).Interface()
+
+		// ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
+		//valueField := templateValue.Field(i)
+		//values[i] = valueField.Addr().Interface()
+
+		// ref: https://samwize.com/2015/03/20/how-to-use-reflect-to-set-a-struct-field/
+		fieldName := tvType.Field(i).Name
+		field:= templateValue.Field(i)
+		fmt.Printf("Field name: '%s', type: '%s'\n", fieldName, field.Type())
+		v := templateValue.FieldByName(fieldName).Addr().Interface()
+		switch field.Type().String() {
+			case "*int":
+				values[i] = v.(*int)
+			case "*string":
+				values[i] = v.(*string)
+		}
+		//values[i] = templateValue.Elem().FieldByName(fieldName).Addr().Interface()
+	}
+
 	protoQuery := querySpec.Query
 	// TODO: expand querySpec.Query '???' placeholders
 	finalQuery := protoQuery
@@ -68,37 +106,32 @@ func (dbc *DBConnection) SQuery(template *interface{}, channel <-chan interface{
 	iArgs := make([]interface{}, len(args))
 	for i, v := range args { iArgs[i] = v }
 
-	// an array of JSON objects; key is the field name
-	var objects []map[string]interface{}
-
 	// Execute the Query
 	rows, err := dbc.Conn.Query(finalQuery, iArgs...)
-	if err != nil { return err }
+	if err != nil { return nil, err }
 
 	// Process the result rows
 	for rows.Next() {
 
 		// figure out what columns were returned
 		// the column names will be the JSON object field keys
-		columns, err := rows.ColumnTypes()
-		if err != nil { return err }
+		//columns, err := rows.ColumnTypes()
+		//if err != nil { return nil, err }
 
 		// Scan needs an array of pointers to the values it is setting
 		// This creates the object and sets the values correctly
-		values := make([]interface{}, len(columns))
-		object := map[string]interface{}{}
-		for i, column := range columns {
-			object[column.Name()] = reflect.New(column.ScanType()).Interface()
-			values[i] = object[column.Name()]
-		}
-
+		//values := make([]interface{}, len(columns))
+		//object := map[string]interface{}{}
+		//for i, column := range columns {
+		//	object[column.Name()] = reflect.New(column.ScanType()).Interface()
+		//	values[i] = object[column.Name()]
+		//}
 		err = rows.Scan(values...)
-		if err != nil { return err }
-
-		objects = append(objects, object)
+		if err != nil { return nil, err }
+		results = append(results, querySpec.Template)
 	}
 
-	return nil
+	return &results, nil
 }
 
 // Execute a query with varargs for substitution and Mapped results
