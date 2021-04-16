@@ -24,6 +24,43 @@ import (
 // ------------------------------------------------------------------------------------------------
 // Query Bits
 
+// A Query Result Row Object Interface
+type ResultIfc interface {
+        GetResult() interface{}
+        GetMemberPointers() []interface{}
+}
+
+// A factory interface to produce Results like the ResultIfc above
+type ResultFactoryIfc interface {
+	NewResult() ResultIfc
+}
+
+// A factory implementation to produce Results like the ResultIfc above
+type ResultFactory struct {
+        prototype       interface{}
+}
+
+// Make a new one of these; the results that pop out of the factory will match the prototype supplied (see FIXME's)
+// TODO: Is it possible for prototype to just be the struct definition rather than an instance of it? go doesn't support generics, so maybe not? Seems kind of reflect-y though, so maybe?
+func NewResultFactory(prototype interface{}) ResultFactoryIfc {
+	rf := ResultFactory{
+		prototype:	prototype,
+	}
+	return rf
+}
+
+func (rf ResultFactory) NewResult() ResultIfc {
+	// FIXME: Use reflection to make a copy of the prototype with new values to that the pointers don't point at the original
+	id := 0
+	task := ""
+	due := ""
+	t := todo{
+		Id:	&id,
+		Task:	&task,
+		Due:	&due,
+	}
+	return t
+}
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
 // automatically. '???' expands to include enough placeholders (as with an IN () list for any count
@@ -34,6 +71,7 @@ type QuerySpec struct {
 	MinKeys		int		// minimum num keys required to populate query; 0 = no min
 	MaxKeys		int		// maximum num keys required to populate query; 0 = no max
 	Template	interface{}	// Structure template that each row result is expected to match; makes FieldNum obsolete
+	ResultFactory	ResultFactoryIfc
 }
 
 // A query always results in a row of column data where each column has a name and a value as a map
@@ -62,12 +100,15 @@ type DBConnection struct {
 // ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
 func (dbc *DBConnection) SQuery(querySpec *QuerySpec, args ...string) (*[]interface{}, error) {
 	results := []interface{}{}
+/*
+	//template := querySpec.Template
+	template := querySpec.ResultFactory()
 
 	// Ref: https://stackoverflow.com/questions/18926303/iterate-through-the-fields-of-a-struct-in-go
-	numFields := reflect.TypeOf(querySpec.Template).NumField()
+	numFields := reflect.TypeOf(template).NumField()
 	fmt.Printf("SQuery() QuerySpec.Template has %d Fields\n", numFields)
 	values := make([]interface{}, numFields)
-	templateValue := reflect.ValueOf(querySpec.Template)
+	templateValue := reflect.ValueOf(template)
 	tvType := templateValue.Type()
 	//templateValue := reflect.ValueOf(querySpec.Template).Elem()
 	for i := 0; i < numFields; i++ {
@@ -98,7 +139,7 @@ func (dbc *DBConnection) SQuery(querySpec *QuerySpec, args ...string) (*[]interf
 		}
 		//values[i] = templateValue.Elem().FieldByName(fieldName).Addr().Interface()
 	}
-
+*/
 	protoQuery := querySpec.Query
 	// TODO: expand querySpec.Query '???' placeholders
 	finalQuery := protoQuery
@@ -127,9 +168,16 @@ func (dbc *DBConnection) SQuery(querySpec *QuerySpec, args ...string) (*[]interf
 		//	object[column.Name()] = reflect.New(column.ScanType()).Interface()
 		//	values[i] = object[column.Name()]
 		//}
+/*
 		err = rows.Scan(values...)
 		if err != nil { return nil, err }
-		results = append(results, querySpec.Template)
+		results = append(results, template)
+*/
+		result := querySpec.ResultFactory()
+		resultMembers := result.GetMemberPointers()
+		err = rows.Scan(resultMembers...)
+		if err != nil { return nil, err }
+		results = append(results, result)
 	}
 
 	return &results, nil
