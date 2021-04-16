@@ -88,7 +88,8 @@ func (dbc *DBConnection) SQuery(querySpec *QuerySpec, args ...string) (*[]interf
 		fieldName := tvType.Field(i).Name
 		field:= templateValue.Field(i)
 		fmt.Printf("Field name: '%s', type: '%s'\n", fieldName, field.Type())
-		v := templateValue.FieldByName(fieldName).Addr().Interface()
+		//v := templateValue.FieldByName(fieldName).Interface()
+		v := field.Interface()
 		switch field.Type().String() {
 			case "*int":
 				values[i] = v.(*int)
