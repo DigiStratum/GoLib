@@ -24,10 +24,28 @@ import (
 // ------------------------------------------------------------------------------------------------
 // Query Bits
 
+
+// Base struct for DB query result row objects
+type Result struct {
+	scanValues	[]interface{}
+}
+
+func (r *Result) GetScanValues() []interface{} {
+	return r.scanValues
+}
+
+func (r *Result) SetScanValues(scanValues []interface{}) {
+	r.scanValues = scanValues
+}
+
+
+
 // A Query Result Row Object Interface
 type ResultIfc interface {
-        GetResult() interface{}
-        GetMemberPointers() []interface{}
+	GetClone() ResultIfc
+	GetResult() interface{}
+	GetScanValues() []interface{}
+	SetScanValues(scanValues []interface{})
 }
 
 // A factory interface to produce Results like the ResultIfc above
@@ -37,29 +55,89 @@ type ResultFactoryIfc interface {
 
 // A factory implementation to produce Results like the ResultIfc above
 type ResultFactory struct {
-        prototype       interface{}
+        prototype	ResultIfc
+	numField	int
 }
 
 // Make a new one of these; the results that pop out of the factory will match the prototype supplied (see FIXME's)
 // TODO: Is it possible for prototype to just be the struct definition rather than an instance of it? go doesn't support generics, so maybe not? Seems kind of reflect-y though, so maybe?
-func NewResultFactory(prototype interface{}) ResultFactoryIfc {
+func NewResultFactory(prototype ResultIfc) ResultFactoryIfc {
 	rf := ResultFactory{
 		prototype:	prototype,
+		numFields:	reflect.TypeOf(rf.prototype).NumField(),
 	}
+	//fmt.Printf("NewResultFactory() - prototype has %d Fields\n", rf.numFields)
 	return rf
 }
 
-func (rf ResultFactory) NewResult() ResultIfc {
-	// FIXME: Use reflection to make a copy of the prototype with new values to that the pointers don't point at the original
-	id := 0
-	task := ""
-	due := ""
-	t := todo{
-		Id:	&id,
-		Task:	&task,
-		Due:	&due,
+func (rf ResultFactory) NewResult() (ResultIfc, err) {
+	newResult := rf.prototype.GetClone()
+	scanValues, err := rf.getScanValues(newResult)
+	if nil != err {
+		return nil, err
 	}
-	return t
+	newResult.SetScanValues(scanValues)
+	return newResult
+}
+
+func (rf ResultFactory) getScanValues(result interface{}) ([]interface{}, err) {
+	// Ref: https://stackoverflow.com/questions/18926303/iterate-through-the-fields-of-a-struct-in-go
+	scanValues := make([]interface{}, rf.numFields)
+
+	// Reflect on the result object passed in
+	// TODO: Reject anything that's not a struct matching our requirements
+	voPrototype := reflect.ValueOf(result)
+
+	// For each of its fields...
+	for i := 0; i < rf.numFields; i++ {
+		// ref: https://samwize.com/2015/03/20/how-to-use-reflect-to-set-a-struct-field/
+		//fmt.Printf("Field name: '%s', type: '%s'\n", voPrototype.Type().Field(i).Name, field.Type())
+		field:= voPrototype.Field(i)
+		newVal, err := rf.newValue(field.Type().String())
+		if nil != err {
+			// Reject anything that's not one of our supported field types
+			return scanValues, err
+		}
+		field.Set(&newVal)
+		scanValues[i] = &newVal
+	}
+	return scanValues, nil
+}
+
+func (rf ResultFactory) newValue(datatype string) (interface{}, err) {
+	switch datatype {
+		case "*string":
+			return "", nil
+		case "*[]byte":
+			return []byte{}, nil
+		case "*int":
+			return 0.(int), nil
+		case "*int8":
+			return 0.(int8), nil
+		case "*int16":
+			return 0.(int16), nil
+		case "*int32":
+			return 0.(int32), nil
+		case "*int64":
+			return 0.(int64), nil
+		case "*uint":
+			return 0.(uint), nil
+		case "*uint8":
+			return 0.(uint8), nil
+		case "*uint16":
+			return 0.(uint16), nil
+		case "*uint32":
+			return 0.(uint32), nil
+		case "*uint64":
+			return 0.(uint64), nil
+		case "*bool":
+			return true, nil
+		case "*float32":
+			return 0.(float32), nil
+		case "*float64":
+			return 0.(float64), nil
+	}
+	return nil, errors.New(fmt.Sprintf(""))
 }
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
