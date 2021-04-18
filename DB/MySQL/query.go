@@ -13,14 +13,19 @@ import (
 // of keys > min. max must be >= min unless max == 0.
 type Query struct {
 	query		string          // The query to execute as prepared statement
-	resultPrototype	ResultIfc       // Object to use as a prototype to produce query Result row objects
+	//resultPrototype	ResultIfc       // Object to use as a prototype to produce query Result row objects
+	resultFactory	*ResultFactory	// Object to use as a prototype to produce query Result row objects
 }
 
 // Make a new one of these
-func NewQuery(query string, prototype ResultIfc) *Query {
+//func NewQuery(query string, prototype ResultIfc) *Query {
+//func NewQuery(query string, resultFactory ResultFactory) *Query {
+func NewQuery(query string, prototype Result) *Query {
+	resultFactory := NewResultFactory(prototype)
 	q := Query{
-		query:			query,
-		resultPrototype:	prototype,
+		query:		query,
+		//resultPrototype:	prototype,
+		resultFactory:	resultFactory,
 	}
 	return &q
 }
@@ -39,10 +44,9 @@ func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 	// Process the result rows
 	for rows.Next() {
 		// Make a new result object for this row
-		result := (*q).resultPrototype.GetZeroClone()
-
-		// Get pointers to all the all the result object members
-		resultProperties, err := result.GetPropertyPointers()
+		// (... and get pointers to all the all the result object members)
+		//result := (*q).resultPrototype.GetZeroClone()
+		result, resultProperties, err := (*q).resultFactory.MakeNewResult()
 		if nil != err { return nil, err }
 
 		// Read MySQL columns for this row into the result object member pointers
