@@ -5,15 +5,7 @@ TODO: Add some sort of query builder - this will allow us to ditch writing SQL f
 */
 
 import (
-	"fmt"
-	"errors"
-	"database/sql"
-	"reflect"
-
 	_ "github.com/go-sql-driver/mysql"
-
-	lib "github.com/DigiStratum/GoLib"
-	db "github.com/DigiStratum/GoLib/DB"
 )
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
@@ -21,40 +13,40 @@ import (
 // of keys > min. max must be >= min unless max == 0.
 type Query struct {
 	query		string          // The query to execute as prepared statement
-	//FieldNum	int             // How many fields are we expecting the result row to contain?
-	//MinKeys		int             // minimum num keys required to populate query; 0 = no min
-	//MaxKeys		int             // maximum num keys required to populate query; 0 = no max
-	//Template	interface{}     // Structure template that each row result is expected to match; makes FieldNum obsolete
-	//ResultFactory	ResultFactoryIfc
 	resultPrototype	ResultIfc       // Object to use as a prototype to produce query Result row objects
 }
 
 // Make a new one of these
 func NewQuery(query string, prototype ResultIfc) *Query {
+	q := Query{
+		query:			query,
+		resultPrototype:	prototype,
+	}
+	return &q
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 	results := ResultSet{}
-	protoQuery := *q.query
+	protoQuery := (*q).query
 	// TODO: expand query '???' placeholders
 	finalQuery := protoQuery
 
 	// Execute the Query
-	rows, err := conn.Query(finalQuery, args...)
+	rows, err := conn.GetConnection().Query(finalQuery, args...)
 	if err != nil { return nil, err }
 
 	// Process the result rows
 	for rows.Next() {
 		// Make a new result object for this row
-		result, err := q.resultPrototype.ZeroClone()
-		if nil != err { return nil, err }
+		result := (*q).resultPrototype.GetZeroClone()
 
 		// Get pointers to all the all the result object members
-		resultProperties := result.GetPropertyPointers()
+		resultProperties, err := result.GetPropertyPointers()
+		if nil != err { return nil, err }
 
 		// Read MySQL columns for this row into the result object member pointers
-		err = rows.Scan(resultProperties...)
+		err = rows.Scan(*resultProperties...)
 		if nil != err { return nil, err }
 
 		results = append(results, result)
