@@ -39,7 +39,11 @@ func NewResultFactory(prototype Result) *ResultFactory {
 func (rf *ResultFactory) MakeNewResult() (*Result, *PropertyPointers, error) {
 
 	// Make a new result object and reflect on it
-	newResult := reflect.New(reflect.TypeOf((*rf).prototype).Elem())
+	//newResult := reflect.New(reflect.TypeOf((*rf).prototype).Elem())
+	//newResult := reflect.New(reflect.TypeOf((*rf).prototype))
+	// https://groups.google.com/g/golang-dev/c/XWfzNWe4Fy4?pli=1
+	// https://www.geeksforgeeks.org/how-to-copy-struct-type-using-value-and-pointer-reference-in-golang/
+	newResult :=(*rf).prototype
 
 	// Create property pointers for each of the fields in our result object
 	// Ref: https://stackoverflow.com/questions/18926303/iterate-through-the-fields-of-a-struct-in-go
@@ -52,8 +56,8 @@ func (rf *ResultFactory) MakeNewResult() (*Result, *PropertyPointers, error) {
 	// For each of its fields...
 	for i := 0; i < numFields; i++ {
 		// ref: https://samwize.com/2015/03/20/how-to-use-reflect-to-set-a-struct-field/
-		//fmt.Printf("Field name: '%s', type: '%s'\n", voPrototype.Type().Field(i).Name, field.Type())
 		field:= rValue.Field(i)
+		fmt.Printf("Field name: '%s', type: '%s'\n", rValue.Type().Field(i).Name, field.Type())
 		newVal, err := rf.newValue(field.Type().String())
 		if nil != err {
 			// Reject anything that's not one of our supported field types
@@ -65,8 +69,9 @@ func (rf *ResultFactory) MakeNewResult() (*Result, *PropertyPointers, error) {
 		propertyPointers[i] = &newVal
 	}
 
-	finalResult := newResult.Interface().(Result)
-	return &finalResult, &propertyPointers, nil
+	//finalResult := newResult.Interface().(Result)
+	//return &finalResult, &propertyPointers, nil
+	return &newResult, &propertyPointers, nil
 }
 
 // Make a new value based on the specified type
