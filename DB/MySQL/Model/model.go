@@ -1,4 +1,4 @@
-package mysql;
+package mmodel;
 
 type FieldType int
 
