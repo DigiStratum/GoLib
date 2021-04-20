@@ -36,7 +36,7 @@ func NewResultFactory(prototype Result) *ResultFactory {
 // Make a new Result!
 // Create a set of pointers to capture query result column values for each row processed with Scan()
 // FIXME: https://stackoverflow.com/questions/40512323/golang-cast-interface-back-to-its-original-type
-func (rf *ResultFactory) MakeNewResult() (*Result, *PropertyPointers, error) {
+func (rf *ResultFactory) MakeNewResult() (Result, *PropertyPointers, error) {
 
 	// Make a new result object and reflect on it
 	//newResult := reflect.New(reflect.TypeOf((*rf).prototype).Elem())
@@ -71,7 +71,7 @@ func (rf *ResultFactory) MakeNewResult() (*Result, *PropertyPointers, error) {
 
 	//finalResult := newResult.Interface().(Result)
 	//return &finalResult, &propertyPointers, nil
-	return &newResult, &propertyPointers, nil
+	return newResult, &propertyPointers, nil
 }
 
 // Make a new value based on the specified type
