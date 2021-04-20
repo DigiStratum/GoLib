@@ -15,16 +15,16 @@ func main() {
 
 type todo struct {
 	//Result
-	Id	*int
-	Task	*string
-	Due	*string
+	Id	int
+	Task	string
+	Due	string
 }
 
 func Todo(id int, task string, due string) todo {
 	t := todo{
-		Id:	&id,
-		Task:	&task,
-		Due:	&due,
+		Id:	id,
+		Task:	task,
+		Due:	due,
 	}
 	return t
 }
@@ -57,9 +57,9 @@ func modify_todo(t todo) []todo {
 	todos := []todo{}
 	todos = append(todos, t)
 	newId := 2
-	t.Id = &newId
+	t.Id = newId
 	newDue := "nope"
-	t.Due = &newDue
+	t.Due = newDue
 	todos = append(todos, t)
 	return todos
 }
@@ -67,7 +67,7 @@ func modify_todo(t todo) []todo {
 func print_todo(t todo) {
 	fmt.Printf(
 		"todo: { \"id\": \"%d\", \"task\": \"%s\", \"due\": \"%s\" }\n",
-		*t.Id, *t.Task, *t.Due,
+		t.Id, t.Task, t.Due,
 	)
 }
 
