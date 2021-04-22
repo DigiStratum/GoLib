@@ -1,0 +1,11 @@
+-- MySQL Test database setup for "todolist"
+create database todolist;
+user todolist;
+create table todo (
+        id int primary key not null auto_increment,
+        task varchar(250),
+        due datetime
+);
+create user 'username'@'localhost' identified by 'password';
+grant all on todolist.* to 'username'@'localhost';
+

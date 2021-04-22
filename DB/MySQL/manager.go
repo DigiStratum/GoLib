@@ -48,6 +48,7 @@ func (mgr *Manager) Connect(dsn string) (*DBKey, error) {
 	return &dbKey, nil
 }
 
+// Check that this connection is still established
 func (mgr *Manager) IsConnected(dbKey DBKey) bool {
 	if conn, ok := mgr.connections[dbKey.Key]; ok {
 		return conn.IsConnected()
@@ -55,11 +56,22 @@ func (mgr *Manager) IsConnected(dbKey DBKey) bool {
 	return false
 }
 
+// TODO: we should maybe get rid of this - if you want a direct connection then connect directly, no?
 func (mgr *Manager) GetConnection(dbKey DBKey) (*Connection, error) {
 	if conn, ok := mgr.connections[dbKey.Key]; ok {
 		return conn, nil
 	}
 	return nil, errors.New(fmt.Sprintf("The connection for '%s' is undefined", dbKey.Key))
+}
+
+// Run a query against the dtaabase connection identified by the dbkey
+func (mgr *Manager) RunQuery(dbKey DBKey, query string, prototype ResultIfc) (*ResultSet, error) {
+	dbConn, err := mgr.GetConnection(dbKey)
+        if nil != err {
+		return nil, errors.New(fmt.Sprintf("Error getting connection: %s\n", err.Error()))
+	}
+        q := NewQuery(query, prototype)
+        return q.Run(dbConn)
 }
 
 // Close the connection with this key, if it exists, and forget about it
