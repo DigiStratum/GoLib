@@ -13,20 +13,18 @@ func main() {
 	//test_modify_passed_struct()
 }
 
-type todo struct {
+type Todo struct {
 	//Result
 	Id	int
 	Task	string
 	Due	string
 }
 
-func Todo(id int, task string, due string) todo {
-	t := todo{
-		Id:	id,
-		Task:	task,
-		Due:	due,
-	}
-	return t
+// Satisfies ResultIfc
+func (t Todo) ZeroClone() (mysql.ResultIfc, mysql.PropertyPointers) {
+	n := Todo{}
+	npp := mysql.PropertyPointers{ &n.Id, &n.Task, &n.Due }
+	return &n, npp
 }
 
 /*
@@ -46,27 +44,25 @@ grant all on todolist.* to 'username'@'localhost';
 
 
 func test_modify_passed_struct() {
-	t := Todo(1, "loaf", "asap")
+	t := Todo{ Id: 1, Task: "loaf", Due: "asap" }
 	todos := modify_todo(t)
 	for _, t := range todos {
 		print_todo(t)
 	}
 }
 
-func modify_todo(t todo) []todo {
-	todos := []todo{}
+func modify_todo(t Todo) []Todo {
+	todos := []Todo{}
 	todos = append(todos, t)
-	newId := 2
-	t.Id = newId
-	newDue := "nope"
-	t.Due = newDue
+	t.Id = 2
+	t.Due = "nope"
 	todos = append(todos, t)
 	return todos
 }
 
-func print_todo(t todo) {
+func print_todo(t Todo) {
 	fmt.Printf(
-		"todo: { \"id\": \"%d\", \"task\": \"%s\", \"due\": \"%s\" }\n",
+		"Todo: { \"id\": \"%d\", \"task\": \"%s\", \"due\": \"%s\" }\n",
 		t.Id, t.Task, t.Due,
 	)
 }
@@ -87,7 +83,7 @@ func test_mysql_query() {
 	}
 	query := mysql.NewQuery(
 		"SELECT id, task, due FROM todo;",
-		Todo(0,"",""),
+		Todo{},
 	)
 
 	results, err := query.Run(dbConn)
@@ -95,8 +91,8 @@ func test_mysql_query() {
 		fmt.Printf("Query Error: %s\n", err.Error())
 	} else {
 		for index, result := range *results {
-			if todoResult, ok := result.(todo); ok {
-				print_todo(todoResult)
+			if todoResult, ok := result.(*Todo); ok {
+				print_todo(*todoResult)
 			} else {
 				fmt.Printf("Error converting result record to todo{%d}\n", index)
 			}
