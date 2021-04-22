@@ -37,11 +37,28 @@ func NewResultFactory(prototype Result) *ResultFactory {
 	return &rf
 }
 
+// ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
+func (rf *ResultFactory) getStructPropertyPointers(u interface{}) PropertyPointers {
+	val := reflect.ValueOf(u).Elem()
+	v := make(PropertyPointers, (*rf).numFields)
+	for i := 0; i < (*rf).numFields; i++ {
+		valueField := val.Field(i)
+		v[i] = valueField.Addr().Interface()
+	}
+	return v
+}
+
+type blerf struct {
+	Bloink	string
+	Bleep	string
+	Bloop	string
+}
+
 // Make a new Result!
 // Create a set of pointers to capture query result column values for each row processed with Scan()
 // FIXME: https://stackoverflow.com/questions/40512323/golang-cast-interface-back-to-its-original-type
 // ref: https://stackoverflow.com/questions/11127723/dynamically-create-variables-of-certain-type-based-on-string-in-go
-func (rf *ResultFactory) MakeNewResult() (Result, *PropertyPointers, error) {
+func (rf *ResultFactory) MakeNewResult() (Result, PropertyPointers, error) {
 
 	// Make a new result object and reflect on it
 	//newResult := reflect.New(reflect.TypeOf((*rf).prototype).Elem())
@@ -50,20 +67,23 @@ func (rf *ResultFactory) MakeNewResult() (Result, *PropertyPointers, error) {
 	// https://www.geeksforgeeks.org/how-to-copy-struct-type-using-value-and-pointer-reference-in-golang/
 	//newResult := (*rf).prototype
 	// ref: https://stackoverflow.com/questions/11127723/dynamically-create-variables-of-certain-type-based-on-string-in-go
-	newResult := reflect.Zero((*rf).prototypeType).Interface()
+	newResult := blerf{}
+	//newResult := reflect.Zero((*rf).prototypeType).Interface()
+	propertyPointers := rf.getStructPropertyPointers(&newResult)
+	return newResult, propertyPointers, nil
 
 	// Create property pointers for each of the fields in our result object
 	// Ref: https://stackoverflow.com/questions/18926303/iterate-through-the-fields-of-a-struct-in-go
-	propertyPointers := make(PropertyPointers, (*rf).numFields)
+	//propertyPointers := make(PropertyPointers, (*rf).numFields)
 
 	// TODO: Reject anything that's not a struct matching our requirements
-	rValue := reflect.ValueOf(newResult)
+	//rValue := reflect.ValueOf(newResult)
 
 	// For each of its fields...
-	for i := 0; i < (*rf).numFields; i++ {
+	//for i := 0; i < (*rf).numFields; i++ {
 		// ref: https://samwize.com/2015/03/20/how-to-use-reflect-to-set-a-struct-field/
-		field := rValue.Field(i)
-		fmt.Printf("Field name: '%s', type: '%s'\n", rValue.Type().Field(i).Name, field.Type())
+		//field := rValue.Field(i)
+		//fmt.Printf("Field name: '%s', type: '%s'\n", rValue.Type().Field(i).Name, field.Type())
 /*
 		newVal, err := rf.newValue(field.Type().String())
 		if nil != err {
@@ -71,28 +91,72 @@ func (rf *ResultFactory) MakeNewResult() (Result, *PropertyPointers, error) {
 			return nil, nil, err
 		}
 */
+
+		// ref: https://github.com/robertkrimen/otto/issues/83
+		//abc := Abc{Def: 3}
+		//abc_ := reflect.New(reflect.Indirect(reflect.ValueOf(abc)).Type()).Elem()
+		//def_ := abc_.FieldByName("Def")
+		//def_.SetInt(4)
+
+
+		// ref: https://stackoverflow.com/questions/29184933/golang-reflect-get-pointer-to-a-struct-field-value
+		//propertyPointers[i] = field.Addr().Interface()
+
+/*
+		rValue_ := reflect.New(reflect.Indirect(rValue).Type()).Elem()
+		field_ := rValue_.FieldByName(rValue.Type().Field(i).Name)
+		switch field.Type().Name() {
+			case "string":
+				t := field.String()
+				//pv.Set(reflect.ValueOf(t))
+				//field_.SetString(t)
+				field_.Set(t)
+				propertyPointers[i] = &t
+			case "int":
+				t := field.Int()
+				//pv.Set(reflect.ValueOf(t))
+				//field_.SetInt(t)
+				field_.Set(t)
+				propertyPointers[i] = &t
+			case "uint":
+				t := field.Uint()
+				pv.Set(reflect.ValueOf(t))
+				propertyPointers[i] = &t
+			case "bool":
+				t := field.Bool()
+				pv.Set(reflect.ValueOf(t))
+				propertyPointers[i] = &t
+			case "float":
+				t := field.Float()
+				pv.Set(reflect.ValueOf(t))
+				propertyPointers[i] = &t
+		}
+*/
+
+
 		// https://groups.google.com/g/golang-dev/c/XWfzNWe4Fy4?pli=1
-		pfield := &field
-		var pv, zv reflect.Value
-		pv = reflect.ValueOf(&pfield).Elem()
-		zv = reflect.New(pv.Type().Elem())
-		pv.Set(zv)
-		propertyPointers[i] = &zv
+		//pfield := &field
+		//var pv, zv reflect.Value
+		//pv := reflect.ValueOf(&pfield).Elem()
+		//zv = reflect.New(pv.Type().Elem())
+		//pv.Set(zv)
+		//zvp := zv.Pointer()
+		//propertyPointers[i] = zvp
 
 		// TODO: Pointers required?
 		//field.Set(reflect.ValueOf(newVal))
 /*
-		if field.CanSet() {
-			field.Set(reflect.ValueOf(newVal))
-		} else {
-			fmt.Printf("Cannot set for field name: '%s'", rValue.Type().Field(i).Name)
-		}
+		//if field.CanSet() {
+		//	field.Set(reflect.ValueOf(newVal))
+		//} else {
+		//	fmt.Printf("Cannot set for field name: '%s'", rValue.Type().Field(i).Name)
+		//}
 */
-	}
+	//}
 
 	//finalResult := newResult.Interface().(Result)
 	//return &finalResult, &propertyPointers, nil
-	return newResult, &propertyPointers, nil
+	//return newResult, &propertyPointers, nil
 }
 
 // Make a new value based on the specified type

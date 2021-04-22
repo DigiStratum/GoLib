@@ -50,7 +50,7 @@ func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 		if nil != err { return nil, err }
 
 		// Read MySQL columns for this row into the result object member pointers
-		err = rows.Scan(*resultProperties...)
+		err = rows.Scan(resultProperties...)
 		if nil != err { return nil, err }
 
 		results = append(results, result)
