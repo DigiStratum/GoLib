@@ -43,6 +43,7 @@ func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 		result, resultProperties := (*q).prototype.ZeroClone()
 
 		// Read MySQL columns for this row into the result object member pointers
+		// ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 		err = rows.Scan(resultProperties...)
 		if nil != err { return nil, err }
 

@@ -5,11 +5,13 @@ DB Manager for MySQL - manages connections and provides various reusable DB capa
 */
 
 import (
-	"fmt"
 	"errors"
 
 	db "github.com/DigiStratum/GoLib/DB"
 )
+
+// ------------------------------------------------------------------------------------------------
+// PUBLIC
 
 // DB Key (Connection identifier)
 type DBKey struct {
@@ -50,36 +52,37 @@ func (mgr *Manager) Connect(dsn string) (*DBKey, error) {
 
 // Check that this connection is still established
 func (mgr *Manager) IsConnected(dbKey DBKey) bool {
-	if conn, ok := mgr.connections[dbKey.Key]; ok {
-		return conn.IsConnected()
-	}
+	conn := mgr.getConnection(dbKey)
+	if nil != conn { return conn.IsConnected() }
 	return false
 }
 
-// TODO: we should maybe get rid of this - if you want a direct connection then connect directly, no?
-func (mgr *Manager) GetConnection(dbKey DBKey) (*Connection, error) {
-	if conn, ok := mgr.connections[dbKey.Key]; ok {
-		return conn, nil
-	}
-	return nil, errors.New(fmt.Sprintf("The connection for '%s' is undefined", dbKey.Key))
-}
-
 // Run a query against the dtaabase connection identified by the dbkey
-func (mgr *Manager) RunQuery(dbKey DBKey, query string, prototype ResultIfc) (*ResultSet, error) {
-	dbConn, err := mgr.GetConnection(dbKey)
-        if nil != err {
-		return nil, errors.New(fmt.Sprintf("Error getting connection: %s\n", err.Error()))
-	}
+func (mgr *Manager) Query(dbKey DBKey, query string, prototype ResultIfc, args ...interface{}) (*ResultSet, error) {
+	dbConn := mgr.getConnection(dbKey)
+        if nil == dbConn { return nil, errors.New("Error getting connection") }
         q := NewQuery(query, prototype)
-        return q.Run(dbConn)
+        return q.Run(dbConn, args...)
 }
 
 // Close the connection with this key, if it exists, and forget about it
 // (There's no value in reusing the key, just delete it)
 func (mgr *Manager) Disconnect(dbKey DBKey) {
-	if conn, ok := mgr.connections[dbKey.Key]; ok {
+	conn := mgr.getConnection(dbKey)
+	if nil != conn {
 		conn.Disconnect()
 		delete(mgr.connections, dbKey.Key)
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// PRIVATE
+
+// Get the connection for the specified key
+func (mgr *Manager) getConnection(dbKey DBKey) *Connection {
+	if conn, ok := mgr.connections[dbKey.Key]; ok {
+		return conn
+	}
+	return nil
 }
 

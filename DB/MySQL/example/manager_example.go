@@ -41,7 +41,7 @@ func main() {
 	if nil != err { die(fmt.Sprintf("Error connecting: %s\n", err.Error())) }
 
 	// Run the query
-	results, err := manager.RunQuery(
+	results, err := manager.Query(
 		*dbKey,
 		"SELECT id, task, due FROM todo;",
 		Todo{},
