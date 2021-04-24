@@ -210,10 +210,13 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 
 	// If this Endpoint is Configurable...
 	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
-		// Hit the Configure method!
+		// Hit the ConfigureEndpoint method!
 		configurableEndpoint.ConfigureEndpoint(ep.endpointConfig)
+	} else if configurableEndpoint, ok := concreteEndpoint.(AllConfigurableIfc); ok {
+		// Hit the ConfigureAll method!
+		configurableEndpoint.ConfigureAll(ep.endpointConfig, ep.moduleConfig, ep.serverConfig)
 	} else {
-		l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Not a ConfigurableEndpoint", ep.name))
+		l.Trace(fmt.Sprintf("Endpoint{%s}.Configure(): Not a Configurable Endpoint", ep.name))
 	}
 
         // See if there are any overrides for this Endpoint hiding in extra Module Config
@@ -412,6 +415,11 @@ func (endpoint *Endpoint) HandleOptions(request *rest.HttpRequest) *rest.HttpRes
 	hdrs.Set("allow", strings.Join(endpoint.methods, ","))
 	hlpr := rest.GetHelper()
 	return hlpr.ResponseWithHeaders(rest.STATUS_OK, nil, &hdrs)
+}
+
+// Implementation-Dependent Endpoint Interface: Configurability
+type AllConfigurableIfc interface {
+	ConfigureAll(endpointConfig, moduleConfig, serverConfig *lib.Config)
 }
 
 // Implementation-Dependent Endpoint Interface: Configurability
