@@ -42,7 +42,7 @@ type querySpec struct {
 // A given database object spec couples access queries with matching field definitions
 type objectSpec struct {
 	template		ObjectTemplate
-	queries			map[string]mysql.QuerySpec
+	queries			map[string]mysql.Query
 }
 
 type ObjectStoreMySQL struct {

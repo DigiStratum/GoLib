@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"encoding/json"
 
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 )
 
 type Todo struct {
-	//Result
-	Id	int
-	Task	string
-	Due	string
+	Id	int	`json:"id"`
+	Task	string	`json:"task"`
+	Due	string	`json:"due"`
 }
 
 // Satisfies ResultIfc
@@ -22,9 +22,7 @@ func (t Todo) ZeroClone() (mysql.ResultIfc, mysql.PropertyPointers) {
 
 
 func (t Todo) Print() {
-	fmt.Printf(
-		"Todo: { \"id\": \"%d\", \"task\": \"%s\", \"due\": \"%s\" }\n",
-		t.Id, t.Task, t.Due,
-	)
+	jbytes, _ := json.Marshal(t)
+	fmt.Println(string(jbytes))
 }
 
