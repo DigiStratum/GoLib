@@ -141,7 +141,9 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 	}
 
 	// Will our Module SecurityPolicy reject this Request?
-	if rej := ctrlr.securityPolicy.HandleRejection(request); nil != rej { return rej }
+	if nil != ctrlr.securityPolicy {
+		if rej := ctrlr.securityPolicy.HandleRejection(request); nil != rej { return rej }
+	}
 
 	response := ctrlr.dispatchRequest(request)
 

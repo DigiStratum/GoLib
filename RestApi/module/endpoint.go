@@ -375,7 +375,9 @@ func (ep *Endpoint) HandleRequest(request *rest.HttpRequest, endpoint EndpointIf
 
 	// Will our SecurityPolicy reject this Request?
 	epsp := ep.GetSecurityPolicy()
-	if rej := epsp.HandleRejection(request); nil != rej { return rej } // REJECT!
+	if nil != epsp {
+		if rej := epsp.HandleRejection(request); nil != rej { return rej } // REJECT!
+	}
 
 	method := request.GetMethod()
 	l := lib.GetLogger()
