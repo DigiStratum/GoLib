@@ -282,6 +282,7 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *re
 		endpoint.GetName(),
 	)))
 	res := endpoint.HandleRequest(request, endpoint)
+	// TODO: Pass endpoint configuration, or a subset, to get endpoint-specific caching policy such as max age, etc.
 	ctrlr.mergeDefaultResponseHeaders(res, ctx.GetRequestId())
 	return res
 }
@@ -326,7 +327,7 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 }
 
 // Get the default response header set
-// TODO: Make cache-control expiration configurable
+// TODO: Make cache-control expiration configurable (endpoint config.cacheAgeMaxSeconds)
 // ref: https://www.keycdn.com/blog/http-security-headers
 // ref: https://www.keycdn.com/support/content-security-policy
 // ref: https://www.keycdn.com/blog/http-cache-headers

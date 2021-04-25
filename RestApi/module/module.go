@@ -135,10 +135,14 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	));
 
 
-	// Initialize our Controller
+	// Initialize our Module's Controller
 	module.controller = NewController()
 	module.controller.Configure(module.serverConfig, module.moduleConfig, module.extraConfig)
-	module.controller.SetSecurityPolicy(NewSecurityPolicy(config.GetSubset("auth")))
+	authConfig := config.GetSubset("auth")
+	if ! authConfig.IsEmpty() {
+		module.controller.SetSecurityPolicy(NewSecurityPolicy(authConfig))
+	}
+
 	return nil
 }
 

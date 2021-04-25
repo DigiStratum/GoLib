@@ -215,7 +215,8 @@ func (ep *Endpoint) Configure(concreteEndpoint interface{}, serverConfig lib.Con
 	}
 
 	// Security policy
-	ep.securityPolicy = NewSecurityPolicy(ep.endpointConfig.GetSubset("auth"))
+	authConfig := ep.endpointConfig.GetSubset("auth")
+	if ! authConfig.IsEmpty() { ep.securityPolicy = NewSecurityPolicy(authConfig) }
 
 	// If this Endpoint is Configurable...
 	if configurableEndpoint, ok := concreteEndpoint.(ConfigurableEndpointIfc); ok {
