@@ -222,8 +222,13 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpRequest) *endpointContainer {
 	bestScore := 0
 	var bestEndpoint *endpointContainer
+	var defaultEndpoint *endpointContainer
 	for _, versions := range (*ctrlr.endpointMap)[request.GetMethod()] {
 		for version, endpoint := range versions {
+
+			// Regardless of pattern matching, if this endpoint is default for this module, capture it!
+			if endpoint.endpointMPV.IsDefault() { defaultEndpoint = &endpoint }
+
 			// TODO: Add support for client to specify a version with X-Version header? Maybe we don't need versions at all?
 			matches := endpoint.endpointMPV.GetRequestMatches(request)
 			if (nil == matches) || (len(matches) == 0) {
@@ -269,7 +274,9 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 		}
 	}
 
-	// Note: Endpoint can call its own matches method to geth named path parameters 
+	// No endpoint pattern matched, but DOES have a default? Return the default, else the "best"
+	if (nil == bestEndpoint) && (nil != defaultEndpoint) { return defaultEndpoint }
+
 	return bestEndpoint
 }
 
