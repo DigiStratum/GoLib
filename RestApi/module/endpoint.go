@@ -47,6 +47,15 @@ of the server, not to give the client a choice - that is done at the Module laye
 
 ref: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
 
+
+FIXME: Endpoint.IsDefault has full configuration support and is being propagated all over the place,
+       but is not used elsewhere in the module, controller, or endpoint. If the Server has selected
+       our Module due to base path mapping, then our Module must handle the request. But if the
+       Controller can't find any good Endpoint to match it then it must either return some confused
+       Error response... or... and hear me out here... sned the request to the Endpoint marked as
+       IsDefault=true for this Module (and if our developer is unfortunate enough to mark two
+       Endpoints within a given Module as such, then the first one wins... and it is NOT an ordered
+       set, so it is a spin of the wheel with each request due to the map[] in use). Make it happen!
 */
 
 import (
