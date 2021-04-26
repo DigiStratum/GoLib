@@ -154,6 +154,8 @@ func (ep *Endpoint) Init(concreteEndpoint interface{}) {
 
 // Does the supplied Endpoint implement the interface for the specified Method?
 func implementsMethod(method string, endpoint interface{}) bool {
+	// If the Endpoint implements the ANY method, then the answer is true for enveyr method!
+	if _, ok := endpoint.(AnyEndpointIfc); ok { return true }
 	switch (method) {
 		case "get": if _, ok := endpoint.(GetEndpointIfc); ok { return true }
 		case "post": if _, ok := endpoint.(PostEndpointIfc); ok { return true }
@@ -391,15 +393,25 @@ func (ep *Endpoint) HandleRequest(request *rest.HttpRequest, endpoint EndpointIf
 
 	// Note that checking requestMethod against ep.methods would be redundant
 	// because Controller should already be doing this for us via ep.GetMethods()
+	var response *rest.HttpResponse
+	supportedMethod := true
 	switch (method) {
-		case "get": return handleGet(request, endpoint)
-		case "head": return handleHead(request, endpoint)
-		case "post": return handlePost(request, endpoint)
-		case "put": return handlePut(request, endpoint)
-		case "options": return handleOptions(request, endpoint)
-		case "delete": return handleDelete(request, endpoint)
-		case "patch": return handlePatch(request, endpoint)
+		case "get": response = handleGet(request, endpoint)
+		case "head": response = handleHead(request, endpoint)
+		case "post": response = handlePost(request, endpoint)
+		case "put": response = handlePut(request, endpoint)
+		case "options": response = handleOptions(request, endpoint)
+		case "delete": response = handleDelete(request, endpoint)
+		case "patch": response = handlePatch(request, endpoint)
+		default: supportedMethod = false
 	}
+
+	// If we got a response, then great
+	if nil != response { return response }
+
+	// Otherwise, give it one last try with the magical ANY method (as long as it was a supported method)
+	if supportedMethod { return handleAny(request, endpoint) }
+
 	l.Error(fmt.Sprintf(
 		"[%s] Endpoint (%s): Controller passed us a non-implemented Request Method '%s'",
 		ctx.GetRequestId(),
@@ -428,6 +440,11 @@ type AllConfigurableIfc interface {
 // Implementation-Dependent Endpoint Interface: Configurability
 type ConfigurableEndpointIfc interface {
 	ConfigureEndpoint(endpointConfig *lib.Config)
+}
+
+// Implementation-Dependent Endpoint Interface: ANY METHOD request handling
+type AnyEndpointIfc interface {
+	HandleAny(request *rest.HttpRequest) *rest.HttpResponse
 }
 
 // Implementation-Dependent Endpoint Interface: GET request handling
@@ -477,6 +494,14 @@ func handleImpossible(unmatchedIfc string, requestId string) *rest.HttpResponse 
 		requestId,
 	))
 	return nil
+}
+
+// Wrap ANY request handling
+func handleAny(request *rest.HttpRequest, ep interface{}) *rest.HttpResponse {
+	if handler, ok := ep.(AnyEndpointIfc); ok {
+		return handler.HandleAny(request)
+	}
+	return handleImpossible("AnyEndpointIfc", request.GetContext().GetRequestId())
 }
 
 // Wrap GET request handling
