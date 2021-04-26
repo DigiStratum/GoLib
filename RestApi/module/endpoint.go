@@ -442,6 +442,11 @@ type ConfigurableEndpointIfc interface {
 	ConfigureEndpoint(endpointConfig *lib.Config)
 }
 
+// Implementation-Dependent Endpoint Interface: Dependency Injection
+type DependencyInjectableEndpointIfc interface {
+	InjectDependencies(dependencies *map[string]interface{})
+}
+
 // Implementation-Dependent Endpoint Interface: ANY METHOD request handling
 type AnyEndpointIfc interface {
 	HandleAny(request *rest.HttpRequest) *rest.HttpResponse
