@@ -65,6 +65,14 @@ func (mgr *Manager) Query(dbKey DBKey, query string, prototype ResultIfc, args .
         return q.Run(dbConn, args...)
 }
 
+// Run a query against the dtaabase connection identified by the dbkey
+func (mgr *Manager) Run(dbKey DBKey, query Query, args ...interface{}) (*ResultSet, error) {
+	dbConn := mgr.getConnection(dbKey)
+	if nil == dbConn { return nil, errors.New("Error getting connection") }
+	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
+	return query.Run(dbConn, args...)
+}
+
 // Close the connection with this key, if it exists, and forget about it
 // (There's no value in reusing the key, just delete it)
 func (mgr *Manager) Disconnect(dbKey DBKey) {

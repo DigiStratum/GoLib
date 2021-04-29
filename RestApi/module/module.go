@@ -147,18 +147,23 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 }
 
 // Server needs to know our Module's path which it will use to map Requests to us
-func (module Module) GetPath() string {
+func (module *Module) GetPath() string {
 	// http://hostname/server.path/module.path/endpoint.pattern
 	return module.moduleConfig.Get("path")
 }
 
 // Server wants to know our name
-func (module Module) GetName() string {
+func (module *Module) GetName() string {
 	return module.name
 }
 
 // Server wants to send Requests to our Controller
-func (module Module) GetController() *Controller {
+func (module *Module) GetController() *Controller {
 	return module.controller
+}
+
+// Module instance wants to inject dependencies into the identified endpoint
+func (module *Module) InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies) {
+	(*module).controller.InjectDependenciesIntoEndpoint(endpointId, deps)
 }
 

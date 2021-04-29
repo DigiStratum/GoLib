@@ -71,6 +71,7 @@ type EndpointIfc interface {
 	Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
 	Init(concreteEndpoint interface{})
 	GetSecurityPolicy() *SecurityPolicy
+	GetId() string
 	GetName() string
 	GetVersion() string
 	GetPattern() string
@@ -88,7 +89,7 @@ type Endpoint struct {
         serverConfig		*lib.Config	// Server configuration copy
         moduleConfig		*lib.Config	// Module configuration copy
 	endpointConfig		*lib.Config	// Endpoint configuration
-        name			string		// Unique name of this Endpoint
+	name			string		// Unique name of this Endpoint
         version			string		// Version of this Endpoint
         pattern			string		// Pattern which matches URI's to us (relative to Module)
 	patternRegexp		*regexp.Regexp	// Compiled Regular Expression for our pattern
@@ -268,6 +269,11 @@ func (ep *Endpoint) GetName() string {
 	return ep.name
 }
 
+// Return our name
+func (ep *Endpoint) GetId() string {
+	return fmt.Sprintf("%s.%s", name, version)
+}
+
 // Get our defaultness
 func (ep *Endpoint) IsDefault() bool {
 	return ep.isDefault
@@ -440,11 +446,6 @@ type AllConfigurableIfc interface {
 // Implementation-Dependent Endpoint Interface: Configurability
 type ConfigurableEndpointIfc interface {
 	ConfigureEndpoint(endpointConfig *lib.Config)
-}
-
-// Implementation-Dependent Endpoint Interface: Dependency Injection
-type DependencyInjectableEndpointIfc interface {
-	InjectDependencies(dependencies *map[string]interface{})
 }
 
 // Implementation-Dependent Endpoint Interface: ANY METHOD request handling

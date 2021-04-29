@@ -27,7 +27,6 @@ func NewQuery(query string, prototype ResultIfc) *Query {
 
 // Run this query against the supplied database Connection with the provided query arguments
 func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
-	results := ResultSet{}
 	protoQuery := (*q).query
 	// TODO: expand query '???' placeholders
 	finalQuery := protoQuery
@@ -37,6 +36,7 @@ func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 	if err != nil { return nil, err }
 
 	// Process the result rows
+	results := ResultSet{}
 	for rows.Next() {
 		// Make a new result object for this row
 		// (... and get pointers to all the all the result object members)

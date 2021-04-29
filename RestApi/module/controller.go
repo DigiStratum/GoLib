@@ -45,23 +45,25 @@ type controllerEPPVMap	map[string]controllerEPVMap	// Endpoint Pattern map
 type controllerEPMPVMap	map[string]controllerEPPVMap	// Endpoint Method map
 
 type Controller struct {
-	securityPolicy	*SecurityPolicy		// Module-wide SecurityPolicy
-	serverConfig	*lib.Config		// Server configuration cache
-	moduleConfig	*lib.Config		// Module configuration cache
-	extraConfig	*lib.Config		// Extra configuration for Endpoints
-	endpointMap	*controllerEPMPVMap	// Map of all our Endpoints
-	endpoints	[]interface{}		// Collection of distinct concrete endpoints
+	securityPolicy		*SecurityPolicy		// Module-wide SecurityPolicy
+	serverConfig		*lib.Config		// Server configuration cache
+	moduleConfig		*lib.Config		// Module configuration cache
+	extraConfig		*lib.Config		// Extra configuration for Endpoints
+	endpointMap		*controllerEPMPVMap	// Map of all our Endpoints
+	endpoints		[]interface{}		// Collection of distinct concrete endpoints
+	endpointDependencies	map[string]*lib.Dependencies	// Dependencies injected for this endpoint; key is Endpoint.id
 }
 
 // Make a new one of these!
 func NewController() *Controller {
 	c := make(controllerEPMPVMap)
 	return &Controller{
-		serverConfig:	lib.NewConfig(),
-		moduleConfig:	lib.NewConfig(),
-		extraConfig:	lib.NewConfig(),
-		endpointMap:	&c,
-		endpoints:	make([]interface{}, 0),
+		serverConfig:		lib.NewConfig(),
+		moduleConfig:		lib.NewConfig(),
+		extraConfig:		lib.NewConfig(),
+		endpointMap:		&c,
+		//endpoints:		make([]interface{}, 0), // <- this assignment is overwritten in Configure() with assignment from GetRegistry()
+		endpointDependencies:	make(map[string]*lib.Dependencies),
 	}
 }
 
@@ -90,13 +92,28 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 	ctrlr.endpoints = *endpoints
 	for _, endpoint := range (*ctrlr).endpoints {
 		if endpointIfc, ok := endpoint.(EndpointIfc); ok {
+
+			// Invoke the endpoint's initializer
 			endpointIfc.Init(endpoint)
 			endpointIfc.Configure(endpoint, *serverConfig, *moduleConfig, *extraConfig)
 			ctrlr.mapEndpoint(endpointIfc)
+
+			// Dependency Injection - we dependencies provided for this endpoint?
+			if deps, ok := (*ctrlr).endpointDependencies[endpointIfc.GetId()]; ok {
+				// We have some dependencies for this endpoint! Is it Dependency Injectable?
+				if diepIfc, ok := endpoint.(lib.DependencyInjectableEndpointIfc); ok {
+					diepIfc.InjectDependencies(&deps)
+				}
+			}
 		} else {
 			l.Error(ctrlr.wrapLog("Configure(): Non-Endpoint given to Controller"))
 		}
 	}
+}
+
+// Module instance wants to inject dependencies into the identified endpoint
+func (ctrlr *Controller) InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies) {
+	(*ctrlr).endpointDependencies[endpointId] = deps
 }
 
 // See that the map has an entry for each method/pattern/version for this Endpoint

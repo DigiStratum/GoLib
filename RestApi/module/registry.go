@@ -15,6 +15,10 @@ here. When the Endpoints are pulled out by the Controller, the Registry is once 
 for the next Module.
 */
 
+type registeredEndpoint struct {
+	endpoint	interface{}
+}
+
 type registry struct {
 	endpoints	*[]interface{}
 }
