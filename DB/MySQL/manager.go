@@ -13,7 +13,7 @@ type ManagerIfc interface {
 	Connect(dsn string) (*DBKey, error)
 	IsConnected(dbKey DBKey) bool
 	Query(dbKey DBKey, query string, prototype ResultIfc, args ...interface{}) (*ResultSet, error)
-	Run(dbKey DBKey, query *Query, args ...interface{}) (*ResultSet, error)
+	Run(dbKey DBKey, query QueryIfc, args ...interface{}) (*ResultSet, error)
 	Disconnect(dbKey DBKey)
 }
 
@@ -61,7 +61,7 @@ func (mgr *manager) Query(dbKey DBKey, query string, prototype ResultIfc, args .
 }
 
 // Run a query against the dtaabase connection identified by the dbkey
-func (mgr *manager) Run(dbKey DBKey, query *Query, args ...interface{}) (*ResultSet, error) {
+func (mgr *manager) Run(dbKey DBKey, query QueryIfc, args ...interface{}) (*ResultSet, error) {
 	conn := mgr.getConnection(dbKey)
 	if nil == conn { return nil, errors.New("Error getting connection") }
 	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
