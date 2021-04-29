@@ -6,6 +6,7 @@ Result Interface - When a query is created, it needs a prototype (ResultIfc) str
 
 type PropertyPointers []interface{}
 
+// Result public interface
 type ResultIfc interface {
 	ZeroClone() (ResultIfc, PropertyPointers)
 }

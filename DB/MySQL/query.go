@@ -8,17 +8,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// Query public interface
+type QueryIfc interface {
+	Run(conn *Connection, args ...interface{}) (*ResultSet, error)
+}
+
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
 // automatically. '???' expands to include enough placeholders (as with an IN () list for any count
 // of keys > min. max must be >= min unless max == 0.
-type Query struct {
+type query struct {
 	query		string          // The query to execute as prepared statement
 	prototype	ResultIfc       // Object to use as a prototype to produce query Result row objects
 }
 
 // Make a new one of these
-func NewQuery(query string, prototype ResultIfc) *Query {
-	q := Query{
+func NewQuery(query string, prototype ResultIfc) QueryIfc {
+	q := query{
 		query:		query,
 		prototype:	prototype,
 	}
@@ -26,7 +31,7 @@ func NewQuery(query string, prototype ResultIfc) *Query {
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (q *Query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
+func (q *query) Run(conn *Connection, args ...interface{}) (*ResultSet, error) {
 	protoQuery := (*q).query
 	// TODO: expand query '???' placeholders
 	finalQuery := protoQuery
