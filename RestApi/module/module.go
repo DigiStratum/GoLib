@@ -39,7 +39,7 @@ import(
 	obj "github.com/DigiStratum/GoLib/Objects"
 )
 
-type ModuleSet map[string]*Module
+type ModuleSet map[string]ModuleIfc
 
 type ModuleIfc interface {
 	Configure(serverConfig lib.Config, extraConfig lib.Config) error

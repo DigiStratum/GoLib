@@ -271,7 +271,7 @@ func (ep *Endpoint) GetName() string {
 
 // Return our name
 func (ep *Endpoint) GetId() string {
-	return fmt.Sprintf("%s.%s", name, version)
+	return fmt.Sprintf("%s.%s", ep.GetName(), ep.GetVersion())
 }
 
 // Get our defaultness

@@ -101,8 +101,8 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 			// Dependency Injection - we dependencies provided for this endpoint?
 			if deps, ok := (*ctrlr).endpointDependencies[endpointIfc.GetId()]; ok {
 				// We have some dependencies for this endpoint! Is it Dependency Injectable?
-				if diepIfc, ok := endpoint.(lib.DependencyInjectableEndpointIfc); ok {
-					diepIfc.InjectDependencies(&deps)
+				if diepIfc, ok := endpoint.(lib.DependencyInjectableIfc); ok {
+					diepIfc.InjectDependencies(deps)
 				}
 			}
 		} else {
