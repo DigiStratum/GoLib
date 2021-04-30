@@ -60,12 +60,11 @@ import (
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
-var supportedMethods	[]string
-
-func init() {
+var (
 	supportedMethods = []string{ "get", "post", "put", "options", "head", "patch", "delete" }
-}
+)
 
+// Endpoint public interface
 type EndpointIfc interface {
 	// TODO: Add error return value for Configure()
 	Configure(concreteEndpoint interface{}, serverConfig lib.Config, moduleConfig lib.Config, extraConfig lib.Config)
@@ -85,6 +84,7 @@ type EndpointIfc interface {
 	HandleRequest(request *rest.HttpRequest, endpoint EndpointIfc) *rest.HttpResponse
 }
 
+// Endpoint is exposed so that it may be embedded into concrete endpoint implementations
 type Endpoint struct {
         serverConfig		*lib.Config	// Server configuration copy
         moduleConfig		*lib.Config	// Module configuration copy
