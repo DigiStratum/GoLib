@@ -41,8 +41,15 @@ import(
 
 type ModuleSet map[string]ModuleIfc
 
+// Configurable Module public interface
+// Note: if a concrete module optionally implements this interface, then it can receive the Module config (from ModuleIfc.GetConfig())
+type ConfigurableModuleIfc interface {
+	ConfigureModule(moduleConfig *lib.Config) error
+}
+
+// Module public interface
 type ModuleIfc interface {
-	Configure(serverConfig lib.Config, extraConfig lib.Config) error
+	Configure(serverConfig *lib.Config, extraConfig *lib.Config) error
 	GetPath() string
 	GetName() string
 	GetConfig() *lib.Config
@@ -74,12 +81,12 @@ func NewModule(objectStore *obj.ObjectStore, name string) *Module {
 // Server needs to initialize this Module with its own configuration data for reference
 // Config is passed by value so that we can have a copy, but not tamper with original
 // TODO: Break this into smaller, testable functions
-func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config) error {
+func (module *Module) Configure(serverConfig *lib.Config, extraConfig *lib.Config) error {
 	l := lib.GetLogger()
 	l.Trace(fmt.Sprintf("Module{%s}.Configure()", module.name))
 
 	// Copy Server configuration data for reference
-	module.serverConfig = &serverConfig
+	module.serverConfig = serverConfig
 
 	// Load Module Config from Object ObjectStore
 	config, err := obj.NewObjectStoreConfig(module.objectStore, "config/config.json")
@@ -90,8 +97,6 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 			err.Error(),
 		))
 	}
-
-//config.Dump()
 
 	// Validate that the Config has what we need for a Module!
 	configPrefix := "module." + module.name + "."
@@ -145,6 +150,11 @@ func (module *Module) Configure(serverConfig lib.Config, extraConfig lib.Config)
 	authConfig := config.GetSubset("auth")
 	if ! authConfig.IsEmpty() {
 		module.controller.SetSecurityPolicy(NewSecurityPolicy(authConfig))
+	}
+
+	// Configurable Module? Convert module to ModuleIfc to get at its resource interface
+	if mi, ok := interface{}(module).(ConfigurableModuleIfc); ok {
+		mi.ConfigureModule(module.moduleConfig)
 	}
 
 	return nil
