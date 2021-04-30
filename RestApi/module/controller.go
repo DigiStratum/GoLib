@@ -27,6 +27,15 @@ import(
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
+// Controller public interface
+type ControllerIfc interface {
+	SetSecurityPolicy(securityPolicy *SecurityPolicy)
+	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config)
+	InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies)
+	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
+}
+
+
 // These are stored in this sequence for expedient dispatching of a request
 // Because we use regular expressions to match the pattern of which Endpoint should handle a given
 // request, it helps to reduce the number of regular expressions we try to find a match on by using
@@ -44,7 +53,7 @@ type controllerEPVMap	map[string]endpointContainer	// Endpoint Version map
 type controllerEPPVMap	map[string]controllerEPVMap	// Endpoint Pattern map
 type controllerEPMPVMap	map[string]controllerEPPVMap	// Endpoint Method map
 
-type Controller struct {
+type controller struct {
 	securityPolicy		*SecurityPolicy		// Module-wide SecurityPolicy
 	serverConfig		*lib.Config		// Server configuration cache
 	moduleConfig		*lib.Config		// Module configuration cache
@@ -55,9 +64,9 @@ type Controller struct {
 }
 
 // Make a new one of these!
-func NewController() *Controller {
+func NewController() ControllerIfc {
 	c := make(controllerEPMPVMap)
-	return &Controller{
+	return &controller{
 		serverConfig:		lib.NewConfig(),
 		moduleConfig:		lib.NewConfig(),
 		extraConfig:		lib.NewConfig(),
@@ -68,17 +77,17 @@ func NewController() *Controller {
 }
 
 // Module passes its own SecurityPolicy to us for reference
-func (ctrlr *Controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
+func (ctrlr *controller) SetSecurityPolicy(securityPolicy *SecurityPolicy) {
 	ctrlr.securityPolicy = securityPolicy
 }
 
 // Wrap log messages with Controller context to reduce boilerplate elsewhere
-func (ctrlr *Controller) wrapLog(msg string) string {
+func (ctrlr *controller) wrapLog(msg string) string {
 	return fmt.Sprintf("Controller{%s}.%s", ctrlr.moduleConfig.Get("name"), msg)
 }
 
 // Module initializes a Controller
-func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
+func (ctrlr *controller) Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config) {
 	l := lib.GetLogger()
 	l.Trace(ctrlr.wrapLog("Configure()"))
 
@@ -112,12 +121,12 @@ func (ctrlr *Controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 }
 
 // Module instance wants to inject dependencies into the identified endpoint
-func (ctrlr *Controller) InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies) {
+func (ctrlr *controller) InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies) {
 	(*ctrlr).endpointDependencies[endpointId] = deps
 }
 
 // See that the map has an entry for each method/pattern/version for this Endpoint
-func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
+func (ctrlr *controller) mapEndpoint(endpoint EndpointIfc) {
 	// Get the Endpoint's Pattern; we force it to match entire URI following Module prefix
 	pattern := endpoint.GetPattern()
 	methods := endpoint.GetMethods()
@@ -144,7 +153,7 @@ func (ctrlr *Controller) mapEndpoint(endpoint EndpointIfc) {
 }
 
 // Do any request pre-processing needed...
-func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	lib.GetLogger().Trace(ctrlr.wrapLog(fmt.Sprintf(
 		"[%s]HandleRequest(): %s %s",
 		request.GetContext().GetRequestId(),
@@ -175,7 +184,7 @@ func (ctrlr *Controller) HandleRequest(request *rest.HttpRequest) *rest.HttpResp
 }
 
 // Retry requests with missing trailing slash
-func (ctrlr *Controller) alternateRequest(request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *controller) alternateRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	// If the last component of the request URI is empty, then it already trails a '/'
 	_, fileName := path.Split(request.GetURI())
 	if len(fileName) == 0 { return nil }
@@ -204,7 +213,7 @@ func (ctrlr *Controller) alternateRequest(request *rest.HttpRequest) *rest.HttpR
 }
 
 // Dispatch the request to an Endpoint
-func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpResponse {
 	hlpr := rest.GetHelper()
 	l := lib.GetLogger()
 
@@ -238,7 +247,7 @@ func (ctrlr *Controller) dispatchRequest(request *rest.HttpRequest) *rest.HttpRe
 }
 
 // Find which Endpoint's pattern matches this request URI - the BEST match, not just ANY match
-func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpRequest) *endpointContainer {
+func (ctrlr *controller) findBestMatchingEndpointForURI(request *rest.HttpRequest) *endpointContainer {
 	bestScore := 0
 	var bestEndpoint *endpointContainer
 	var defaultEndpoint *endpointContainer
@@ -300,7 +309,7 @@ func (ctrlr *Controller) findBestMatchingEndpointForURI(request *rest.HttpReques
 }
 
 // Wrap HTTP Request to send to Endpoint for handling
-func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *rest.HttpRequest) *rest.HttpResponse {
+func (ctrlr *controller) endpointHandleRequest(endpoint EndpointIfc, request *rest.HttpRequest) *rest.HttpResponse {
 	ctx := request.GetContext()
 	lib.GetLogger().Trace(ctrlr.wrapLog(fmt.Sprintf(
 		"[%s]endpointHandleRequest() - Controller: Selected Endpoint: '%s'",
@@ -315,7 +324,7 @@ func (ctrlr *Controller) endpointHandleRequest(endpoint EndpointIfc, request *re
 
 // Merge default response headers into OK responses if not already supplied
 // TODO: Make this more granular to be endpoint-specific (override)
-func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse, requestId string) {
+func (ctrlr *controller) mergeDefaultResponseHeaders(response *rest.HttpResponse, requestId string) {
 	// Only OK (2xx) responses want default headers, else nothing to do
 	if rest.GetHelper().IsStatus2xx(response.GetStatus()) { return }
 
@@ -359,7 +368,7 @@ func (ctrlr *Controller) mergeDefaultResponseHeaders(response *rest.HttpResponse
 // ref: https://www.keycdn.com/blog/http-cache-headers
 // ref: https://content-security-policy.com/
 // ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
-func (ctrlr *Controller) getDefaultResponseHeaders() *map[string]string {
+func (ctrlr *controller) getDefaultResponseHeaders() *map[string]string {
 	headers := map[string]string{
 		"cache-control": "max-age=43200,public,must-revalidate,no-transform",
 		"x-frame-options": "SAMEORIGIN",

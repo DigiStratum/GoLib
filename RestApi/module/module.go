@@ -48,7 +48,7 @@ type ModuleIfc interface {
 	GetConfig() *lib.Config
 	GetServerConfig() *lib.Config
 	GetExtraConfig() *lib.Config
-	GetController() *Controller
+	GetController() ControllerIfc
 }
 
 type Module struct {
@@ -57,7 +57,7 @@ type Module struct {
 	moduleConfig	*lib.Config	// Our own Config that we initialize with
 	extraConfig	*lib.Config	// Extra data from our own Config to pass on to Endpoints
 	objectStore	*obj.ObjectStore
-	controller	*Controller
+	controller	ControllerIfc
 }
 
 // Make a new one of these!
@@ -177,7 +177,7 @@ func (module *Module) GetExtraConfig() *lib.Config {
 }
 
 // Server wants to send Requests to our Controller
-func (module *Module) GetController() *Controller {
+func (module *Module) GetController() ControllerIfc {
 	return module.controller
 }
 
