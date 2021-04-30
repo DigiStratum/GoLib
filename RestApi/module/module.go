@@ -48,6 +48,7 @@ type ModuleIfc interface {
 	GetConfig() *lib.Config
 	GetServerConfig() *lib.Config
 	GetExtraConfig() *lib.Config
+	GetController() *Controller
 }
 
 type Module struct {
