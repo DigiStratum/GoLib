@@ -45,6 +45,9 @@ type ModuleIfc interface {
 	Configure(serverConfig lib.Config, extraConfig lib.Config) error
 	GetPath() string
 	GetName() string
+	GetConfig() *lib.Config
+	GetServerConfig() *lib.Config
+	GetExtraConfig() *lib.Config
 }
 
 type Module struct {
@@ -155,6 +158,21 @@ func (module *Module) GetPath() string {
 // Server wants to know our name
 func (module *Module) GetName() string {
 	return module.name
+}
+
+// Get the Config for this Module
+func (module *Module) GetConfig() *lib.Config {
+	return (*module).moduleConfig
+}
+
+// Get the Config for the Server
+func (module *Module) GetServerConfig() *lib.Config {
+	return (*module).serverConfig
+}
+
+// Get the "extra" Config from the Server
+func (module *Module) GetExtraConfig() *lib.Config {
+	return (*module).extraConfig
 }
 
 // Server wants to send Requests to our Controller
