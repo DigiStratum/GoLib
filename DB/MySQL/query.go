@@ -10,7 +10,7 @@ import (
 
 // Query public interface
 type QueryIfc interface {
-	Run(conn ConnectionIfc, args ...interface{}) (*ResultSet, error)
+	Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
 }
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
@@ -31,7 +31,7 @@ func NewQuery(query string, prototype ResultIfc) QueryIfc {
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (*ResultSet, error) {
+func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error) {
 	protoQuery := (*q).query
 	// TODO: expand query '???' placeholders
 	finalQuery := protoQuery
@@ -41,7 +41,7 @@ func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (*ResultSet, error) {
 	if err != nil { return nil, err }
 
 	// Process the result rows
-	results := ResultSet{}
+	results := NewResultSet()
 	for rows.Next() {
 		// Make a new result object for this row
 		// (... and get pointers to all the all the result object members)
@@ -52,9 +52,9 @@ func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (*ResultSet, error) {
 		err = rows.Scan(resultProperties...)
 		if nil != err { return nil, err }
 
-		results = append(results, result)
+		results = results.Append(result)
 	}
 
-	return &results, nil
+	return results, nil
 }
 
