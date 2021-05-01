@@ -13,13 +13,6 @@ type DependencyInjectableIfc interface {
         InjectDependencies(deps *Dependencies) error
 }
 
-// Whatever implements this interface initializes dependencies that will be injected elsewhere
-// Note: this happens AFTER Configure() stage in order to see that all configuration data is
-// available in order to initialize the dependencies (some of which may need configuration!)
-type DependencyInitializerIfc interface {
-	InitDependencies() error
-}
-
 // Make a new one of these!
 func NewDependencies() *Dependencies {
 	d := Dependencies{
