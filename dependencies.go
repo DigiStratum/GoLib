@@ -17,7 +17,7 @@ type DependenciesIfc interface {
 
 // Whatever implements this interface is able to receive dependencies
 type DependencyInjectableIfc interface {
-        InjectDependencies(deps *Dependencies) error
+        InjectDependencies(deps DependenciesIfc) error
 }
 
 // Make a new one of these!

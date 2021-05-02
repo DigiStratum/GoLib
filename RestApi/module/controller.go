@@ -31,7 +31,7 @@ import(
 type ControllerIfc interface {
 	SetSecurityPolicy(securityPolicy *SecurityPolicy)
 	Configure(serverConfig *lib.Config, moduleConfig *lib.Config, extraConfig *lib.Config)
-	InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies)
+	InjectDependenciesIntoEndpoint(endpointId string, deps lib.DependenciesIfc)
 	HandleRequest(request *rest.HttpRequest) *rest.HttpResponse
 }
 
@@ -60,7 +60,7 @@ type controller struct {
 	extraConfig		*lib.Config		// Extra configuration for Endpoints
 	endpointMap		*controllerEPMPVMap	// Map of all our Endpoints
 	endpoints		[]interface{}		// Collection of distinct concrete endpoints
-	endpointDependencies	map[string]*lib.Dependencies	// Dependencies injected for this endpoint; key is Endpoint.id
+	endpointDependencies	map[string]lib.DependenciesIfc	// Dependencies injected for this endpoint; key is Endpoint.id
 }
 
 // Make a new one of these!
@@ -72,7 +72,7 @@ func NewController() ControllerIfc {
 		extraConfig:		lib.NewConfig(),
 		endpointMap:		&c,
 		//endpoints:		make([]interface{}, 0), // <- this assignment is overwritten in Configure() with assignment from GetRegistry()
-		endpointDependencies:	make(map[string]*lib.Dependencies),
+		endpointDependencies:	make(map[string]lib.DependenciesIfc),
 	}
 }
 
@@ -121,7 +121,7 @@ func (ctrlr *controller) Configure(serverConfig *lib.Config, moduleConfig *lib.C
 }
 
 // Module instance wants to inject dependencies into the identified endpoint
-func (ctrlr *controller) InjectDependenciesIntoEndpoint(endpointId string, deps *lib.Dependencies) {
+func (ctrlr *controller) InjectDependenciesIntoEndpoint(endpointId string, deps lib.DependenciesIfc) {
 	(*ctrlr).endpointDependencies[endpointId] = deps
 }
 
