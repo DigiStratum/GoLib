@@ -70,10 +70,11 @@ const (
 )
 
 type logger struct {
-	threadId	string		// Quasi-distinct threadId to filter log output by thread
-	minLogLevel	logLevel	// The minimum logging level
-	logWriter	LogWriter	// The LogWriter we are going to use (TODO: Add support for multiple)
-	logTimestamp	bool		// Conditionally disable timestamps on the log output (consumer may do this for us)
+	threadId	string			// Quasi-distinct threadId to filter log output by thread
+	minLogLevel	logLevel		// The minimum logging level
+	logWriter	LogWriter		// The LogWriter we are going to use (TODO: Add support for multiple)
+	logTimestamp	bool			// Conditionally disable timestamps on the log output (consumer may do this for us)
+	logLevelLabels	map[logLevel]string	// Convert a givenlogLevel to a readable string
 }
 
 var loggerInstance logger
@@ -90,12 +91,20 @@ func GetLogger() *logger {
 
 // Get a new instance
 func NewLogger() *logger {
-	// We would be galactically unlucky to get two threads that start at the same nano-second...
+	logLevelLabels := make(map[logLevel]string)
+	logLevelLabels[CRAZY] = "CRAZY"
+	logLevelLabels[TRACE] = "TRACE"
+	logLevelLabels[DEBUG] = "DEBUG"
+	logLevelLabels[INFO] = "INFO"
+	logLevelLabels[WARN] = "WARN"
+	logLevelLabels[ERROR] = "ERROR"
+	logLevelLabels[FATAL] = "FATAL"
 	newLogger := logger {
 		threadId:	fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
 		minLogLevel:	INFO,
 		logWriter:	NewStdOutLogWriter(),
 		logTimestamp:	true,
+		logLevelLabels:	logLevelLabels,
 	}
 	return &newLogger
 }
@@ -131,19 +140,10 @@ func (l *logger) LogTimestamp(logTimestamp bool) {
 }
 
 // Log some output
-// Wrap level+msg in an error as a code-reduction convenience to any caller wanting to return it
-func (l *logger) log(level logLevel, msg string) error {
-	var prefix string
-	switch (level) {
-		case CRAZY: prefix = "CRAZY"
-		case TRACE: prefix = "TRACE"
-		case DEBUG: prefix = "DEBUG"
-		case INFO: prefix = "INFO"
-		case WARN: prefix = "WARN"
-		case ERROR: prefix = "ERROR"
-		case FATAL: prefix = "FATAL"
-	}
-	logMsg := fmt.Sprintf("%5s %s", prefix, msg)
+// Wrap level+message in an error as a code-reduction convenience to any caller wanting to return it
+func (l *logger) log(level logLevel, format string, a ...interface{}) error {
+	msg := fmt.Sprintf(format, a...)
+	logMsg := fmt.Sprintf("%5s %s", l.logLevelLabels[level], msg)
 	if level >= l.minLogLevel {
 		// Send the log message to our LogWriter
 		timestamp := ""
@@ -161,37 +161,37 @@ func (l *logger) log(level logLevel, msg string) error {
 }
 
 // Log CRAZY output
-func (l *logger) Crazy(msg string) error {
-	return l.log(CRAZY, msg)
+func (l *logger) Crazy(format string, a ...interface{}) error {
+	return l.log(CRAZY, format, a...)
 }
 
 // Log TRACE output
-func (l *logger) Trace(msg string) error {
-	return l.log(TRACE, msg)
+func (l *logger) Trace(format string, a ...interface{}) error {
+	return l.log(TRACE, format, a...)
 }
 
 // Log DEBUG output
-func (l *logger) Debug(msg string) error {
-	return l.log(DEBUG, msg)
+func (l *logger) Debug(format string, a ...interface{}) error {
+	return l.log(DEBUG, format, a...)
 }
 
 // Log INFO output
-func (l *logger) Info(msg string) error {
-	return l.log(INFO, msg)
+func (l *logger) Info(format string, a ...interface{}) error {
+	return l.log(INFO, format, a...)
 }
 
 // Log WARN output
-func (l *logger) Warn(msg string) error {
-	return l.log(WARN, msg)
+func (l *logger) Warn(format string, a ...interface{}) error {
+	return l.log(WARN, format, a...)
 }
 
 // Log ERROR output
-func (l *logger) Error(msg string) error {
-	return l.log(ERROR, msg)
+func (l *logger) Error(format string, a ...interface{}) error {
+	return l.log(ERROR, format, a...)
 }
 
 // Log FATAL output (caller should exit/panic after this)
-func (l *logger) Fatal(msg string) error {
-	return l.log(FATAL, msg)
+func (l *logger) Fatal(format string, a ...interface{}) error {
+	return l.log(FATAL, format, a...)
 }
 
