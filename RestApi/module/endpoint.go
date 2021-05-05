@@ -1,5 +1,24 @@
 package module
 
+/*
+
+This is the integration contract for an Endpoint implementation. From the Stratify SaaS Platform
+perspective, an Endpoint is the lowest layer of HTTP concerns that adapts to business logic
+concerns. It is responsible for receiving and handling HTTP Requests that are mapped to it through
+configuration, and returning a well-formed HTTP Response that the higher layers can return to the
+client.
+
+Any Endpoint implementation MUST implement the Required Endpoint public interface. As well, at least
+one Optional Endpoint public interface SHOULD be implemented, otherwise the Endpoint would not be
+able to receive any HTTP Requests to handle. All of the Optional Endpoint public interfaces MAY be
+implemented with one caveat: the AnyEndpointIfc is only used as a fallback if any of the other
+Optional Endpoint public interfaces has NOT been implemented. If ALL of the other Optional Endpoint
+public interfaces have been implemented, then the AnyEndpointIfc will not receive requests. If the
+AnyEndpointIfc is implemented, then it will receive any HTTP Requests for any supported HTTP method
+where there is not an implementation provided for that method.
+
+*/
+
 import (
 	lib "github.com/DigiStratum/GoLib"
 	rest "github.com/DigiStratum/GoLib/RestApi"
