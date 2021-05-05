@@ -24,6 +24,25 @@ func GetHelper() *helper {
 	return instance
 }
 
+// Produce an HTTP response, code only, no headers/body
+func (hlpr *helper) ReponseCode(status HttpStatus) *HttpResponse {
+	hdrs := HttpHeaders{}
+	body := ""
+	return hlpr.ResponseWithHeaders(status, &body, &hdrs)
+}
+
+// Produce an HTTP response, code and default status text, JSON format
+func (hlpr *helper) ReponseSimpleJson(status HttpStatus) *HttpResponse {
+	message := hlpr.GetHttpStatusText(status)
+	var staticResponse string
+	if hlpr.IsStatus2xx(status) {
+		staticResponse = fmt.Sprintf("[ { \"msg\": \"%s\" } ]", message)
+	} else {
+		staticResponse = fmt.Sprintf("[ { \"error\": { \"msg\": \"%s\" } } ]", message)
+	}
+	return hlpr.Response(status, &staticResponse, "application/json")
+}
+
 // Produce an HTTP error response by HTTP status code only
 func (hlpr *helper) ResponseError(status HttpStatus) *HttpResponse {
 	hdrs := HttpHeaders{}
