@@ -24,6 +24,13 @@ func GetHelper() *helper {
 	return instance
 }
 
+// Produce an HTTP response with standard headers
+func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) *HttpResponse {
+	hdrs := HttpHeaders{}
+	hdrs.Set("content-type", contentType)
+	return hlpr.ResponseWithHeaders(status, body, &hdrs)
+}
+
 // Produce an HTTP response, code only, no headers/body
 func (hlpr *helper) ReponseCode(status HttpStatus) *HttpResponse {
 	hdrs := HttpHeaders{}
@@ -49,13 +56,6 @@ func (hlpr *helper) ResponseError(status HttpStatus) *HttpResponse {
 	hdrs.Set("content-type", "text/plain")
 	body := hlpr.GetHttpStatusText(status)
 	return hlpr.ResponseWithHeaders(status, &body, &hdrs)
-}
-
-// Produce an HTTP response with standard headers
-func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) *HttpResponse {
-	hdrs := HttpHeaders{}
-	hdrs.Set("content-type", contentType)
-	return hlpr.ResponseWithHeaders(status, body, &hdrs)
 }
 
 // Produce an OK HTTP response with standard headers
