@@ -39,7 +39,7 @@ func (hlpr *helper) ReponseCode(status HttpStatus) *HttpResponse {
 }
 
 // Produce an HTTP response, code and default status text, JSON format
-func (hlpr *helper) ReponseSimpleJson(status HttpStatus) *HttpResponse {
+func (hlpr *helper) ResponseSimpleJson(status HttpStatus) *HttpResponse {
 	message := hlpr.GetHttpStatusText(status)
 	var staticResponse string
 	if hlpr.IsStatus2xx(status) {
