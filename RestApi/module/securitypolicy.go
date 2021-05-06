@@ -13,15 +13,21 @@ import (
 	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
-type SecurityPolicy struct {
+// Security Policy public interface
+type SecurityPolicyIfc interface {
+	SetRequireAuthentication(isRequired bool)
+	RequiresAuthentication() bool
+}
+
+type securityPolicy struct {
 	requireAuthentication	bool
 }
 
 // Make a new one of these!
-func NewSecurityPolicy(config *lib.Config) *SecurityPolicy {
+func NewSecurityPolicy(config *lib.Config) SecurityPolicyIfc {
 
 	// By default we do nothing
-	sp := SecurityPolicy{
+	sp := securityPolicy{
 		requireAuthentication:	false,
 	}
 
@@ -36,29 +42,12 @@ func NewSecurityPolicy(config *lib.Config) *SecurityPolicy {
 }
 
 // Set whether authentication is required
-func (sp *SecurityPolicy) SetRequireAuthentication(isRequired bool) {
+func (sp *securityPolicy) SetRequireAuthentication(isRequired bool) {
 	sp.requireAuthentication = isRequired
 }
 
 // Get whether authentication is required
-func (sp *SecurityPolicy) RequiresAuthentication() bool {
+func (sp *securityPolicy) RequiresAuthentication() bool {
 	return sp.requireAuthentication
-}
-
-// How to handle rejection: Get an appropriate HttpResponse for any SecurityPolicy rejection; nil if ok
-func (sp SecurityPolicy) HandleRejection(request *rest.HttpRequest) *rest.HttpResponse {
-	hlpr := rest.GetHelper()
-
-	// If authentication is required...
-	if sp.RequiresAuthentication() {
-		// ... make sure the request has provided an Authorization header
-		requestHeaders := request.GetHeaders()
-		authHeader := requestHeaders.Get("authorization")
-		if "" == authHeader {
-			return hlpr.ResponseError(rest.STATUS_UNAUTHORIZED)
-		}
-	}
-
-	return nil
 }
 
