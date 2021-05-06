@@ -10,7 +10,6 @@ TODO: Expand to actually check HttpRequest auth with configured authenticator(s)
 
 import (
 	lib "github.com/DigiStratum/GoLib"
-	rest "github.com/DigiStratum/GoLib/RestApi"
 )
 
 // Security Policy public interface
