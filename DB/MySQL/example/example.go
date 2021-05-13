@@ -32,7 +32,8 @@ func manager_example() {
 	if nil != err { die(fmt.Sprintf("Query Error: %s\n", err.Error())) }
 
 	// Process the results
-	for index, result := range *results {
+	for index := 0; index < results.Len(); index++ {
+		result := results.Get(index)
 		if todoResult, ok := result.(*Todo); ok {
 			todoResult.Print()
 		} else {
@@ -60,7 +61,9 @@ func connection_example() {
 	if nil != err { die(fmt.Sprintf("Query Error: %s\n", err.Error())) }
 
 	// Process the results
-	for index, result := range *results {
+	//for index, result := range *results {
+	for index := 0; index < results.Len(); index++ {
+		result := results.Get(index)
 		if todoResult, ok := result.(*Todo); ok {
 			todoResult.Print()
 		} else {
