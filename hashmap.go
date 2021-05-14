@@ -21,6 +21,22 @@ type KeyValuePair struct {
 	Value	string
 }
 
+// HashMap public interface
+type HashMapIfc interface {
+	IsEmpty() bool {
+	Size() int {
+	Merge(inbound *HashMap) {
+	Set(key string, value string) {
+	Get(key string) string {
+	Has(key string) bool {
+	HasAll(keys *[]string) bool {
+	GetCopy() *HashMap {
+	IterateCallback(callback func(kvp KeyValuePair)) {
+	IterateChannel() <-chan KeyValuePair {
+	Dump() {
+	DumpString() string {
+}
+
 type HashMap	map[string]string
 
 // Make a new one of these!
