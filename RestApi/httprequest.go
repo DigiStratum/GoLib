@@ -39,6 +39,8 @@ type HttpRequestIfc struct {
 	GetAcceptableLanguages() *[]string
 	getWeightedHeaderList(headerName string) *[]string
 	IsIdempotentMethod() bool
+	SetPathParameters(params *lib.HashMap)
+	GetPathParameters() *lib.HashMap
 }
 
 type httpRequest struct {
@@ -54,6 +56,7 @@ type httpRequest struct {
 	body		*string
 	bodyData	*HttpBodyData
 	context		*HttpRequestContext
+	pathParams	*lib.HashMap
 }
 
 // Make a new one of these
@@ -183,6 +186,25 @@ func (request *httpRequest) GetAcceptableLanguages() *[]string {
 	return languages
 }
 
+// Quick check if the current request is expected to be idempotent in implementation
+func (request *httpRequest) IsIdempotentMethod() bool {
+	if request.method == "post" { return false }
+	return true
+}
+
+// Set the path parameters (should be endpointwrapper)
+func (request *httpRequest) SetPathParameters(params *lib.HashMap) {
+	request.pathParams = params
+}
+
+// Get the path parameters (should be endpoint implementation)
+func (request *httpRequest) GetPathParameters() *lib.HashMap {
+	return request.pathParams
+}
+
+// -------------------------------------------------------------------------------------------------
+// Private implementation
+
 // Extract a list of values from headers, ordered by preference expressed as quality value
 // ref: https://developer.mozilla.org/en-US/docs/Glossary/Quality_values
 func (request *httpRequest) getWeightedHeaderList(headerName string) *[]string {
@@ -218,10 +240,5 @@ func (request *httpRequest) getWeightedHeaderList(headerName string) *[]string {
 		}
 	}
 	return &values
-}
-
-func (request *httpRequest) IsIdempotentMethod() bool {
-	if request.method == "post" { return false }
-	return true
 }
 
