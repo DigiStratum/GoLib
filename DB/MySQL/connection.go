@@ -4,6 +4,8 @@ package mysql
 
 DB Connection
 
+See additional DSN parameters here: https://github.com/go-sql-driver/mysql#interpolateparams
+
 */
 
 import (
