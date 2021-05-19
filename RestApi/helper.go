@@ -9,6 +9,8 @@ import(
 	obj "github.com/DigiStratum/GoLib/Objects"
 )
 
+type HttpStatus int
+
 type helper struct { }
 
 var instance *helper
@@ -25,21 +27,20 @@ func GetHelper() *helper {
 }
 
 // Produce an HTTP response with standard headers
-func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) HttpResponseIfc {
+	hdrs := NewHttpHeaders()
 	hdrs.Set("content-type", contentType)
-	return hlpr.ResponseWithHeaders(status, body, &hdrs)
+	return hlpr.ResponseWithHeaders(status, body, hdrs)
 }
 
 // Produce an HTTP response, code only, no headers/body
-func (hlpr *helper) ReponseCode(status HttpStatus) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) ReponseCode(status HttpStatus) HttpResponseIfc {
 	body := ""
-	return hlpr.ResponseWithHeaders(status, &body, &hdrs)
+	return hlpr.ResponseWithHeaders(status, &body, NewHttpHeaders())
 }
 
 // Produce an HTTP response, code and default status text, JSON format
-func (hlpr *helper) ResponseSimpleJson(status HttpStatus) *HttpResponse {
+func (hlpr *helper) ResponseSimpleJson(status HttpStatus) HttpResponseIfc {
 	message := hlpr.GetHttpStatusText(status)
 	var staticResponse string
 	if hlpr.IsStatus2xx(status) {
@@ -51,44 +52,44 @@ func (hlpr *helper) ResponseSimpleJson(status HttpStatus) *HttpResponse {
 }
 
 // Produce an HTTP error response by HTTP status code only
-func (hlpr *helper) ResponseError(status HttpStatus) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) ResponseError(status HttpStatus) HttpResponseIfc {
+	hdrs := NewHttpHeaders()
 	hdrs.Set("content-type", "text/plain")
 	body := hlpr.GetHttpStatusText(status)
-	return hlpr.ResponseWithHeaders(status, &body, &hdrs)
+	return hlpr.ResponseWithHeaders(status, &body, hdrs)
 }
 
 // Produce an OK HTTP response with standard headers
-func (hlpr *helper) ResponseOk(body *string, contentType string) *HttpResponse {
+func (hlpr *helper) ResponseOk(body *string, contentType string) HttpResponseIfc {
 	return hlpr.Response(STATUS_OK, body, contentType)
 }
 
 // Produce an ERROR HTTP response with JSON message body and standard headers
-func (hlpr *helper) ResponseErrorJson(status HttpStatus, message string) *HttpResponse {
+func (hlpr *helper) ResponseErrorJson(status HttpStatus, message string) HttpResponseIfc {
 	staticResponse := fmt.Sprintf("[ { \"error\": { \"msg\": \"%s\" } } ]", message)
 	return hlpr.Response(status, &staticResponse, "application/json")
 }
 
 // Produce an HTTP response from an Object (200 OK)
-func (hlpr *helper) ResponseObject(object *obj.Object, uri string) *HttpResponse {
+func (hlpr *helper) ResponseObject(object *obj.Object, uri string) HttpResponseIfc {
 	return hlpr.Response(STATUS_OK, object.GetContent(), hlpr.GetMimetype(uri))
 }
 
 // Produce an HTTP response from an Object (200 OK)
-func (hlpr *helper) ResponseObjectCacheable(object *obj.Object, uri string, maxAgeSeconds int) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) ResponseObjectCacheable(object *obj.Object, uri string, maxAgeSeconds int) HttpResponseIfc {
+	hdrs := NewHttpHeaders()
 	hdrs.Set("content-type", hlpr.GetMimetype(uri))
 	// ref: https://varvy.com/pagespeed/cache-control.html
 	hdrs.Set("cache-control", fmt.Sprintf("max-age=%d,public", maxAgeSeconds))
-	return hlpr.ResponseWithHeaders(STATUS_OK, object.GetContent(), &hdrs)
+	return hlpr.ResponseWithHeaders(STATUS_OK, object.GetContent(), hdrs)
 }
 
 // Produce an HTTP response with custom headers
-func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers *HttpHeaders) *HttpResponse {
-	response := NewResponse()
+func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers HttpHeadersIfc) HttpResponseIfc {
+	response := NewHttpResponse()
 	response.SetStatus(status)
 	response.SetBody(body)
-	if len(*headers) > 0 {
+	if ! headers.IsEmpty() {
 		hdrs := response.GetHeaders()
 		hdrs.Merge(headers)
 	}
@@ -96,19 +97,19 @@ func (hlpr *helper) ResponseWithHeaders(status HttpStatus, body *string, headers
 }
 
 // Produce an HTTP redirect (TEMPORARY) response to the supplied URL
-func (hlpr *helper) ResponseRedirect(URL string) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) ResponseRedirect(URL string) HttpResponseIfc {
+	hdrs := NewHttpHeaders()
 	hdrs.Set("location", URL)
 	body := ""
-	return hlpr.ResponseWithHeaders(STATUS_TEMPORARY_REDIRECT, &body, &hdrs)
+	return hlpr.ResponseWithHeaders(STATUS_TEMPORARY_REDIRECT, &body, hdrs)
 }
 
 // Produce an HTTP redirect (PERMANENT) response to the supplied URL
-func (hlpr *helper) ResponseRedirectPermanent(URL string) *HttpResponse {
-	hdrs := HttpHeaders{}
+func (hlpr *helper) ResponseRedirectPermanent(URL string) HttpResponseIfc {
+	hdrs := NewHttpHeaders()
 	hdrs.Set("location", URL)
 	body := ""
-	return hlpr.ResponseWithHeaders(STATUS_MOVED_PERMANENTLY, &body, &hdrs)
+	return hlpr.ResponseWithHeaders(STATUS_MOVED_PERMANENTLY, &body, hdrs)
 }
 
 // Scan over the body data and, for each unique name, scrub out any duplicates

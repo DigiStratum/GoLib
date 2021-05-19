@@ -6,20 +6,19 @@ type HttpResponseIfc interface {
 	SetBody(body *string)
 	GetStatus() HttpStatus
 	SetStatus(status HttpStatus)
-	GetHeaders() *HttpHeaders
+	GetHeaders() HttpHeadersIfc
 }
 
-type HttpResponse struct {
+type httpResponse struct {
 	status		HttpStatus
-	headers		*HttpHeaders
+	headers		HttpHeadersIfc
 	body		*string
 }
 
 // Make a new one of these!
-func NewHttpResponse() *httpResponse {
-	hdrs := make(HttpHeaders)
+func NewHttpResponse() HttpResponseIfc {
 	return &httpResponse{
-		headers: &hdrs,
+		headers: NewHttpHeaders(),
 	}
 }
 
@@ -39,7 +38,7 @@ func (hr *httpResponse) SetStatus(status HttpStatus) {
 	hr.status = status
 }
 
-func (hr *httpResponse) GetHeaders() *HttpHeaders {
+func (hr *httpResponse) GetHeaders() HttpHeadersIfc {
 	return hr.headers
 }
 

@@ -21,7 +21,7 @@ type httpRequestContext struct {
 }
 
 // Make a new one of these!
-func NewhttpRequestContext() httpRequestContextIfc {
+func NewHttpRequestContext() HttpRequestContextIfc {
 	return &httpRequestContext{}
 }
 

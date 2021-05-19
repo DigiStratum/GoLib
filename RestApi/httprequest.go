@@ -13,7 +13,7 @@ import(
 )
 
 // Http Request public interface
-type HttpRequestIfc struct {
+type HttpRequestIfc interface {
 	GetProtocol() string
 	SetProtocol(protocol string)
 	GetHost() string
@@ -33,9 +33,9 @@ type HttpRequestIfc struct {
 	SetBody(body *string)
 	GetBodyData() *HttpBodyData
 	SetBodyData(bodyData *HttpBodyData)
-	GetContext() *HttpRequestContext
-	SetContext(context *HttpRequestContext)
-	GetHeaders() *HttpHeaders
+	GetContext() HttpRequestContextIfc
+	SetContext(context HttpRequestContextIfc)
+	GetHeaders() HttpHeadersIfc
 	GetAcceptableLanguages() *[]string
 	getWeightedHeaderList(headerName string) *[]string
 	IsIdempotentMethod() bool
@@ -52,19 +52,18 @@ type httpRequest struct {
 	method		string
 	uri		string
 	queryString	string
-	headers		*HttpHeaders
+	headers		HttpHeadersIfc
 	body		*string
 	bodyData	*HttpBodyData
-	context		*HttpRequestContext
+	context		HttpRequestContextIfc
 	pathParams	*lib.HashMap
 }
 
 // Make a new one of these
 func NewRequest() HttpRequestIfc {
-	hdrs := make(HttpHeaders)
 	bodyData := make(HttpBodyData)
 	return &httpRequest{
-		headers: &hdrs,
+		headers: NewHttpHeaders(),
 		bodyData: &bodyData,
 		context: NewHttpRequestContext(),
 	}
@@ -162,17 +161,17 @@ func (request *httpRequest) SetBodyData(bodyData *HttpBodyData) {
 // TODO: Add helpers for Body Data to build it up one name/value at a time
 
 // Get the Request Context
-func (request *httpRequest) GetContext() *HttpRequestContext {
+func (request *httpRequest) GetContext() HttpRequestContextIfc {
 	return request.context
 }
 
 // Set the Request Context
-func (request *httpRequest) SetContext(context *HttpRequestContext) {
+func (request *httpRequest) SetContext(context HttpRequestContextIfc) {
 	request.context = context
 }
 
 // Get the Request Headers
-func (request *httpRequest) GetHeaders() *HttpHeaders {
+func (request *httpRequest) GetHeaders() HttpHeadersIfc {
 	return request.headers
 }
 

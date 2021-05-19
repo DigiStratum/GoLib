@@ -10,12 +10,13 @@ package restapi
 type HttpHeadersIfc interface {
 	Get(name string) string
 	Set(name string, value string)
-	Merge(headers *HttpHeaders)
+	Merge(headers HttpHeadersIfc)
 	GetHeaderNames() *[]string
+	IsEmpty() bool
 }
 
 // Name/value pair header map for Request or Response
-type httpHeaders [string]string
+type httpHeaders map[string]string
 
 // Make a new one of these
 func NewHttpHeaders() HttpHeadersIfc {
@@ -38,7 +39,7 @@ func (hdrs *httpHeaders) Set(name string, value string) {
 // Merge an HttpHeaders set into our own
 func (hdrs *httpHeaders) Merge(headers HttpHeadersIfc) {
 	names := headers.GetHeaderNames()
-	for name := range *names {
+	for _, name := range *names {
 		(*hdrs)[name] = headers.Get(name)
 	}
 }
@@ -46,9 +47,13 @@ func (hdrs *httpHeaders) Merge(headers HttpHeadersIfc) {
 // Get the complete set of names
 func (hdrs *httpHeaders) GetHeaderNames() *[]string {
 	names := make([]string, 0)
-	for name, _ := range *headers {
+	for name, _ := range *hdrs {
 		names = append(names, name)
 	}
 	return &names
 }
 
+// Are there NO headers set?
+func (hdrs *httpHeaders) IsEmpty() bool {
+	return 0 == len(*hdrs)
+}
