@@ -13,18 +13,15 @@ TODO: Put some multi-threaded protections around the accessors here
 */
 
 import (
-	"sync"
-	"fmt"
-	"strings"
 	"time"
 )
 
 type cacheitem struct {
 	Value	interface{}
-	Expires	Time
+	Expires	time.Time
 }
 
-func (ci cacheitem) IsExpired() {
+func (ci cacheitem) IsExpired() bool {
 	return ci.Expires.Before(time.Now())
 }
 
@@ -34,7 +31,7 @@ type cache	map[string]cacheitem
 type CacheIfc interface {
 	IsEmpty() bool
 	Size() int
-	Set(key string, value interface{}, expires Time)
+	Set(key string, value interface{}, expires time.Time)
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -63,7 +60,7 @@ func (c *cache) Size() int {
 }
 
 // Set a single cache element key to the specified value
-func (c *cache) Set(key string, value interface{}, expires Time) {
+func (c *cache) Set(key string, value interface{}, expires time.Time) {
 	(*c)[key] = cacheitem{
 		Value:		value,
 		Expires:	expires,
@@ -97,7 +94,7 @@ func (c *cache) HasAll(keys *[]string) bool {
 func (c *cache) purgeExpired() {
 	// Find which keys we need to purge because their cacheitem is expired
 	purgeKeys := []string{}
-	for ci, key := range *c {
+	for key, ci := range *c {
 		if ci.IsExpired() { purgeKeys = append(purgeKeys, key) }
 	}
 	// Purge them!
