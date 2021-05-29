@@ -8,22 +8,22 @@ type DBKeyIfc interface {
 }
 
 // DB Key (Connection identifier for Manager)
-type DBKey struct {
+type dBKey struct {
 	key	string
 }
 
 // Make a new one of these from an existing key
-func NewDBKey(key string) *DBKey {
-	return &DBKey{ key: key }
+func NewDBKey(key string) DBKeyIfc {
+	return &dBKey{ key: key }
 }
 
 // Make a new one of these from DSN
-func NewDBKeyFromDSN(dsn string) *DBKey {
-	return &DBKey{ key: db.GetDSNHash(dsn) }
+func NewDBKeyFromDSN(dsn string) DBKeyIfc {
+	return &dBKey{ key: db.GetDSNHash(dsn) }
 }
 
 // Get the key
-func (dbk *DBKey) GetKey() string {
+func (dbk *dBKey) GetKey() string {
 	return dbk.key
 }
 
