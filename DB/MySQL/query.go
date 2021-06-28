@@ -5,12 +5,15 @@ TODO: Add some sort of query builder - this will allow us to ditch writing SQL f
 */
 
 import (
+	errors
 	_ "github.com/go-sql-driver/mysql"
 )
 
 // Query public interface
 type QueryIfc interface {
 	Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
+	RunInt(conn ConnectionIfc, args ...interface{}) (*int, error)
+	RunString(conn ConnectionIfc, args ...interface{}) (*string, error)
 }
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
@@ -32,12 +35,14 @@ func NewQuery(query string, prototype ResultIfc) QueryIfc {
 
 // Run this query against the supplied database Connection with the provided query arguments
 func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error) {
-	protoQuery := (*q).query
-	// TODO: expand query '???' placeholders
-	finalQuery := protoQuery
+	// This type of query runner requires a prototype to be set
+	if (nil == (*q).prototype) { return nil, errors.New("Run() - Prototype is not set!") }
 
 	// Execute the Query
-	rows, err := conn.GetConnection().Query(finalQuery, args...)
+	query := q.resolveQuery(args)
+	rows, err := conn.GetConnection().Query(query, args...)
+	// ref: http://go-database-sql.org/retrieving.html
+	defer rows.Close()
 	if err != nil { return nil, err }
 
 	// Process the result rows
@@ -58,3 +63,30 @@ func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
 	return results, nil
 }
 
+// Run this query against the supplied database Connection with the provided query arguments
+// This variant returns only a single int value as the only column of the only row of the result
+func (q *qry) RunInt(conn ConnectionIfc, args ...interface{}) (*int, error) {
+	var value int
+	query := q.resolveQuery(args)
+	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
+	if err != nil { return nil, err }
+	return &value, nil
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+// This variant returns only a single string value as the only column of the only row of the result
+func (q *qry) RunString(conn ConnectionIfc, args ...interface{}) (*string, error) {
+	var value string
+	query := q.resolveQuery(args)
+	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
+	if err != nil { return nil, err }
+	return &value, nil
+}
+
+// Placeholder to support resolving magic expander tags, etc within our query
+func (q *qry) resolveQuery(args ... interface{}) string {
+	protoQuery := (*q).query
+	// TODO: expand query '???' placeholders
+	finalQuery := protoQuery
+	return finalQuery
+}

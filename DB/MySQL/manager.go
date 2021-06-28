@@ -14,6 +14,8 @@ type ManagerIfc interface {
 	IsConnected(dbKeyIfc DBKeyIfc) bool
 	Query(dbKeyIfc DBKeyIfc, query string, prototype ResultIfc, args ...interface{}) (ResultSetIfc, error)
 	Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error)
+	RunInt(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*int, error)
+	RunString(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*string, error)
 	Disconnect(dbKeyIfc DBKeyIfc)
 }
 
@@ -53,19 +55,33 @@ func (mgr *manager) IsConnected(dbKeyIfc DBKeyIfc) bool {
 	return false
 }
 
-// Run a query against the dtaabase connection identified by the dbkey
+// Run a query against the database connection identified by the dbkey
 func (mgr *manager) Query(dbKeyIfc DBKeyIfc, query string, prototype ResultIfc, args ...interface{}) (ResultSetIfc, error) {
 	conn := mgr.getConnection(dbKeyIfc)
         if nil == conn { return nil, errors.New("Error getting connection") }
         return NewQuery(query, prototype).Run(conn, args...)
 }
 
-// Run a query against the dtaabase connection identified by the dbkey
+// Run a query against the database connection identified by the dbkey
 func (mgr *manager) Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error) {
 	conn := mgr.getConnection(dbKeyIfc)
 	if nil == conn { return nil, errors.New("Error getting connection") }
 	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
 	return query.Run(conn, args...)
+}
+
+func (mgr *manager) RunInt(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*int, error) {
+	conn := mgr.getConnection(dbKeyIfc)
+	if nil == conn { return nil, errors.New("Error getting connection") }
+	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
+	return query.RunInt(conn, args...)
+}
+
+func (mgr *manager) RunString(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*string, error) {
+	conn := mgr.getConnection(dbKeyIfc)
+	if nil == conn { return nil, errors.New("Error getting connection") }
+	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
+	return query.RunString(conn, args...)
 }
 
 // Close the connection with this key, if it exists, and forget about it
