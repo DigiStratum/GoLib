@@ -11,9 +11,11 @@ import (
 
 // Query public interface
 type QueryIfc interface {
-	Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
-	RunInt(conn ConnectionIfc, args ...interface{}) (*int, error)
-	RunString(conn ConnectionIfc, args ...interface{}) (*string, error)
+	Run(conn ConnectionIfc, args ...interface{}) error
+	RunReturnInt(conn ConnectionIfc, args ...interface{}) (*int, error)
+	RunReturnString(conn ConnectionIfc, args ...interface{}) (*string, error)
+	RunReturnOne(conn ConnectionIfc, args ...interface{}) (ResultIfc, error)
+	RunReturnSet(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
 }
 
 // The spec for a prepared statement query. Single '?' substitution is handled by db.Query()
@@ -34,12 +36,57 @@ func NewQuery(query string, prototype ResultIfc) QueryIfc {
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error) {
+// No result rows are expected or returned
+func (q *qry) Run(conn ConnectionIfc, args ...interface{}) error {
+	query := q.resolveQuery(args...)
+	// TODO: Capture result (_) to get result.RowsAffected(), etc
+	_, err := conn.GetConnection().Exec(query, args...)
+	return err
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+// This variant returns only a single int value as the only column of the only row of the result
+func (q *qry) RunReturnInt(conn ConnectionIfc, args ...interface{}) (*int, error) {
+	var value int
+	query := q.resolveQuery(args...)
+	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
+	if err != nil { return nil, err }
+	return &value, nil
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+// This variant returns only a single string value as the only column of the only row of the result
+func (q *qry) RunReturnString(conn ConnectionIfc, args ...interface{}) (*string, error) {
+	var value string
+	query := q.resolveQuery(args...)
+	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
+	if err != nil { return nil, err }
+	return &value, nil
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+// This variant returns only a single ResultIfc value as the only row of the result
+func (q *qry) RunReturnOne(conn ConnectionIfc, args ...interface{}) (ResultIfc, error)
+	// This type of query runner requires a prototype to be set
+	if (nil == (*q).prototype) { return nil, errors.New("Run() - Prototype is not set!") }
+
+	// Make a new result object for this row
+	// (... and get pointers to all the all the result object members)
+	result, resultProperties := (*q).prototype.ZeroClone()
+
+	query := q.resolveQuery(args...)
+	err := conn.GetConnection().QueryRow(query, args...).Scan(resultProperties...)
+	if err != nil { return nil, err }
+	return &result, nil
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+func (q *qry) RunReturnSet(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error) {
 	// This type of query runner requires a prototype to be set
 	if (nil == (*q).prototype) { return nil, errors.New("Run() - Prototype is not set!") }
 
 	// Execute the Query
-	query := q.resolveQuery(args)
+	query := q.resolveQuery(args...)
 	rows, err := conn.GetConnection().Query(query, args...)
 	// ref: http://go-database-sql.org/retrieving.html
 	defer rows.Close()
@@ -61,26 +108,6 @@ func (q *qry) Run(conn ConnectionIfc, args ...interface{}) (ResultSetIfc, error)
 	}
 
 	return results, nil
-}
-
-// Run this query against the supplied database Connection with the provided query arguments
-// This variant returns only a single int value as the only column of the only row of the result
-func (q *qry) RunInt(conn ConnectionIfc, args ...interface{}) (*int, error) {
-	var value int
-	query := q.resolveQuery(args)
-	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
-	if err != nil { return nil, err }
-	return &value, nil
-}
-
-// Run this query against the supplied database Connection with the provided query arguments
-// This variant returns only a single string value as the only column of the only row of the result
-func (q *qry) RunString(conn ConnectionIfc, args ...interface{}) (*string, error) {
-	var value string
-	query := q.resolveQuery(args)
-	err := conn.GetConnection().QueryRow(query, args...).Scan(&value)
-	if err != nil { return nil, err }
-	return &value, nil
 }
 
 // Placeholder to support resolving magic expander tags, etc within our query

@@ -13,9 +13,11 @@ type ManagerIfc interface {
 	Connect(dsn string) (DBKeyIfc, error)
 	IsConnected(dbKeyIfc DBKeyIfc) bool
 	Query(dbKeyIfc DBKeyIfc, query string, prototype ResultIfc, args ...interface{}) (ResultSetIfc, error)
-	Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error)
+	Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) error
 	RunInt(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*int, error)
 	RunString(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*string, error)
+	RunReturnOne(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultIfc, error)
+	RunReturnSet(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error)
 	Disconnect(dbKeyIfc DBKeyIfc)
 }
 
@@ -63,25 +65,41 @@ func (mgr *manager) Query(dbKeyIfc DBKeyIfc, query string, prototype ResultIfc, 
 }
 
 // Run a query against the database connection identified by the dbkey
-func (mgr *manager) Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error) {
+func (mgr *manager) Run(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) error {
 	conn := mgr.getConnection(dbKeyIfc)
 	if nil == conn { return nil, errors.New("Error getting connection") }
 	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
 	return query.Run(conn, args...)
 }
 
-func (mgr *manager) RunInt(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*int, error) {
+func (mgr *manager) RunReturnInt(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*int, error) {
 	conn := mgr.getConnection(dbKeyIfc)
 	if nil == conn { return nil, errors.New("Error getting connection") }
 	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
-	return query.RunInt(conn, args...)
+	return query.RunReturnInt(conn, args...)
 }
 
-func (mgr *manager) RunString(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*string, error) {
+func (mgr *manager) RunReturnString(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (*string, error) {
 	conn := mgr.getConnection(dbKeyIfc)
 	if nil == conn { return nil, errors.New("Error getting connection") }
 	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
-	return query.RunString(conn, args...)
+	return query.RunReturnString(conn, args...)
+}
+
+// Run a query against the database connection identified by the dbkey
+func (mgr *manager) RunReturnOne(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultIfc, error) {
+	conn := mgr.getConnection(dbKeyIfc)
+	if nil == conn { return nil, errors.New("Error getting connection") }
+	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
+	return query.RunReturnOne(conn, args...)
+}
+
+// Run a query against the database connection identified by the dbkey
+func (mgr *manager) RunReturnSet(dbKeyIfc DBKeyIfc, query QueryIfc, args ...interface{}) (ResultSetIfc, error) {
+	conn := mgr.getConnection(dbKeyIfc)
+	if nil == conn { return nil, errors.New("Error getting connection") }
+	// TODO: check the result of the query and, if err, check the connection and, if fail, reconnect and try again
+	return query.RunReturnSet(conn, args...)
 }
 
 // Close the connection with this key, if it exists, and forget about it
