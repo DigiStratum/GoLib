@@ -5,7 +5,7 @@ TODO: Add some sort of query builder - this will allow us to ditch writing SQL f
 */
 
 import (
-	errors
+	"errors"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -66,7 +66,7 @@ func (q *qry) RunReturnString(conn ConnectionIfc, args ...interface{}) (*string,
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single ResultIfc value as the only row of the result
-func (q *qry) RunReturnOne(conn ConnectionIfc, args ...interface{}) (ResultIfc, error)
+func (q *qry) RunReturnOne(conn ConnectionIfc, args ...interface{}) (ResultIfc, error) {
 	// This type of query runner requires a prototype to be set
 	if (nil == (*q).prototype) { return nil, errors.New("Run() - Prototype is not set!") }
 
@@ -77,7 +77,7 @@ func (q *qry) RunReturnOne(conn ConnectionIfc, args ...interface{}) (ResultIfc, 
 	query := q.resolveQuery(args...)
 	err := conn.GetConnection().QueryRow(query, args...).Scan(resultProperties...)
 	if err != nil { return nil, err }
-	return &result, nil
+	return result, nil
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
