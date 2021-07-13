@@ -18,11 +18,11 @@ import (
 
 type cacheitem struct {
 	Value	interface{}
-	Expires	time.Time
+	Expires	int64
 }
 
 func (ci cacheitem) IsExpired() bool {
-	return ci.Expires.Before(time.Now())
+	return time.Unix().UTC() < ci.Expires
 }
 
 type cache	map[string]cacheitem
@@ -31,7 +31,7 @@ type cache	map[string]cacheitem
 type CacheIfc interface {
 	IsEmpty() bool
 	Size() int
-	Set(key string, value interface{}, expires time.Time)
+	Set(key string, value interface{}, expires int64)
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -60,7 +60,7 @@ func (c *cache) Size() int {
 }
 
 // Set a single cache element key to the specified value
-func (c *cache) Set(key string, value interface{}, expires time.Time) {
+func (c *cache) Set(key string, value interface{}, expires int64) {
 	(*c)[key] = cacheitem{
 		Value:		value,
 		Expires:	expires,
