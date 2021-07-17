@@ -15,7 +15,7 @@ import (
 type ObjectStoreIfc interface {
 
 	// Configure ObjectStore after it exists (properties are implementation-specific)
-	Configure(storeConfig *lib.Config) error
+	Configure(storeConfig lib.ConfigIfc) error
 
 	// Get the Object located at this path, or nil if none
 	GetObject(path string) *Object
@@ -46,7 +46,7 @@ func NewObjectStorePreloaded(collection *ObjectCollection) *ObjectStore {
 
 // Satisfies ObjectStoreIfc
 // Any ObjectStore implementation should override this as needed
-func (os *ObjectStore) Configure(storeConfig *lib.Config) error {
+func (os *ObjectStore) Configure(storeConfig lib.ConfigIfc) error {
 	// There is no configuration data required for this objectStore type
 	return nil
 }

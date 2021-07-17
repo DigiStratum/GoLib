@@ -36,7 +36,7 @@ import (
 )
 
 type ObjectStoreS3 struct {
-	storeConfig	*lib.Config
+	storeConfig	lib.ConfigIfc
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
 	readCache	*MutableObjectStore
@@ -52,7 +52,7 @@ func NewObjectStoreS3() *ObjectStoreS3 {
 }
 
 // Satisfies RespositoryIfc
-func (os *ObjectStoreS3) Configure(config *lib.Config) error {
+func (os *ObjectStoreS3) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for S3!
 	requiredConfig := []string{ "awsregion", "s3bucket", "s3folder" }

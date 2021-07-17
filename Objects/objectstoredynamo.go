@@ -39,7 +39,7 @@ import (
 )
 
 type ObjectStoreDynamo struct {
-	storeConfig	*lib.Config
+	storeConfig	lib.ConfigIfc
 	readCache	*MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 	awsDynamoDB	*dynamodb.DynamoDB
@@ -54,7 +54,7 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 }
 
 // Satisfies RespositoryIfc
-func (os *ObjectStoreDynamo) Configure(config *lib.Config) error {
+func (os *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for AWS Dynamo!
 	requiredConfig := []string{ "awsregion", "tablename", "primarykey" }

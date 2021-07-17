@@ -18,7 +18,7 @@ import (
 )
 
 // Make a new Config initialized with properties from a JSON Object
-func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (*lib.Config, error) {
+func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.ConfigIfc, error) {
 
 	// Check the ObjectStore
 	if nil == objectStore {

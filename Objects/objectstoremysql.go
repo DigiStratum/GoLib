@@ -46,7 +46,7 @@ type objectSpec struct {
 }
 
 type ObjectStoreMySQL struct {
-	storeConfig		*lib.Config
+	storeConfig		lib.ConfigIfc
 	readCache		*MutableObjectStore
 	awsHelper		*cloud.AWSHelper
 	objectSpecs		map[string]objectSpec	// Object spec names must be part of object "path"
@@ -62,7 +62,7 @@ func NewObjectStoreMySQL() *ObjectStoreMySQL {
 }
 
 // Satisfies RespositoryIfc
-func (os *ObjectStoreMySQL) Configure(config *lib.Config) error {
+func (os *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for MySQL!
 	requiredConfig := []string{ "dsn" }
