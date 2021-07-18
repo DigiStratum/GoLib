@@ -22,12 +22,11 @@ type cacheitem struct {
 }
 
 func (ci cacheitem) IsExpired() bool {
-	return time.Unix().UTC() < ci.Expires
+	return time.Now().Unix() < ci.Expires
 }
 
 type cache	map[string]cacheitem
 
-// Cache public interface
 type CacheIfc interface {
 	IsEmpty() bool
 	Size() int
@@ -42,6 +41,10 @@ type CacheIfc interface {
 func NewCache() CacheIfc {
 	return &cache{}
 }
+
+// -------------------------------------------------------------------------------------------------
+// Cache Public Interface
+// -------------------------------------------------------------------------------------------------
 
 // Flush all the items out of the cache
 func (c *cache) Flush() {

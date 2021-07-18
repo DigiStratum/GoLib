@@ -37,7 +37,7 @@ type ConfigurableIfc interface {
 
 type ConfigIfc interface {
 	HashMapIfc	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
-	Merge(mergeCfg ConfigIfc)
+	MergeConfig(mergeCfg ConfigIfc)
 	GetSubset(prefix string) ConfigIfc
 	GetInverseSubset(prefix string) ConfigIfc
 	LoadFromJsonString(configJson *string)
@@ -65,9 +65,10 @@ func NewConfig() ConfigIfc {
 // -------------------------------------------------------------------------------------------------
 
 // Merge configuration data
-// Just because we embed HashMap doesn't mean data type casting works out for us
-func (cfg *config) Merge(mergeCfg ConfigIfc) {
-	cfg.HashMap.Merge(&(mergeCfg.HashMap))
+func (cfg *config) MergeConfig(mergeCfg ConfigIfc) {
+	if mc, ok := mergeCfg.(*config); ok {
+		cfg.HashMap.Merge(&(mc.HashMap))
+	}
 }
 
 // Get configuration datum whose keys begin with the prefix...
@@ -152,7 +153,7 @@ func (cfg *config) Dereference(referenceConfig ConfigIfc) int {
 }
 
 // Dereference against a list of other referenceConfigs
-func (cfg *Cconfig) DereferenceAll(referenceConfigs ...ConfigIfc) {
+func (cfg *config) DereferenceAll(referenceConfigs ...ConfigIfc) {
 	for _, referenceConfig := range referenceConfigs {
 		GetLogger().Crazy(fmt.Sprintf(
 			"DereferenceAll against Config: %s",
