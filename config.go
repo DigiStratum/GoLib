@@ -41,6 +41,7 @@ type ConfigIfc interface {
 	GetSubset(prefix string) ConfigIfc
 	GetInverseSubset(prefix string) ConfigIfc
 	LoadFromJsonString(configJson *string)
+	LoadFromJsonStringOrError(configJson *string) error
 	LoadFromJsonFile(configFile string)
 	DereferenceString(str string) *string
 	Dereference(referenceConfig ConfigIfc) int
