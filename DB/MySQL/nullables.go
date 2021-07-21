@@ -203,10 +203,33 @@ func (nt *NullTime) UnmarshalJSON(b []byte) error {
 
 // -------------------------------------------------------------------------------------------------
 // Nullable - a compound structure that supports all of the nullable types with additional support methods
+const (
+	NULLABLE_NIL NullableType = iota
+	NULLABLE_INT64
+	NULLABLE_BOOL
+	NULLABLE_FLOAT64
+	NULLABLE_STRING
+	NULLABLE_TIME
+	NULLABLE_UNKNOWN
+)
+
+GetNullableTypeString(nullableType NullableType) string {
+	switch nullableType {
+		case NULLABLE_NIL:		return "nil"
+		case NULLABLE_INT64:		return "int64"
+		case NULLABLE_BOOL:		return "bool"
+		case NULLABLE_FLOAT64:		return "float64"
+		case NULLABLE_STRING:		return "string"
+		case NULLABLE_TIME:		return "time"
+	}
+	return "unknown"
+}
 
 type NullableIfc interface {
-	IsValid() bool
-	SetValue(value interface{})
+	IsNil() bool
+	SetValue(value interface{}) bool
+	GetType() NullableType
+	GetNullableTypeString(nullableType NullableType) string
 	IsInt64() bool
         IsBool() bool
         IsFloat64() bool
@@ -219,18 +242,19 @@ type NullableIfc interface {
 }
 
 type Nullable struct {
-	valid	bool
-	ni	NullInt64
-	nb	NullBool
-	nf	NullFloat64
-	ns	NullString
-	nt	NullTime
+	isNil		bool
+	nullableType	NullableType
+	ni		NullInt64
+	nb		NullBool
+	nf		NullFloat64
+	ns		NullString
+	nt		NullTime
 }
 
 // Make a new one of these!
 func NewNullable(value interface{}) NullableIfc {
 	n := Nullable{
-		valid:	false,
+		isNil:	true,
 		ni:	NullInt64{ Valid: false },
 		nb:	NullBool{ Valid: false },
 		nf:	NullFloat64{ Valid: false },
@@ -241,37 +265,73 @@ func NewNullable(value interface{}) NullableIfc {
 	return &n
 }
 
-func (n *Nullable) IsValid() bool { return (*n).valid }
+func (n *Nullable) IsNil() bool { return (*n).isNil }
 
-// Convert value to appropriate Nullable
-func (n *Nullable) SetValue(value interface{}) {
-	if v, ok := value.(int64); ok {
-		(*n).ni.Int64 = v
-		(*n).ni.Valid = (*n).valid = true
-	} else if v, ok := value.(bool); ok {
-		(*n).ni.Bool = v
-		(*n).ni.Valid = (*n).valid = true
-	} else if v, ok := value.(float64); ok {
-		(*n).ni.Float64 = v
-		(*n).ni.Valid = (*n).valid = true
-	} else if v, ok := value.(string); ok {
-		(*n).ni.String = v
-		(*n).ni.Valid = (*n).valid = true
-	} else if v, ok := value.(time.Time); ok {
-		(*n).ni.Time = v
-		(*n).ni.Valid = (*n).valid = true
-	}
+// Convert value to appropriate Nullable; return true on success, else false
+func (n *Nullable) SetValue(value interface{}) bool {
+	if v, ok := value.(int64); ok { n.setInt64(v) }
+	else if v, ok := value.(bool); ok { n.setBool(v) }
+	else if v, ok := value.(float64); ok { n.setFloat64(v) }
+	else if v, ok := value.(string); ok { n.setString(v) }
+	else if v, ok := value.(time.Time); ok { n.setTime(v) }
+	else { return false }
+	return true
 }
 
-func (n *Nullable) IsInt64() bool { (*n).ni.Valid }
-func (n *Nullable) IsBool() bool { (*n).nb.Valid }
-func (n *Nullable) IsFloat64() bool { (*n).nf.Valid }
-func (n *Nullable) IsString() bool { (*n).ns.Valid }
-func (n *Nullable) IsTime() bool { (*n).nt.Valid }
+func (n *Nullable) setInt64(value int64) {
+	(*n).nullableType = NULLABLE_INT64
+	(*n).ni.Int64 = v
+	(*n).ni.Valid = true
+	(*n).isNil = false
+}
+
+func (n *Nullable) setBool(value bool) {
+	(*n).nullableType = NULLABLE_BOOL
+	(*n).ni.Bool = v
+	(*n).ni.Valid = true
+	(*n).isNil = false
+}
+
+func (n *Nullable) setFloat64(value float64) {
+	(*n).nullableType = NULLABLE_FLOAT64
+	(*n).ni.Float64 = v
+	(*n).ni.Valid = true
+	(*n).isNil = false
+}
+
+func (n *Nullable) setString(value string) {
+	(*n).nullableType = NULLABLE_STRING
+	(*n).ni.String = v
+	(*n).ni.Valid = true
+	(*n).isNil = false
+}
+
+func (n *Nullable) setTime(value time.Time) {
+	(*n).nullableType = NULLABLE_TIME
+	(*n).ni.Time = v
+	(*n).ni.Valid = true
+	(*n).isNil = false
+}
+
+func (n *Nullable) GetType() NullableType {
+	if n.IsNil() { return NULLABLE_NIL }
+	if n.IsInt64() { return NULLABLE_INT64 }
+	if n.IsBool() { return NULLABLE_BOOL }
+	if n.IsFloat64() { return NULLABLE_FLOAT64 }
+	if n.IsString() { return NULLABLE_STRING }
+	if n.IsTime() { return NULLABLE_TIME }
+	return NULLABLE_UNKNOWN
+}
+
+func (n *Nullable) IsInt64() bool { (*n).nullableType == NULLABLE_NIL }
+func (n *Nullable) IsBool() bool { (*n).nullableType == NULLABLE_BOOL }
+func (n *Nullable) IsFloat64() bool { (*n).nullableType == NULLABLE_FLOAT64 }
+func (n *Nullable) IsString() bool { (*n).nullableType == NULLABLE_STRING }
+func (n *Nullable) IsTime() bool { (*n).nullableType == NULLABLE_TIME }
 
 // Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
 func (n *Nullable) GetInt64() *int64 {
-	if ! (*n).valid { return nil }
+	if n.IsNil() { return nil }
 
 	// NullInt64 passes through unmodified
 	if (*n).ni.Valid { return &(*n).ni.Int64 }
@@ -300,7 +360,7 @@ func (n *Nullable) GetInt64() *int64 {
 
 // Return the value as a bool, complete with data conversions, or nil if nil or conversion problem
 func (n *Nullable) GetBool() *bool {
-	if ! (*n).valid { return nil }
+	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a bool
 	if (*n).ni.Valid { return v := ((*n).ni.Int64 == 0); return &v }
@@ -327,8 +387,7 @@ func (n *Nullable) GetBool() *bool {
 
 // Return the value as a Float64, complete with data conversions, or nil if nil or conversion problem
 func (n *Nullable) GetFloat64() *float64 {
-	var v float64 = 0.0
-	if ! (*n).valid { return nil }
+	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a Float64
 	if (*n).ni.Valid { vc := float64((*n).ni.Int64); return &vc }
@@ -337,6 +396,7 @@ func (n *Nullable) GetFloat64() *float64 {
 	// we use 2.0|0.0 for true|false, respectively so that inverse conversion works.
 	// Precision rounding reduces 1.0 to < 1 (0.999) which when converted back would yield 0 decimal value (false)
 	if (*n).nb.Valid {
+		var v float64 = 0.0
 		if (*n).nb.Bool { v = 2.0 }
 		return &v
 	}
@@ -359,7 +419,7 @@ func (n *Nullable) GetFloat64() *float64 {
 
 // Return the value as a *string, complete with data conversions, or nil if nil or conversion problem
 func (n *Nullable) GetString() *string {
-	if ! (*n).valid { return nil }
+	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a string
 	if (*n).ni.Valid {
@@ -396,7 +456,7 @@ func (n *Nullable) GetString() *string {
 
 // Return the value as a *time.Time, complete with data conversions, or nil if nil or conversion problem
 func (n *Nullable) GetTime() *time.Time {
-	if ! (*n).valid { return nil }
+	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a time.Time (unix timestamp)
 	if (*n).ni.Valid {

@@ -6,18 +6,22 @@ import (
 )
 
 type NewResultIfc interface {
-	Get(field string) interface{}
+	Get(field string) NullableIfc
 	Fields() []string
 	ToJson() (*string, error)
 }
 
+type resultRow map[string]NullableIfc
+
 type newResult struct {
 	//result		map[string]interface{}
-	result		map[string]string
+	//result		map[string]string
+	result		resultRow
 }
 
 //func newNewResult(result map[string]interface{}) NewResultIfc {
-func newNewResult(result map[string]string) NewResultIfc {
+//func newNewResult(result map[string]string) NewResultIfc {
+func newNewResult(result resultRow) NewResultIfc {
 	r := newResult{
 		result:		result,
 	}
@@ -28,7 +32,8 @@ func newNewResult(result map[string]string) NewResultIfc {
 // NewResultIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *newResult) Get(field string) interface{} {
+//func (r *newResult) Get(field string) interface{} {
+func (r *newResult) Get(field string) NullableIfc {
 	if value, ok := (*r).result[field]; ok { return value }
 	return nil
 }
@@ -43,8 +48,15 @@ func (r *newResult) Fields() []string {
 }
 
 func (r *newResult) ToJson() (*string, error) {
+	// TODO: See if there is a way to encode each Nullable value as it's native JSON data type instead of making them all strings
 	for field, value := range (*r).result {
-		fmt.Printf("Field['%s'] = '%s'\n", field, value)
+		var svalue string
+		if value.IsNil() {
+			svalue = "nil"
+		} else {
+			svalue = fmt.Sprintf("%s::%s", GetNullableTypeString(value.GetType()), value.GetString())
+		}
+		fmt.Printf("Field['%s'] = '%s'\n", field, svalue)
 	}
 	fmt.Println("")
 	jsonBytes, err := json.Marshal((*r).result)
@@ -56,12 +68,9 @@ func (r *newResult) ToJson() (*string, error) {
 // -------------------------------------------------------------------------------------------------
 
 type NewResultSetIfc interface {
-	// Public
 	Get(resultNum int) NewResultIfc
 	Len() int
 	IsEmpty() bool
-	// Private
-	add(result NewResultIfc)
 }
 
 type newResultSet struct {
@@ -138,17 +147,18 @@ func (nq *newQuery) Run(args ...interface{}) (NewResultSetIfc, error) {
 		// Scan the result into the column pointers...
 		if err = rows.Scan(columnPointers...); err != nil { return nil, err }
 
-		// Create our map, and retrieve the value for each column from the pointers slice,
-		// storing it in the map with the name of the column as the key.
-		m := make(map[string]string)
+		// Create our map, and retrieve the value for each column from the pointers,
+		// slice, storing it in the map with the name of the column as the key.
+		result := make(resultRow)
 		for i, colName := range cols {
 			val := columnPointers[i].(*interface{})
 			//m[colName] = *val
 			//m[colName] = fmt.Sprintf("%v", *val)
 			//m[colName] = fmt.Sprintf("%v", (*val).(string))
-			m[colName] = fmt.Sprintf("%v", string(*val))
+			//m[colName] = fmt.Sprintf("%v", string(*val))
+			result[colName] = NewNullable(*val)
 		}
-		results.add(newNewResult(m))
+		results.add(newNewResult(result))
 	}
 	return results, nil
 }
