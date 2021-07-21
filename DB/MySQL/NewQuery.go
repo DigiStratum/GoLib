@@ -1,23 +1,27 @@
 package mysql
 
+import (
+	"fmt"
+	"encoding/json"
+)
+
 type NewResultIfc interface {
 	Get(field string) interface{}
-}
-
-type writableResultIfc interface {
-	NewResultIfc
-	ToImmutable() NewResultIfc
+	Fields() []string
+	ToJson() (*string, error)
 }
 
 type newResult struct {
-	result		map[string]interface{}
+	//result		map[string]interface{}
+	result		map[string]string
 }
 
-func newNewResult(result map[string]interface{}) NewResultIfc {
-	result := newResult{
+//func newNewResult(result map[string]interface{}) NewResultIfc {
+func newNewResult(result map[string]string) NewResultIfc {
+	r := newResult{
 		result:		result,
 	}
-	return &result
+	return &r
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -29,36 +33,44 @@ func (r *newResult) Get(field string) interface{} {
 	return nil
 }
 
-// -------------------------------------------------------------------------------------------------
-// writableResultIfc Private Interface
-// -------------------------------------------------------------------------------------------------
+// Pluck the fields out of the result set and just return them so that caller can iterate with Get()
+func (r *newResult) Fields() []string {
+	fields := make([]string, 0)
+	for field, _ := range (*r).result {
+		fields = append(fields, field)
+	}
+	return fields
+}
 
-func (r *newResult) ToImmutable() NewResultIfc {
-	immutable, _ := r.(NewResultIfc)
-	return immutable
+func (r *newResult) ToJson() (*string, error) {
+	for field, value := range (*r).result {
+		fmt.Printf("Field['%s'] = '%s'\n", field, value)
+	}
+	fmt.Println("")
+	jsonBytes, err := json.Marshal((*r).result)
+	if nil != err { return nil, err }
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
 }
 
 // -------------------------------------------------------------------------------------------------
 
 type NewResultSetIfc interface {
+	// Public
 	Get(resultNum int) NewResultIfc
-	Num() int
+	Len() int
 	IsEmpty() bool
-}
-
-type writableResultIfc interface {
-	NewResultSetIfc
-	Add(result NewResultIfc)
-	ToImmutable() NewResultSetIfc
+	// Private
+	add(result NewResultIfc)
 }
 
 type newResultSet struct {
 	results		[]NewResultIfc
 }
 
-func newWritableResultSet() writableResultIfc {
+func newNewResultSet() NewResultSetIfc {
 	rs := newResultSet{
-		results:	make([]NewResultIfc, 0)
+		results:	make([]NewResultIfc, 0),
 	}
 	return &rs
 }
@@ -67,45 +79,41 @@ func newWritableResultSet() writableResultIfc {
 // NewResultSetIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 func (rs *newResultSet) Get(resultNum int) NewResultIfc {
-	if resultNum >= rs.Num() { return nil }
+	if resultNum >= rs.Len() { return nil }
 	return (*rs).results[resultNum]
 }
 
-func (rs *newResultSet) Num() int {
+func (rs *newResultSet) Len() int {
 	return len((*rs).results)
 }
 
 func (rs *newResultSet) IsEmpty() bool {
-	return rs.Num() == 0
+	return rs.Len() == 0
 }
 
 // -------------------------------------------------------------------------------------------------
-// writableResultIfc Private Interface
+// NewResultSetIfc Private Interface
 // -------------------------------------------------------------------------------------------------
 
-func (rs *newResultSet) Add(result NewResultIfc) {
-	(*rs).results = append((*rs.results), result)
+func (rs *newResultSet) add(result NewResultIfc) {
+	(*rs).results = append((*rs).results, result)
 }
 
-func (rs *newResultSet) ToImmutable() NewResultSetIfc {
-	immutable, _ := rs.(NewResultSetIfc)
-	return immutable
-}
+// -------------------------------------------------------------------------------------------------
 
 type NewQueryIfc interface {
-	Exec(args ...interface{}) error
-	GetResults() NewResultSetIfc
+	Run(args ...interface{}) (NewResultSetIfc, error)
 }
 
 type newQuery struct {
+	connection	ConnectionIfc
 	query		string
-	results		NewResultSetIfc
 }
 
-func NewNewQuery(query string) NewQueryIfc {
+func NewNewQuery(connection ConnectionIfc, query string) NewQueryIfc {
 	q := newQuery{
+		connection:	connection,
 		query:		query,
-		results:	newWritableResultSet(),
 	}
 	return &q
 }
@@ -114,33 +122,33 @@ func NewNewQuery(query string) NewQueryIfc {
 // NewQueryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (nq *newQuery) Exec(args ...interface{}) error {
-	rows, _ := db.Query((*nq).query)
+func (nq *newQuery) Run(args ...interface{}) (NewResultSetIfc, error) {
+	results := newNewResultSet()
+	// ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
+	rows, err := (*nq).connection.GetConnection().Query((*nq).query)
+	if nil != err { return nil, err }
 	cols, _ := rows.Columns()
 	for rows.Next() {
-		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
+		columns := make([]interface{}, len(cols))
 		for i, _ := range columns {
 			columnPointers[i] = &columns[i]
 		}
 
 		// Scan the result into the column pointers...
-		if err := rows.Scan(columnPointers...); err != nil {
-			return err
-		}
+		if err = rows.Scan(columnPointers...); err != nil { return nil, err }
 
 		// Create our map, and retrieve the value for each column from the pointers slice,
 		// storing it in the map with the name of the column as the key.
-		m := make(map[string]interface{})
+		m := make(map[string]string)
 		for i, colName := range cols {
 			val := columnPointers[i].(*interface{})
-			m[colName] = *val
+			//m[colName] = *val
+			//m[colName] = fmt.Sprintf("%v", *val)
+			//m[colName] = fmt.Sprintf("%v", (*val).(string))
+			m[colName] = fmt.Sprintf("%v", string(*val))
 		}
-		(*nq).results.add(newNewResult(m))
+		results.add(newNewResult(m))
 	}
-	return nil // no error
-}
-
-func (nq *newQuery) GetResults() NewResultSetIfc {
-	return (*nq).results
+	return results, nil
 }

@@ -26,9 +26,12 @@ import (
 	"reflect"
 	"database/sql"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 )
+
 
 // -------------------------------------------------------------------------------------------------
 // NullInt64 is an alias for sql.NullInt64 data type
@@ -127,6 +130,7 @@ func (nf *NullFloat64) UnmarshalJSON(b []byte) error {
 
 // -------------------------------------------------------------------------------------------------
 // NullString is an alias for sql.NullString data type
+// ref: https://golang.org/src/database/sql/sql.go?s=4943:5036#L177
 type NullString sql.NullString
 
 // Scan implements the Scanner interface for NullString
@@ -197,3 +201,226 @@ func (nt *NullTime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// -------------------------------------------------------------------------------------------------
+// Nullable - a compound structure that supports all of the nullable types with additional support methods
+
+type NullableIfc interface {
+	IsValid() bool
+	SetValue(value interface{})
+	IsInt64() bool
+        IsBool() bool
+        IsFloat64() bool
+        IsString() bool
+        IsTime() bool
+        GetInt64() *int64
+        GetBool() *bool
+        GetFloat64() *float64
+        GetString() *string
+}
+
+type Nullable struct {
+	valid	bool
+	ni	NullInt64
+	nb	NullBool
+	nf	NullFloat64
+	ns	NullString
+	nt	NullTime
+}
+
+// Make a new one of these!
+func NewNullable(value interface{}) NullableIfc {
+	n := Nullable{
+		valid:	false,
+		ni:	NullInt64{ Valid: false },
+		nb:	NullBool{ Valid: false },
+		nf:	NullFloat64{ Valid: false },
+		ns:	NullString{ Valid: false },
+		nt:	NullTime{ Valid: false },
+	}
+	n.SetValue(value)
+	return &n
+}
+
+func (n *Nullable) IsValid() bool { return (*n).valid }
+
+// Convert value to appropriate Nullable
+func (n *Nullable) SetValue(value interface{}) {
+	if v, ok := value.(int64); ok {
+		(*n).ni.Int64 = v
+		(*n).ni.Valid = (*n).valid = true
+	} else if v, ok := value.(bool); ok {
+		(*n).ni.Bool = v
+		(*n).ni.Valid = (*n).valid = true
+	} else if v, ok := value.(float64); ok {
+		(*n).ni.Float64 = v
+		(*n).ni.Valid = (*n).valid = true
+	} else if v, ok := value.(string); ok {
+		(*n).ni.String = v
+		(*n).ni.Valid = (*n).valid = true
+	} else if v, ok := value.(time.Time); ok {
+		(*n).ni.Time = v
+		(*n).ni.Valid = (*n).valid = true
+	}
+}
+
+func (n *Nullable) IsInt64() bool { (*n).ni.Valid }
+func (n *Nullable) IsBool() bool { (*n).nb.Valid }
+func (n *Nullable) IsFloat64() bool { (*n).nf.Valid }
+func (n *Nullable) IsString() bool { (*n).ns.Valid }
+func (n *Nullable) IsTime() bool { (*n).nt.Valid }
+
+// Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
+func (n *Nullable) GetInt64() *int64 {
+	if ! (*n).valid { return nil }
+
+	// NullInt64 passes through unmodified
+	if (*n).ni.Valid { return &(*n).ni.Int64 }
+
+	// NullBool converts to a int64
+	if (*n).nb.Valid {
+		v := 0
+		if (*n).nb.Bool { v = 1 }
+		return &v
+	}
+
+	// NullFloat64 converts to an int64
+	if (*n).nf.Valid { v := int64((*n).nf); return &v }
+
+	// NullString converts to an int64
+	if (*n).ns.Valid {
+		if vc, err := strconv.ParseInt((*n).ns.String, 0, 64); nil == err { return &vc }
+		return nil
+	}
+
+	// NullTime converts to an int64 (timestamp)
+	if (*n).nt.Valid { vc := (*n).nt.Time.Unix(); &vc }
+
+	return nil
+}
+
+// Return the value as a bool, complete with data conversions, or nil if nil or conversion problem
+func (n *Nullable) GetBool() *bool {
+	if ! (*n).valid { return nil }
+
+	// NullInt64 converts to a bool
+	if (*n).ni.Valid { return v := ((*n).ni.Int64 == 0); return &v }
+
+	// NullBool passes through unmodified
+	if (*n).nb.Valid { return &(*n).nb.Bool }
+
+	// NullFloat64 converts to a bool (true if we drop the decimal and the remaining int != 0)
+	if (*n).nf.Valid { return v := (int64((*n).nf) != 0); return &v }
+
+	// NullString converts to a bool (true if "true" or stringified int and != 0 )
+	if (*n).ns.Valid {
+		lcv := strings.ToLower((*n).ns.String)
+		if lcv == "true" { v := true; return &v }
+		if vc, err := strconv.ParseInt((*n).ns.String); nil != err { v := (vc != 0); return &v }
+		return nil
+	}
+
+	// NullTime converts to a bool (true if non-null)
+	if (*n).nt.Valid { return v := true; return &v }
+
+	return nil
+}
+
+// Return the value as a Float64, complete with data conversions, or nil if nil or conversion problem
+func (n *Nullable) GetFloat64() *float64 {
+	var v float64 = 0.0
+	if ! (*n).valid { return nil }
+
+	// NullInt64 converts to a Float64
+	if (*n).ni.Valid { vc := float64((*n).ni.Int64); return &vc }
+
+	// NullBool converts to a Float64
+	// we use 2.0|0.0 for true|false, respectively so that inverse conversion works.
+	// Precision rounding reduces 1.0 to < 1 (0.999) which when converted back would yield 0 decimal value (false)
+	if (*n).nb.Valid {
+		if (*n).nb.Bool { v = 2.0 }
+		return &v
+	}
+
+	// NullFloat64 passes through unmodified
+	if (*n).nf.Valid { return &(*n).nf.Float64 }
+
+	// NullString converts to a Float64
+	if (*n).ns.Valid {
+		if vc, err := strconv.ParseFloat((*n).ns.String, 64); nil != err { return &vc }
+		return nil
+	}
+
+	// NullTime conversion to a Float64 not supported
+	// (timestamp) would lose precision, so we will 0 it out, no value
+	if (*n).nt.Valid { return nil }
+
+	return nil
+}
+
+// Return the value as a *string, complete with data conversions, or nil if nil or conversion problem
+func (n *Nullable) GetString() *string {
+	if ! (*n).valid { return nil }
+
+	// NullInt64 converts to a string
+	if (*n).ni.Valid {
+		v := strconv.Itoa((*n).ni.Int64)
+		return &v
+	}
+
+	// NullBool converts to a string
+	if (*n).nb.Valid {
+		v := "false"
+		if (*n).nb.Bool { v = "true" }
+		return &v
+	}
+
+	// NullFloat64 converts to a string
+	if (*n).nf.Valid {
+		v := strconv.FormatFloat((*n).nf.Float64, 'E', -1, 64)
+		return &v
+	}
+
+	// NullString passes through unmodified
+	if (*n).ns.Valid { return &(*n).ns.String }
+
+	// NullTime converts to a string
+	// ref: https://stackoverflow.com/questions/33119748/convert-time-time-to-string
+	// ref: (so annoying...) https://pkg.go.dev/time#Time.Format
+	if (*n).nt.Valid {
+		v := (*n).nt.Time.Format("2006-01-02 15:04:05")
+		return &v
+	}
+
+	return nil
+}
+
+// Return the value as a *time.Time, complete with data conversions, or nil if nil or conversion problem
+func (n *Nullable) GetTime() *time.Time {
+	if ! (*n).valid { return nil }
+
+	// NullInt64 converts to a time.Time (unix timestamp)
+	if (*n).ni.Valid {
+		v := time.Unix((*n).ni.Int64, 0)
+		return &v
+	}
+
+	// NullBool does not convert...
+	if (*n).nb.Valid { return nil }
+
+	// NullFloat64 converts to an int64, then to a time
+	if (*n).nf.Valid {
+		v := time.Unix(int64((*n).nf.Float64), 0)
+		return &v
+	}
+
+	// NullString parses as a datetime (MySQL style)
+	if (*n).ns.Valid {
+		v := time.Parse("2006-01-02 15:04:05", (*n).ns.String)
+		return &v
+	}
+
+	// NullTime passes through unmodified
+	if (*n).nt.Valid { return &(*n).nt.Time	}
+
+	return nil
+}
