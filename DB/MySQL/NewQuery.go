@@ -68,9 +68,12 @@ func (r *newResult) ToJson() (*string, error) {
 // -------------------------------------------------------------------------------------------------
 
 type NewResultSetIfc interface {
+	// Public
 	Get(resultNum int) NewResultIfc
 	Len() int
 	IsEmpty() bool
+	// Private
+	add(result NewResultIfc)
 }
 
 type newResultSet struct {
