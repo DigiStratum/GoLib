@@ -15,8 +15,7 @@ import (
 
 func MakeDSN (user, pass, host, port, name string) string {
 	// ref: https://stackoverflow.com/questions/23550453/golang-how-to-open-a-remote-mysql-connection
-	// ref: https://stackoverflow.com/questions/29341590/how-to-parse-time-from-database/29343013#29343013
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, pass, host, port, name)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
         return dsn
 }
 

@@ -212,7 +212,6 @@ const (
 	NULLABLE_FLOAT64
 	NULLABLE_STRING
 	NULLABLE_TIME
-	NULLABLE_UNKNOWN
 )
 
 func  GetNullableTypeString(nullableType NullableType) string {
@@ -254,14 +253,14 @@ type Nullable struct {
 
 // Make a new one of these!
 func NewNullable(value interface{}) NullableIfc {
-fmt.Printf("NewNullable(%T)\n", value)
 	n := Nullable{
-		isNil:	true,
-		ni:	NullInt64{ Valid: false },
-		nb:	NullBool{ Valid: false },
-		nf:	NullFloat64{ Valid: false },
-		ns:	NullString{ Valid: false },
-		nt:	NullTime{ Valid: false },
+		isNil:		true,
+		nullableType:	NULLABLE_NIL,
+		ni:		NullInt64{ Valid: false },
+		nb:		NullBool{ Valid: false },
+		nf:		NullFloat64{ Valid: false },
+		ns:		NullString{ Valid: false },
+		nt:		NullTime{ Valid: false },
 	}
 	n.SetValue(value)
 	return &n
@@ -320,15 +319,7 @@ func (n *Nullable) setTime(value time.Time) {
 	(*n).isNil = false
 }
 
-func (n *Nullable) GetType() NullableType {
-	if n.IsNil() { return NULLABLE_NIL }
-	if n.IsInt64() { return NULLABLE_INT64 }
-	if n.IsBool() { return NULLABLE_BOOL }
-	if n.IsFloat64() { return NULLABLE_FLOAT64 }
-	if n.IsString() { return NULLABLE_STRING }
-	if n.IsTime() { return NULLABLE_TIME }
-	return NULLABLE_UNKNOWN
-}
+func (n *Nullable) GetType() NullableType { return (*n).nullableType }
 
 func (n *Nullable) IsInt64() bool { return (*n).nullableType == NULLABLE_NIL }
 func (n *Nullable) IsBool() bool { return (*n).nullableType == NULLABLE_BOOL }
@@ -496,26 +487,26 @@ func (n *Nullable) GetTime() *time.Time {
 	return nil
 }
 
-// FIXME: switch on the n.nullableType to un|marshal JSON for Nullable
-// (make calls to the Un|marshal() methods for the NUll*primitives)
-
 // MarshalJSON for Nullable
 func (n *Nullable) MarshalJSON() ([]byte, error) {
-	if ! nt.Valid { return []byte("null"), nil }
-	val := fmt.Sprintf("\"%s\"", nt.Time.Format(time.RFC3339))
-	return []byte(val), nil
+	switch (*n).nullableType {
+		case NULLABLE_INT64: return (*n).ni.MarshalJSON()
+		case NULLABLE_BOOL: return (*n).nb.MarshalJSON()
+		case NULLABLE_FLOAT64: return (*n).nf.MarshalJSON()
+		case NULLABLE_STRING: return (*n).ns.MarshalJSON()
+		case NULLABLE_TIME: return (*n).nt.MarshalJSON()
+		default: return []byte("null"), nil
+	}
 }
 
 // UnmarshalJSON for Nullable
 func (n *Nullable) UnmarshalJSON(b []byte) error {
-	s := string(b)
-	x, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		nt.Valid = false
-		return err
+	switch (*n).nullableType {
+		case NULLABLE_INT64: return (*n).ni.UnmarshalJSON(b)
+		case NULLABLE_BOOL: return (*n).nb.UnmarshalJSON(b)
+		case NULLABLE_FLOAT64: return (*n).nf.UnmarshalJSON(b)
+		case NULLABLE_STRING: return (*n).ns.UnmarshalJSON(b)
+		case NULLABLE_TIME: return (*n).nt.UnmarshalJSON(b)
+		default: return nil
 	}
-
-	nt.Time = x
-	nt.Valid = true
-	return nil
 }

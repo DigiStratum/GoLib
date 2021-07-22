@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"fmt"
 	"encoding/json"
 )
 
@@ -14,13 +13,9 @@ type NewResultIfc interface {
 type resultRow map[string]NullableIfc
 
 type newResult struct {
-	//result		map[string]interface{}
-	//result		map[string]string
 	result		resultRow
 }
 
-//func newNewResult(result map[string]interface{}) NewResultIfc {
-//func newNewResult(result map[string]string) NewResultIfc {
 func newNewResult(result resultRow) NewResultIfc {
 	r := newResult{
 		result:		result,
@@ -32,7 +27,6 @@ func newNewResult(result resultRow) NewResultIfc {
 // NewResultIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-//func (r *newResult) Get(field string) interface{} {
 func (r *newResult) Get(field string) NullableIfc {
 	if value, ok := (*r).result[field]; ok { return value }
 	return nil
@@ -49,17 +43,6 @@ func (r *newResult) Fields() []string {
 
 func (r *newResult) ToJson() (*string, error) {
 	// TODO: See if there is a way to encode each Nullable value as it's native JSON data type instead of making them all strings
-	for field, value := range (*r).result {
-		var svalue string = "nil"
-		if ! value.IsNil() {
-			sptr := value.GetString()
-			if nil != sptr {
-				svalue = fmt.Sprintf("%s::%s", GetNullableTypeString(value.GetType()), *sptr)
-			}
-		}
-		fmt.Printf("Field['%s'] = '%s'\n", field, svalue)
-	}
-	fmt.Println("")
 	jsonBytes, err := json.Marshal((*r).result)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
@@ -143,9 +126,7 @@ func (nq *newQuery) Run(args ...interface{}) (NewResultSetIfc, error) {
 	cols, _ := rows.Columns()
 	for rows.Next() {
 		columnPointers := make([]interface{}, len(cols))
-		//columns := make([]interface{}, len(cols))
 		columns := make([]string, len(cols))
-		//columnPointers := make([]*string, len(cols))
 		for i, _ := range columns {
 			columnPointers[i] = &columns[i]
 		}
@@ -157,15 +138,7 @@ func (nq *newQuery) Run(args ...interface{}) (NewResultSetIfc, error) {
 		// slice, storing it in the map with the name of the column as the key.
 		result := make(resultRow)
 		for i, colName := range cols {
-			//val := columnPointers[i].(*interface{})
-			//val := columnPointers[i].(*string)
 			val := columns[i]
-fmt.Printf("Run().Row(%T) -> '%s'\n", val, val)
-
-			//m[colName] = *val
-			//m[colName] = fmt.Sprintf("%v", *val)
-			//m[colName] = fmt.Sprintf("%v", (*val).(string))
-			//m[colName] = fmt.Sprintf("%v", string(*val))
 			result[colName] = NewNullable(val)
 		}
 		results.add(newNewResult(result))
