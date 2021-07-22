@@ -1,7 +1,15 @@
-package mysql
+package nullables
 
 /*
 Nullable primitive data types extended to work for JSON Marshaling
+
+Nullable is a compound structure that supports all of the nullable types with additional support methods. The idea
+is to be able to support loose typing of sorts from MySQL data. This sounds easier than it is with the way Scan()
+gets hints from interface{}, etc. But this is a better start in this direction than we had with our earlier prototype
+based model which began to reveal over-complex interface compliance as we begin to shift away from DTO type structures
+with all the database record fields exported and towards interface driven models that lend themselves well to a more
+generalized approach - this enables us to move more of our boilerplate implementation to this shared library level to
+reduce requirements at the application/service model layer for faster, easier develpoment of mysql-backed models.
 
 Even though we want to read records from the database into simple string, int, etc. the reality is
 that these values could be null in the database... and where that is the case, they must be
@@ -9,8 +17,9 @@ nullable in our Result object as well - otherwise we'll get an error from the qu
 when attempting to write a nul into a non-nullable field.
 
 ref: https://medium.com/aubergine-solutions/how-i-handled-null-possible-values-from-database-rows-in-golang-521fb0ee267
+ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 
-We define the following nullable data types:
+We define the following nullable data types as extensions of the same-named types from the sql package:
 
 * NullInt64
 * NullBool
@@ -18,191 +27,23 @@ We define the following nullable data types:
 * NullString
 * NullTime
 
+What these allow for is a query to return null for one of the values and store it into the nullable. If a value were, say,
+a straight string or int, Go does not allow this to be nil, so things get difficult.
+
 */
 
 import (
 	"fmt"
 	"time"
-	"reflect"
-	"database/sql"
-	"encoding/json"
 	"strconv"
 	"strings"
-
-	"github.com/go-sql-driver/mysql"
+	"errors"
 )
 
-
 // -------------------------------------------------------------------------------------------------
-// NullInt64 is an alias for sql.NullInt64 data type
-type NullInt64 sql.NullInt64
-
-// Scan implements the Scanner interface for NullInt64
-func (ni *NullInt64) Scan(value interface{}) error {
-	var i sql.NullInt64
-	if err := i.Scan(value); err != nil { return err }
-
-	// if nil the make Valid false
-	if reflect.TypeOf(value) == nil {
-		*ni = NullInt64{i.Int64, false}
-	} else {
-		*ni = NullInt64{i.Int64, true}
-	}
-	return nil
-}
-
-// MarshalJSON for NullInt64
-func (ni *NullInt64) MarshalJSON() ([]byte, error) {
-	if ! ni.Valid { return []byte("null"), nil }
-	return json.Marshal(ni.Int64)
-}
-
-// UnmarshalJSON for NullInt64
-func (ni *NullInt64) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &ni.Int64)
-	ni.Valid = (err == nil)
-	return err
-}
-
+// Nullable supporting types, constants, and functions
 // -------------------------------------------------------------------------------------------------
-// NullBool is an alias for sql.NullBool data type
-type NullBool sql.NullBool
 
-// Scan implements the Scanner interface for NullBool
-func (nb *NullBool) Scan(value interface{}) error {
-	var b sql.NullBool
-	if err := b.Scan(value); err != nil { return err }
-
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*nb = NullBool{b.Bool, false}
-	} else {
-		*nb = NullBool{b.Bool, true}
-	}
-
-	return nil
-}
-
-// MarshalJSON for NullBool
-func (nb *NullBool) MarshalJSON() ([]byte, error) {
-	if ! nb.Valid { return []byte("null"), nil }
-	return json.Marshal(nb.Bool)
-}
-
-// UnmarshalJSON for NullBool
-func (nb *NullBool) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &nb.Bool)
-	nb.Valid = (err == nil)
-	return err
-}
-
-// -------------------------------------------------------------------------------------------------
-// NullFloat64 is an alias for sql.NullFloat64 data type
-type NullFloat64 sql.NullFloat64
-
-// Scan implements the Scanner interface for NullFloat64
-func (nf *NullFloat64) Scan(value interface{}) error {
-	var f sql.NullFloat64
-	if err := f.Scan(value); err != nil { return err }
-
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*nf = NullFloat64{f.Float64, false}
-	} else {
-		*nf = NullFloat64{f.Float64, true}
-	}
-
-	return nil
-}
-
-// MarshalJSON for NullFloat64
-func (nf *NullFloat64) MarshalJSON() ([]byte, error) {
-	if ! nf.Valid { return []byte("null"), nil }
-	return json.Marshal(nf.Float64)
-}
-
-// UnmarshalJSON for NullFloat64
-func (nf *NullFloat64) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &nf.Float64)
-	nf.Valid = (err == nil)
-	return err
-}
-
-// -------------------------------------------------------------------------------------------------
-// NullString is an alias for sql.NullString data type
-// ref: https://golang.org/src/database/sql/sql.go?s=4943:5036#L177
-type NullString sql.NullString
-
-// Scan implements the Scanner interface for NullString
-func (ns *NullString) Scan(value interface{}) error {
-	var s sql.NullString
-	if err := s.Scan(value); err != nil { return err }
-
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*ns = NullString{s.String, false}
-	} else {
-		*ns = NullString{s.String, true}
-	}
-
-	return nil
-}
-
-// MarshalJSON for NullString
-func (ns *NullString) MarshalJSON() ([]byte, error) {
-	if ! ns.Valid { return []byte("null"), nil }
-	return json.Marshal(ns.String)
-}
-
-// UnmarshalJSON for NullString
-func (ns *NullString) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &ns.String)
-	ns.Valid = (err == nil)
-	return err
-}
-
-// -------------------------------------------------------------------------------------------------
-// NullTime is an alias for mysql.NullTime data type
-type NullTime mysql.NullTime
-
-// Scan implements the Scanner interface for NullTime
-func (nt *NullTime) Scan(value interface{}) error {
-	var t mysql.NullTime
-	if err := t.Scan(value); err != nil { return err }
-
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*nt = NullTime{t.Time, false}
-	} else {
-		*nt = NullTime{t.Time, true}
-	}
-
-	return nil
-}
-
-// MarshalJSON for NullTime
-func (nt *NullTime) MarshalJSON() ([]byte, error) {
-	if ! nt.Valid { return []byte("null"), nil }
-	val := fmt.Sprintf("\"%s\"", nt.Time.Format(time.RFC3339))
-	return []byte(val), nil
-}
-
-// UnmarshalJSON for NullTime
-func (nt *NullTime) UnmarshalJSON(b []byte) error {
-	s := string(b)
-	x, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		nt.Valid = false
-		return err
-	}
-
-	nt.Time = x
-	nt.Valid = true
-	return nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// Nullable - a compound structure that supports all of the nullable types with additional support methods
 type NullableType int8
 
 const (
@@ -239,9 +80,12 @@ type NullableIfc interface {
         GetBool() *bool
         GetFloat64() *float64
         GetString() *string
+        MarshalJSON() ([]byte, error)
+        UnmarshalJSON(b []byte) error
+        Scan(value interface{}) error
 }
 
-type Nullable struct {
+type nullable struct {
 	isNil		bool
 	nullableType	NullableType
 	ni		NullInt64
@@ -253,7 +97,7 @@ type Nullable struct {
 
 // Make a new one of these!
 func NewNullable(value interface{}) NullableIfc {
-	n := Nullable{
+	n := nullable{
 		isNil:		true,
 		nullableType:	NULLABLE_NIL,
 		ni:		NullInt64{ Valid: false },
@@ -266,10 +110,14 @@ func NewNullable(value interface{}) NullableIfc {
 	return &n
 }
 
-func (n *Nullable) IsNil() bool { return (*n).isNil }
+// -------------------------------------------------------------------------------------------------
+// NullableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (n *nullable) IsNil() bool { return (*n).isNil }
 
 // Convert value to appropriate Nullable; return true on success, else false
-func (n *Nullable) SetValue(value interface{}) bool {
+func (n *nullable) SetValue(value interface{}) bool {
 	if v, ok := value.(int64); ok {
 		n.setInt64(v)
 	} else if v, ok := value.(bool); ok {
@@ -284,51 +132,51 @@ func (n *Nullable) SetValue(value interface{}) bool {
 	return true
 }
 
-func (n *Nullable) setInt64(value int64) {
+func (n *nullable) setInt64(value int64) {
 	(*n).nullableType = NULLABLE_INT64
 	(*n).ni.Int64 = value
 	(*n).ni.Valid = true
 	(*n).isNil = false
 }
 
-func (n *Nullable) setBool(value bool) {
+func (n *nullable) setBool(value bool) {
 	(*n).nullableType = NULLABLE_BOOL
 	(*n).nb.Bool = value
 	(*n).nb.Valid = true
 	(*n).isNil = false
 }
 
-func (n *Nullable) setFloat64(value float64) {
+func (n *nullable) setFloat64(value float64) {
 	(*n).nullableType = NULLABLE_FLOAT64
 	(*n).nf.Float64 = value
 	(*n).nf.Valid = true
 	(*n).isNil = false
 }
 
-func (n *Nullable) setString(value string) {
+func (n *nullable) setString(value string) {
 	(*n).nullableType = NULLABLE_STRING
 	(*n).ns.String = value
 	(*n).ns.Valid = true
 	(*n).isNil = false
 }
 
-func (n *Nullable) setTime(value time.Time) {
+func (n *nullable) setTime(value time.Time) {
 	(*n).nullableType = NULLABLE_TIME
 	(*n).nt.Time = value
 	(*n).nt.Valid = true
 	(*n).isNil = false
 }
 
-func (n *Nullable) GetType() NullableType { return (*n).nullableType }
+func (n *nullable) GetType() NullableType { return (*n).nullableType }
 
-func (n *Nullable) IsInt64() bool { return (*n).nullableType == NULLABLE_NIL }
-func (n *Nullable) IsBool() bool { return (*n).nullableType == NULLABLE_BOOL }
-func (n *Nullable) IsFloat64() bool { return (*n).nullableType == NULLABLE_FLOAT64 }
-func (n *Nullable) IsString() bool { return (*n).nullableType == NULLABLE_STRING }
-func (n *Nullable) IsTime() bool { return (*n).nullableType == NULLABLE_TIME }
+func (n *nullable) IsInt64() bool { return (*n).nullableType == NULLABLE_NIL }
+func (n *nullable) IsBool() bool { return (*n).nullableType == NULLABLE_BOOL }
+func (n *nullable) IsFloat64() bool { return (*n).nullableType == NULLABLE_FLOAT64 }
+func (n *nullable) IsString() bool { return (*n).nullableType == NULLABLE_STRING }
+func (n *nullable) IsTime() bool { return (*n).nullableType == NULLABLE_TIME }
 
 // Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
-func (n *Nullable) GetInt64() *int64 {
+func (n *nullable) GetInt64() *int64 {
 	if n.IsNil() { return nil }
 
 	// NullInt64 passes through unmodified
@@ -357,7 +205,7 @@ func (n *Nullable) GetInt64() *int64 {
 }
 
 // Return the value as a bool, complete with data conversions, or nil if nil or conversion problem
-func (n *Nullable) GetBool() *bool {
+func (n *nullable) GetBool() *bool {
 	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a bool
@@ -387,7 +235,7 @@ func (n *Nullable) GetBool() *bool {
 }
 
 // Return the value as a Float64, complete with data conversions, or nil if nil or conversion problem
-func (n *Nullable) GetFloat64() *float64 {
+func (n *nullable) GetFloat64() *float64 {
 	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a Float64
@@ -419,7 +267,7 @@ func (n *Nullable) GetFloat64() *float64 {
 }
 
 // Return the value as a *string, complete with data conversions, or nil if nil or conversion problem
-func (n *Nullable) GetString() *string {
+func (n *nullable) GetString() *string {
 	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a string
@@ -456,7 +304,7 @@ func (n *Nullable) GetString() *string {
 }
 
 // Return the value as a *time.Time, complete with data conversions, or nil if nil or conversion problem
-func (n *Nullable) GetTime() *time.Time {
+func (n *nullable) GetTime() *time.Time {
 	if n.IsNil() { return nil }
 
 	// NullInt64 converts to a time.Time (unix timestamp)
@@ -487,8 +335,8 @@ func (n *Nullable) GetTime() *time.Time {
 	return nil
 }
 
-// MarshalJSON for Nullable
-func (n *Nullable) MarshalJSON() ([]byte, error) {
+// MarshalJSON for Nullable - we just sub it out to the underlying Nullable type
+func (n *nullable) MarshalJSON() ([]byte, error) {
 	switch (*n).nullableType {
 		case NULLABLE_INT64: return (*n).ni.MarshalJSON()
 		case NULLABLE_BOOL: return (*n).nb.MarshalJSON()
@@ -499,8 +347,8 @@ func (n *Nullable) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// UnmarshalJSON for Nullable
-func (n *Nullable) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON for Nullable - we just sub it out to the underlying Nullable type
+func (n *nullable) UnmarshalJSON(b []byte) error {
 	switch (*n).nullableType {
 		case NULLABLE_INT64: return (*n).ni.UnmarshalJSON(b)
 		case NULLABLE_BOOL: return (*n).nb.UnmarshalJSON(b)
@@ -508,5 +356,17 @@ func (n *Nullable) UnmarshalJSON(b []byte) error {
 		case NULLABLE_STRING: return (*n).ns.UnmarshalJSON(b)
 		case NULLABLE_TIME: return (*n).nt.UnmarshalJSON(b)
 		default: return nil
+	}
+}
+
+// Scan for Nullable - we just sub it out to the underlying Nullable type
+func (n *nullable) Scan(value interface{}) error {
+	switch (*n).nullableType {
+		case NULLABLE_INT64: return (*n).ni.Scan(value)
+		case NULLABLE_BOOL: return (*n).nb.Scan(value)
+		case NULLABLE_FLOAT64: return (*n).nf.Scan(value)
+		case NULLABLE_STRING: return (*n).ns.Scan(value)
+		case NULLABLE_TIME: return (*n).nt.Scan(value)
+		default: return errors.New("Unsupported Nullable Type (oversight in implementation!)")
 	}
 }

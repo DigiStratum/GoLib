@@ -2,15 +2,17 @@ package mysql
 
 import (
 	"encoding/json"
+	
+	nullables "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
 )
 
 type NewResultIfc interface {
-	Get(field string) NullableIfc
+	Get(field string) nullables.NullableIfc
 	Fields() []string
 	ToJson() (*string, error)
 }
 
-type resultRow map[string]NullableIfc
+type resultRow map[string]nullables.NullableIfc
 
 type newResult struct {
 	result		resultRow
@@ -27,7 +29,7 @@ func newNewResult(result resultRow) NewResultIfc {
 // NewResultIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *newResult) Get(field string) NullableIfc {
+func (r *newResult) Get(field string) nullables.NullableIfc {
 	if value, ok := (*r).result[field]; ok { return value }
 	return nil
 }
@@ -139,7 +141,7 @@ func (nq *newQuery) Run(args ...interface{}) (NewResultSetIfc, error) {
 		result := make(resultRow)
 		for i, colName := range cols {
 			val := columns[i]
-			result[colName] = NewNullable(val)
+			result[colName] = nullables.NewNullable(val)
 		}
 		results.add(newNewResult(result))
 	}
