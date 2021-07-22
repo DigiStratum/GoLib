@@ -254,6 +254,7 @@ type Nullable struct {
 
 // Make a new one of these!
 func NewNullable(value interface{}) NullableIfc {
+fmt.Printf("NewNullable(%T)\n", value)
 	n := Nullable{
 		isNil:	true,
 		ni:	NullInt64{ Valid: false },
@@ -456,7 +457,7 @@ func (n *Nullable) GetString() *string {
 	// ref: https://stackoverflow.com/questions/33119748/convert-time-time-to-string
 	// ref: (so annoying...) https://pkg.go.dev/time#Time.Format
 	if (*n).nt.Valid {
-		v := (*n).nt.Time.Format("2006-01-02 15:04:05")
+		v := (*n).nt.Time.Format("2006-01-02T15:04:05Z")
 		return &v
 	}
 
@@ -484,7 +485,7 @@ func (n *Nullable) GetTime() *time.Time {
 
 	// NullString parses as a datetime (MySQL style)
 	if (*n).ns.Valid {
-		v, err := time.Parse("2006-01-02 15:04:05", (*n).ns.String)
+		v, err := time.Parse("2006-01-02T15:04:05Z", (*n).ns.String)
 		if nil != err { return nil }
 		return &v
 	}
@@ -492,5 +493,29 @@ func (n *Nullable) GetTime() *time.Time {
 	// NullTime passes through unmodified
 	if (*n).nt.Valid { return &(*n).nt.Time	}
 
+	return nil
+}
+
+// FIXME: switch on the n.nullableType to un|marshal JSON for Nullable
+// (make calls to the Un|marshal() methods for the NUll*primitives)
+
+// MarshalJSON for Nullable
+func (n *Nullable) MarshalJSON() ([]byte, error) {
+	if ! nt.Valid { return []byte("null"), nil }
+	val := fmt.Sprintf("\"%s\"", nt.Time.Format(time.RFC3339))
+	return []byte(val), nil
+}
+
+// UnmarshalJSON for Nullable
+func (n *Nullable) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	x, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		nt.Valid = false
+		return err
+	}
+
+	nt.Time = x
+	nt.Valid = true
 	return nil
 }
