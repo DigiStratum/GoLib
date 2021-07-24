@@ -4,6 +4,10 @@ package mysql
 A single result row from a MySQL query result set
 
 TODO: See if there is a way to encode each Nullable value as it's native JSON data type instead of making them all strings
+
+Interesting:
+ * http://go-database-sql.org/varcols.html
+ * http://jmoiron.github.io/sqlx/
 */
 
 import (
