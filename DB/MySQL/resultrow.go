@@ -11,6 +11,8 @@ Interesting:
 */
 
 import (
+	"encoding/json"
+
 	nullables "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
 )
 
@@ -18,6 +20,7 @@ type ResultRowIfc interface {
 	Get(field string) nullables.NullableIfc
 	Set(field string, value nullables.NullableIfc)
 	Fields() []string
+	ToJson() (*string, error)
 }
 
 type resultRow map[string]nullables.NullableIfc
@@ -46,4 +49,11 @@ func (rr *resultRow) Fields() []string {
 	i := 0
 	for field, _ := range (*rr) { fields[i] = field; i++ }
 	return fields
+}
+
+func (rr *resultRow) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(rr)
+	if nil != err { return nil, err }
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
 }

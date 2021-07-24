@@ -30,6 +30,8 @@ type query struct {
 	statement	*db.Stmt
 }
 
+// Make a new one of these!
+// Returns nil if there is any problem setting up the query...!
 func NewQuery(connection ConnectionIfc, qry string) QueryIfc {
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
@@ -38,7 +40,7 @@ func NewQuery(connection ConnectionIfc, qry string) QueryIfc {
 	var err error
 	if ! strings.Contains(qry, "???") {
 		statement, err = connection.GetConnection().Prepare(qry)
-		if nil != err { return nil } // TODO: log an error!
+		if nil != err { return nil } // TODO: log an error! (?)
 	}
 
 	q := query{
