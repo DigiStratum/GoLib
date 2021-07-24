@@ -9,7 +9,7 @@ See additional DSN parameters here: https://github.com/go-sql-driver/mysql#inter
 */
 
 import (
-	"database/sql"
+	db "database/sql"
 )
 
 // Connection public interface
@@ -18,12 +18,12 @@ type ConnectionIfc interface {
 	Connect() error
 	Disconnect()
 	Reconnect()
-	GetConnection() *sql.DB
+	GetConnection() *db.DB
 }
 
 type connection struct {
 	dsn	string          // Full Data Source Name for this connection
-	conn	*sql.DB         // Read-Write Connection
+	conn	*db.DB         // Read-Write Connection
 }
 
 // Make a new one of these and connect!
@@ -45,7 +45,7 @@ func (c *connection) Connect() error {
 	// If we're already connected, nothing to do
 	if c.IsConnected() { return nil }
 	var err error
-	(*c).conn, err = sql.Open("mysql", (*c).dsn)
+	(*c).conn, err = db.Open("mysql", (*c).dsn)
 	return err
 }
 
@@ -63,7 +63,7 @@ func (c *connection) Reconnect() {
 }
 
 // Get the underlying connection for the caller to put it to work!
-func (c *connection) GetConnection() *sql.DB {
+func (c *connection) GetConnection() *db.DB {
 	return (*c).conn
 }
 

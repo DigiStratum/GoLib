@@ -16,7 +16,7 @@ import (
 
 type ResultRowIfc interface {
 	Get(field string) nullables.NullableIfc
-	Set(field string, nullables.NullableIfc)
+	Set(field string, value nullables.NullableIfc)
 	Fields() []string
 }
 
@@ -44,6 +44,6 @@ func (rr *resultRow) Set(field string, value nullables.NullableIfc) {
 func (rr *resultRow) Fields() []string {
 	fields := make([]string, len(*rr))
 	i := 0
-	for field, _ := range (*rr) { fields[i++] = field }
+	for field, _ := range (*rr) { fields[i] = field; i++ }
 	return fields
 }

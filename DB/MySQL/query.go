@@ -5,9 +5,7 @@ package mysql
 */
 
 import (
-	"encoding/json"
-
-	sql "github.com/go-sql-driver/mysql"
+	db "database/sql"
 
 	nullables "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
 )
@@ -18,7 +16,7 @@ type QueryIfc interface {
 	RunReturnValue(receiver interface{}, args ...interface{}) error
 	RunReturnInt(args ...interface{}) (*int, error)
 	RunReturnString(args ...interface{}) (*string, error)
-	RunReturnOne(args ...interface{}) (ResultIfc, error)
+	RunReturnOne(args ...interface{}) (ResultRowIfc, error)
 	RunReturnAll(args ...interface{}) (ResultSetIfc, error)
 	RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
 	// Private interface
@@ -28,14 +26,14 @@ type QueryIfc interface {
 type query struct {
 	connection	ConnectionIfc
 	query		string
-	statement	*sql.Stmt
+	statement	*db.Stmt
 }
 
 func NewQuery(connection ConnectionIfc, query string) QueryIfc {
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
 	// https://pkg.go.dev/database/sql#Stmt
-	var statement *sql.Stmt
+	var statement *db.Stmt
 	if ! string.Contains(query, "???") {
 		statement, err := connection.Prepare(query)
 		if nil != err { return nil } // TODO: log an error!
@@ -60,7 +58,7 @@ func (q *query) Run(args ...interface{}) error {
 	// TODO: Capture Exec() result (swallowed into _) to get result.RowsAffected(), etc
 	if nil != (*q).statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		_, err = (*q).statement..Exec(args...)
+		_, err = (*q).statement.Exec(args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
@@ -74,7 +72,7 @@ func (q *query) Run(args ...interface{}) error {
 // This variant returns only a single value (any type pointed at by receiver) as the only column
 // of the only row of the result
 func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error {
-	var row *sql.Row
+	var row *db.Row
 	var err error
 
 	if nil != (*q).statement {
@@ -90,7 +88,7 @@ func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error 
 	if nil == row { return nil }
 
 	err = row.Scan(receiver)
-	if sql.ErrNoRows == err { return nil }
+	if db.ErrNoRows == err { return nil }
 	return err
 }
 
@@ -131,7 +129,7 @@ func (q *query) RunReturnAll(args ...interface{}) (ResultSetIfc, error) {
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error) {
-	var rows *sql.Rows
+	var rows *db.Rows
 	var err error
 
 	if nil != (*q).statement {
@@ -145,14 +143,15 @@ func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error
 	}
 
 	// If the query returned no results, handle it specifically...
-	if sql.ErrNoRows == err { return nil, nil }
+	if db.ErrNoRows == err { return nil, nil }
 	if nil != err { return nil, err }
 	if nil != rows { defer rows.Close() }
 
 	results := NewResultSet()
 	cols, _ := rows.Columns()
 	num := 0
-	for ((max == 0) || (num++ < max)) && rows.Next() {}
+	for ((max == 0) || (max < num)) && rows.Next() {
+		num++
 		columnValues, columnPointers := makeScanReceiver(len(cols))
 		if err := rows.Scan(*columnPointers...); err != nil { return nil, err }
 		result := convertScanReceiverToResultRow(&cols, columnValues)
@@ -196,6 +195,6 @@ func makeScanReceiver(size int) (*[]string, *[]interface{}) {
 // Note: names and values array len() must match. If they don't, then the Universe is off balance
 func convertScanReceiverToResultRow(names, values *[]string) ResultRowIfc {
 	result := NewResultRow()
-	for i, name := range names { result.Set(name, nullables.NewNullable((*values)[i]) }
+	for i, name := range names { result.Set(name, nullables.NewNullable((*values)[i])) }
 	return result
 }
