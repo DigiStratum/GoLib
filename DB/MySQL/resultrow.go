@@ -23,7 +23,7 @@ type ResultRowIfc interface {
 type resultRow map[string]nullables.NullableIfc
 
 func NewResultRow() ResultRowIfc {
-	rr := make(map[string]nullables.NullableIfc)
+	rr := make(resultRow)
 	return &rr
 }
 

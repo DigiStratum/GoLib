@@ -5,6 +5,7 @@ package mysql
 */
 
 import (
+	"strings"
 	db "database/sql"
 
 	nullables "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
@@ -29,19 +30,20 @@ type query struct {
 	statement	*db.Stmt
 }
 
-func NewQuery(connection ConnectionIfc, query string) QueryIfc {
+func NewQuery(connection ConnectionIfc, qry string) QueryIfc {
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
 	// https://pkg.go.dev/database/sql#Stmt
 	var statement *db.Stmt
-	if ! string.Contains(query, "???") {
-		statement, err := connection.Prepare(query)
+	var err error
+	if ! strings.Contains(qry, "???") {
+		statement, err = connection.GetConnection().Prepare(qry)
 		if nil != err { return nil } // TODO: log an error!
 	}
 
-	q := newQuery{
+	q := query{
 		connection:	connection,
-		query:		query,
+		query:		qry,
 		statement:	statement,
 	}
 	return &q
@@ -195,6 +197,6 @@ func makeScanReceiver(size int) (*[]string, *[]interface{}) {
 // Note: names and values array len() must match. If they don't, then the Universe is off balance
 func convertScanReceiverToResultRow(names, values *[]string) ResultRowIfc {
 	result := NewResultRow()
-	for i, name := range names { result.Set(name, nullables.NewNullable((*values)[i])) }
+	for i, name := range *names { result.Set(name, nullables.NewNullable((*values)[i])) }
 	return result
 }
