@@ -14,6 +14,7 @@ import (
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 )
 
 type KeyValuePair struct {
@@ -28,6 +29,7 @@ type HashMapIfc interface {
 	Merge(inbound *HashMap)
 	Set(key string, value string)
 	Get(key string) string
+	GetInt64(key string) int64
 	Has(key string) bool
 	HasAll(keys *[]string) bool
 	GetCopy() *HashMap
@@ -37,12 +39,17 @@ type HashMapIfc interface {
 	DumpString() string
 }
 
+// If we don't export this, then we can't embed it into Config
 type HashMap	map[string]string
 
 // Make a new one of these!
 func NewHashMap() *HashMap {
 	return &HashMap{}
 }
+
+// -------------------------------------------------------------------------------------------------
+// HashMapIfc Public Interface
+// -------------------------------------------------------------------------------------------------
 
 // Check whether this HashMap is empty (has no properties)
 func (hash *HashMap) IsEmpty() bool {
@@ -70,6 +77,11 @@ func (hash *HashMap) Get(key string) string {
 	val, ok := (*hash)[key]
 	if ok { str = val }
 	return str
+}
+
+func (hash *HashMap) GetInt64(key string) int64 {
+	if vc, err := strconv.ParseInt((hash.Get(key), 0, 64); nil == err { return vc }
+	return 0
 }
 
 // Check whether we have a configuration element by key name
