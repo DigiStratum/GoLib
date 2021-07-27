@@ -1,4 +1,4 @@
-package mysql
+package connection
 
 /*
 This Database Connection Pool establishes one or more persistent connections to a MySQL database given a configured DSN.
@@ -14,6 +14,14 @@ reopen it, or just cycle it back into the pool of available connections. This ca
 including overall activity, maximum age of established connections, any sort of flag indicating that the connection is
 "dirty" (e.g some change has been made to transaction isolation mode, etc.) We could also take this opportunity to audit
 all of the open connections to see if any others have been sitting open and idle too long and need similar treatment.
+
+TODO: Consider whether this can be abstracted within reason to support any kind of database. Perhaps all it needs is
+one additional layer of abstraction around the database-specific functions, but this can create an annoying requirement
+on the consumer side to receive the abstracted interface and have to cast it to a DB-specific interface. We could also
+use some sort of generic DB function method that accepts a "command" as a string or constant wherein the generic function
+switches and dispatches based on this, however you then have this additional overhead and still would be left with
+potentially returning generic/abstract structures that the consumer would have to deal with (unless the result of such
+is always a ResultSetIfc (nil or 1+ rows) each with 1+ columns, and an error (nil if none)..?)
 */
 
 import (
@@ -22,26 +30,19 @@ import (
 	lib "github.com/DigiStratum/GoLib"
 )
 
+// A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
-}
-
-type pooledConnectionIfc
-
-type pooledConnection struct {
-	connection	ConnectionIfc	// Our underlying database connection
-	establishedAt	int64		// Time that this connection was established to the DB
-	lastActiveAt	int64		// Last time this connection saw activity from the consumer
-	lastLeasedAt	int64		// Last time this connection was leased out
+	GetConnection() LeasedConnectionIfc
 }
 
 type connectionPool struct {
-	configured	bool
-	dsn		string
-	minConnections	int64
-	maxConnections	int64
-	maxIdle		int64
-	connections	[]pooledConnectionIfc
-	leases		map[string]pooledConnectionIfc
+	configured		bool
+	dsn			string
+	minConnections		int64
+	maxConnections		int64
+	maxIdle			int64
+	connections		[]pooledConnectionIfc
+	leasedConnections	leasedConnectionsIfc
 }
 
 const DEFAULT_MIN_CONNECTIONS = 1
@@ -57,7 +58,7 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]pooledConnectionIfc, 0, DEFAULT_MAX_CONNECTIONS),
-		leases:			make(map[string]pooledConnectionIfc),
+		leasedConnections:	newLeasedConnectionsIfc(),
 	}
 	return &cp
 }
@@ -79,6 +80,7 @@ func (cp *connectionPool) Configure(config ConfigIfc) error {
 				(*cp).minConnections = math.Max(1, config.GetInt64("min_connections"))
 				// If Min pushed above Max, then push Max up
 				(*cp).maxConnections = math.Max((*cp).minConnections, (*cp).maxConnections)
+
 			case "max_connections":
 				// Set the new Max (cannot be < 1)
 				(*cp).maxConnections = math.Max(1, config.GetInt64("max_connections"))
@@ -93,14 +95,60 @@ func (cp *connectionPool) Configure(config ConfigIfc) error {
 					copy(nc, (*cp).connections)
 					(*cp).connections = nc
 				}
+
 			case "max_idle":
 				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
 				(*cp).maxIdle = math.Max(1, config.GetInt64("max_idle"))
+
 			default:
-				return errors.New(fmt.Sprintf("Unknown configuration key", kvp.Key))
+				return errors.New(fmt.Sprintf("Unknown configuration key: '%s'", kvp.Key))
 		}
 	}
 	(*cp).configured = true
 
 	return nil
 }
+
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+// Request a connection from the pool using multiple approaches
+func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
+	var connection pooledConnectionIfc
+	// 1) An already established connection that is available (not leased out to another consumer)
+	connection = cp.findAvailableConnection()
+
+	// 2) A newly created connection if the total number of connections is below the max
+	if nil == connection { connection = cp.createNewConnection() }
+
+	// 3) An already established connection that is leased out, but past the lease time for idle connections
+	if nil == connection { connection = cp.findExpiredConnection() }
+
+	if nil == connection { return nil }
+
+	// Establish a lease for this connection which is ours now
+	return (*cp).leasedConnections.GetLeaseForConnection(connection)
+}
+
+func (cp *connectionPool) findAvailableConnection() pooledConnectionIfc {
+	for connection := range (*cp).connections {
+		if ! connection.IsLeased() { return connection }
+	}
+	return nil
+}
+
+func (cp *connectionPool) createNewConnection() pooledConnectionIfc {
+	// if we are at capacity, then we can't create a new connection
+	if len((*cp).connections) >= cap((*cp).connections) { return nil }
+	// TODO: Implement!
+	return nil
+}
+
+func (cp *connectionPool) findExpiredConnection() pooledConnectionIfc {
+	// TODO: Implement!
+	return nil
+}
+
+
+

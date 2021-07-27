@@ -8,27 +8,29 @@ TODO: A persistent connection pool is going to be needed in a multithreaded, sta
 
 import (
 	"errors"
+
+	conn "github.com/DigiStratum/GoLib/DB/MySQL/connection"
 )
 
 type ManagerIfc interface {
 	// Public interface
 	Connect(dsn string) (DBKeyIfc, error)
 	IsConnected(dbKey DBKeyIfc) bool
-	NewQuery(dbKey DBKeyIfc, query string) (QueryIfc, error)
+	NewQuery(dbKey DBKeyIfc, qry string) (QueryIfc, error)
 	Disconnect(dbKey DBKeyIfc)
 	// Private interface
-	getConnection(dbKey DBKeyIfc) ConnectionIfc
+	getConnection(dbKey DBKeyIfc) conn.ConnectionIfc
 }
 
 // Set of connections, keyed on DSN
 type manager struct {
-	connections	map[string]ConnectionIfc
+	connections	map[string]conn.ConnectionIfc
 }
 
 // Make a new one of these!
 func NewManager() ManagerIfc {
 	return &manager{
-		connections: make(map[string]ConnectionIfc),
+		connections: make(map[string]conn.ConnectionIfc),
 	}
 }
 
@@ -44,7 +46,7 @@ func (mgr *manager) Connect(dsn string) (DBKeyIfc, error) {
 	dbKey := NewDBKeyFromDSN(dsn)
 	if _, ok := mgr.connections[dbKey.GetKey()]; ! ok {
 		// Not connected yet - let's do this thing!
-		conn, err := NewConnection(dsn)
+		conn, err := conn.NewConnection(dsn)
 		if err != nil { return nil, err }
 
 		// Make a new connection record
@@ -61,10 +63,10 @@ func (mgr *manager) IsConnected(dbKey DBKeyIfc) bool {
 }
 
 // Make a new Query attached to this manager session
-func (mgr *manager) NewQuery(dbKey DBKeyIfc, query string) (QueryIfc, error) {
+func (mgr *manager) NewQuery(dbKey DBKeyIfc, qry string) (QueryIfc, error) {
 	conn := mgr.getConnection(dbKey)
         if nil == conn { return nil, errors.New("Error getting connection") }
-	return NewQuery(conn, query), nil
+	return NewQuery(conn, qry), nil
 }
 
 // Close the connection with this key, if it exists, and forget about it
@@ -82,7 +84,7 @@ func (mgr *manager) Disconnect(dbKey DBKeyIfc) {
 // -------------------------------------------------------------------------------------------------
 
 // Get the connection for the specified key
-func (mgr *manager) getConnection(dbKey DBKeyIfc) ConnectionIfc {
+func (mgr *manager) getConnection(dbKey DBKeyIfc) conn.ConnectionIfc {
 	if conn, ok := mgr.connections[dbKey.GetKey()]; ok {
 		return conn
 	}
