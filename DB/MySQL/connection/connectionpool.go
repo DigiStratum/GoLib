@@ -22,6 +22,10 @@ use some sort of generic DB function method that accepts a "command" as a string
 switches and dispatches based on this, however you then have this additional overhead and still would be left with
 potentially returning generic/abstract structures that the consumer would have to deal with (unless the result of such
 is always a ResultSetIfc (nil or 1+ rows) each with 1+ columns, and an error (nil if none)..?)
+
+TODO:
+ * Close/Disconnect
+
 */
 
 import (
