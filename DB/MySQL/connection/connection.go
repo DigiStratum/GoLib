@@ -2,9 +2,10 @@ package connection
 
 /*
 
-DB Connection
+DB Connection - All the low-level nitty-gritty interacting with the sql driver
 
-See additional DSN parameters here: https://github.com/go-sql-driver/mysql#interpolateparams
+ref: https://github.com/go-sql-driver/mysql#interpolateparams
+ref: https://pkg.go.dev/database/sql#Tx.Stmt
 
 */
 
@@ -12,18 +13,31 @@ import (
 	db "database/sql"
 )
 
-// Connection public interface
 type ConnectionIfc interface {
+	// Connections
 	IsConnected() bool
 	Connect() error
 	Disconnect()
 	Reconnect()
-	GetConnection() *db.DB
+
+	// Transactions
+	InTransaction() bool
+	Rollback() error
+	Begin() error
+	Commit() error
+
+	// Operations
+	Prepare(query string) (*db.Stmt, error)
+	Exec(query string, args ...interface{}) (db.Result, error)
+	Query(query string, args ...interface{}) (*db.Rows, error)
+	QueryRow(query string, args ...interface{}) *db.Row
+	Stmt(stmt *db.Stmt) *db.Stmt
 }
 
 type connection struct {
-	dsn	string          // Full Data Source Name for this connection
-	conn	*db.DB         // Read-Write Connection
+	dsn		string		// Full Data Source Name for this connection
+	conn		*db.DB		// Read-Write Connection
+	transaction	*db.Tx		// Our transaction, if we're in the middle of one
 }
 
 // Make a new one of these and connect!
@@ -33,6 +47,14 @@ func NewConnection(dsn string) (ConnectionIfc, error) {
 	}
 	return &connection, connection.Connect()
 }
+
+// -------------------------------------------------------------------------------------------------
+// ConnectionIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+// ------------
+// Connections
+// ------------
 
 // Check whether this connection is established
 func (c *connection) IsConnected() bool {
@@ -67,3 +89,66 @@ func (c *connection) GetConnection() *db.DB {
 	return (*c).conn
 }
 
+// ------------
+// Transactions
+// ------------
+
+func (c *connection) InTransaction() bool {
+	return nil != (*c).transaction
+}
+
+func (c *connection) Rollback() error {
+	// Not in the middle of a Transaction? no-op, no-error!
+	if ! c.InTransaction() { return nil }
+	err := (*c).transaction.Rollback()
+	(*c).transaction = nil
+	return err
+}
+
+func (c *connection) Begin() error {
+	// If we're already in a Transaction...
+	if c.InTransaction() {
+		// Assume that the app has lost track of the Transaction, maybe lost the connection lease: reset!
+		err := c.Rollback()
+		if nil != err { return err }
+	}
+
+	(*c).transaction, err := (*c).conn.Begin()
+	return err
+}
+
+func (c *connection) Commit() error {
+	if ! c.InTransaction() { return errors.New("No active transaction!") }
+	err := (*c).transaction.Commit()
+	(*c).transaction = nil
+	return err
+}
+
+// ------------
+// Operations
+// ------------
+
+func (c *connection) Prepare(query string) (*db.Stmt, error) {
+	if c.InTransaction() { return (*c).transaction.Prepare(query) }
+	return (*c).conn.Prepare(query)
+}
+
+func (c *connection) Exec(query string, args ...interface{}) (db.Result, error) {
+	if c.InTransaction() { return (*c).transaction.Exec(query, args...) }
+	return (*c).conn.Exec(query, args...)
+}
+
+func (c *connection) Query(query string, args ...interface{}) (*db.Rows, error) {
+	if c.InTransaction() { return (*c).transaction.Query(query, args...) }
+	return (*c).conn.Query(query, args...)
+}
+
+func (c *connection) QueryRow(query string, args ...interface{}) *db.Row {
+	if c.InTransaction() { return (*c).transaction.QueryRow(query, args...) }
+	return (*c).conn.QueryRow(query, args...)
+}
+
+func (c *connection) Stmt(stmt *db.Stmt) *db.Stmt {
+	if ! c.InTransaction() { return nil }
+	return (*c).transaction.Stmt(stmt)
+}

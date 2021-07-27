@@ -1,7 +1,12 @@
 package mysql
 
 /*
-// TODO: add other RunReturn{type}() variants for datetime, float, etc. as needed
+
+TODO: add other RunReturn{type}() variants for datetime, float, etc. as needed
+
+Prepared statements are a good idea for even single statements for security (sql injection is impossible):
+ref: https://stackoverflow.com/questions/1849803/are-prepared-statements-a-waste-for-normal-queries-php
+
 */
 
 import (
@@ -27,25 +32,31 @@ type QueryIfc interface {
 type query struct {
 	connection	ConnectionIfc
 	query		string
-	statement	*db.Stmt
+	prepareOk	bool
 }
 
 // Make a new one of these!
 // Returns nil if there is any problem setting up the query...!
-func NewQuery(connection ConnectionIfc, qry string) QueryIfc {
+func NewQuery(connection interface{}, qry string) QueryIfc {
+
+	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
+	var conn ConnectionIfc
+	if conn, ok := connection.(ConnectionIfc); ! ok { return nil }
+
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
 	// https://pkg.go.dev/database/sql#Stmt
 	var statement *db.Stmt
 	var err error
 	if ! strings.Contains(qry, "???") {
-		statement, err = connection.GetConnection().Prepare(qry)
+		statement, err = conn.Prepare(qry)
 		if nil != err { return nil } // TODO: log an error! (?)
 	}
 
 	q := query{
-		connection:	connection,
+		connection:	conn,
 		query:		qry,
+		prepareOk:	! strings.Contains(qry, "???"),
 		statement:	statement,
 	}
 	return &q
@@ -67,7 +78,7 @@ func (q *query) Run(args ...interface{}) error {
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
 		if nil != err { return err }
-		_, err = (*q).connection.GetConnection().Exec(*qry, args...)
+		_, err = (*q).connection.Exec(*qry, args...)
 	}
 	return err
 }
@@ -86,7 +97,7 @@ func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error 
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
 		if nil != err { return err }
-		row = (*q).connection.GetConnection().QueryRow(*qry, args...)
+		row = (*q).connection.QueryRow(*qry, args...)
 	}
 
 	if nil == row { return nil }
@@ -143,7 +154,7 @@ func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
 		if nil != err { return nil, err }
-		rows, err = (*q).connection.GetConnection().Query(*qry, args...)
+		rows, err = (*q).connection.Query(*qry, args...)
 	}
 
 	// If the query returned no results, handle it specifically...
