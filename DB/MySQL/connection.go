@@ -1,4 +1,4 @@
-package connection
+package mysql
 
 /*
 
@@ -10,6 +10,7 @@ ref: https://pkg.go.dev/database/sql#Tx.Stmt
 */
 
 import (
+	"errors"
 	db "database/sql"
 )
 
@@ -112,8 +113,8 @@ func (c *connection) Begin() error {
 		err := c.Rollback()
 		if nil != err { return err }
 	}
-
-	(*c).transaction, err := (*c).conn.Begin()
+	var err error
+	(*c).transaction, err = (*c).conn.Begin()
 	return err
 }
 

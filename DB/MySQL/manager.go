@@ -6,8 +6,6 @@ DB Manager for MySQL - manages a set of named (keyed) mysql database connections
 
 import (
 	"errors"
-
-	conn "github.com/DigiStratum/GoLib/DB/MySQL/connection"
 )
 
 type ManagerIfc interface {
@@ -17,21 +15,21 @@ type ManagerIfc interface {
 	NewQuery(dbKey DBKeyIfc, qry string) (QueryIfc, error)
 	Disconnect(dbKey DBKeyIfc)
 	// Private interface
-	//getConnection(dbKey DBKeyIfc) conn.ConnectionIfc
-	getConnectionPool(dbKey DBKeyIfc) conn.ConnectionPoolIfc
+	//getConnection(dbKey DBKeyIfc) ConnectionIfc
+	getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
 }
 
 // Set of connections, keyed on DSN
 type manager struct {
-	//connections		map[string]conn.ConnectionIfc
-	connectionPools		map[string]conn.ConnectionPoolIfc
+	//connections		map[string]ConnectionIfc
+	connectionPools		map[string]ConnectionPoolIfc
 }
 
 // Make a new one of these!
 func NewManager() ManagerIfc {
 	return &manager{
-		//connections: make(map[string]conn.ConnectionIfc),
-		connectionPools: make(map[string]conn.ConnectionPoolIfc),
+		//connections: make(map[string]ConnectionIfc),
+		connectionPools: make(map[string]ConnectionPoolIfc),
 	}
 }
 
@@ -47,7 +45,7 @@ func (mgr *manager) Connect(dsn string) (DBKeyIfc, error) {
 /*
 	if _, ok := mgr.connections[dbKey.GetKey()]; ! ok {
 		// Not connected yet - let's do this thing!
-		conn, err := conn.NewConnection(dsn)
+		conn, err := NewConnection(dsn)
 		if err != nil { return nil, err }
 
 		// Make a new connection record
@@ -64,25 +62,26 @@ func (mgr *manager) Connect(dsn string) (DBKeyIfc, error) {
 
 // Check that this connection is still established
 func (mgr *manager) IsConnected(dbKey DBKeyIfc) bool {
-	conn := mgr.getConnection(dbKey)
-	if nil != conn { return conn.IsConnected() }
+	c := mgr.getConnection(dbKey)
+	if nil != c { return c.IsConnected() }
 	return false
 }
 
 // Make a new Query attached to this manager session
 func (mgr *manager) NewQuery(dbKey DBKeyIfc, qry string) (QueryIfc, error) {
-	conn := mgr.getConnection(dbKey)
-        if nil == conn { return nil, errors.New("Error getting connection") }
-	return NewQuery(conn, qry), nil
+	c := mgr.getConnection(dbKey)
+        if nil == c { return nil, errors.New("Error getting connection") }
+	return NewQuery(c, qry), nil
 }
 
 // Close the connection with this key, if it exists, and forget about it
 // (There's no value in reusing the key, just delete it)
 func (mgr *manager) Disconnect(dbKey DBKeyIfc) {
 	//conn := mgr.getConnection(dbKey)
+	//if nil != conn {
 	connPool := mgr.getConnectionPool(dbKey)
-	if nil != conn {
-		//conn.Disconnect()
+	if nil != connPool {
+		//Disconnect()
 		//delete(mgr.connections, dbKey.GetKey())
 		// FIXME: Disconnect/close the connection pool
 		delete(mgr.connectionPools, dbKey.GetKey())
@@ -94,10 +93,10 @@ func (mgr *manager) Disconnect(dbKey DBKeyIfc) {
 // -------------------------------------------------------------------------------------------------
 
 // Get the connection for the specified key
-//func (mgr *manager) getConnection(dbKey DBKeyIfc) conn.ConnectionIfc {
+//func (mgr *manager) getConnection(dbKey DBKeyIfc) ConnectionIfc {
 	//if conn, ok := mgr.connections[dbKey.GetKey()]; ok {
 	//	return conn
-func (mgr *manager) getConnectionPool(dbKey DBKeyIfc) conn.ConnectionPoolIfc {
+func (mgr *manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
 	if connPool, ok := mgr.connectionPools[dbKey.GetKey()]; ok {
 		return connPool
 	}

@@ -1,4 +1,4 @@
-package connection
+package mysql
 
 /*
 This Database Connection Pool establishes one or more persistent connections to a MySQL database given a configured DSN.
@@ -29,8 +29,8 @@ TODO:
 */
 
 import (
+	"fmt"
 	"errors"
-
 	lib "github.com/DigiStratum/GoLib"
 )
 
@@ -42,11 +42,11 @@ type ConnectionPoolIfc interface {
 type connectionPool struct {
 	configured		bool
 	dsn			string
-	minConnections		int64
-	maxConnections		int64
-	maxIdle			int64
-	connections		[]pooledConnectionIfc
-	leasedConnections	leasedConnectionsIfc
+	minConnections		int
+	maxConnections		int
+	maxIdle			int
+	connections		[]PooledConnectionIfc
+	leasedConnections	LeasedConnectionsIfc
 }
 
 const DEFAULT_MIN_CONNECTIONS = 1
@@ -61,8 +61,8 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
 		maxIdle:		DEFAULT_MAX_IDLE,
-		connections:		make([]pooledConnectionIfc, 0, DEFAULT_MAX_CONNECTIONS),
-		leasedConnections:	newLeasedConnectionsIfc(),
+		connections:		make([]PooledConnectionIfc, 0, DEFAULT_MAX_CONNECTIONS),
+		leasedConnections:	NewLeasedConnectionsIfc(),
 	}
 	return &cp
 }
@@ -72,7 +72,7 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
-func (cp *connectionPool) Configure(config ConfigIfc) error {
+func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 	// If we have already been configured, do not accept a second configuration
 	if (*cp).configured { return nil }
 
@@ -81,28 +81,31 @@ func (cp *connectionPool) Configure(config ConfigIfc) error {
 		switch kvp.Key {
 			case "min_connections":
 				// Set the new Min (cannot be < 1)
-				(*cp).minConnections = math.Max(1, config.GetInt64("min_connections"))
+				(*cp).minConnections = int(config.GetInt64("min_connections"))
+				if (*cp).minConnections < 1 { (*cp).minConnections = 1 }
 				// If Min pushed above Max, then push Max up
-				(*cp).maxConnections = math.Max((*cp).minConnections, (*cp).maxConnections)
+				if (*cp).maxConnections < (*cp).minConnections { (*cp).maxConnections = (*cp).minConnections }
 
 			case "max_connections":
 				// Set the new Max (cannot be < 1)
-				(*cp).maxConnections = math.Max(1, config.GetInt64("max_connections"))
+				(*cp).maxConnections = int(config.GetInt64("max_connections"))
+				if (*cp).maxConnections < 1 { (*cp).maxConnections = 1 }
 				// If Max dropped below Min, then push Min down
-				(*cp).minConnections = math.Min((*cp).minConnections, (*cp).maxConnections)
+				if (*cp).maxConnections < (*cp).minConnections { (*cp).minConnections = (*cp).maxConnections }
 
 				// If the new Max increases from default...
-				if cap((*cp.connections)) < (*cp).maxConnections {
+				if cap((*cp).connections) < (*cp).maxConnections {
 					// Increase connection pool capacity from default to the new max_connections
 					// ref: https://blog.golang.org/slices-intro
-					nc := make([]pooledConnectionIfc, len((*cp).connections), (*cp).maxConnections)
+					nc := make([]PooledConnectionIfc, len((*cp).connections), (*cp).maxConnections)
 					copy(nc, (*cp).connections)
 					(*cp).connections = nc
 				}
 
 			case "max_idle":
 				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
-				(*cp).maxIdle = math.Max(1, config.GetInt64("max_idle"))
+				(*cp).maxIdle = int(config.GetInt64("max_idle"))
+				if (*cp).maxIdle < 1 { (*cp).maxIdle = 1 }
 
 			default:
 				return errors.New(fmt.Sprintf("Unknown configuration key: '%s'", kvp.Key))
@@ -119,7 +122,7 @@ func (cp *connectionPool) Configure(config ConfigIfc) error {
 
 // Request a connection from the pool using multiple approaches
 func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
-	var connection pooledConnectionIfc
+	var connection PooledConnectionIfc
 	// 1) An already established connection that is available (not leased out to another consumer)
 	connection = cp.findAvailableConnection()
 
@@ -135,21 +138,21 @@ func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
 	return (*cp).leasedConnections.GetLeaseForConnection(connection)
 }
 
-func (cp *connectionPool) findAvailableConnection() pooledConnectionIfc {
-	for connection := range (*cp).connections {
+func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
+	for _, connection := range (*cp).connections {
 		if ! connection.IsLeased() { return connection }
 	}
 	return nil
 }
 
-func (cp *connectionPool) createNewConnection() pooledConnectionIfc {
+func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
 	// if we are at capacity, then we can't create a new connection
 	if len((*cp).connections) >= cap((*cp).connections) { return nil }
 	// TODO: Implement!
 	return nil
 }
 
-func (cp *connectionPool) findExpiredConnection() pooledConnectionIfc {
+func (cp *connectionPool) findExpiredConnection() PooledConnectionIfc {
 	// TODO: Implement!
 	return nil
 }

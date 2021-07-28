@@ -1,4 +1,4 @@
-package connection
+package mysql
 
 import (
 	"time"
@@ -36,6 +36,7 @@ func NewPooledConnection(dsn string) (PooledConnectionIfc, error) {
 		isLeased:	false,
 		leaseKey:	0,
 	}
+	return &pc, nil
 }
 
 // -------------------------------------------------------------------------------------------------

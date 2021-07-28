@@ -1,4 +1,4 @@
-package connection
+package mysql
 
 /*
 A Leased Connection wraps a pooled DB connection with an internally managed lease key. If we lose our lease due to
@@ -9,8 +9,7 @@ connection, with each method being a pass-through based on keyed access to the u
 
 import (
 	"errors"
-
-	query "github.com/DigiStratum/GoLib/DB/MySQL"
+	db "database/sql"
 )
 
 type LeasedConnectionIfc interface {
@@ -103,7 +102,7 @@ func (lc *leasedConnection) Stmt(stmt *db.Stmt) *db.Stmt {
 
 func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
 	if ! lc.checkLease() { return nil, errors.New("No Leased Connection!") }
-	return query.NewQuery(lc, qry string)
+	return query.NewQuery(lc, qry)
 }
 
 // -------------------------------------------------------------------------------------------------

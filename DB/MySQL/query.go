@@ -40,8 +40,8 @@ type query struct {
 func NewQuery(connection interface{}, qry string) QueryIfc {
 
 	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
-	var conn ConnectionIfc
-	if conn, ok := connection.(ConnectionIfc); ! ok { return nil }
+	var c ConnectionIfc
+	if c, ok := connection.(ConnectionIfc); ! ok { return nil }
 
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
@@ -49,12 +49,12 @@ func NewQuery(connection interface{}, qry string) QueryIfc {
 	var statement *db.Stmt
 	var err error
 	if ! strings.Contains(qry, "???") {
-		statement, err = conn.Prepare(qry)
+		statement, err = c.Prepare(qry)
 		if nil != err { return nil } // TODO: log an error! (?)
 	}
 
 	q := query{
-		connection:	conn,
+		connection:	c,
 		query:		qry,
 		prepareOk:	! strings.Contains(qry, "???"),
 		statement:	statement,

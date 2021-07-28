@@ -1,4 +1,4 @@
-package connection
+package mysql
 
 type LeasedConnectionsIfc interface {
 	// Public interface
