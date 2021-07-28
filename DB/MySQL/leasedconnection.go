@@ -38,7 +38,7 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 // -------------------------------------------------------------------------------------------------
 
 func (lc *leasedConnection) IsConnected() bool {
-	if ! lc.checkLease() { return nil }
+	if ! lc.checkLease() { return false }
 	return (*lc).pooledConnection.IsConnected()
 }
 
@@ -102,7 +102,7 @@ func (lc *leasedConnection) Stmt(stmt *db.Stmt) *db.Stmt {
 
 func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
 	if ! lc.checkLease() { return nil, errors.New("No Leased Connection!") }
-	return query.NewQuery(lc, qry)
+	return NewQuery(lc, qry), nil
 }
 
 // -------------------------------------------------------------------------------------------------

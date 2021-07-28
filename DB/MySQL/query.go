@@ -7,6 +7,7 @@ TODO: add other RunReturn{type}() variants for datetime, float, etc. as needed
 Prepared statements are a good idea for even single statements for security (sql injection is impossible):
 ref: https://stackoverflow.com/questions/1849803/are-prepared-statements-a-waste-for-normal-queries-php
 
+FIXME: statement here is not implemented correctly. we should form a statement if possible, then pass it into a transaction in connection for use; too much low-level mysql interaction going on here.
 */
 
 import (

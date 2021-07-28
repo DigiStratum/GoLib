@@ -2,17 +2,39 @@ package mysql
 
 import (
 	"time"
+	db "database/sql"
 )
 
 // A Pooled Connection wraps a raw DB connection with additional metadata to manage leasing
 // We are not exporting this because it is only important to the connection package internal implementation
 type PooledConnectionIfc interface {
-	GetConnection(leaseKey int64) ConnectionIfc
+
+	// Connections
+	//GetConnection(leaseKey int64) ConnectionIfc
+	IsConnected() bool
+	Connect() error
+	Disconnect()
+	Reconnect()
+
+	// Leasing
 	IsLeased() bool
 	MatchesLeaseKey(leaseKey int64) bool
 	Lease(leaseKey int64)
 	Release()
 	Touch()
+
+	// Transactions
+	InTransaction() bool
+	Rollback() error
+	Begin() error
+	Commit() error
+
+	// Operations
+	Prepare(query string) (*db.Stmt, error)
+	Exec(query string, args ...interface{}) (db.Result, error)
+	Query(query string, args ...interface{}) (*db.Rows, error)
+	QueryRow(query string, args ...interface{}) *db.Row
+	Stmt(stmt *db.Stmt) *db.Stmt
 }
 
 type pooledConnection struct {
@@ -42,11 +64,20 @@ func NewPooledConnection(dsn string) (PooledConnectionIfc, error) {
 // -------------------------------------------------------------------------------------------------
 // pooledConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
+/*
 func (pc *pooledConnection) GetConnection(leaseKey int64) ConnectionIfc {
 	if ! pc.MatchesLeaseKey(leaseKey) { return nil }
 	return (*pc).connection
 }
+*/
 
+// Connections
+func (pc *pooledConnection) IsConnected() bool { return (*pc).connection.IsConnected() }
+func (pc *pooledConnection) Connect() error { return (*pc).connection.Connect() }
+func (pc *pooledConnection) Disconnect() { (*pc).connection.Disonnect() }
+func (pc *pooledConnection) Reconnect() { (*pc).connection.Reconnect() }
+
+// Leasing
 func (pc *pooledConnection) IsLeased() bool { return (*pc).isLeased }
 
 func (pc *pooledConnection) MatchesLeaseKey(leaseKey int64) bool {
@@ -69,3 +100,16 @@ func (pc *pooledConnection) Release() {
 func (pc *pooledConnection) Touch() {
 	(*pc).lastActiveAt = time.Now().Unix()
 }
+
+// Transactions
+func (pc *pooledConnection) InTransaction() bool { return (*pc).connection.InTransaction() }
+func (pc *pooledConnection) Rollback() error { return (*pc).connection.Rollback() }
+func (pc *pooledConnection) Begin() error { return (*pc).connection.Begin() }
+func (pc *pooledConnection) Commit() error { return (*pc).connection.Commit() }
+
+// Operations
+func (pc *pooledConnection) Prepare(query string) (*db.Stmt, error) { return (*pc).connection.Prepare(query) }
+func (pc *pooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { return (*pc).connection.Exec(query, args...) }
+func (pc *pooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { return (*pc).connection.Query(query, args...) }
+func (pc *pooledConnection) QueryRow(query string, args ...interface{}) *db.Row { return (*pc).connection.QueryRow(query, args...) }
+func (pc *pooledConnection) Stmt(stmt *db.Stmt) *db.Stmt { return (*pc).connection.Stmt(stmt) }

@@ -2,29 +2,29 @@ package mysql
 
 type LeasedConnectionsIfc interface {
 	// Public interface
-	GetLeaseForConnection(connection pooledConnectionIfc) LeasedConnectionIfc
+	GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc
 	// Private interface
 	leaseExists(leaseKey int64) bool
 	getNewLeaseKey() *int64
 }
 
 type leasedConnections struct {
-	leases		map[string]LeasedConnectionIfc
+	leases		map[int64]LeasedConnectionIfc
 	nextLeaseKey	int64
 }
 
 func NewLeasedConnectionsIfc() LeasedConnectionsIfc {
 	lc := leasedConnections{
-		leases:		make(map[string]LeasedConnectionIfc),
+		leases:		make(map[int64]LeasedConnectionIfc),
 		nextLeaseKey:	0,
 	}
 	return &lc
 }
 
-func (lc *leasedConnections) GetLeaseForConnection(connection pooledConnectionIfc) LeasedConnectionIfc {
+func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
 	// TODO: Implement!
 	if ptrLeaseKey := lc.getNewLeaseKey(); nil != ptrLeaseKey {
-		leasedConnection := NewLeasedConnection(connection)
+		leasedConnection := NewLeasedConnection(connection, *ptrLeaseKey)
 		if nil != leasedConnection {
 			(*lc).leases[*ptrLeaseKey] = leasedConnection
 			return leasedConnection
