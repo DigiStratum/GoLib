@@ -80,7 +80,7 @@ func (hash *HashMap) Get(key string) string {
 }
 
 func (hash *HashMap) GetInt64(key string) int64 {
-	if vc, err := strconv.ParseInt((hash.Get(key), 0, 64); nil == err { return vc }
+	if vc, err := strconv.ParseInt(hash.Get(key), 0, 64); nil == err { return vc }
 	return 0
 }
 
