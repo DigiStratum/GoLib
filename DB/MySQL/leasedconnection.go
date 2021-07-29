@@ -12,11 +12,49 @@ import (
 	db "database/sql"
 )
 
+// Connections
+type leasedConnectionIfc interface {
+	IsConnected() bool
+	Connect() error
+	Disconnect()
+	Reconnect()
+}
+
+// Transactions
+type leasedConnectionTransactionIfc interface {
+	InTransaction() bool
+	Rollback() error
+	Begin() error
+	Commit() error
+}
+
+// Connection Operations
+type leasedConnectionOperationIfc interface {
+	Prepare(query string) (*db.Stmt, error)
+	Exec(query string, args ...interface{}) (db.Result, error)
+	Query(query string, args ...interface{}) (*db.Rows, error)
+	QueryRow(query string, args ...interface{}) *db.Row
+	Stmt(stmt *db.Stmt) *db.Stmt
+}
+
 type LeasedConnectionIfc interface {
+	// Embed Transaction support to this interface
+	leasedConnectionTransactionIfc
+
+	// Query implementation receives this LeasedConnectionIfc to execute operations against our connection
 	NewQuery(query string) (QueryIfc, error)
+
+
 	// Private
 	checkLease() bool
 	errNoLease() error
+}
+
+// Query implementation can use these to perform the essential operations against our leased connection
+type leasedConnectionQueryIfc interface {
+	// Embed Transaction and Operation support to this interface which will be supplied to Queries NewQuery()
+	leasedConnectionTransactionIfc
+	leasedConnectionOperationIfc
 }
 
 type leasedConnection struct {
@@ -34,7 +72,7 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConnectionIfc Public Interface
+// leasedConnectionOperationIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (lc *leasedConnection) IsConnected() bool {
@@ -102,7 +140,10 @@ func (lc *leasedConnection) Stmt(stmt *db.Stmt) *db.Stmt {
 
 func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
 	if ! lc.checkLease() { return nil, errors.New("No Leased Connection!") }
-	return NewQuery(lc, qry), nil
+	if lcq, ok := lc.(leasedConnectionQueryIfc); ok {
+		return NewQuery(lcq, qry), nil
+	}
+	return nil, errors.New("Leased Connection does not satisfy LeasedConnectionQueryIfc!")
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -37,6 +37,7 @@ import (
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
 	GetConnection() LeasedConnectionIfc
+	SelfDestruct()
 }
 
 type connectionPool struct {
@@ -62,7 +63,7 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]PooledConnectionIfc, 0, DEFAULT_MAX_CONNECTIONS),
-		leasedConnections:	NewLeasedConnectionsIfc(),
+		leasedConnections:	NewLeasedConnections(),
 	}
 	return &cp
 }
@@ -70,6 +71,17 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
+
+func (cp *connectionPool) SelfDestruct() {
+	// Wipe the DSN to prevent new connections from being established
+	(*cp).dsn = ""
+
+	// Drop all open leases
+	(*cp).leasedConnections = NewLeasedConnections()
+
+	// Close all connections
+	for c := range (*cp).connections { c.Disconnect() }
+}
 
 // Optionally accept overrides for defaults in configuration
 func (cp *connectionPool) Configure(config lib.ConfigIfc) error {

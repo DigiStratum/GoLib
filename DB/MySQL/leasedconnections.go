@@ -13,7 +13,7 @@ type leasedConnections struct {
 	nextLeaseKey	int64
 }
 
-func NewLeasedConnectionsIfc() LeasedConnectionsIfc {
+func NewLeasedConnections() LeasedConnectionsIfc {
 	lc := leasedConnections{
 		leases:		make(map[int64]LeasedConnectionIfc),
 		nextLeaseKey:	0,

@@ -26,6 +26,17 @@ type QueryIfc interface {
 	RunReturnOne(args ...interface{}) (ResultRowIfc, error)
 	RunReturnAll(args ...interface{}) (ResultSetIfc, error)
 	RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
+
+/*
+// FIXME: bake these operations into the RunXXX() functions - there should be no need for the consumer to access these low-level operations
+	// All of these should be operations and/or capabilities of QueryIfc:
+	Prepare(query string) (*db.Stmt, error)
+	Exec(query string, args ...interface{}) (db.Result, error)
+	Query(query string, args ...interface{}) (*db.Rows, error)
+	QueryRow(query string, args ...interface{}) *db.Row
+	Stmt(stmt *db.Stmt) *db.Stmt
+*/
+
 	// Private interface
 	resolveQuery(args ... interface{}) (*string, error)
 }
