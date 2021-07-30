@@ -41,7 +41,6 @@ func (lc *leasedConnections) leaseExists(leaseKey int64) bool {
 
 // Return the next available Lease Key, or nil on failure
 func (lc *leasedConnections) getNewLeaseKey() *int64 {
-	attempts := 0
 	// If we don't get this even on the first attempt, then something is wrong... but just in case...
 	for attempts := 0; attempts < 100; attempts++ {
 		(*lc).nextLeaseKey++

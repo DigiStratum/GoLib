@@ -53,11 +53,12 @@ func connection_example() {
 	if nil != err { die(fmt.Sprintf("Error getting connection: %s\n", err.Error())) }
 
 	// Run the query
-	query := mysql.NewQuery(
+	query, err := mysql.NewQuery(
 		dbConn,
 		"SELECT id, task, due FROM todo;",
 	)
-	if nil == query { die("Query Setup Error!\n") }
+	if (nil != err ) || (nil == query) { die(fmt.Sprintf("Query Setup Error: %s\n", err)) }
+	
 	results, err := query.RunReturnAll() // No args for this example
 	if nil != err { die(fmt.Sprintf("Query Error: %s\n", err.Error())) }
 

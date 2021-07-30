@@ -34,7 +34,6 @@ type PooledConnectionIfc interface {
 	Exec(query string, args ...interface{}) (db.Result, error)
 	Query(query string, args ...interface{}) (*db.Rows, error)
 	QueryRow(query string, args ...interface{}) *db.Row
-	Stmt(stmt *db.Stmt) *db.Stmt
 }
 
 type pooledConnection struct {
@@ -112,4 +111,3 @@ func (pc *pooledConnection) Prepare(query string) (*db.Stmt, error) { return (*p
 func (pc *pooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { return (*pc).connection.Exec(query, args...) }
 func (pc *pooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { return (*pc).connection.Query(query, args...) }
 func (pc *pooledConnection) QueryRow(query string, args ...interface{}) *db.Row { return (*pc).connection.QueryRow(query, args...) }
-func (pc *pooledConnection) Stmt(stmt *db.Stmt) *db.Stmt { return (*pc).connection.Stmt(stmt) }

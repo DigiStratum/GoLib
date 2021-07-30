@@ -4,15 +4,14 @@ package mysql
 DB Manager for MySQL - manages a set of named (keyed) mysql database connections / pools
 */
 
-import (
-	"errors"
-)
-
 type ManagerIfc interface {
 	// Public interface
 	NewConnectionPool(dsn string) DBKeyIfc
-	GetConnection(dbKey DBKeyIfc) ConnectionIfc
-	DestroyConnectionPool(dbKey)
+	DestroyConnectionPool(dbKey DBKeyIfc)
+
+	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
+	// TODO: ReleaseConnection(lc LeasedConnectionIfc)
+
 	// Private interface
 	getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
 }
@@ -40,13 +39,13 @@ func (mgr *manager) NewConnectionPool(dsn string) DBKeyIfc {
 }
 
 func (mgr *manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
-	connPool := getConnectionPool(dbKey)
+	connPool := mgr.getConnectionPool(dbKey)
 	if nil == connPool { return nil }
 	return connPool.GetConnection()
 }
 
-func (mgr *manager) DestroyConnectionPool(dbKey) {
-	connPool := getConnectionPool(dbKey)
+func (mgr *manager) DestroyConnectionPool(dbKey DBKeyIfc) {
+	connPool := mgr.getConnectionPool(dbKey)
 	if nil == connPool { return }
 	connPool.SelfDestruct()
 }

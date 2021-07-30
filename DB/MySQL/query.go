@@ -2,12 +2,30 @@ package mysql
 
 /*
 
-TODO: add other RunReturn{type}() variants for datetime, float, etc. as needed
+A Query is attached to a database connection.
 
-Prepared statements are a good idea for even single statements for security (sql injection is impossible):
+The job of the Query interface is to abstract the MySQL interface technicalities away from the consumer.
+
+We can add other RunReturn{type}() variants for datetime, float, etc. as needed.
+
+Prepared statements are a good idea for even single statements for security (makes sql injection impossible):
 ref: https://stackoverflow.com/questions/1849803/are-prepared-statements-a-waste-for-normal-queries-php
 
-FIXME: statement here is not implemented correctly. we should form a statement if possible, then pass it into a transaction in connection for use; too much low-level mysql interaction going on here.
+FIXME: we attach query to a connection upon creation... but a leased connection could go away, leaving the query and any
+prepared statement attached to nothing. We should have a way to deal with this, either self-destruct, or recover a leased
+connection from the pool, or cause the consumer to do the same, etc. Probably best left to the consumer so that they can
+connect their own connection link to the same one... Refactored the factory function to separate attachment of the query
+to a given ConnectionIfc so that the consumer can reattach a query as needed... but it still needs to receive some indicator
+that this is needed.
+
+// TODO: Consider support for literal substitutions here that could get us things like variable table names and other unescaped values for query variance
+// TODO: expand query '???' placeholders
+// because args is interface{}, we can pass whatever we want for this. let's declare that any arg which is an
+// array will be treated as a set to expand. we will expect that there be the same number of sets as there are
+// '???' placeholders. We will replace the  Nth '???' placeholder in the order that they appear with the count of
+// '?,?,...' placeholders that matches the Len() of the Nth array. If the count of arrays supplied does not matche
+// the count of '???' placeholders, then error
+
 */
 
 import (
@@ -20,23 +38,14 @@ import (
 
 type QueryIfc interface {
 	// Public Interface
-	Run(args ...interface{}) error
+	AttachConnection(connection interface{}) error
+	Run(args ...interface{}) (ResultIfc, error)
 	RunReturnValue(receiver interface{}, args ...interface{}) error
 	RunReturnInt(args ...interface{}) (*int, error)
 	RunReturnString(args ...interface{}) (*string, error)
 	RunReturnOne(args ...interface{}) (ResultRowIfc, error)
 	RunReturnAll(args ...interface{}) (ResultSetIfc, error)
 	RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
-
-/*
-// FIXME: bake these operations into the RunXXX() functions - there should be no need for the consumer to access these low-level operations
-	// All of these should be operations and/or capabilities of QueryIfc:
-	Prepare(query string) (*db.Stmt, error)
-	Exec(query string, args ...interface{}) (db.Result, error)
-	Query(query string, args ...interface{}) (*db.Rows, error)
-	QueryRow(query string, args ...interface{}) *db.Row
-	Stmt(stmt *db.Stmt) *db.Stmt
-*/
 
 	// Private interface
 	resolveQuery(args ... interface{}) (*string, error)
@@ -45,33 +54,18 @@ type QueryIfc interface {
 type query struct {
 	connection	ConnectionIfc
 	query		string
-	prepareOk	bool
+	statement	*db.Stmt
 }
 
 // Make a new one of these!
 // Returns nil if there is any problem setting up the query...!
 func NewQuery(connection interface{}, qry string) (QueryIfc, error) {
-
-	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
-	var c ConnectionIfc
-	if c, ok := connection.(ConnectionIfc); ! ok { return nil, errors.New("Does not satisfy ConnectionIfc!") }
-
-	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
-	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
-	// https://pkg.go.dev/database/sql#Stmt
-	var statement *db.Stmt
-	var err error
-	if ! strings.Contains(qry, "???") {
-		statement, err = c.Prepare(qry)
-		if nil != err { return nil, err }
-	}
-
 	q := query{
-		connection:	c,
 		query:		qry,
-		prepareOk:	! strings.Contains(qry, "???"),
-		statement:	statement,
 	}
+
+	if err := q.AttachConnection(connection); nil != err { return nil, err }
+
 	return &q, nil
 }
 
@@ -79,21 +73,41 @@ func NewQuery(connection interface{}, qry string) (QueryIfc, error) {
 // QueryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// Run this query against the supplied database Connection with the provided query arguments
-// No result rows are expected or returned
-func (q *query) Run(args ...interface{}) error {
+func (q *query) AttachConnection(connection interface{}) error {
+	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
+	var c ConnectionIfc
+	var ok bool
+	if c, ok = connection.(ConnectionIfc); ! ok { return errors.New("Does not satisfy ConnectionIfc!") }
+
+	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
+	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
+	// https://pkg.go.dev/database/sql#Stmt
+	var statement *db.Stmt
 	var err error
-	// TODO: Capture Exec() result (swallowed into _) to get result.RowsAffected(), etc
+	if ! strings.Contains((*q).query, "???") {
+		statement, err = c.Prepare((*q).query)
+		if nil != err { return err }
+	}
+
+	(*q).connection = c
+	(*q).statement = statement
+	return nil
+}
+
+// Run this query against the supplied database Connection with the provided query arguments
+func (q *query) Run(args ...interface{}) (ResultIfc, error) {
+	var result db.Result
+	var err error
 	if nil != (*q).statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		_, err = (*q).statement.Exec(args...)
+		result, err = (*q).connection.StmtExec((*q).statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
-		if nil != err { return err }
-		_, err = (*q).connection.Exec(*qry, args...)
+		if nil != err { return nil, err }
+		result, err = (*q).connection.Exec(*qry, args...)
 	}
-	return err
+	return NewResult(result), err
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
@@ -105,7 +119,7 @@ func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error 
 
 	if nil != (*q).statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		row = (*q).statement.QueryRow(args...)
+		row = (*q).connection.StmtQueryRow((*q).statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
@@ -162,7 +176,7 @@ func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error
 
 	if nil != (*q).statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		rows, err = (*q).statement.Query(args...)
+		rows, err = (*q).connection.StmtQuery((*q).statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
 		qry, err := q.resolveQuery(args...)
@@ -193,15 +207,8 @@ func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error
 // -------------------------------------------------------------------------------------------------
 
 // Placeholder to support resolving magic expander tags, etc within our query
-// TODO: Consider support for literal substitutions here that could get us things like variable table names and other unescaped values for query variance
 func (q *query) resolveQuery(args ... interface{}) (*string, error) {
 	protoQuery := (*q).query
-	// TODO: expand query '???' placeholders
-	// because args is interface{}, we can pass whatever we want for this. let's declare that any arg which is an
-	// array will be treated as a set to expand. we will expect that there be the same number of sets as there are
-	// '???' placeholders. We will replace the  Nth '???' placeholder in the order that they appear with the count of
-	// '?,?,...' placeholders that matches the Len() of the Nth array. If the count of arrays supplied does not matche
-	// the count of '???' placeholders, then error
 	finalQuery := protoQuery
 	return &finalQuery, nil
 }

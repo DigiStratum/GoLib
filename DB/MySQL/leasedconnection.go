@@ -101,8 +101,3 @@ func (lc *leasedConnection) QueryRow(query string, args ...interface{}) *db.Row 
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil }
 	return (*lc).pooledConnection.QueryRow(query, args...)
 }
-
-func (lc *leasedConnection) Stmt(stmt *db.Stmt) *db.Stmt {
-	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil }
-	return (*lc).pooledConnection.Stmt(stmt)
-}

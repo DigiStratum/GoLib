@@ -37,7 +37,11 @@ type ConnectionIfc interface {
 	Exec(query string, args ...interface{}) (db.Result, error)
 	Query(query string, args ...interface{}) (*db.Rows, error)
 	QueryRow(query string, args ...interface{}) *db.Row
-	Stmt(stmt *db.Stmt) *db.Stmt
+
+	// Statements
+	StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error)
+	StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error)
+	StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row
 }
 
 type connection struct {
@@ -154,7 +158,24 @@ func (c *connection) QueryRow(query string, args ...interface{}) *db.Row {
 	return (*c).conn.QueryRow(query, args...)
 }
 
-func (c *connection) Stmt(stmt *db.Stmt) *db.Stmt {
-	if ! c.InTransaction() { return nil }
-	return (*c).transaction.Stmt(stmt)
+// ------------
+// Statements
+// ------------
+
+func (c *connection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) {
+	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
+	if c.InTransaction() { return (*c).transaction.Stmt(stmt).Exec(args...) }
+	return stmt.Exec(args...)
+}
+
+func (c *connection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
+	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
+	if c.InTransaction() { return (*c).transaction.Stmt(stmt).Query(args...) }
+	return stmt.Query(args...)
+}
+
+func (c *connection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
+	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
+	if c.InTransaction() { return (*c).transaction.Stmt(stmt).QueryRow(args...) }
+	return stmt.QueryRow(args...)
 }
