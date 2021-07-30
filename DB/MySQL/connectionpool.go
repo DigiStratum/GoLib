@@ -80,7 +80,7 @@ func (cp *connectionPool) SelfDestruct() {
 	(*cp).leasedConnections = NewLeasedConnections()
 
 	// Close all connections
-	for c := range (*cp).connections { c.Disconnect() }
+	for _, c := range (*cp).connections { c.Disconnect() }
 }
 
 // Optionally accept overrides for defaults in configuration
@@ -142,7 +142,7 @@ func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
 	if nil == connection { connection = cp.createNewConnection() }
 
 	// 3) An already established connection that is leased out, but past the lease time for idle connections
-	if nil == connection { connection = cp.findExpiredConnection() }
+	if nil == connection { connection = cp.findExpiredLeaseConnection() }
 
 	if nil == connection { return nil }
 
@@ -164,8 +164,9 @@ func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
 	return nil
 }
 
-func (cp *connectionPool) findExpiredConnection() PooledConnectionIfc {
+func (cp *connectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
 	// TODO: Implement!
+	// TODO: If we find one, make sure that we reset the connection state to whatever extent we can (e.g. rollback if in transaction)
 	return nil
 }
 

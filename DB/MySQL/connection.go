@@ -14,6 +14,14 @@ import (
 	db "database/sql"
 )
 
+// Transactions
+type ConnectionTransactionIfc interface {
+	InTransaction() bool
+	Rollback() error
+	Begin() error
+	Commit() error
+}
+
 type ConnectionIfc interface {
 	// Connections
 	IsConnected() bool
@@ -22,10 +30,7 @@ type ConnectionIfc interface {
 	Reconnect()
 
 	// Transactions
-	InTransaction() bool
-	Rollback() error
-	Begin() error
-	Commit() error
+	ConnectionTransactionIfc
 
 	// Operations
 	Prepare(query string) (*db.Stmt, error)

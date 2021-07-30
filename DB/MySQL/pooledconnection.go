@@ -74,7 +74,7 @@ func (pc *pooledConnection) GetConnection(leaseKey int64) ConnectionIfc {
 // Connections
 func (pc *pooledConnection) IsConnected() bool { return (*pc).connection.IsConnected() }
 func (pc *pooledConnection) Connect() error { return (*pc).connection.Connect() }
-func (pc *pooledConnection) Disconnect() { (*pc).connection.Disonnect() }
+func (pc *pooledConnection) Disconnect() { (*pc).connection.Disconnect() }
 func (pc *pooledConnection) Reconnect() { (*pc).connection.Reconnect() }
 
 // Leasing

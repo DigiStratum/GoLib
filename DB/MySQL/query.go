@@ -11,6 +11,7 @@ FIXME: statement here is not implemented correctly. we should form a statement i
 */
 
 import (
+	"errors"
 	"strings"
 	db "database/sql"
 
@@ -49,11 +50,11 @@ type query struct {
 
 // Make a new one of these!
 // Returns nil if there is any problem setting up the query...!
-func NewQuery(connection interface{}, qry string) QueryIfc {
+func NewQuery(connection interface{}, qry string) (QueryIfc, error) {
 
 	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
 	var c ConnectionIfc
-	if c, ok := connection.(ConnectionIfc); ! ok { return nil }
+	if c, ok := connection.(ConnectionIfc); ! ok { return nil, errors.New("Does not satisfy ConnectionIfc!") }
 
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
@@ -62,7 +63,7 @@ func NewQuery(connection interface{}, qry string) QueryIfc {
 	var err error
 	if ! strings.Contains(qry, "???") {
 		statement, err = c.Prepare(qry)
-		if nil != err { return nil } // TODO: log an error! (?)
+		if nil != err { return nil, err }
 	}
 
 	q := query{
@@ -71,7 +72,7 @@ func NewQuery(connection interface{}, qry string) QueryIfc {
 		prepareOk:	! strings.Contains(qry, "???"),
 		statement:	statement,
 	}
-	return &q
+	return &q, nil
 }
 
 // -------------------------------------------------------------------------------------------------

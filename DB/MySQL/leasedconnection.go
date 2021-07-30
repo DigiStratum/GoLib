@@ -12,54 +12,18 @@ import (
 	db "database/sql"
 )
 
-// Connections
-type leasedConnectionIfc interface {
-	IsConnected() bool
-	Connect() error
-	Disconnect()
-	Reconnect()
-}
-
-// Transactions
-type leasedConnectionTransactionIfc interface {
-	InTransaction() bool
-	Rollback() error
-	Begin() error
-	Commit() error
-}
-
-// Connection Operations
-type leasedConnectionOperationIfc interface {
-	Prepare(query string) (*db.Stmt, error)
-	Exec(query string, args ...interface{}) (db.Result, error)
-	Query(query string, args ...interface{}) (*db.Rows, error)
-	QueryRow(query string, args ...interface{}) *db.Row
-	Stmt(stmt *db.Stmt) *db.Stmt
-}
-
 type LeasedConnectionIfc interface {
 	// Embed Transaction support to this interface
-	leasedConnectionTransactionIfc
+	ConnectionTransactionIfc
 
 	// Query implementation receives this LeasedConnectionIfc to execute operations against our connection
 	NewQuery(query string) (QueryIfc, error)
-
-
-	// Private
-	checkLease() bool
-	errNoLease() error
-}
-
-// Query implementation can use these to perform the essential operations against our leased connection
-type leasedConnectionQueryIfc interface {
-	// Embed Transaction and Operation support to this interface which will be supplied to Queries NewQuery()
-	leasedConnectionTransactionIfc
-	leasedConnectionOperationIfc
 }
 
 type leasedConnection struct {
 	pooledConnection	PooledConnectionIfc
 	leaseKey		int64
+	errNoLease		error
 }
 
 func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) LeasedConnectionIfc {
@@ -67,16 +31,27 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 	lc := leasedConnection{
 		pooledConnection:	pooledConnection,
 		leaseKey:		leaseKey,
+		errNoLease:		errors.New("No Leased Connection!"),
 	}
 	return &lc
 }
 
 // -------------------------------------------------------------------------------------------------
-// leasedConnectionOperationIfc Public Interface
+// LeasedConnectionIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, errors.New("No Leased Connection!") }
+	// Note: NewQuery() accepts an interface for the connection - leasedConnection must satisfy ConnectionIfc or error!
+	return NewQuery(lc, qry)
+}
+
+// -------------------------------------------------------------------------------------------------
+// ConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (lc *leasedConnection) IsConnected() bool {
-	if ! lc.checkLease() { return false }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return false }
 	return (*lc).pooledConnection.IsConnected()
 }
 
@@ -87,79 +62,47 @@ func (lc *leasedConnection) Connect() error {
 	return errors.New("Leased connection - no state changes allowed")
 }
 
-// Transactions - Passthrough
 func (lc *leasedConnection) InTransaction() bool {
-	if ! lc.checkLease() { return false }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return false }
 	return (*lc).pooledConnection.InTransaction()
 }
 
 func (lc *leasedConnection) Rollback() error {
-	if ! lc.checkLease() { return lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	return (*lc).pooledConnection.Rollback()
 }
 
 func (lc *leasedConnection) Begin() error {
-	if ! lc.checkLease() { return lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	return (*lc).pooledConnection.Begin()
 }
 
 func (lc *leasedConnection) Commit() error {
-	if ! lc.checkLease() { return lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	return (*lc).pooledConnection.Commit()
 }
 
-// Operations - Passthrough
 func (lc *leasedConnection) Prepare(query string) (*db.Stmt, error) {
-	if ! lc.checkLease() { return nil, lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, (*lc).errNoLease }
 	return (*lc).pooledConnection.Prepare(query)
 }
 
 func (lc *leasedConnection) Exec(query string, args ...interface{}) (db.Result, error) {
-	if ! lc.checkLease() { return nil, lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, (*lc).errNoLease }
 	return (*lc).pooledConnection.Exec(query, args...)
 }
 
 func (lc *leasedConnection) Query(query string, args ...interface{}) (*db.Rows, error) {
-	if ! lc.checkLease() { return nil, lc.errNoLease() }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, (*lc).errNoLease }
 	return (*lc).pooledConnection.Query(query, args...)
 }
 
 func (lc *leasedConnection) QueryRow(query string, args ...interface{}) *db.Row {
-	if ! lc.checkLease() { return nil }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil }
 	return (*lc).pooledConnection.QueryRow(query, args...)
 }
 
 func (lc *leasedConnection) Stmt(stmt *db.Stmt) *db.Stmt {
-	if ! lc.checkLease() { return nil }
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil }
 	return (*lc).pooledConnection.Stmt(stmt)
-}
-
-// -------------------------------------------------------------------------------------------------
-// LeasedConnectionIfc Public Interface
-// -------------------------------------------------------------------------------------------------
-
-func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
-	if ! lc.checkLease() { return nil, errors.New("No Leased Connection!") }
-	if lcq, ok := lc.(leasedConnectionQueryIfc); ok {
-		return NewQuery(lcq, qry), nil
-	}
-	return nil, errors.New("Leased Connection does not satisfy LeasedConnectionQueryIfc!")
-}
-
-// -------------------------------------------------------------------------------------------------
-// LeasedConnectionIfc Private Interface
-// -------------------------------------------------------------------------------------------------
-
-// TODO: Move this to pooledConnection so that it has the power of accept/reject instead of self-policing here?
-// Check whether we still hold the lease on our connection
-func (lc *leasedConnection) checkLease() bool {
-	if nil == (*lc).pooledConnection { return false }
-	if (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return true }
-	// The lease has changed! Drop the connection to eliminate any chance of further inactivity
-	(*lc).pooledConnection = nil
-	return false
-}
-
-func (lc *leasedConnection) errNoLease() error {
-	return errors.New("No Leased Connection!")
 }
