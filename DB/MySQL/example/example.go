@@ -9,56 +9,48 @@ import (
 )
 
 func main() {
-	connection_example()
-	//manager_example()
-}
-/*
-func manager_example() {
 	// Get a database connection
 	dsn := db.MakeDSN("username", "password", "localhost", "3306", "todolist")
 	fmt.Printf("MySQL DSN is: %s\n", dsn)
 
-	// Get the connection through a connection Manager if you want to manage multiple connections to different DB's
+	connection_example(dsn)
+	manager_example(dsn)
+}
+
+// Get the connection through a connection Manager if you want to manage multiple connections/pools to different DB's
+func manager_example(dsn string) {
+
 	manager := mysql.NewManager()
-	dbKey, err := manager.Connect(dsn)
-	if nil != err { die(fmt.Sprintf("Error connecting: %s\n", err.Error())) }
+	dbKey := manager.NewConnectionPool(dsn)
 
-	// Run the query
-	results, err := manager.Query(
-		*dbKey,
-		"SELECT id, task, due FROM todo;",
-		Todo{},
-	)
-	if nil != err { die(fmt.Sprintf("Query Error: %s\n", err.Error())) }
+	// Get leased connection from pool
+	conn := manager.GetConnection(dbKey)
+	if nil == conn { die("Error connecting\n") }
 
-	// Process the results
-	for index := 0; index < results.Len(); index++ {
-		result := results.Get(index)
-		if todoResult, ok := result.(*Todo); ok {
-			todoResult.Print()
-		} else {
-			fmt.Printf("Error converting result record to todo{%d}\n", index)
-		}
-	}
+	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
 
-	manager.Disconnect(*dbKey)
+	if nil != err { die(fmt.Sprintf("Error Creating Query: %s\n", err.Error())) }
+
+	runQuery(query)
+
+	manager.DestroyConnectionPool(dbKey)
 }
-*/
-func connection_example() {
-	// Get a database connection
-	dsn := db.MakeDSN("username", "password", "localhost", "3306", "todolist")
-	fmt.Printf("MySQL DSN is: %s\n", dsn)
 
-	dbConn, err := mysql.NewConnection(dsn)
+// Get the connection directly
+func connection_example(dsn string) {
+	// Get direct connection
+	conn, err := mysql.NewConnection(dsn)
 	if nil != err { die(fmt.Sprintf("Error getting connection: %s\n", err.Error())) }
 
-	// Run the query
-	query, err := mysql.NewQuery(
-		dbConn,
-		"SELECT id, task, due FROM todo;",
-	)
+	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
 	if (nil != err ) || (nil == query) { die(fmt.Sprintf("Query Setup Error: %s\n", err)) }
 	
+	runQuery(query)
+
+	conn.Disconnect()
+}
+
+func runQuery(query mysql.QueryIfc) {
 	results, err := query.RunReturnAll() // No args for this example
 	if nil != err { die(fmt.Sprintf("Query Error: %s\n", err.Error())) }
 
@@ -71,12 +63,9 @@ func connection_example() {
 		}
 		fmt.Printf("Result: %s\n\n", *resultJson)
 	}
-
-	dbConn.Disconnect()
 }
 
 func die(msg string) {
 	fmt.Printf("%s\n", msg)
 	os.Exit(1)
 }
-

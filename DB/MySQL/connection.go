@@ -14,12 +14,12 @@ import (
 	db "database/sql"
 )
 
-// Transactions
-type ConnectionTransactionIfc interface {
+type ConnectionCommonIfc interface {
 	InTransaction() bool
 	Rollback() error
 	Begin() error
 	Commit() error
+	NewQuery(query string) (QueryIfc, error)
 }
 
 type ConnectionIfc interface {
@@ -30,7 +30,7 @@ type ConnectionIfc interface {
 	Reconnect()
 
 	// Transactions
-	ConnectionTransactionIfc
+	ConnectionCommonIfc
 
 	// Operations
 	Prepare(query string) (*db.Stmt, error)
@@ -132,6 +132,10 @@ func (c *connection) Commit() error {
 	err := (*c).transaction.Commit()
 	(*c).transaction = nil
 	return err
+}
+
+func (c *connection) NewQuery(query string) (QueryIfc, error) {
+	return NewQuery(c, query)
 }
 
 // ------------

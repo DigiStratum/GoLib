@@ -10,7 +10,6 @@ import (
 type PooledConnectionIfc interface {
 
 	// Connections
-	//GetConnection(leaseKey int64) ConnectionIfc
 	IsConnected() bool
 	Connect() error
 	Disconnect()
@@ -63,12 +62,6 @@ func NewPooledConnection(dsn string) (PooledConnectionIfc, error) {
 // -------------------------------------------------------------------------------------------------
 // pooledConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-/*
-func (pc *pooledConnection) GetConnection(leaseKey int64) ConnectionIfc {
-	if ! pc.MatchesLeaseKey(leaseKey) { return nil }
-	return (*pc).connection
-}
-*/
 
 // Connections
 func (pc *pooledConnection) IsConnected() bool { return (*pc).connection.IsConnected() }

@@ -14,10 +14,7 @@ import (
 
 type LeasedConnectionIfc interface {
 	// Embed Transaction support to this interface
-	ConnectionTransactionIfc
-
-	// Query implementation receives this LeasedConnectionIfc to execute operations against our connection
-	NewQuery(query string) (QueryIfc, error)
+	ConnectionCommonIfc
 }
 
 type leasedConnection struct {
@@ -39,12 +36,6 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 // -------------------------------------------------------------------------------------------------
 // LeasedConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-
-func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
-	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, errors.New("No Leased Connection!") }
-	// Note: NewQuery() accepts an interface for the connection - leasedConnection must satisfy ConnectionIfc or error!
-	return NewQuery(lc, qry)
-}
 
 // -------------------------------------------------------------------------------------------------
 // ConnectionIfc Public Interface
@@ -80,6 +71,12 @@ func (lc *leasedConnection) Begin() error {
 func (lc *leasedConnection) Commit() error {
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	return (*lc).pooledConnection.Commit()
+}
+
+func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, errors.New("No Leased Connection!") }
+	// Feed NewQuery() our leasedConnection so it doesn't have direct access to underlying pooledConnection
+	return NewQuery(lc, qry)
 }
 
 func (lc *leasedConnection) Prepare(query string) (*db.Stmt, error) {
