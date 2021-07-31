@@ -106,10 +106,10 @@ func (lc *leasedConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Res
 
 func (lc *leasedConnection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, (*lc).errNoLease }
-	return (*lc).pooledConnection.StmtExec(stmt, args...)
+	return (*lc).pooledConnection.StmtQuery(stmt, args...)
 }
 
 func (lc *leasedConnection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil }
-	return (*lc).pooledConnection.StmtExec(stmt, args...)
+	return (*lc).pooledConnection.StmtQueryRow(stmt, args...)
 }
