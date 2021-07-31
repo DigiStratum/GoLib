@@ -4,6 +4,10 @@ package mysql
 DB Manager for MySQL - manages a set of named (keyed) mysql database connections / pools
 */
 
+import (
+	"fmt"
+)
+
 type ManagerIfc interface {
 	// Public interface
 	NewConnectionPool(dsn string) DBKeyIfc
@@ -41,7 +45,10 @@ func (mgr *manager) NewConnectionPool(dsn string) DBKeyIfc {
 func (mgr *manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
 	connPool := mgr.getConnectionPool(dbKey)
 	if nil == connPool { return nil }
-	return connPool.GetConnection()
+fmt.Println("@HERE got connection pool")
+	conn, err := connPool.GetConnection()
+	if nil != err { fmt.Println("error: %s", err.Error()) }
+	return conn
 }
 
 func (mgr *manager) DestroyConnectionPool(dbKey DBKeyIfc) {

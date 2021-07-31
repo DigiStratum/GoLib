@@ -26,6 +26,8 @@ is always a ResultSetIfc (nil or 1+ rows) each with 1+ columns, and an error (ni
 TODO:
  * Close/Disconnect
 
+FIXME: Concurrency is going to be an issue in this place. We must address it!
+
 */
 
 import (
@@ -36,7 +38,7 @@ import (
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
-	GetConnection() LeasedConnectionIfc
+	GetConnection() (LeasedConnectionIfc, error)
 	SelfDestruct()
 }
 
@@ -133,8 +135,9 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
-func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
+func (cp *connectionPool) GetConnection() (LeasedConnectionIfc, error) {
 	var connection PooledConnectionIfc
+
 	// 1) An already established connection that is available (not leased out to another consumer)
 	connection = cp.findAvailableConnection()
 
@@ -144,13 +147,14 @@ func (cp *connectionPool) GetConnection() LeasedConnectionIfc {
 	// 3) An already established connection that is leased out, but past the lease time for idle connections
 	if nil == connection { connection = cp.findExpiredLeaseConnection() }
 
-	if nil == connection { return nil }
+	if nil == connection { return nil, errors.New("No available pooled connections!") }
 
 	// Establish a lease for this connection which is ours now
-	return (*cp).leasedConnections.GetLeaseForConnection(connection)
+	return (*cp).leasedConnections.GetLeaseForConnection(connection), nil
 }
 
 func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
+fmt.Println("@HERE findAvailableConnection()")
 	for _, connection := range (*cp).connections {
 		if ! connection.IsLeased() { return connection }
 	}
@@ -158,13 +162,18 @@ func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
 }
 
 func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
+fmt.Println("@HERE createNewConnection()")
 	// if we are at capacity, then we can't create a new connection
 	if len((*cp).connections) >= cap((*cp).connections) { return nil }
-	// TODO: Implement!
-	return nil
+fmt.Println("@HERE new connection!")
+	// We're under capacity so should be able to add a new connection
+	newConnection, err := NewPooledConnection((*cp).dsn)
+	if nil == err { (*cp).connections = append((*cp).connections, newConnection) }
+	return newConnection // nil if there was an error
 }
 
 func (cp *connectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
+fmt.Println("@HERE findExpiredLeaseConnection()")
 	// TODO: Implement!
 	// TODO: If we find one, make sure that we reset the connection state to whatever extent we can (e.g. rollback if in transaction)
 	return nil
