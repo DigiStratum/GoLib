@@ -27,12 +27,12 @@ func NewLeasedConnections() LeasedConnectionsIfc {
 // -------------------------------------------------------------------------------------------------
 
 func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
+	// Get a new lease key...
 	if ptrLeaseKey := lc.getNewLeaseKey(); nil != ptrLeaseKey {
+		// Set up a new lease for it...
 		leasedConnection := NewLeasedConnection(connection, *ptrLeaseKey)
-		if nil != leasedConnection {
-			(*lc).leases[*ptrLeaseKey] = leasedConnection
-			return leasedConnection
-		}
+		(*lc).leases[*ptrLeaseKey] = leasedConnection
+		return leasedConnection
 	}
 	return nil
 }

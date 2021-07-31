@@ -40,6 +40,7 @@ import (
 type ConnectionPoolIfc interface {
 	GetConnection() (LeasedConnectionIfc, error)
 	Release(leaseKey int64) error
+	GetMaxIdle() int
 	ClosePool()
 }
 
@@ -55,7 +56,7 @@ type connectionPool struct {
 
 const DEFAULT_MIN_CONNECTIONS = 1
 const DEFAULT_MAX_CONNECTIONS = 1
-const DEFAULT_MAX_IDLE = 1
+const DEFAULT_MAX_IDLE = 60
 
 // Make a new one of these
 func NewConnectionPool(dsn string) ConnectionPoolIfc {
@@ -74,24 +75,6 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-
-func (cp *connectionPool) Release(leaseKey int64) error {
-	if ! (*cp).leasedConnections.Release(leaseKey) {
-		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
-	}
-	return nil
-}
-
-func (cp *connectionPool) ClosePool() {
-	// Wipe the DSN to prevent new connections from being established
-	(*cp).dsn = ""
-
-	// Drop all open leases
-	(*cp).leasedConnections = NewLeasedConnections()
-
-	// Disconnect all open connections
-	for _, c := range (*cp).connections { c.Disconnect() }
-}
 
 // Optionally accept overrides for defaults in configuration
 func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
@@ -161,6 +144,30 @@ func (cp *connectionPool) GetConnection() (LeasedConnectionIfc, error) {
 	return (*cp).leasedConnections.GetLeaseForConnection(connection), nil
 }
 
+func (cp *connectionPool) Release(leaseKey int64) error {
+	if ! (*cp).leasedConnections.Release(leaseKey) {
+		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
+	}
+	return nil
+}
+
+// Max Idle has a default, but may be overridden by configuration; this gets access to the current setting value
+func (cp *connectionPool) GetMaxIdle() int {
+	return (*cp).maxIdle
+}
+
+func (cp *connectionPool) ClosePool() {
+	// Wipe the DSN to prevent new connections from being established
+	(*cp).dsn = ""
+
+	// Drop all open leases
+	(*cp).leasedConnections = NewLeasedConnections()
+
+	// Disconnect all open connections
+	for _, c := range (*cp).connections { c.Disconnect() }
+}
+
+
 func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
 	for _, connection := range (*cp).connections {
 		if ! connection.IsLeased() { return connection }
@@ -178,7 +185,8 @@ func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
 }
 
 func (cp *connectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
-	// TODO: Implement!
-	// TODO: If we find one, make sure that we reset the connection state to whatever extent we can (e.g. rollback if in transaction)
+	for _, connection := range (*cp).connections {
+		if connection.IsLeased() && connection.IsExpired() { return connection }
+	}
 	return nil
 }

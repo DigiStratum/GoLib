@@ -1,12 +1,18 @@
 package mysql
 
+/*
+
+A Pooled Connection wraps a raw DB connection with additional metadata to manage leasing
+
+TODO: Add support for restoring the state of the connection in the event that we capture changes like transaction isolation, etc.
+
+*/
+
 import (
 	"time"
 	db "database/sql"
 )
 
-// A Pooled Connection wraps a raw DB connection with additional metadata to manage leasing
-// We are not exporting this because it is only important to the connection package internal implementation
 type PooledConnectionIfc interface {
 
 	// Connections
@@ -21,6 +27,7 @@ type PooledConnectionIfc interface {
 	Lease(leaseKey int64)
 	Release() error
 	Touch()
+	IsExpired() bool
 
 	// Transactions
 	InTransaction() bool
@@ -85,11 +92,16 @@ func (pc *pooledConnection) MatchesLeaseKey(leaseKey int64) bool {
 }
 
 func (pc *pooledConnection) Lease(leaseKey int64) {
+	// Set up the lease to guarantee nobody else comes and steals this from us
 	(*pc).isLeased = true
 	(*pc).leaseKey = leaseKey
 	now := time.Now().Unix()
 	(*pc).lastLeasedAt = now
 	(*pc).lastActiveAt = now
+	// Just in case we evicted a previous lease holder, see if there is any connection state reset needed
+	if pc.InTransaction() {
+		pc.Rollback()
+	}
 }
 
 func (pc *pooledConnection) Release() error {
@@ -104,6 +116,13 @@ func (pc *pooledConnection) Touch() {
 	(*pc).lastActiveAt = time.Now().Unix()
 }
 
+func (pc *pooledConnection) IsExpired() bool {
+	maxIdle := int64((*pc).pool.GetMaxIdle())
+	now := time.Now().Unix()
+	// If the last time this connection was Touch()ed, plus the max idle period is in the past, lease expired!
+	return (*pc).lastActiveAt + maxIdle < now
+}
+
 // Transactions
 func (pc *pooledConnection) InTransaction() bool { return (*pc).connection.InTransaction() }
 func (pc *pooledConnection) Rollback() error { return (*pc).connection.Rollback() }
@@ -115,7 +134,6 @@ func (pc *pooledConnection) Prepare(query string) (*db.Stmt, error) { return (*p
 func (pc *pooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { pc.Touch(); return (*pc).connection.Exec(query, args...) }
 func (pc *pooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { pc.Touch(); return (*pc).connection.Query(query, args...) }
 func (pc *pooledConnection) QueryRow(query string, args ...interface{}) *db.Row { pc.Touch(); return (*pc).connection.QueryRow(query, args...) }
-
 
 // Statements
 func (pc *pooledConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) { pc.Touch(); return (*pc).connection.StmtExec(stmt, args...) }

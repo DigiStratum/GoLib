@@ -39,7 +39,6 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 // LeasedConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-
 func (lc *leasedConnection) Release() error {
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	if err := (*lc).pooledConnection.Release(); nil != err { return err }
