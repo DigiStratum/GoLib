@@ -39,7 +39,8 @@ import (
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
 	GetConnection() (LeasedConnectionIfc, error)
-	SelfDestruct()
+	Release(leaseKey int64) error
+	ClosePool()
 }
 
 type connectionPool struct {
@@ -74,14 +75,21 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 // ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (cp *connectionPool) SelfDestruct() {
+func (cp *connectionPool) Release(leaseKey int64) error {
+	if ! (*cp).leasedConnections.Release(leaseKey) {
+		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
+	}
+	return nil
+}
+
+func (cp *connectionPool) ClosePool() {
 	// Wipe the DSN to prevent new connections from being established
 	(*cp).dsn = ""
 
 	// Drop all open leases
 	(*cp).leasedConnections = NewLeasedConnections()
 
-	// Close all connections
+	// Disconnect all open connections
 	for _, c := range (*cp).connections { c.Disconnect() }
 }
 
@@ -164,7 +172,7 @@ func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
 	// if we are at capacity, then we can't create a new connection
 	if len((*cp).connections) >= cap((*cp).connections) { return nil }
 	// We're under capacity so should be able to add a new connection
-	newConnection, err := NewPooledConnection((*cp).dsn)
+	newConnection, err := NewPooledConnection((*cp).dsn, cp)
 	if nil == err { (*cp).connections = append((*cp).connections, newConnection) }
 	return newConnection // nil if there was an error
 }

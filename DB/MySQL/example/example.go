@@ -67,7 +67,10 @@ func manager_example(dsn string) {
 
 	runQueryDumpAll(query)
 
-	manager.DestroyConnectionPool(dbKey)
+	err = conn.Release()
+	if nil != err { die(fmt.Sprintf("Error Releasing Connection: %s\n", err.Error())) }
+
+	manager.CloseConnectionPool(dbKey)
 }
 
 // Get the connection directly

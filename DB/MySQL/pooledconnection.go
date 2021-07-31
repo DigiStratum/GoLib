@@ -19,14 +19,14 @@ type PooledConnectionIfc interface {
 	IsLeased() bool
 	MatchesLeaseKey(leaseKey int64) bool
 	Lease(leaseKey int64)
-	Release()
+	Release() error
 	Touch()
 
 	// Transactions
 	InTransaction() bool
-	Rollback() error
 	Begin() error
 	Commit() error
+	Rollback() error
 
 	// Operations
 	Prepare(query string) (*db.Stmt, error)
@@ -41,19 +41,21 @@ type PooledConnectionIfc interface {
 }
 
 type pooledConnection struct {
-	connection	ConnectionIfc	// Our underlying database connection
-	establishedAt	int64		// Time that this connection was established to the DB
-	lastActiveAt	int64		// Last time this connection saw activity from the consumer
-	lastLeasedAt	int64		// Last time this connection was leased out
-	isLeased	bool		// Is this connection currently leased out?
-	leaseKey	int64		// This is the lease key for the current lease holder
+	pool		ConnectionPoolIfc	// The pool that this pooled connection lives in
+	connection	ConnectionIfc		// Our underlying database connection
+	establishedAt	int64			// Time that this connection was established to the DB
+	lastActiveAt	int64			// Last time this connection saw activity from the consumer
+	lastLeasedAt	int64			// Last time this connection was leased out
+	isLeased	bool			// Is this connection currently leased out?
+	leaseKey	int64			// This is the lease key for the current lease holder
 }
 
-func NewPooledConnection(dsn string) (PooledConnectionIfc, error) {
+func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (PooledConnectionIfc, error) {
 	connection, err := NewConnection(dsn)
 	if nil != err { return nil, err }
 	now := time.Now().Unix()
 	pc := pooledConnection{
+		pool:		connPool,
 		connection:	connection,
 		establishedAt:	now,
 		lastActiveAt:	0,
@@ -90,8 +92,12 @@ func (pc *pooledConnection) Lease(leaseKey int64) {
 	(*pc).lastActiveAt = now
 }
 
-func (pc *pooledConnection) Release() {
+func (pc *pooledConnection) Release() error {
+	err := (*pc).pool.Release((*pc).leaseKey)
+	if nil != err { return err }
 	(*pc).isLeased = false
+	(*pc).leaseKey = 0
+	return nil
 }
 
 func (pc *pooledConnection) Touch() {

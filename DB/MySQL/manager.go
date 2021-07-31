@@ -11,10 +11,8 @@ import (
 type ManagerIfc interface {
 	// Public interface
 	NewConnectionPool(dsn string) DBKeyIfc
-	DestroyConnectionPool(dbKey DBKeyIfc)
-
+	CloseConnectionPool(dbKey DBKeyIfc)
 	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
-	// TODO: ReleaseConnection(lc LeasedConnectionIfc)
 
 	// Private interface
 	getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
@@ -50,10 +48,10 @@ func (mgr *manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
 	return conn
 }
 
-func (mgr *manager) DestroyConnectionPool(dbKey DBKeyIfc) {
+func (mgr *manager) CloseConnectionPool(dbKey DBKeyIfc) {
 	connPool := mgr.getConnectionPool(dbKey)
 	if nil == connPool { return }
-	connPool.SelfDestruct()
+	connPool.ClosePool()
 }
 
 // -------------------------------------------------------------------------------------------------

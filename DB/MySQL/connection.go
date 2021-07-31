@@ -16,10 +16,10 @@ import (
 
 type ConnectionCommonIfc interface {
 	InTransaction() bool
-	Rollback() error
 	Begin() error
-	Commit() error
 	NewQuery(query string) (QueryIfc, error)
+	Commit() error
+	Rollback() error
 }
 
 type ConnectionIfc interface {
@@ -107,14 +107,6 @@ func (c *connection) InTransaction() bool {
 	return nil != (*c).transaction
 }
 
-func (c *connection) Rollback() error {
-	// Not in the middle of a Transaction? no-op, no-error!
-	if ! c.InTransaction() { return nil }
-	err := (*c).transaction.Rollback()
-	(*c).transaction = nil
-	return err
-}
-
 func (c *connection) Begin() error {
 	// If we're already in a Transaction...
 	if c.InTransaction() {
@@ -127,6 +119,10 @@ func (c *connection) Begin() error {
 	return err
 }
 
+func (c *connection) NewQuery(query string) (QueryIfc, error) {
+	return NewQuery(c, query)
+}
+
 func (c *connection) Commit() error {
 	if ! c.InTransaction() { return errors.New("No active transaction!") }
 	err := (*c).transaction.Commit()
@@ -134,8 +130,12 @@ func (c *connection) Commit() error {
 	return err
 }
 
-func (c *connection) NewQuery(query string) (QueryIfc, error) {
-	return NewQuery(c, query)
+func (c *connection) Rollback() error {
+	// Not in the middle of a Transaction? no-op, no-error!
+	if ! c.InTransaction() { return nil }
+	err := (*c).transaction.Rollback()
+	(*c).transaction = nil
+	return err
 }
 
 // ------------

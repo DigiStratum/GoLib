@@ -3,8 +3,9 @@ package mysql
 type LeasedConnectionsIfc interface {
 	// Public interface
 	GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc
+	Release(leaseKey int64) bool
+
 	// Private interface
-	leaseExists(leaseKey int64) bool
 	getNewLeaseKey() *int64
 }
 
@@ -21,8 +22,11 @@ func NewLeasedConnections() LeasedConnectionsIfc {
 	return &lc
 }
 
+// -------------------------------------------------------------------------------------------------
+// LeasedConnectionsIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
-	// TODO: Implement!
 	if ptrLeaseKey := lc.getNewLeaseKey(); nil != ptrLeaseKey {
 		leasedConnection := NewLeasedConnection(connection, *ptrLeaseKey)
 		if nil != leasedConnection {
@@ -32,6 +36,16 @@ func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIf
 	}
 	return nil
 }
+
+func (lc *leasedConnections) Release(leaseKey int64) bool {
+	if ! lc.leaseExists(leaseKey) { return false }
+	delete((*lc).leases, leaseKey)
+	return true
+}
+
+// -------------------------------------------------------------------------------------------------
+// LeasedConnectionsIfc Private Interface
+// -------------------------------------------------------------------------------------------------
 
 // Is there a Lease on record now with this key?
 func (lc *leasedConnections) leaseExists(leaseKey int64) bool {

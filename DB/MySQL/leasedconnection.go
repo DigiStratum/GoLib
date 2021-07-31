@@ -15,6 +15,8 @@ import (
 type LeasedConnectionIfc interface {
 	// Embed Transaction support to this interface
 	ConnectionCommonIfc
+
+	Release() error
 }
 
 type leasedConnection struct {
@@ -37,6 +39,14 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) L
 // LeasedConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+
+func (lc *leasedConnection) Release() error {
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
+	if err := (*lc).pooledConnection.Release(); nil != err { return err }
+	(*lc).leaseKey = 0
+	return nil
+}
+
 // -------------------------------------------------------------------------------------------------
 // ConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
@@ -58,14 +68,15 @@ func (lc *leasedConnection) InTransaction() bool {
 	return (*lc).pooledConnection.InTransaction()
 }
 
-func (lc *leasedConnection) Rollback() error {
-	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
-	return (*lc).pooledConnection.Rollback()
-}
-
 func (lc *leasedConnection) Begin() error {
 	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
 	return (*lc).pooledConnection.Begin()
+}
+
+func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, errors.New("No Leased Connection!") }
+	// Feed NewQuery() our leasedConnection so it doesn't have direct access to underlying pooledConnection
+	return NewQuery(lc, qry)
 }
 
 func (lc *leasedConnection) Commit() error {
@@ -73,10 +84,9 @@ func (lc *leasedConnection) Commit() error {
 	return (*lc).pooledConnection.Commit()
 }
 
-func (lc *leasedConnection) NewQuery(qry string) (QueryIfc, error) {
-	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return nil, errors.New("No Leased Connection!") }
-	// Feed NewQuery() our leasedConnection so it doesn't have direct access to underlying pooledConnection
-	return NewQuery(lc, qry)
+func (lc *leasedConnection) Rollback() error {
+	if ! (*lc).pooledConnection.MatchesLeaseKey((*lc).leaseKey) { return (*lc).errNoLease }
+	return (*lc).pooledConnection.Rollback()
 }
 
 func (lc *leasedConnection) Prepare(query string) (*db.Stmt, error) {
