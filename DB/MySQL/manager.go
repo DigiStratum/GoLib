@@ -6,6 +6,7 @@ DB Manager for MySQL - manages a set of named (keyed) mysql database connections
 
 import (
 	"fmt"
+	"sync"
 )
 
 type ManagerIfc interface {
@@ -21,6 +22,7 @@ type ManagerIfc interface {
 // Set of connections, keyed on DSN
 type manager struct {
 	connectionPools		map[string]ConnectionPoolIfc
+	mutex			sync.Mutex
 }
 
 // Make a new one of these!
@@ -36,6 +38,8 @@ func NewManager() ManagerIfc {
 
 func (mgr *manager) NewConnectionPool(dsn string) DBKeyIfc {
 	dbKey := NewDBKeyFromDSN(dsn)
+	(*mgr).mutex.Lock()
+	defer (*mgr).mutex.Unlock()
 	(*mgr).connectionPools[dbKey.GetKey()] = NewConnectionPool(dsn)
 	return dbKey
 }
@@ -49,6 +53,8 @@ func (mgr *manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
 }
 
 func (mgr *manager) CloseConnectionPool(dbKey DBKeyIfc) {
+	(*mgr).mutex.Lock()
+	defer (*mgr).mutex.Unlock()
 	connPool := mgr.getConnectionPool(dbKey)
 	if nil == connPool { return }
 	connPool.ClosePool()
