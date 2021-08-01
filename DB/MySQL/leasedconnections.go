@@ -1,5 +1,9 @@
 package mysql
 
+import (
+	"sync"
+)
+
 type LeasedConnectionsIfc interface {
 	// Public interface
 	GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc
@@ -12,6 +16,7 @@ type LeasedConnectionsIfc interface {
 type leasedConnections struct {
 	leases		map[int64]LeasedConnectionIfc
 	nextLeaseKey	int64
+	mutex		sync.Mutex
 }
 
 func NewLeasedConnections() LeasedConnectionsIfc {
@@ -27,6 +32,7 @@ func NewLeasedConnections() LeasedConnectionsIfc {
 // -------------------------------------------------------------------------------------------------
 
 func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
+	(*lc).mutex.Lock(); defer (*lc).mutex.Unlock()
 	// Get a new lease key...
 	if ptrLeaseKey := lc.getNewLeaseKey(); nil != ptrLeaseKey {
 		// Set up a new lease for it...
@@ -38,6 +44,7 @@ func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIf
 }
 
 func (lc *leasedConnections) Release(leaseKey int64) bool {
+	(*lc).mutex.Lock(); defer (*lc).mutex.Unlock()
 	if ! lc.leaseExists(leaseKey) { return false }
 	delete((*lc).leases, leaseKey)
 	return true

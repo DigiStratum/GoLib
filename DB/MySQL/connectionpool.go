@@ -23,16 +23,12 @@ switches and dispatches based on this, however you then have this additional ove
 potentially returning generic/abstract structures that the consumer would have to deal with (unless the result of such
 is always a ResultSetIfc (nil or 1+ rows) each with 1+ columns, and an error (nil if none)..?)
 
-TODO:
- * Close/Disconnect
-
-FIXME: Concurrency is going to be an issue in this place. We must address it!
-
 */
 
 import (
 	"fmt"
 	"errors"
+	"sync"
 	lib "github.com/DigiStratum/GoLib"
 )
 
@@ -52,6 +48,7 @@ type connectionPool struct {
 	maxIdle			int
 	connections		[]PooledConnectionIfc
 	leasedConnections	LeasedConnectionsIfc
+	mutex			sync.Mutex
 }
 
 const DEFAULT_MIN_CONNECTIONS = 1
@@ -129,6 +126,8 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 func (cp *connectionPool) GetConnection() (LeasedConnectionIfc, error) {
 	var connection PooledConnectionIfc
 
+	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
+
 	// 1) An already established connection that is available (not leased out to another consumer)
 	connection = cp.findAvailableConnection()
 
@@ -145,6 +144,7 @@ func (cp *connectionPool) GetConnection() (LeasedConnectionIfc, error) {
 }
 
 func (cp *connectionPool) Release(leaseKey int64) error {
+	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
 	if ! (*cp).leasedConnections.Release(leaseKey) {
 		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
 	}
@@ -157,6 +157,8 @@ func (cp *connectionPool) GetMaxIdle() int {
 }
 
 func (cp *connectionPool) ClosePool() {
+	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
+
 	// Wipe the DSN to prevent new connections from being established
 	(*cp).dsn = ""
 
@@ -167,6 +169,9 @@ func (cp *connectionPool) ClosePool() {
 	for _, c := range (*cp).connections { c.Disconnect() }
 }
 
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc Private Interface
+// -------------------------------------------------------------------------------------------------
 
 func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
 	for _, connection := range (*cp).connections {

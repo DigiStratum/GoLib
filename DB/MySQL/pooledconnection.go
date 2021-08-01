@@ -10,6 +10,7 @@ TODO: Add support for restoring the state of the connection in the event that we
 
 import (
 	"time"
+	"sync"
 	db "database/sql"
 )
 
@@ -55,6 +56,7 @@ type pooledConnection struct {
 	lastLeasedAt	int64			// Last time this connection was leased out
 	isLeased	bool			// Is this connection currently leased out?
 	leaseKey	int64			// This is the lease key for the current lease holder
+	mutex		sync.Mutex
 }
 
 func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (PooledConnectionIfc, error) {
@@ -92,6 +94,8 @@ func (pc *pooledConnection) MatchesLeaseKey(leaseKey int64) bool {
 }
 
 func (pc *pooledConnection) Lease(leaseKey int64) {
+	(*pc).mutex.Lock(); defer (*pc).mutex.Unlock()
+
 	// Set up the lease to guarantee nobody else comes and steals this from us
 	(*pc).isLeased = true
 	(*pc).leaseKey = leaseKey
@@ -105,6 +109,7 @@ func (pc *pooledConnection) Lease(leaseKey int64) {
 }
 
 func (pc *pooledConnection) Release() error {
+	(*pc).mutex.Lock(); defer (*pc).mutex.Unlock()
 	err := (*pc).pool.Release((*pc).leaseKey)
 	if nil != err { return err }
 	(*pc).isLeased = false

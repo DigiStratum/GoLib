@@ -71,4 +71,3 @@ func (mgr *manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
 	}
 	return nil
 }
-
