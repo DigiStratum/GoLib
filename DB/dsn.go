@@ -1,4 +1,4 @@
-package dsn
+package db
 
 /*
 A library of functions to deal with Data Source Name specifiers
