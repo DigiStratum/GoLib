@@ -15,14 +15,6 @@ including overall activity, maximum age of established connections, any sort of 
 "dirty" (e.g some change has been made to transaction isolation mode, etc.) We could also take this opportunity to audit
 all of the open connections to see if any others have been sitting open and idle too long and need similar treatment.
 
-TODO: Consider whether this can be abstracted within reason to support any kind of database. Perhaps all it needs is
-one additional layer of abstraction around the database-specific functions, but this can create an annoying requirement
-on the consumer side to receive the abstracted interface and have to cast it to a DB-specific interface. We could also
-use some sort of generic DB function method that accepts a "command" as a string or constant wherein the generic function
-switches and dispatches based on this, however you then have this additional overhead and still would be left with
-potentially returning generic/abstract structures that the consumer would have to deal with (unless the result of such
-is always a ResultSetIfc (nil or 1+ rows) each with 1+ columns, and an error (nil if none)..?)
-
 */
 
 import (
@@ -66,6 +58,9 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 		connections:		make([]PooledConnectionIfc, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
 	}
+	// Set up the first resource
+	cp.establishMinConnections()
+
 	return &cp
 }
 
@@ -95,14 +90,6 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 				// If Max dropped below Min, then push Min down
 				if (*cp).maxConnections < (*cp).minConnections { (*cp).minConnections = (*cp).maxConnections }
 
-				// If the new Max increases from default...
-				if cap((*cp).connections) < (*cp).maxConnections {
-					// Increase connection pool capacity from default to the new max_connections
-					// ref: https://blog.golang.org/slices-intro
-					nc := make([]PooledConnectionIfc, len((*cp).connections), (*cp).maxConnections)
-					copy(nc, (*cp).connections)
-					(*cp).connections = nc
-				}
 
 			case "max_idle":
 				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
@@ -114,6 +101,18 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 		}
 	}
 	(*cp).configured = true
+
+	// If the new Max increases from default...
+	if cap((*cp).connections) < (*cp).maxConnections {
+		// Increase connection pool capacity from default to the new max_connections
+		// ref: https://blog.golang.org/slices-intro
+		nc := make([]PooledConnectionIfc, len((*cp).connections), (*cp).maxConnections)
+		copy(nc, (*cp).connections)
+		(*cp).connections = nc
+	}
+
+	// If the minimum resource count has gone up, fill up the difference
+	cp.establishMinConnections()
 
 	return nil
 }
@@ -194,4 +193,11 @@ func (cp *connectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
 		if connection.IsLeased() && connection.IsExpired() { return connection }
 	}
 	return nil
+}
+
+func (cp *connectionPool) establishMinConnections() {
+	// If the minimum resource count has gone up, fill up the difference
+	for ci := len((*cp).connections); ci < (*cp).minConnections; ci++ {
+		_ = cp.createNewConnection()
+	}
 }
