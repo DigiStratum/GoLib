@@ -63,7 +63,7 @@ func (lru *lruCache) Get(key string) *string {
 	lru.lock()
 	defer lru.unlock()
 	if element := lru.find(key, true); nil != element {
-		content := element.Value.(cacheItem).Content
+		content := element.Value.(lruCacheItem).Content
 		return &content
 	}
 	return nil
@@ -101,7 +101,7 @@ func (lru *lruCache) SetLimits(sizeLimit, countLimit int) {
 
 // Private Implementation
 
-type cacheItem struct {
+type lruCacheItem struct {
 	Key, Content		string
 	Size			int
 }
@@ -119,7 +119,7 @@ func (lru *lruCache) numToPrune(key string, size int) int {
 	var pruneCount, replaceCount, replaceSize int
 	if element := lru.find(key, false); nil != element {
 		replaceCount = 1
-		replaceSize = element.Value.(cacheItem).Size
+		replaceSize = element.Value.(lruCacheItem).Size
 	}
 
 	// If there is a count limit in effect...
@@ -138,7 +138,7 @@ func (lru *lruCache) numToPrune(key string, size int) int {
 			num := 0
 			element := lru.ageList.Back()
 			for ; (nil != element) && (pruneSize > 0); num++ {
-				pruneSize -= element.Value.(cacheItem).Size
+				pruneSize -= element.Value.(lruCacheItem).Size
 				element = element.Next()
 			}
 			if num > pruneCount { pruneCount = num }
@@ -162,7 +162,7 @@ func (lru *lruCache) pruneToFit(key string, size int) bool {
 	// Prune starting at the back of the age list for the count we need to prune
 	element := lru.ageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
-		key := element.Value.(cacheItem).Key
+		key := element.Value.(lruCacheItem).Key
 		element = element.Next()
 		lru.drop(key)
 	}
@@ -174,7 +174,7 @@ func (lru *lruCache) pruneToFit(key string, size int) bool {
 func (lru *lruCache) set(key, content string) bool {
 	if ! lru.pruneToFit(key, len(content)) { return false }
 	lru.drop(key)
-	(*lru).elements[key] = lru.ageList.PushFront(cacheItem{
+	(*lru).elements[key] = lru.ageList.PushFront(lruCacheItem{
 		Key: key,
 		Content: content,
 		Size: len(content),
@@ -188,7 +188,7 @@ func (lru *lruCache) set(key, content string) bool {
 // return bool true is we drop it, else false
 func (lru *lruCache) drop(key string) bool {
 	if element := lru.find(key, false); nil != element {
-		(*lru).size -= len(element.Value.(cacheItem).Content)
+		(*lru).size -= len(element.Value.(lruCacheItem).Content)
 		(*lru).count--
 		lru.ageList.Remove(element)
 		delete(lru.elements, key)
