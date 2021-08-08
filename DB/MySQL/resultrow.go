@@ -21,6 +21,7 @@ type ResultRowIfc interface {
 	Set(field string, value nullables.NullableIfc)
 	Fields() []string
 	ToJson() (*string, error)
+//	ToFlatMap() map[string]*string
 }
 
 type resultRow map[string]nullables.NullableIfc
@@ -57,3 +58,11 @@ func (rr *resultRow) ToJson() (*string, error) {
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
 }
+
+/*
+func (rr *resultRow) ToFlatMap() map[string]*string {
+	fm := make(map[string]*string)
+	for field, nullable := range (*rr) { fm[field] = nullable.GetString() }
+	return fm
+}
+*/
