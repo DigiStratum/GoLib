@@ -4,9 +4,7 @@ package golib
 /*
 
 This HashMap class wraps a basic Go map with essential helper functions to make life easier for
-dealing with simple key/value pair data.
-
-TODO: Put some multi-threaded protections around the accessors here
+dealing with simple key/value pair data. *Should* be thread-safe.
 
 */
 
