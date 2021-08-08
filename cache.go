@@ -8,9 +8,12 @@ for dealing with simple key/value pair data where the values are objects (interf
 strings. An important differentiator of a cache vs. a hashmap is that the cache entries have time-
 based expirations to ensure that none of the entries outlive their prescribed freshness.
 
-TODO: Put some multi-threaded protections around the accessors here
 TODO: Set up go routine thread to regularly purgeExpired; track the next nearest expire time so that
-we can land right on it (certainly no sooner than necessary?)
+we can land right on it (certainly no sooner than necessary?) How do we stop the go routine when the
+underlying struct is dead (like the caller creates/uses cache, then throws it away)? the go routine
+should stop if the struct is "dead"
+ref: https://stackoverflow.com/questions/6807590/how-to-stop-a-goroutine
+ref: https://yourbasic.org/golang/wait-for-goroutines-waitgroup/
 
 */
 
