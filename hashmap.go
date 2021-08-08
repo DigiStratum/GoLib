@@ -130,7 +130,7 @@ func (r HashMap) GetInt64(key string) *int64 {
 
 // Check whether we have a data element by key name
 func (r HashMap) Has(key string) bool {
-	return r.Get(key) == nil
+	return r.Get(key) != nil
 }
 
 // Check whether we have configuration elements for all the key names
