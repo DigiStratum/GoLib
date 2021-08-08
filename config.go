@@ -24,6 +24,7 @@ In addition to the explicit imports below, we use the following classes from thi
 import(
 	"strings"
 	"fmt"
+	"sync"
 )
 
 // Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
@@ -50,15 +51,14 @@ type ConfigIfc interface {
 }
 
 // Config embeds a HashMap so that we can extend it
-// ref: https://stackoverflow.com/questions/28800672/how-to-add-new-methods-to-an-existing-type-in-go
-type config struct {
+type Config struct {
 	HashMap
 }
 
-// Make a new one of these!
-func NewConfig() ConfigIfc {
+// Factory Functions
+func NewConfig() Config {
 	hash := NewHashMap()
-	return &config{ HashMap: *hash }
+	return Config{ HashMap: hash }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -66,46 +66,43 @@ func NewConfig() ConfigIfc {
 // -------------------------------------------------------------------------------------------------
 
 // Merge configuration data
-func (cfg *config) MergeConfig(mergeCfg ConfigIfc) {
-	if mc, ok := mergeCfg.(*config); ok {
-		cfg.HashMap.Merge(&(mc.HashMap))
+func (r *Config) MergeConfig(mergeCfg ConfigIfc) {
+	if mc, ok := mergeCfg.(HashMapIfc); ok {
+		r.HashMap.Merge(mc)
 	}
 }
 
 // Get configuration datum whose keys begin with the prefix...
 // We also strip the prefix off leaving just the interesting parts
-func (cfg *config) GetSubset(prefix string) ConfigIfc {
-	return cfg.getSubset(prefix, true)
+func (r Config) GetSubset(prefix string) Config {
+	return r.getSubset(prefix, true)
 }
 
 // Get configuration datum whose keys DO NOT begin with the prefix...
 // We also strip the prefix off leaving just the interesting parts
-func (cfg *config) GetInverseSubset(prefix string) ConfigIfc {
-	return cfg.getSubset(prefix, false)
+func (r Config) GetInverseSubset(prefix string) Config {
+	return r.getSubset(prefix, false)
 }
 
-// Load our JSON configuration data from a string
-func (cfg *config) LoadFromJsonString(configJson *string) {
-	NewJson(configJson).LoadOrPanic(&cfg.HashMap)
-	//cfg.Dump()
+// Load our JSON configuration data from a string (or panic on error)
+func (r *Config) LoadFromJsonString(configJson *string) {
+	NewJson(configJson).LoadOrPanic(&r.HashMap)
 }
 
 // Load our JSON configuration data from a string (or return an error)
-func (cfg *config) LoadFromJsonStringOrError(configJson *string) error {
-	if err := NewJson(configJson).Load(&cfg.HashMap); nil == err { return err }
-	//cfg.Dump()
+func (r *Config) LoadFromJsonStringOrError(configJson *string) error {
+	if err := NewJson(configJson).Load(&r.HashMap); nil == err { return err }
 	return nil
 }
 
-// Load our JSON configuration data from a file on disk
-func (cfg *config) LoadFromJsonFile(configFile string) {
-	NewJsonFromFile(configFile).LoadOrPanic(&cfg.HashMap)
-	//cfg.Dump()
+// Load our JSON configuration data from a file on disk (or panic on error)
+func (r *Config) LoadFromJsonFile(configFile string) {
+	NewJsonFromFile(configFile).LoadOrPanic(&r.HashMap)
 }
 
 // Rereference any %key% references to our own keys in the supplied string
 // returns dereferenced string
-func (cfg *config) DereferenceString(str string) *string {
+func (r Config) DereferenceString(str string) *string {
 	log := GetLogger()
 	// For each of our key/value pairs...
 	for cpair := range cfg.IterateChannel() {
@@ -136,7 +133,7 @@ func (cfg *config) DereferenceString(str string) *string {
 
 // Dereference any values we have that %reference% keys in the referenceConfig
 // returns count of references substituted
-func (cfg *config) Dereference(referenceConfig ConfigIfc) int {
+func (r Config) Dereference(referenceConfig ConfigIfc) int {
 	GetLogger().Trace("Config.Dereference()")
 	GetLogger().Crazy(fmt.Sprintf(
 		"Dereferencing against Config: %s",
@@ -154,7 +151,7 @@ func (cfg *config) Dereference(referenceConfig ConfigIfc) int {
 }
 
 // Dereference against a list of other referenceConfigs
-func (cfg *config) DereferenceAll(referenceConfigs ...ConfigIfc) {
+func (r Config) DereferenceAll(referenceConfigs ...ConfigIfc) {
 	for _, referenceConfig := range referenceConfigs {
 		GetLogger().Crazy(fmt.Sprintf(
 			"DereferenceAll against Config: %s",
@@ -166,7 +163,7 @@ func (cfg *config) DereferenceAll(referenceConfigs ...ConfigIfc) {
 
 // Dereference until result comes back 0 or maxLoops iterations are completed
 // Returns true if fully dereferenced, false, if more refereces may be hiding
-func (cfg *config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
+func (r Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 	localMax := maxLoops
 	if localMax > MAX_REFERENCE_DEPTH { localMax = MAX_REFERENCE_DEPTH; }
 	for loop := 0; loop < localMax; loop++ {
@@ -184,7 +181,7 @@ func (cfg *config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool
 
 // Get configuration datum whose keys Do/Don't begin with the prefix...
 // Return the matches if keepMatches, else return the NON-matches
-func (cfg *config) getSubset(prefix string, keepMatches bool) ConfigIfc {
+func (r Config) getSubset(prefix string, keepMatches bool) ConfigIfc {
 	res := NewConfig()
 	for pair := range cfg.IterateChannel() {
 		matches := strings.HasPrefix(pair.Key, prefix)

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"encoding/json"
 )
 
 type KeyValuePair struct {
@@ -39,111 +40,124 @@ type HashMapIfc interface {
 	DumpString() string
 }
 
-// If we don't export this, then we can't embed it into Config
-type HashMap	map[string]string
+type HashMap struct {
+	hash		map[string]string
+	mutex		sync.Mutex
+}
 
-// Make a new one of these!
-func NewHashMap() *HashMap {
-	return &HashMap{}
+// Factory Functions
+func NewHashMap() HashMap {
+	return HashMap{
+		hash:	make(map[string]string),
+	}
+}
+
+// Get a full (deep) copy of this HashMap
+// This is so that we can give away a copy to someone else without allowing them to tamper with us
+// ref: https://developer20.com/be-aware-of-coping-in-go/
+func CopyHashMap(source HashMap) HashMap {
+	r := NewHashMap()
+	for k, v := range source.hash { r.hash[k] = v }
+	return r
+}
+
+func NewHashMapFromJsonString(json *string) (HashMap, error) {
+	r := NewHashMap()
+	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
+	return r, nil
+}
+
+func NewHashMapFromJsonFile(jsonFile string) (HashMap, error) {
+	r := NewHashMap()
+	if err := r.LoadFromJsonFile(jsonFile); nil != err { return nil, err }
+	return r, nil
 }
 
 // -------------------------------------------------------------------------------------------------
 // HashMapIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// Load our hash map with JSON data from a string (or return an error)
+func (r *HashMap) LoadFromJsonString(json *string) error {
+	return NewJson(json).Load(&r.HashMap)
+}
+
+// Load our hash map with JSON data from a file (or return an error)
+func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
+	return NewJsonFromFile(jsonFile).Load(&r.HashMap)
+}
+
 // Check whether this HashMap is empty (has no properties)
-func (hash *HashMap) IsEmpty() bool {
-	return 0 == hash.Size()
+func (r HashMap) IsEmpty() bool {
+	return 0 == r.Size()
 }
 
 // Get the number of properties in this HashMap
-func (hash *HashMap) Size() int {
-	return len(*hash)
+func (r HashMap) Size() int {
+	return len(r.hash)
 }
 
-// Merge some additional configuration data on top of our own
-func (hash *HashMap) Merge(inbound *HashMap) {
-	for k, v := range *inbound { (*hash)[k] = v }
+// Merge some additional data on top of our own
+func (r *HashMap) Merge(inbound HashMap) {
+	for k, v := range inbound.hash { r.hash[k] = v }
 }
 
-// Set a single configuration element key to the specified value
-func (hash *HashMap) Set(key string, value string) {
-	(*hash)[key] = value
+// Set a single data element key to the specified value
+func (r *HashMap) Set(key string, value string) {
+	r.hash[key] = value
 }
 
-// Get a single configuration element by key name
-func (hash *HashMap) Get(key string) string {
-	str := ""
-	val, ok := (*hash)[key]
-	if ok { str = val }
-	return str
+// Get a single data element by key name
+func (r HashMap) Get(key string) *string {
+	if val, ok := r.hash[key]; ok { return &val }
+	return nil
 }
 
-func (hash *HashMap) GetInt64(key string) int64 {
-	if vc, err := strconv.ParseInt(hash.Get(key), 0, 64); nil == err { return vc }
-	return 0
+func (r HashMap) GetInt64(key string) *int64 {
+	if vc, err := strconv.ParseInt(r.hash.Get(key), 0, 64); nil == err { return &vc }
+	return nil
 }
 
-// Check whether we have a configuration element by key name
-func (hash *HashMap) Has(key string) bool {
-	_, ok := (*hash)[key];
-	return ok
+// Check whether we have a data element by key name
+func (r HashMap) Has(key string) bool {
+	return r.Get(key) == nil
 }
 
 // Check whether we have configuration elements for all the key names
-func (hash *HashMap) HasAll(keys *[]string) bool {
-	for _, key := range *keys {
-		_, ok := (*hash)[key];
-		if ! ok { return false }
-	}
+func (r HashMap) HasAll(keys *[]string) bool {
+	for _, key := range *keys { if ! r.Has(key) { return false } }
 	return true
 }
 
-// Get a full copy of this HashMap
-// This is so that we can give away a copy to someone else without allowing them to tamper with us
-func (hash *HashMap) GetCopy() *HashMap {
-	if nil == hash { return nil }
-	res := make(HashMap)
-	for k, v := range *hash { res[k] = v }
-	return &res
+func (r HashMap) GetKeys() []string {
+	keys := make([]string, len(r.hash))
+	i := 0
+	for key, _ := range r.hash { keys[i] = key; i++ }
+	return keys
 }
 
 // Iterate over the keys for this HashMap and call a callback for each
 // ref: https://ewencp.org/blog/golang-iterators/index.html
-func (hash *HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
-	for k, v := range *hash { callback(KeyValuePair{ Key: k, Value: v}) }
+func (r HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
+	for k, v := range r.hash { callback(KeyValuePair{ Key: k, Value: v}) }
 }
 
 // Iterate over the keys for this HashMap and send all the KeyValuePairs to a channel
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 // ref: https://blog.golang.org/pipelines
 // ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
-func (hash *HashMap) IterateChannel() <-chan KeyValuePair {
-	ch := make(chan KeyValuePair, len(*hash))
+func (r HashMap) IterateChannel() <-chan KeyValuePair {
+	ch := make(chan KeyValuePair, len(r.hash))
 	defer close(ch)
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Fire off a go routine to fill up the channel
-	go func() {
-		for k, v := range *hash {
-			ch <- KeyValuePair{ Key: k, Value: v }
-		}
-		wg.Done()
-	}()
-	wg.Wait()
+	for k, v := range r.hash {
+		ch <- KeyValuePair{ Key: k, Value: v }
+	}
 	return ch
 }
 
-// Dump the contents of this HashMap to stdout for debug purposes
-func (hash *HashMap) Dump() {
-	GetLogger().Info(hash.DumpString())
+func (r HashMap) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(r.hash)
+	if nil != err { return nil, err }
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
 }
-
-// Dump the contents of this HashMap to a string so that it can be captured/processed as needed by the caller
-func (hash *HashMap) DumpString() string {
-	var b strings.Builder
-	for k, v := range *hash { fmt.Fprintf(&b, "\t'%s': '%s'\n", k, v) }
-	return fmt.Sprintf("HashMap = {\n%s}\n", b.String())
-}
-

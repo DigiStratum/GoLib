@@ -46,7 +46,7 @@ type CacheIfc interface {
 	Flush()
 }
 
-// Factories
+// Factory Functions
 func NewCache() Cache {
 	return Cache{
 		cache:	make(map[string]cacheItem),
