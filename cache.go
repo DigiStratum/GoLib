@@ -47,8 +47,8 @@ type CacheIfc interface {
 }
 
 // Factory Functions
-func NewCache() Cache {
-	return Cache{
+func NewCache() *Cache {
+	return &Cache{
 		cache:	make(map[string]cacheItem),
 	}
 }

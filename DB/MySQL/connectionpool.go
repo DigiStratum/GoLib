@@ -77,23 +77,29 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 	for kvp := range config.IterateChannel() {
 		switch kvp.Key {
 			case "min_connections":
+				value := config.GetInt64("min_connections")
+				if nil == value { break }
 				// Set the new Min (cannot be < 1)
-				(*cp).minConnections = int(config.GetInt64("min_connections"))
+				(*cp).minConnections = int(*value)
 				if (*cp).minConnections < 1 { (*cp).minConnections = 1 }
 				// If Min pushed above Max, then push Max up
 				if (*cp).maxConnections < (*cp).minConnections { (*cp).maxConnections = (*cp).minConnections }
 
 			case "max_connections":
+				value := config.GetInt64("max_connections")
+				if nil == value { break }
 				// Set the new Max (cannot be < 1)
-				(*cp).maxConnections = int(config.GetInt64("max_connections"))
+				(*cp).maxConnections = int(*value)
 				if (*cp).maxConnections < 1 { (*cp).maxConnections = 1 }
 				// If Max dropped below Min, then push Min down
 				if (*cp).maxConnections < (*cp).minConnections { (*cp).minConnections = (*cp).maxConnections }
 
 
 			case "max_idle":
+				value := config.GetInt64("max_idle")
+				if nil == value { break }
+				(*cp).maxIdle = int(*value)
 				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
-				(*cp).maxIdle = int(config.GetInt64("max_idle"))
 				if (*cp).maxIdle < 1 { (*cp).maxIdle = 1 }
 
 			default:

@@ -12,8 +12,6 @@ TODO: Put some multi-threaded protections around the accessors here
 
 import (
 	"sync"
-	"fmt"
-	"strings"
 	"strconv"
 	"encoding/json"
 )
@@ -25,19 +23,20 @@ type KeyValuePair struct {
 
 // HashMap public interface
 type HashMapIfc interface {
+	LoadFromJsonString(json *string) error
+	LoadFromJsonFile(jsonFile string) error
 	IsEmpty() bool
 	Size() int
-	Merge(inbound *HashMap)
+	Merge(mergeHash HashMapIfc)
 	Set(key string, value string)
-	Get(key string) string
-	GetInt64(key string) int64
+	Get(key string) *string
+	GetInt64(key string) *int64
+	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	GetCopy() *HashMap
 	IterateCallback(callback func(kvp KeyValuePair))
 	IterateChannel() <-chan KeyValuePair
-	Dump()
-	DumpString() string
+	ToJson() (*string, error)
 }
 
 type HashMap struct {
@@ -55,22 +54,22 @@ func NewHashMap() HashMap {
 // Get a full (deep) copy of this HashMap
 // This is so that we can give away a copy to someone else without allowing them to tamper with us
 // ref: https://developer20.com/be-aware-of-coping-in-go/
-func CopyHashMap(source HashMap) HashMap {
+func CopyHashMap(source *HashMap) *HashMap {
 	r := NewHashMap()
-	for k, v := range source.hash { r.hash[k] = v }
-	return r
+	for k, v := range (*source).hash { r.hash[k] = v }
+	return &r
 }
 
-func NewHashMapFromJsonString(json *string) (HashMap, error) {
+func NewHashMapFromJsonString(json *string) (*HashMap, error) {
 	r := NewHashMap()
 	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
-	return r, nil
+	return &r, nil
 }
 
-func NewHashMapFromJsonFile(jsonFile string) (HashMap, error) {
+func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 	r := NewHashMap()
 	if err := r.LoadFromJsonFile(jsonFile); nil != err { return nil, err }
-	return r, nil
+	return &r, nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -79,12 +78,14 @@ func NewHashMapFromJsonFile(jsonFile string) (HashMap, error) {
 
 // Load our hash map with JSON data from a string (or return an error)
 func (r *HashMap) LoadFromJsonString(json *string) error {
-	return NewJson(json).Load(&r.HashMap)
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	return NewJson(json).Load(&r.hash)
 }
 
 // Load our hash map with JSON data from a file (or return an error)
 func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
-	return NewJsonFromFile(jsonFile).Load(&r.HashMap)
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	return NewJsonFromFile(jsonFile).Load(&r.hash)
 }
 
 // Check whether this HashMap is empty (has no properties)
@@ -98,12 +99,18 @@ func (r HashMap) Size() int {
 }
 
 // Merge some additional data on top of our own
-func (r *HashMap) Merge(inbound HashMap) {
-	for k, v := range inbound.hash { r.hash[k] = v }
+func (r *HashMap) Merge(mergeHash HashMapIfc) {
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	keys := mergeHash.GetKeys()
+	for _, key := range keys {
+		value := mergeHash.Get(key)
+		if nil != value { r.Set(key, *value) }
+	}
 }
 
 // Set a single data element key to the specified value
 func (r *HashMap) Set(key string, value string) {
+	r.mutex.Lock(); defer r.mutex.Unlock()
 	r.hash[key] = value
 }
 
@@ -114,7 +121,10 @@ func (r HashMap) Get(key string) *string {
 }
 
 func (r HashMap) GetInt64(key string) *int64 {
-	if vc, err := strconv.ParseInt(r.hash.Get(key), 0, 64); nil == err { return &vc }
+	value := r.Get(key)
+	if nil != value {
+		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err { return &vc }
+	}
 	return nil
 }
 

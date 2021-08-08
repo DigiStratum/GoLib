@@ -10,88 +10,64 @@ Dealing with JSON at a level of abstraction above encoding/json.
 import(
 	"os"
 	"fmt"
-	gojson "encoding/json"
-	"errors"
+	"encoding/json"
 )
 
-type json struct {
+type JsonIfc interface {
+	Load(target interface{}) error
+}
+
+type Json struct {
 	source	string
 	path	string
 	json	*string
 }
 
-type JSON struct {
-	Json	json
-}
-
-// Make a new one of these (from string)!
-func NewJson(jsonString *string) *json {
-	return &json{ json: jsonString, source: "string" }
+// Factory Functions
+func NewJson(jsonString *string) *Json {
+	return &Json{ json: jsonString, source: "string" }
 }
 
 // Make a new one of these (from file)!
-func NewJsonFromFile(path string) *json {
-	return &json{ path: path, source: "file" }
+func NewJsonFromFile(path string) *Json {
+	return &Json{ path: path, source: "file" }
 }
 
-// Make a new one of these (from string)!
-func NewJSON(jsonString *string) *JSON {
-	return &JSON{
-		Json: json{
-			json: jsonString,
-			source: "string",
-		},
-	}
-}
-
-// Make a new one of these (from file)!
-func NewJSONFromFile(path string) *JSON {
-	return &JSON{
-		Json: json{
-			path: path,
-			source: "file",
-		},
-	}
-}
+// -------------------------------------------------------------------------------------------------
+// JsonIfc Public Interface
+// -------------------------------------------------------------------------------------------------
 
 // Generic JSON load (into ANY interface)
 // The provided target should be a pointer to where we will dump the decoded JSON result
-func (j *json) Load(target interface{}) error {
-	switch (j.source) {
+func (r *Json) Load(target interface{}) error {
+	switch (r.source) {
 		case "string":
-			if (nil == j.json) || ("" == *(j.json)) {
-				return errors.New(
+			if (nil == r.json) || ("" == *r.json) {
+				return fmt.Errorf(
 					"Json.Load(): We were given nil or empty string for the JSON (string)",
 				)
 			}
-			if err := gojson.Unmarshal([]byte(*(j.json)), &target); err != nil {
-				return errors.New(fmt.Sprintf(
+			if err := json.Unmarshal([]byte(*r.json), &target); err != nil {
+				return fmt.Errorf(
 					"Json.Load(): Failed to unmarshall JSON (string): %s",
 					err.Error(),
-				))
+				)
 			}
 			return nil
 
 		case "file":
-			file, err := os.Open(j.path)
+			file, err := os.Open(r.path)
 			defer file.Close()
 			if nil == err {
-				decoder := gojson.NewDecoder(file)
+				decoder := json.NewDecoder(file)
 				err = decoder.Decode(target)
 				if nil == err { return nil }
 			}
 			// Decorate the errror with a little more context
-			return errors.New(fmt.Sprintf(
-				"Json.Load(): (file='%s'): '%s'", j.path, err.Error(),
-			))
+			return fmt.Errorf(
+				"Json.Load(): (file='%s'): '%s'", r.path, err.Error(),
+			)
 	}
 
-	return errors.New(fmt.Sprintf("Json.Load(): Unsupported JSON source (%s)", j.source))
+	return fmt.Errorf("Json.Load(): Unsupported JSON source (%s)", r.source)
 }
-
-// Generic JSON load (or panic)
-// The provided target should be a pointer to where we will dump the decoded JSON result
-func (j *json) LoadOrPanic(target interface{}) {
-	if err := j.Load(target); nil != err { panic(err.Error()) }
-}
-

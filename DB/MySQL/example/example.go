@@ -32,17 +32,20 @@ import (
 func main() {
 	// Load configuration
 	cfg := lib.NewConfig()
-	cfg.LoadFromJsonFile("example.config.json")
+	err := cfg.LoadFromJsonFile("example.config.json")
+	if nil != err {
+		die("Error loading config from JSON file")
+	}
 	requiredConfigKeys := []string{ "user", "pass", "host", "port", "name" }
 	if ! cfg.HasAll(&requiredConfigKeys) {
 		die("Missing one or more required configuration keys")
 	}
 	dsn := db.MakeDSN(
-		cfg.Get("user"),
-		cfg.Get("pass"),
-		cfg.Get("host"),
-		cfg.Get("port"),
-		cfg.Get("name"),
+		*(cfg.Get("user")),
+		*(cfg.Get("pass")),
+		*(cfg.Get("host")),
+		*(cfg.Get("port")),
+		*(cfg.Get("name")),
 	)
 	fmt.Printf("MySQL DSN is: %s\n\n", dsn)
 
