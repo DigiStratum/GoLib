@@ -4,14 +4,14 @@ package golib
 /*
 Dependencies - Implement a container to hold named dependencies and an interface for injection
 */
-type dependencies struct {
+type Dependencies struct {
 	deps	map[string]interface{}
 }
 
-// Dependencies public interface
 type DependenciesIfc interface {
 	Set(name string, dep interface{})
 	Get(name string) interface{}
+	Has(names string) bool
 	HasAll(names *[]string) bool
 }
 
@@ -21,28 +21,38 @@ type DependencyInjectableIfc interface {
 }
 
 // Make a new one of these!
-func NewDependencies() DependenciesIfc {
-	d := dependencies{
+func NewDependencies() *Dependencies {
+	d := Dependencies{
 		deps:	make(map[string]interface{}),
 	}
 	return &d
 }
 
+// -------------------------------------------------------------------------------------------------
+// DependenciesIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+
 // Set a dependency by name
-func (d *dependencies) Set(name string, dep interface{}) {
-	(*d).deps[name] = dep
+func (d *Dependencies) Set(name string, dep interface{}) {
+	d.deps[name] = dep
 }
 
 // Get a dependency by name
-func (d *dependencies) Get(name string) interface{} {
-	if i, ok := (*d).deps[name]; ok { return i }
+func (d Dependencies) Get(name string) interface{} {
+	if i, ok := d.deps[name]; ok { return i }
 	return nil
 }
 
 // Check whether we have dependencies for all the names
-func (d *dependencies) HasAll(names *[]string) bool {
+func (d Dependencies) Has(name string) bool {
+	return d.Get(name) != nil
+}
+
+// Check whether we have dependencies for all the names
+func (d Dependencies) HasAll(names *[]string) bool {
 	for _, name := range *names {
-		if _, ok := (*d).deps[name]; ! ok { return false }
+		if ! d.Has(name) { return false }
 	}
 	return true
 }
