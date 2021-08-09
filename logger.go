@@ -26,33 +26,37 @@ import (
 )
 
 // LogWriter interface
-type LogWriter interface {
+type LogWriterIfc interface {
 	Log(message string)
 }
 
-// DStdOut LogWriter
+// StdOut LogWriter
 type stdOutLogWriter struct {}
-
-// Make a new LogWriter for StdOut
-func NewStdOutLogWriter() LogWriter {
-	return stdOutLogWriter{}
-}
-
-//  Satisfies LogWriter interface
-func (lw stdOutLogWriter) Log(message string) {
-	fmt.Println(message)
-}
 
 // Default LogWriter
 type defaultLogWriter struct {}
 
+// Factory Functions
+
+// Make a new LogWriter for StdOut
+func NewStdOutLogWriter() stdOutLogWriter {
+	return stdOutLogWriter{}
+}
+
 // Make a new LogWriter for default golang logger
-func NewDefaultLogWriter() LogWriter {
+func NewDefaultLogWriter() defaultLogWriter {
 	return defaultLogWriter{}
 }
 
-//  Satisfies LogWriter interface
-func (lw defaultLogWriter) Log(message string) {
+// -------------------------------------------------------------------------------------------------
+// LogWriterIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r stdOutLogWriter) Log(message string) {
+	fmt.Println(message)
+}
+
+func (r defaultLogWriter) Log(message string) {
 	log.Println(message)
 }
 
@@ -69,12 +73,15 @@ const (
 	FATAL			// What fundamental problem is there that is considered do or die?
 )
 
+type LoggerIfc interface {
+}
+
 type logger struct {
 	threadId	string			// Quasi-distinct threadId to filter log output by thread
 	minLogLevel	logLevel		// The minimum logging level
-	logWriter	LogWriter		// The LogWriter we are going to use (TODO: Add support for multiple)
+	logWriter	LogWriterIfc		// The LogWriter we are going to use (TODO: Add support for multiple)
 	logTimestamp	bool			// Conditionally disable timestamps on the log output (consumer may do this for us)
-	logLevelLabels	map[logLevel]string	// Convert a givenlogLevel to a readable string
+	logLevelLabels	map[logLevel]string	// Convert a given logLevel to a readable string
 }
 
 var loggerInstance logger
@@ -89,7 +96,7 @@ func GetLogger() *logger {
 	return &loggerInstance
 }
 
-// Get a new instance
+// Get a new (non-singleton)instance
 func NewLogger() *logger {
 	logLevelLabels := make(map[logLevel]string)
 	logLevelLabels[CRAZY] = "CRAZY"
@@ -109,89 +116,94 @@ func NewLogger() *logger {
 	return &newLogger
 }
 
+// -------------------------------------------------------------------------------------------------
+// LoggerIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Set the threadId to something meaningful to the caller
-func (l *logger) SetThreadId(threadId string) {
-	l.threadId = threadId
+func (r *logger) SetThreadId(threadId string) {
+	r.threadId = threadId
 }
 
 // Set the minimum log level
-func (l *logger) SetMinLogLevel(level string) {
+func (r *logger) SetMinLogLevel(level string) {
 	switch (strings.ToLower(strings.TrimSpace(level))) {
-		case "crazy": l.minLogLevel = CRAZY; return
-		case "trace": l.minLogLevel = TRACE; return
-		case "debug": l.minLogLevel = DEBUG; return
-		case "info": l.minLogLevel = INFO; return
-		case "warn": l.minLogLevel = WARN; return
-		case "error": l.minLogLevel = ERROR; return
-		case "fatal": l.minLogLevel = FATAL; return
+		case "crazy": r.minLogLevel = CRAZY; return
+		case "trace": r.minLogLevel = TRACE; return
+		case "debug": r.minLogLevel = DEBUG; return
+		case "info": r.minLogLevel = INFO; return
+		case "warn": r.minLogLevel = WARN; return
+		case "error": r.minLogLevel = ERROR; return
+		case "fatal": r.minLogLevel = FATAL; return
 	}
-	l.Error(fmt.Sprintf("Logger: SetMinLogLevel(): Unrecognized Log Level requested: '%s'", level))
+	r.Error(fmt.Sprintf("Logger: SetMinLogLevel(): Unrecognized Log Level requested: '%s'", level))
 }
 
 // Replace the current LogWriter with something more to our liking
 // TODO: Add support for multiple LogWriter's so that we can send logs to more than one place
-func (l *logger) SetLogWriter(logWriter LogWriter) {
-	l.logWriter = logWriter
+func (r *logger) SetLogWriter(logWriter LogWriterIfc) {
+	r.logWriter = logWriter
 }
 
 // Set the logTimestamp state (defaults to true to enable timestamps in logger output)
-func (l *logger) LogTimestamp(logTimestamp bool) {
-	l.logTimestamp = logTimestamp
+func (r *logger) LogTimestamp(logTimestamp bool) {
+	r.logTimestamp = logTimestamp
 }
 
 // Log some output
-// Wrap level+message in an error as a code-reduction convenience to any caller wanting to return it
-func (l *logger) log(level logLevel, format string, a ...interface{}) error {
+func (r logger) log(level logLevel, format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
-	logMsg := fmt.Sprintf("%5s %s", l.logLevelLabels[level], msg)
-	if level >= l.minLogLevel {
+	logMsg := fmt.Sprintf("%5s %s", r.logLevelLabels[level], msg)
+	if level >= r.minLogLevel {
 		// Send the log message to our LogWriter
 		timestamp := ""
-		if l.logTimestamp {
+		if r.logTimestamp {
 			timestamp = fmt.Sprintf("%s ", time.Now().Format(time.RFC3339))
 		}
-		l.logWriter.Log(fmt.Sprintf(
+		r.logWriter.Log(fmt.Sprintf(
 			"%sthread:%s %s",
 			timestamp,
-			l.threadId,
+			r.threadId,
 			logMsg,
 		))
 	}
-	return errors.New(logMsg)
+	// Wrap level (WARN|ERROR|FATAL)+message in an error as a code
+	// reduction convenience to any caller wanting to return it
+	if level >= WARN { return errors.New(logMsg) }
+	return nil
 }
 
 // Log CRAZY output
-func (l *logger) Crazy(format string, a ...interface{}) error {
-	return l.log(CRAZY, format, a...)
+func (r logger) Crazy(format string, a ...interface{}) error {
+	return r.log(CRAZY, format, a...)
 }
 
 // Log TRACE output
-func (l *logger) Trace(format string, a ...interface{}) error {
-	return l.log(TRACE, format, a...)
+func (r logger) Trace(format string, a ...interface{}) error {
+	return r.log(TRACE, format, a...)
 }
 
 // Log DEBUG output
-func (l *logger) Debug(format string, a ...interface{}) error {
-	return l.log(DEBUG, format, a...)
+func (r logger) Debug(format string, a ...interface{}) error {
+	return r.log(DEBUG, format, a...)
 }
 
 // Log INFO output
-func (l *logger) Info(format string, a ...interface{}) error {
-	return l.log(INFO, format, a...)
+func (r logger) Info(format string, a ...interface{}) error {
+	return r.log(INFO, format, a...)
 }
 
 // Log WARN output
-func (l *logger) Warn(format string, a ...interface{}) error {
-	return l.log(WARN, format, a...)
+func (r logger) Warn(format string, a ...interface{}) error {
+	return r.log(WARN, format, a...)
 }
 
 // Log ERROR output
-func (l *logger) Error(format string, a ...interface{}) error {
-	return l.log(ERROR, format, a...)
+func (r logger) Error(format string, a ...interface{}) error {
+	return r.log(ERROR, format, a...)
 }
 
 // Log FATAL output (caller should exit/panic after this)
-func (l *logger) Fatal(format string, a ...interface{}) error {
-	return l.log(FATAL, format, a...)
+func (r logger) Fatal(format string, a ...interface{}) error {
+	return r.log(FATAL, format, a...)
 }
-
