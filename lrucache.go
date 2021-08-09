@@ -27,79 +27,15 @@ import (
 	"container/list"
 )
 
-
-// Public Interface
-
-// Make a new one of these
-func NewLRUCache() *lruCache {
-	return &lruCache{
-		count:		0,
-		countLimit:	0,
-		size:		0,
-		sizeLimit:	0,
-		ageList:	list.New(),
-		elements:	make(map[string]*list.Element),
-		mutex:		&sync.Mutex{},
-	}
+type LruCacheIfc interface {
+	Has(key string) bool
+	Set(key, content string) bool
+	Get(key string) *string
+	Drop(key string) bool
+	Size() int
+	Count() int
+	SetLimits(sizeLimit, countLimit int)
 }
-
-// Check whether we have an item in the cache with the supplied key
-func (lru *lruCache) Has(key string) bool {
-	lru.lock()
-	defer lru.unlock()
-	return (nil != lru.find(key, true))
-}
-
-// Add a content item to the cache with the supplied key
-// return true if we set it, else false
-func (lru *lruCache) Set(key, content string) bool {
-	lru.lock()
-	defer lru.unlock()
-	return lru.set(key, content)
-}
-
-// Retrieve an item from the cache with the supplied key (or nil if there isn't one)
-func (lru *lruCache) Get(key string) *string {
-	lru.lock()
-	defer lru.unlock()
-	if element := lru.find(key, true); nil != element {
-		content := element.Value.(lruCacheItem).Content
-		return &content
-	}
-	return nil
-}
-
-// Drop an item from the cache with the supplied key
-// return true if we drop it, else false
-func (lru *lruCache) Drop(key string) bool {
-	lru.lock()
-	defer lru.unlock()
-	return lru.drop(key)
-}
-
-// Return the data size currently being held in this cache
-func (lru *lruCache) Size() int {
-	lru.lock()
-	defer lru.unlock()
-	return lru.size
-}
-
-// Return the count of entries currently being held in this cache
-func (lru *lruCache) Count() int {
-	lru.lock()
-	defer lru.unlock()
-	return lru.count
-}
-
-// Set the limits for size/count on this cache; 0 means unlimited (default for both)
-func (lru *lruCache) SetLimits(sizeLimit, countLimit int) {
-	lru.lock()
-	defer lru.unlock()
-	lru.sizeLimit = sizeLimit
-	lru.countLimit = countLimit
-}
-
-// Private Implementation
 
 type lruCacheItem struct {
 	Key, Content		string
@@ -114,29 +50,100 @@ type lruCache struct {
 	mutex			*sync.Mutex
 }
 
+// Make a new one of these
+func NewLRUCache() *lruCache {
+	return &lruCache{
+		count:		0,
+		countLimit:	0,
+		size:		0,
+		sizeLimit:	0,
+		ageList:	list.New(),
+		elements:	make(map[string]*list.Element),
+		mutex:		&sync.Mutex{},
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+// LruCacheIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+// Check whether we have an item in the cache with the supplied key
+func (r lruCache) Has(key string) bool {
+	return (nil != r.find(key, true))
+}
+
+// Add a content item to the cache with the supplied key
+// return true if we set it, else false
+func (r *lruCache) Set(key, content string) bool {
+	r.lock()
+	defer r.unlock()
+	return r.set(key, content)
+}
+
+// Retrieve an item from the cache with the supplied key (or nil if there isn't one)
+func (r lruCache) Get(key string) *string {
+	r.lock()
+	defer r.unlock()
+	if element := r.find(key, true); nil != element {
+		content := element.Value.(lruCacheItem).Content
+		return &content
+	}
+	return nil
+}
+
+// Drop an item from the cache with the supplied key
+// return true if we drop it, else false
+func (r *lruCache) Drop(key string) bool {
+	r.lock()
+	defer r.unlock()
+	return r.drop(key)
+}
+
+// Return the data size currently being held in this cache
+func (r lruCache) Size() int {
+	return r.size
+}
+
+// Return the count of entries currently being held in this cache
+func (r lruCache) Count() int {
+	return r.count
+}
+
+// Set the limits for size/count on this cache; 0 means unlimited (default for both)
+func (r *lruCache) SetLimits(sizeLimit, countLimit int) {
+	r.lock()
+	defer r.unlock()
+	r.sizeLimit = sizeLimit
+	r.countLimit = countLimit
+}
+
+// -------------------------------------------------------------------------------------------------
+// LruCacheIfc Private Interface
+// -------------------------------------------------------------------------------------------------
+
 // How many existing cache entries must be pruned to fit this new one?
-func (lru *lruCache) numToPrune(key string, size int) int {
+func (r lruCache) numToPrune(key string, size int) int {
 	var pruneCount, replaceCount, replaceSize int
-	if element := lru.find(key, false); nil != element {
+	if element := r.find(key, false); nil != element {
 		replaceCount = 1
 		replaceSize = element.Value.(lruCacheItem).Size
 	}
 
 	// If there is a count limit in effect...
-	if lru.countLimit > 0 {
-		futureCount := lru.count + 1 - replaceCount
-		if futureCount > lru.countLimit { pruneCount = futureCount - lru.countLimit }
+	if r.countLimit > 0 {
+		futureCount := r.count + 1 - replaceCount
+		if futureCount > r.countLimit { pruneCount = futureCount - r.countLimit }
 	}
 
 	// If there is a size limit in effect...
-	if lru.sizeLimit > 0 {
+	if r.sizeLimit > 0 {
 		// If we add this to the cache without pruning, future size would be...
-		futureSize := lru.size + size - replaceSize
+		futureSize := r.size + size - replaceSize
 		// If we break the size limit by adding...
-		if futureSize > lru.sizeLimit {
-			pruneSize := futureSize - lru.sizeLimit
+		if futureSize > r.sizeLimit {
+			pruneSize := futureSize - r.sizeLimit
 			num := 0
-			element := lru.ageList.Back()
+			element := r.ageList.Back()
 			for ; (nil != element) && (pruneSize > 0); num++ {
 				pruneSize -= element.Value.(lruCacheItem).Size
 				element = element.Next()
@@ -149,68 +156,68 @@ func (lru *lruCache) numToPrune(key string, size int) int {
 
 // Prune the currently cached element collection to fit the new element within limits
 // return boolean true if it will fit, else false (true doesn't indicate whether we did any pruning)
-func (lru *lruCache) pruneToFit(key string, size int) bool {
+func (r *lruCache) pruneToFit(key string, size int) bool {
 
 	// Will it fit at all?
-	if (lru.sizeLimit > 0) && (size > lru.sizeLimit) { return false }
-	pruneCount := lru.numToPrune(key, size)
+	if (r.sizeLimit > 0) && (size > r.sizeLimit) { return false }
+	pruneCount := r.numToPrune(key, size)
 	if 0 == pruneCount { return true }
 
 	// TODO: Make sure we're not pruning more than some percentage threshold
 	// (to minimize performance hits due to statistical outliers)
 
 	// Prune starting at the back of the age list for the count we need to prune
-	element := lru.ageList.Back()
+	element := r.ageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		key := element.Value.(lruCacheItem).Key
 		element = element.Next()
-		lru.drop(key)
+		r.drop(key)
 	}
 	return true
 }
 
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
-func (lru *lruCache) set(key, content string) bool {
-	if ! lru.pruneToFit(key, len(content)) { return false }
-	lru.drop(key)
-	(*lru).elements[key] = lru.ageList.PushFront(lruCacheItem{
+func (r *lruCache) set(key, content string) bool {
+	if ! r.pruneToFit(key, len(content)) { return false }
+	r.drop(key)
+	r.elements[key] = r.ageList.PushFront(lruCacheItem{
 		Key: key,
 		Content: content,
 		Size: len(content),
 	})
-	(*lru).size += len(content)
-	(*lru).count++
+	r.size += len(content)
+	r.count++
 	return true
 }
 
 // Drop if exists (don't bump on the find since we're going to drop it!)
 // return bool true is we drop it, else false
-func (lru *lruCache) drop(key string) bool {
-	if element := lru.find(key, false); nil != element {
-		(*lru).size -= len(element.Value.(lruCacheItem).Content)
-		(*lru).count--
-		lru.ageList.Remove(element)
-		delete(lru.elements, key)
+func (r *lruCache) drop(key string) bool {
+	if element := r.find(key, false); nil != element {
+		r.size -= len(element.Value.(lruCacheItem).Content)
+		r.count--
+		r.ageList.Remove(element)
+		delete(r.elements, key)
 		return true
 	}
 	return false
 }
 
-func (lru *lruCache) find(key string, bump bool) *list.Element {
-	if element, ok := (*lru).elements[key]; ok {
+func (r lruCache) find(key string, bump bool) *list.Element {
+	if element, ok := r.elements[key]; ok {
 		// If we got bumped, move to front of age List
-		if bump { lru.ageList.MoveToFront(element) }
+		if bump { r.ageList.MoveToFront(element) }
 		return element
 	}
 	return nil
 }
 
-func (lru *lruCache) lock() {
-	lru.mutex.Lock()
+func (r *lruCache) lock() {
+	r.mutex.Lock()
 }
 
-func (lru *lruCache) unlock() {
-	lru.mutex.Unlock()
+func (r *lruCache) unlock() {
+	r.mutex.Unlock()
 }
 
