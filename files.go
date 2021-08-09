@@ -1,17 +1,11 @@
+// DigiStratum GoLib - File handling
 package golib
-
-/*
-
-File handling library functions
-
-*/
 
 import(
 	"os"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"errors"
 	"path"
 )
 
@@ -35,7 +29,7 @@ func ReadFileBytes(path string) (*[]byte, error) {
 	var err error
 	tbuf, err = ioutil.ReadFile(path)
 	if nil != err {
-		return nil, errors.New(fmt.Sprintf("Error reading '%s': %s", path, err.Error()))
+		return nil, fmt.Errorf("Error reading '%s': %s", path, err.Error())
 	}
 	return &tbuf, nil
 }
@@ -60,9 +54,9 @@ func IsFile(path string) bool {
 func CopyFile(src, dst string) error {
 	// Source must be a file
 	if ! IsFile(src) {
-		return errors.New(fmt.Sprintf(
+		return fmt.Errorf(
 			"Files.CopyFile(): src (%s) is not a file", src,
-		))
+		)
 	}
 
 	// Destination must either be a file (to be replaced) or a dir (to drop the file into)
@@ -75,9 +69,9 @@ func CopyFile(src, dst string) error {
 		srcFile := src[len(srcDir):]
 		destPath = dst + "/" + srcFile
 	} else {
-		return errors.New(fmt.Sprintf(
+		return fmt.Errorf(
 			"Files.CopyFile(): dst (%s) is neither a file, nor a dir", dst,
-		))
+		)
 	}
 
 	// Do the actual file copying bits
@@ -94,4 +88,3 @@ func CopyFile(src, dst string) error {
 	err = out.Sync()
 	return err
 }
-

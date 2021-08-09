@@ -32,7 +32,6 @@ func NewDependencies() *Dependencies {
 // DependenciesIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-
 // Set a dependency by name
 func (d *Dependencies) Set(name string, dep interface{}) {
 	d.deps[name] = dep
