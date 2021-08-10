@@ -11,10 +11,16 @@ broadly applicable which we will capture here.
 
 import (
         "fmt"
+
         "github.com/aws/aws-sdk-go/aws"
         "github.com/aws/aws-sdk-go/aws/session"
+
 	lib "github.com/DigiStratum/GoLib"
 )
+
+type AWSHelperIfc interface {
+	GetSession() *session.Session
+}
 
 type AWSHelper struct {
 	awsRegion	string
@@ -29,21 +35,21 @@ func NewAWSHelper(awsRegion string) *AWSHelper {
 }
 
 // Get our AWS session
-func (ah *AWSHelper) GetSession() *session.Session {
-	if nil == ah.awsSession {
+func (r *AWSHelper) GetSession() *session.Session {
+	if nil == r.awsSession {
 		sess, err := session.NewSession(
-			&aws.Config{ Region: aws.String(ah.awsRegion) },
+			&aws.Config{ Region: aws.String(r.awsRegion) },
 		)
 		if nil != err {
 			lib.GetLogger().Error(fmt.Sprintf(
 				"Failed to establish an AWS session in region '%s': '%s'",
-				ah.awsRegion,
+				r.awsRegion,
 				err.Error(),
 			))
 			return nil
 		}
-		ah.awsSession = sess
+		r.awsSession = sess
 	}
-	return ah.awsSession
+	return r.awsSession
 }
 
