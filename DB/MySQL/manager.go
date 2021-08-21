@@ -10,13 +10,9 @@ import (
 )
 
 type ManagerIfc interface {
-	// Public interface
 	NewConnectionPool(dsn string) DBKeyIfc
 	CloseConnectionPool(dbKey DBKeyIfc)
 	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
-
-	// Private interface
-	//getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
 }
 
 // Set of connections, keyed on DSN

@@ -48,7 +48,7 @@ type PooledConnectionIfc interface {
 	StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row
 }
 
-type pooledConnection struct {
+type PooledConnection struct {
 	pool		ConnectionPoolIfc	// The pool that this pooled connection lives in
 	connection	ConnectionIfc		// Our underlying database connection
 	establishedAt	int64			// Time that this connection was established to the DB
@@ -59,11 +59,11 @@ type pooledConnection struct {
 	mutex		sync.Mutex
 }
 
-func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (PooledConnectionIfc, error) {
+func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (*PooledConnection, error) {
 	connection, err := NewConnection(dsn)
 	if nil != err { return nil, err }
 	now := time.Now().Unix()
-	pc := pooledConnection{
+	pc := PooledConnection{
 		pool:		connPool,
 		connection:	connection,
 		establishedAt:	now,
@@ -76,71 +76,71 @@ func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (PooledConnecti
 }
 
 // -------------------------------------------------------------------------------------------------
-// pooledConnectionIfc Public Interface
+// PooledConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Connections
-func (pc *pooledConnection) IsConnected() bool { return (*pc).connection.IsConnected() }
-func (pc *pooledConnection) Connect() error { pc.Touch(); return (*pc).connection.Connect() }
-func (pc *pooledConnection) Disconnect() { (*pc).connection.Disconnect() }
-func (pc *pooledConnection) Reconnect() { pc.Touch(); (*pc).connection.Reconnect() }
+func (r *PooledConnection) IsConnected() bool { return r.connection.IsConnected() }
+func (r *PooledConnection) Connect() error { r.Touch(); return r.connection.Connect() }
+func (r *PooledConnection) Disconnect() { r.connection.Disconnect() }
+func (r *PooledConnection) Reconnect() { r.Touch(); r.connection.Reconnect() }
 
 // Leasing
-func (pc *pooledConnection) IsLeased() bool { return (*pc).isLeased }
+func (r *PooledConnection) IsLeased() bool { return r.isLeased }
 
-func (pc *pooledConnection) MatchesLeaseKey(leaseKey int64) bool {
-	if ! pc.IsLeased() { return false }
-	return (*pc).leaseKey == leaseKey
+func (r *PooledConnection) MatchesLeaseKey(leaseKey int64) bool {
+	if ! r.IsLeased() { return false }
+	return r.leaseKey == leaseKey
 }
 
-func (pc *pooledConnection) Lease(leaseKey int64) {
-	(*pc).mutex.Lock(); defer (*pc).mutex.Unlock()
+func (r *PooledConnection) Lease(leaseKey int64) {
+	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Set up the lease to guarantee nobody else comes and steals this from us
-	(*pc).isLeased = true
-	(*pc).leaseKey = leaseKey
+	r.isLeased = true
+	r.leaseKey = leaseKey
 	now := time.Now().Unix()
-	(*pc).lastLeasedAt = now
-	(*pc).lastActiveAt = now
+	r.lastLeasedAt = now
+	r.lastActiveAt = now
 	// Just in case we evicted a previous lease holder, see if there is any connection state reset needed
-	if pc.InTransaction() {
-		pc.Rollback()
+	if r.InTransaction() {
+		r.Rollback()
 	}
 }
 
-func (pc *pooledConnection) Release() error {
-	(*pc).mutex.Lock(); defer (*pc).mutex.Unlock()
-	err := (*pc).pool.Release((*pc).leaseKey)
+func (r *PooledConnection) Release() error {
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	err := r.pool.Release(r.leaseKey)
 	if nil != err { return err }
-	(*pc).isLeased = false
-	(*pc).leaseKey = 0
+	r.isLeased = false
+	r.leaseKey = 0
 	return nil
 }
 
-func (pc *pooledConnection) Touch() {
-	(*pc).lastActiveAt = time.Now().Unix()
+func (r *PooledConnection) Touch() {
+	r.lastActiveAt = time.Now().Unix()
 }
 
-func (pc *pooledConnection) IsExpired() bool {
-	maxIdle := int64((*pc).pool.GetMaxIdle())
+func (r *PooledConnection) IsExpired() bool {
+	maxIdle := int64(r.pool.GetMaxIdle())
 	now := time.Now().Unix()
 	// If the last time this connection was Touch()ed, plus the max idle period is in the past, lease expired!
-	return (*pc).lastActiveAt + maxIdle < now
+	return r.lastActiveAt + maxIdle < now
 }
 
 // Transactions
-func (pc *pooledConnection) InTransaction() bool { return (*pc).connection.InTransaction() }
-func (pc *pooledConnection) Rollback() error { return (*pc).connection.Rollback() }
-func (pc *pooledConnection) Begin() error { return (*pc).connection.Begin() }
-func (pc *pooledConnection) Commit() error { pc.Touch(); return (*pc).connection.Commit() }
+func (r *PooledConnection) InTransaction() bool { return r.connection.InTransaction() }
+func (r *PooledConnection) Rollback() error { return r.connection.Rollback() }
+func (r *PooledConnection) Begin() error { return r.connection.Begin() }
+func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
-func (pc *pooledConnection) Prepare(query string) (*db.Stmt, error) { return (*pc).connection.Prepare(query) }
-func (pc *pooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { pc.Touch(); return (*pc).connection.Exec(query, args...) }
-func (pc *pooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { pc.Touch(); return (*pc).connection.Query(query, args...) }
-func (pc *pooledConnection) QueryRow(query string, args ...interface{}) *db.Row { pc.Touch(); return (*pc).connection.QueryRow(query, args...) }
+func (r *PooledConnection) Prepare(query string) (*db.Stmt, error) { return r.connection.Prepare(query) }
+func (r *PooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
+func (r *PooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
+func (r *PooledConnection) QueryRow(query string, args ...interface{}) *db.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
 
 // Statements
-func (pc *pooledConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) { pc.Touch(); return (*pc).connection.StmtExec(stmt, args...) }
-func (pc *pooledConnection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {  pc.Touch(); return (*pc).connection.StmtQuery(stmt, args...) }
-func (pc *pooledConnection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {  pc.Touch(); return (*pc).connection.StmtQueryRow(stmt, args...) }
+func (r *PooledConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) { r.Touch(); return r.connection.StmtExec(stmt, args...) }
+func (r *PooledConnection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {  r.Touch(); return r.connection.StmtQuery(stmt, args...) }
+func (r *PooledConnection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {  r.Touch(); return r.connection.StmtQueryRow(stmt, args...) }
