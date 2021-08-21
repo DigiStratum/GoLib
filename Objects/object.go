@@ -10,7 +10,7 @@ representations in an API, even codified chunks of data within our own executabl
 Object optionally support fields; if the field map is nil, then they are not being used.
 
 TODO: Isolate the encode/decode so that other tools can build against it and have a function that
-      properly interacts with the same encoding scheme as us using ouo *Encoded* accessor methods.
+      properly interacts with the same encoding scheme as us using our *Encoded* accessor methods.
 
 */
 
@@ -21,73 +21,33 @@ import (
 	lib "github.com/DigiStratum/GoLib"
 )
 
-type ObjectFieldType int
-
-const (
-	OFT_UNKNOWN ObjectFieldType = iota
-	OFT_NUMERIC	// Any base 10 numeric form
-	OFT_TEXTUAL	// Any string/text form
-	OFT_DATETIME	// Any valid date and/or time form
-	OFT_BOOLEAN	// Any boolean form
-	OFT_BYTE	// any 8 bit form
-	OFT_SHORT	// any 16 bit form
-	OFT_INT		// any 32 bit form
-	OFT_LONG	// any 64 but form
-	OFT_FLOAT	// any floating point "real" value
-	OFT_DOUBLE	// any double-precision "real" value
-	OFT_FIXED	// any fixed point "real" value
-	OFT_STRING	// any ASCII string
-	OFT_CHAR	// any ASCII single character
-	OFT_MBSTRING	// any multibyte string
-	OFT_MBCHAR	// any multibyte single character
-)
-
-type ObjectTemplate map[string]ObjectFieldType
-
-// Association of Type and value for a single Object Field
-type ObjectField struct {
-	Type		ObjectFieldType
-	Value		*string			// Significance varies with Type
+type ObjectIfc interface {
+	SetContentFromString(content *string)
+	SetEncodedContentFromString(encodedContent *string)
+	SetContentFromFile(path string) error
+	GetContent() *string
+	GetEncodedContent() *string
+	GetFieldType(fieldName string) string
 }
 
-// Map name to ObjectField
-type ObjectFieldMap	map[string]ObjectField
+type objectEncodingScheme int
 
-// Map name to value which may be nil for a given field
-type ObjectFieldValues	map[string]*string
+const (
+	OES_UNKNOWN objectEncodingScheme = iota
+	OES_BASE64					// Base64 Encoding
+)
 
 // A static Object that we're going to codify
 type Object struct {
-	isEncoded	bool			// Is the content encoded?
-	content		*string			// Non-fielded Object "BLOB" representation
-	fields		*ObjectFieldMap		// Field name to value map
+	isEncoded	bool				// Is the content encoded?
+	encodingScheme	objectEncodingScheme		// What method of encoding is used?
+	content		*string				// Non-fielded Object "BLOB" representation
+	fields		map[string]ObjectField		// Field name to value map
 }
 
-// Make a new one of these
+// Factory Functions
 func NewObject() *Object {
 	return &Object{}
-}
-
-// Make a new one of these with mapped fields (yey!)
-// Note that field map could be just names & types (spec), or could also include values (record)
-func NewObjectFromTemplate(objectTemplate *ObjectTemplate) *Object {
-
-	// No template makes this the same as a plain Object
-	if nil == objectTemplate {
-		return NewObject()
-	}
-
-	// Transfer the names/types of our Template to a new ObjectFieldMap
-	objectFieldMap := make(ObjectFieldMap)
-	for name := range *objectTemplate {
-		objectFieldMap[name] = ObjectField{
-			Type: (*objectTemplate)[name],
-		}
-	}
-
-	return &Object{
-		fields:	&objectFieldMap,
-	}
 }
 
 // Make a new one of these from a simple string
@@ -103,6 +63,10 @@ func NewObjectFromFile(path string) *Object {
 	object.SetContentFromFile(path)
 	return object
 }
+
+// -------------------------------------------------------------------------------------------------
+// ObjectIfc Public Interface
+// -------------------------------------------------------------------------------------------------
 
 // Set the Object Content from a plain text string (it will be encoded!)
 func (o *Object) SetContentFromString(content *string) {
@@ -144,8 +108,9 @@ func (o *Object) GetContent() *string {
 }
 
 // Get the Object Content as an Encoded string (you better know what to do with it!)
-func (o *Object) GetEncodedContent() *string {
-	return o.content
+func (r Object) GetEncodedContent() *string {
+	copy := *(r.content) // Make an immutable copy of the content
+	return &copy
 }
 
 // Reset the content of this object; preserves field map for fielded objects 
@@ -166,6 +131,10 @@ func (o *Object) ResetObject() {
 		o.content = nil
 		o.isEncoded = false
 	}
+}
+
+func (r *Object) SetField(fieldName string, objectField ObjectFieldIfc) {
+	r.fields[fieldName] = ojectField
 }
 
 // Set the named field to the specified value (including nil!)
@@ -196,59 +165,20 @@ func (o *Object) SetFieldValue(name string, value *string) error {
 	return nil
 }
 
-// Set all field values as supplied (they much match field map for this object!)
-func (o *Object) SetFieldValuesFromMap(fieldValues *ObjectFieldValues) {
-	// TODO: Implement Me; iterate over ObjectFieldValues; fail if any supplied field is not part of object fieldmap, use SetFieldValue() above for each
-}
-
-// Set all field values as supplied (they much match field map for this object!)
-func (o *Object) SetFieldValuesFromJson(fieldJson string) {
-	// TODO: IMplement Me; convert the json into ObjectFieldValues struct and call SetFieldValuesFromMap() above
-}
-
 // Determine whethere the value passes all the rules for the specified field type
 func (o *Object) IsValueType(value *string, fieldType ObjectFieldType) bool {
 	// TODO switch on type and run the value through the wringer here
 	return true
 }
 
-// Return a readable string for each one
-func (o *Object) GetObjectFieldTypeReadable(fieldType ObjectFieldType) string {
-	switch (fieldType) {
-		case OFT_UNKNOWN:
-			return "unknown"
-		case OFT_NUMERIC:
-			return "numeric"
-		case OFT_TEXTUAL:
-			return "textual"
-		case OFT_DATETIME:
-			return "datetime"
-		case OFT_BOOLEAN:
-			return "boolean"
-		case OFT_BYTE:
-			return "byte"
-		case OFT_SHORT:
-			return "short"
-		case OFT_INT:
-			return "int"
-		case OFT_LONG:
-			return "long"
-		case OFT_FLOAT:
-			return "float"
-		case OFT_DOUBLE:
-			return "double"
-		case OFT_FIXED:
-			return "fixed"
-		case OFT_STRING:
-			return "string"
-		case OFT_CHAR:
-			return "char"
-		case OFT_MBSTRING:
-			return "mbstring"
-		case OFT_MBCHAR:
-			return "mbchar"
-		default:
-			return "unknown"
-	}
+func (r Object) HasField(fieldName string) {
+	_, ok := r.fields[name]
+	return ok
+}
+
+// Return a readable string for the named field
+func (o *Object) GetFieldType(fieldName string) string {
+	if ! r.HasField(fieldName) { return "unknown field" }
+	return r.fields[name].Type.ToString()
 }
 

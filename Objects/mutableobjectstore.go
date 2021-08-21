@@ -2,19 +2,24 @@ package objects
 
 /*
 
-A MutableObjectStore must add the following in addition to the normal ObjectStore requirements.
+A MutableObjectStore extends an ObjectStore with write capability
+
+TODO:
+ * Add support for Delete/Drop object
+ * Add support to synchronize with source if we put/delete in memory and it is now different from
+   source (write-through? implementation dependent?)
 
 */
 
 type MutableObjectStoreIfc interface {
-	ObjectStoreIfc	// Inherit the requirements of the ObjectStore interface as well
+	ObjectStoreIfc	// Embed ObjectStore interface
 
 	// Put the supplied Object into this ObjectStore at the specified path
-	PutObject(path string, object *Object) error
+	PutObject(path string, object ObjectIfc) error
 }
 
 type MutableObjectStore struct {
-	ObjectStore	// Inherit the properties and functions of ObjectStore
+	ObjectStore	// Embed ObjectStore properties
 }
 
 // Make a new one of these!
@@ -30,7 +35,6 @@ func NewMutableObjectStore() *MutableObjectStore {
 }
 
 // Put the supplied Object into this ObjectStore at the specified path
-func (os *MutableObjectStore) PutObject(path string, object *Object) error {
-	return os.collection.PutObject(path, object)
+func (r *MutableObjectStore) PutObject(path string, object ObjectIfc) error {
+	return r.collection.PutObject(path, object)
 }
-
