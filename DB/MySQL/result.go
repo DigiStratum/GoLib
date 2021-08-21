@@ -14,40 +14,41 @@ type ResultIfc interface {
 	GetRowsAffected() (*int64, error)
 }
 
-type result struct {
+type Result struct {
 	res		db.Result
 	lastInsertId	*int64
 	rowsAffected	*int64
 }
 
 // Make a new one of these!
-func NewResult(res db.Result) ResultIfc {
-	r := result{
+func NewResult(res db.Result) *Result {
+	return &Result{
 		res:	res,
 	}
-	return &r
 }
 
 // -------------------------------------------------------------------------------------------------
 // ResultIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *result) GetLastInsertId() (*int64, error) {
+// Get the last insert id from our query result, if available
+func (r *Result) GetLastInsertId() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
-	if nil == (*r).res {
-		v, err := (*r).res.LastInsertId()
+	if nil == r.res {
+		v, err := r.res.LastInsertId()
 		if nil != err { return nil, err }
-		(*r).lastInsertId = &v
+		r.lastInsertId = &v
 	}
-	return (*r).lastInsertId, nil
+	return r.lastInsertId, nil
 }
 
-func (r *result) GetRowsAffected() (*int64, error) {
+// Get the affected row count from our query result, if available
+func (r *Result) GetRowsAffected() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
-	if nil == (*r).res {
-		v, err := (*r).res.RowsAffected()
+	if nil == r.res {
+		v, err := r.res.RowsAffected()
 		if nil != err { return nil, err }
-		(*r).rowsAffected = &v
+		r.rowsAffected = &v
 	}
-	return (*r).rowsAffected, nil
+	return r.rowsAffected, nil
 }
