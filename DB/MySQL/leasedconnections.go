@@ -13,14 +13,14 @@ type LeasedConnectionsIfc interface {
 	getNewLeaseKey() *int64
 }
 
-type leasedConnections struct {
+type LeasedConnections struct {
 	leases		map[int64]LeasedConnectionIfc
 	nextLeaseKey	int64
 	mutex		sync.Mutex
 }
 
-func NewLeasedConnections() LeasedConnectionsIfc {
-	lc := leasedConnections{
+func NewLeasedConnections() *LeasedConnections {
+	lc := LeasedConnections{
 		leases:		make(map[int64]LeasedConnectionIfc),
 		nextLeaseKey:	0,
 	}
@@ -31,22 +31,22 @@ func NewLeasedConnections() LeasedConnectionsIfc {
 // LeasedConnectionsIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (lc *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
-	(*lc).mutex.Lock(); defer (*lc).mutex.Unlock()
+func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
+	r.mutex.Lock(); defer r.mutex.Unlock()
 	// Get a new lease key...
-	if ptrLeaseKey := lc.getNewLeaseKey(); nil != ptrLeaseKey {
+	if ptrLeaseKey := r.getNewLeaseKey(); nil != ptrLeaseKey {
 		// Set up a new lease for it...
 		leasedConnection := NewLeasedConnection(connection, *ptrLeaseKey)
-		(*lc).leases[*ptrLeaseKey] = leasedConnection
+		r.leases[*ptrLeaseKey] = leasedConnection
 		return leasedConnection
 	}
 	return nil
 }
 
-func (lc *leasedConnections) Release(leaseKey int64) bool {
-	(*lc).mutex.Lock(); defer (*lc).mutex.Unlock()
-	if ! lc.leaseExists(leaseKey) { return false }
-	delete((*lc).leases, leaseKey)
+func (r *LeasedConnections) Release(leaseKey int64) bool {
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	if ! r.leaseExists(leaseKey) { return false }
+	delete(r.leases, leaseKey)
 	return true
 }
 
@@ -55,17 +55,17 @@ func (lc *leasedConnections) Release(leaseKey int64) bool {
 // -------------------------------------------------------------------------------------------------
 
 // Is there a Lease on record now with this key?
-func (lc *leasedConnections) leaseExists(leaseKey int64) bool {
-	_, ok := (*lc).leases[leaseKey]
+func (r LeasedConnections) leaseExists(leaseKey int64) bool {
+	_, ok := r.leases[leaseKey]
 	return ok
 }
 
 // Return the next available Lease Key, or nil on failure
-func (lc *leasedConnections) getNewLeaseKey() *int64 {
+func (r *LeasedConnections) getNewLeaseKey() *int64 {
 	// If we don't get this even on the first attempt, then something is wrong... but just in case...
 	for attempts := 0; attempts < 100; attempts++ {
-		(*lc).nextLeaseKey++
-		if ! lc.leaseExists((*lc).nextLeaseKey) { return &(*lc).nextLeaseKey }
+		r.nextLeaseKey++
+		if ! r.leaseExists(r.nextLeaseKey) { return &r.nextLeaseKey }
 	}
 	return nil
 }
