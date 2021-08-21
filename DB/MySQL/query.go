@@ -187,7 +187,10 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
 	// Note: names and values array len() must match. If they don't, then the Universe is off balance
 	convertScanReceiverToResultRow := func(names, values *[]string) ResultRowIfc {
 		result := NewResultRow()
-		for i, name := range *names { result.Set(name, nullables.NewNullable((*values)[i])) }
+		for i, name := range *names {
+			nullableValue := nullables.NewNullable((*values)[i])
+			result.Set(name, *nullableValue)
+		}
 		return result
 	}
 

@@ -18,16 +18,15 @@ import (
 
 type ResultRowIfc interface {
 	Get(field string) nullables.NullableIfc
-	Set(field string, value nullables.NullableIfc)
+	Set(field string, value nullables.Nullable)
 	Fields() []string
 	ToJson() (*string, error)
-//	ToFlatMap() map[string]*string
 }
 
-type resultRow map[string]nullables.NullableIfc
+type ResultRow map[string]nullables.Nullable
 
-func NewResultRow() ResultRowIfc {
-	rr := make(resultRow)
+func NewResultRow() *ResultRow {
+	rr := make(ResultRow)
 	return &rr
 }
 
@@ -35,34 +34,26 @@ func NewResultRow() ResultRowIfc {
 // ResultRowIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (rr *resultRow) Get(field string) nullables.NullableIfc {
-	if value, ok := (*rr)[field]; ok { return value }
+func (r *ResultRow) Get(field string) nullables.NullableIfc {
+	if value, ok := (*r)[field]; ok { return &value }
 	return nil
 }
 
-func (rr *resultRow) Set(field string, value nullables.NullableIfc) {
-	(*rr)[field] = value
+func (r *ResultRow) Set(field string, value nullables.Nullable) {
+	(*r)[field] = value
 }
 
 // Pluck the fields out of the result and just return them so that caller can iterate with Get()
-func (rr *resultRow) Fields() []string {
-	fields := make([]string, len(*rr))
+func (r *ResultRow) Fields() []string {
+	fields := make([]string, len(*r))
 	i := 0
-	for field, _ := range (*rr) { fields[i] = field; i++ }
+	for field, _ := range (*r) { fields[i] = field; i++ }
 	return fields
 }
 
-func (rr *resultRow) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(rr)
+func (r ResultRow) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(r)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
 }
-
-/*
-func (rr *resultRow) ToFlatMap() map[string]*string {
-	fm := make(map[string]*string)
-	for field, nullable := range (*rr) { fm[field] = nullable.GetString() }
-	return fm
-}
-*/
