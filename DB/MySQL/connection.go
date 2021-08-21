@@ -44,15 +44,15 @@ type ConnectionIfc interface {
 	StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row
 }
 
-type connection struct {
+type Connection struct {
 	dsn		string		// Full Data Source Name for this connection
 	conn		*db.DB		// Read-Write Connection
 	transaction	*db.Tx		// Our transaction, if we're in the middle of one
 }
 
 // Make a new one of these and connect!
-func NewConnection(dsn string) (ConnectionIfc, error) {
-	connection := connection{
+func NewConnection(dsn string) (*Connection, error) {
+	connection := Connection{
 		dsn:	dsn,
 	}
 	return &connection, connection.Connect()
@@ -67,74 +67,74 @@ func NewConnection(dsn string) (ConnectionIfc, error) {
 // ------------
 
 // Check whether this connection is established
-func (c *connection) IsConnected() bool {
-	if nil == (*c).conn { return false }
-	return nil == (*c).conn.Ping()
+func (r Connection) IsConnected() bool {
+	if nil == r.conn { return false }
+	return nil == r.conn.Ping()
 }
 
 // Establish the connection using the suplied DSN
-func (c *connection) Connect() error {
+func (r *Connection) Connect() error {
 	// If we're already connected, nothing to do
-	if c.IsConnected() { return nil }
+	if r.IsConnected() { return nil }
 	var err error
-	(*c).conn, err = db.Open("mysql", (*c).dsn)
+	r.conn, err = db.Open("mysql", r.dsn)
 	return err
 }
 
 // Drop this connection
-func (c * connection) Disconnect() {
+func (r *Connection) Disconnect() {
 	// If we're not connected, nothing to do
-	if ! c.IsConnected() { return }
-	(*c).conn.Close()
+	if ! r.IsConnected() { return }
+	r.conn.Close()
 }
 
 // Cycle this connection, or establish a new connection if we're not connected
-func (c *connection) Reconnect() {
-	if c.IsConnected() { c.Disconnect() }
-	c.Connect()
+func (r *Connection) Reconnect() {
+	if r.IsConnected() { r.Disconnect() }
+	r.Connect()
 }
 
 // Get the underlying connection for the caller to put it to work!
-func (c *connection) GetConnection() *db.DB {
-	return (*c).conn
+func (r *Connection) GetConnection() *db.DB {
+	return r.conn
 }
 
 // ------------
 // Transactions
 // ------------
 
-func (c *connection) InTransaction() bool {
-	return nil != (*c).transaction
+func (r Connection) InTransaction() bool {
+	return nil != r.transaction
 }
 
-func (c *connection) Begin() error {
+func (r *Connection) Begin() error {
 	// If we're already in a Transaction...
-	if c.InTransaction() {
+	if r.InTransaction() {
 		// Assume that the app has lost track of the Transaction, maybe lost the connection lease: reset!
-		err := c.Rollback()
+		err := r.Rollback()
 		if nil != err { return err }
 	}
 	var err error
-	(*c).transaction, err = (*c).conn.Begin()
+	r.transaction, err = r.conn.Begin()
 	return err
 }
 
-func (c *connection) NewQuery(query string) (QueryIfc, error) {
-	return NewQuery(c, query)
+func (r *Connection) NewQuery(query string) (QueryIfc, error) {
+	return NewQuery(r, query)
 }
 
-func (c *connection) Commit() error {
-	if ! c.InTransaction() { return errors.New("No active transaction!") }
-	err := (*c).transaction.Commit()
-	(*c).transaction = nil
+func (r *Connection) Commit() error {
+	if ! r.InTransaction() { return errors.New("No active transaction!") }
+	err := r.transaction.Commit()
+	r.transaction = nil
 	return err
 }
 
-func (c *connection) Rollback() error {
+func (r *Connection) Rollback() error {
 	// Not in the middle of a Transaction? no-op, no-error!
-	if ! c.InTransaction() { return nil }
-	err := (*c).transaction.Rollback()
-	(*c).transaction = nil
+	if ! r.InTransaction() { return nil }
+	err := r.transaction.Rollback()
+	r.transaction = nil
 	return err
 }
 
@@ -142,44 +142,44 @@ func (c *connection) Rollback() error {
 // Operations
 // ------------
 
-func (c *connection) Prepare(query string) (*db.Stmt, error) {
-	if c.InTransaction() { return (*c).transaction.Prepare(query) }
-	return (*c).conn.Prepare(query)
+func (r Connection) Prepare(query string) (*db.Stmt, error) {
+	if r.InTransaction() { return r.transaction.Prepare(query) }
+	return r.conn.Prepare(query)
 }
 
-func (c *connection) Exec(query string, args ...interface{}) (db.Result, error) {
-	if c.InTransaction() { return (*c).transaction.Exec(query, args...) }
-	return (*c).conn.Exec(query, args...)
+func (r Connection) Exec(query string, args ...interface{}) (db.Result, error) {
+	if r.InTransaction() { return r.transaction.Exec(query, args...) }
+	return r.conn.Exec(query, args...)
 }
 
-func (c *connection) Query(query string, args ...interface{}) (*db.Rows, error) {
-	if c.InTransaction() { return (*c).transaction.Query(query, args...) }
-	return (*c).conn.Query(query, args...)
+func (r Connection) Query(query string, args ...interface{}) (*db.Rows, error) {
+	if r.InTransaction() { return r.transaction.Query(query, args...) }
+	return r.conn.Query(query, args...)
 }
 
-func (c *connection) QueryRow(query string, args ...interface{}) *db.Row {
-	if c.InTransaction() { return (*c).transaction.QueryRow(query, args...) }
-	return (*c).conn.QueryRow(query, args...)
+func (r Connection) QueryRow(query string, args ...interface{}) *db.Row {
+	if r.InTransaction() { return r.transaction.QueryRow(query, args...) }
+	return r.conn.QueryRow(query, args...)
 }
 
 // ------------
 // Statements
 // ------------
 
-func (c *connection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) {
+func (r Connection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if c.InTransaction() { return (*c).transaction.Stmt(stmt).Exec(args...) }
+	if r.InTransaction() { return r.transaction.Stmt(stmt).Exec(args...) }
 	return stmt.Exec(args...)
 }
 
-func (c *connection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
+func (r Connection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if c.InTransaction() { return (*c).transaction.Stmt(stmt).Query(args...) }
+	if r.InTransaction() { return r.transaction.Stmt(stmt).Query(args...) }
 	return stmt.Query(args...)
 }
 
-func (c *connection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
+func (r Connection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if c.InTransaction() { return (*c).transaction.Stmt(stmt).QueryRow(args...) }
+	if r.InTransaction() { return r.transaction.Stmt(stmt).QueryRow(args...) }
 	return stmt.QueryRow(args...)
 }
