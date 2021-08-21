@@ -7,7 +7,7 @@ which can be managed via ObjectStore. By abstracting Objects as the data set ins
 file on disk, we can capture them in any number of places: files on disk, records in a database,
 representations in an API, even codified chunks of data within our own executable.
 
-Object optionally support fields; if the field map is nil, then they are not being used.
+Object optionally support fields; if the fields map is nil, then they are not being used.
 
 TODO: Isolate the encode/decode so that other tools can build against it and have a function that
       properly interacts with the same encoding scheme as us using our *Encoded* accessor methods.
@@ -34,12 +34,12 @@ type objectEncodingScheme int
 
 const (
 	OES_UNKNOWN objectEncodingScheme = iota
+	OES_NONE					// No Encoding
 	OES_BASE64					// Base64 Encoding
 )
 
 // A static Object that we're going to codify
 type Object struct {
-	isEncoded	bool				// Is the content encoded?
 	encodingScheme	objectEncodingScheme		// What method of encoding is used?
 	content		*string				// Non-fielded Object "BLOB" representation
 	fields		map[string]ObjectField		// Field name to value map
@@ -47,7 +47,9 @@ type Object struct {
 
 // Factory Functions
 func NewObject() *Object {
-	return &Object{}
+	return &Object{
+		encodingScheme:		OES_NONE,
+	}
 }
 
 // Make a new one of these from a simple string
@@ -70,20 +72,22 @@ func NewObjectFromFile(path string) *Object {
 
 // Set the Object Content from a plain text string (it will be encoded!)
 func (o *Object) SetContentFromString(content *string) {
+	// TODO: Don't encode automatically or assume Base64 (possible waste of CPU/time)
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(*content))
 	o.content = &encodedContent
-	o.isEncoded = true
+	o.encodingScheme = OES_BASE64
 }
 
 // Set the Object Content from a text string which is already endcoded
 // (This is used by callers such as res2go that know how to pre-encode)
 func (o *Object) SetEncodedContentFromString(encodedContent *string) {
 	o.content = encodedContent
-	o.isEncoded = true
+	// TODO: Don't assume Base64
+	o.encodingScheme = OES_BASE64
 }
 
 // Set the Object Content from a source file path (it will be encoded!)
-// (This is used to anything froma simple text file to full binary assets)
+// (This is used to anything from a simple text file to full binary assets)
 func (o *Object) SetContentFromFile(path string) error {
 	s, err := lib.ReadFileString(path)
 	if nil != err { return err }
@@ -94,9 +98,10 @@ func (o *Object) SetContentFromFile(path string) error {
 // Get the Object Content as a string (could be anything!)
 func (o *Object) GetContent() *string {
 	// For non-encoded, raw content (probably loaded from disk, DB, service, etc)
-	if ! o.isEncoded { return o.content }
+	if (o.encodingScheme == OES_NONE) { return o.content }
 
 	// For encoded content (probably compiled)
+	// TODO: Don't assume Base64
 	decodedContentBytes, err := base64.StdEncoding.DecodeString(*o.content)
 	if nil != err {
 		// TODO: Handle errors
@@ -129,7 +134,7 @@ func (o *Object) ResetObject() {
 	} else {
 		// reset content for non-fielded objects
 		o.content = nil
-		o.isEncoded = false
+		o.encodingScheme = OES_UNKNOWN
 	}
 }
 
