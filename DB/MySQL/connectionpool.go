@@ -15,6 +15,9 @@ including overall activity, maximum age of established connections, any sort of 
 "dirty" (e.g some change has been made to transaction isolation mode, etc.) We could also take this opportunity to audit
 all of the open connections to see if any others have been sitting open and idle too long and need similar treatment.
 
+TODO:
+ * Change mutex to go-routine+channel for multithreaded orchestration
+
 */
 
 import (
@@ -32,7 +35,7 @@ type ConnectionPoolIfc interface {
 	ClosePool()
 }
 
-type connectionPool struct {
+type ConnectionPool struct {
 	configured		bool
 	dsn			string
 	minConnections		int
@@ -48,8 +51,8 @@ const DEFAULT_MAX_CONNECTIONS = 1
 const DEFAULT_MAX_IDLE = 60
 
 // Make a new one of these
-func NewConnectionPool(dsn string) ConnectionPoolIfc {
-	cp := connectionPool{
+func NewConnectionPool(dsn string) *ConnectionPool {
+	cp := ConnectionPool{
 		configured:		false,
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
@@ -69,9 +72,9 @@ func NewConnectionPool(dsn string) ConnectionPoolIfc {
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
-func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
+func (r *ConnectionPool) Configure(config lib.ConfigIfc) error {
 	// If we have already been configured, do not accept a second configuration
-	if (*cp).configured { return nil }
+	if r.configured { return nil }
 
 	// Capture optional configs
 	for kvp := range config.IterateChannel() {
@@ -80,45 +83,45 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 				value := config.GetInt64("min_connections")
 				if nil == value { break }
 				// Set the new Min (cannot be < 1)
-				(*cp).minConnections = int(*value)
-				if (*cp).minConnections < 1 { (*cp).minConnections = 1 }
+				r.minConnections = int(*value)
+				if r.minConnections < 1 { r.minConnections = 1 }
 				// If Min pushed above Max, then push Max up
-				if (*cp).maxConnections < (*cp).minConnections { (*cp).maxConnections = (*cp).minConnections }
+				if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
 
 			case "max_connections":
 				value := config.GetInt64("max_connections")
 				if nil == value { break }
 				// Set the new Max (cannot be < 1)
-				(*cp).maxConnections = int(*value)
-				if (*cp).maxConnections < 1 { (*cp).maxConnections = 1 }
+				r.maxConnections = int(*value)
+				if r.maxConnections < 1 { r.maxConnections = 1 }
 				// If Max dropped below Min, then push Min down
-				if (*cp).maxConnections < (*cp).minConnections { (*cp).minConnections = (*cp).maxConnections }
+				if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
 
 
 			case "max_idle":
 				value := config.GetInt64("max_idle")
 				if nil == value { break }
-				(*cp).maxIdle = int(*value)
+				r.maxIdle = int(*value)
 				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
-				if (*cp).maxIdle < 1 { (*cp).maxIdle = 1 }
+				if r.maxIdle < 1 { r.maxIdle = 1 }
 
 			default:
 				return errors.New(fmt.Sprintf("Unknown configuration key: '%s'", kvp.Key))
 		}
 	}
-	(*cp).configured = true
+	r.configured = true
 
 	// If the new Max increases from default...
-	if cap((*cp).connections) < (*cp).maxConnections {
+	if cap(r.connections) < r.maxConnections {
 		// Increase connection pool capacity from default to the new max_connections
 		// ref: https://blog.golang.org/slices-intro
-		nc := make([]PooledConnectionIfc, len((*cp).connections), (*cp).maxConnections)
-		copy(nc, (*cp).connections)
-		(*cp).connections = nc
+		nc := make([]PooledConnectionIfc, len(r.connections), r.maxConnections)
+		copy(nc, r.connections)
+		r.connections = nc
 	}
 
 	// If the minimum resource count has gone up, fill up the difference
-	cp.establishMinConnections()
+	r.establishMinConnections()
 
 	return nil
 }
@@ -128,82 +131,82 @@ func (cp *connectionPool) Configure(config lib.ConfigIfc) error {
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
-func (cp *connectionPool) GetConnection() (LeasedConnectionIfc, error) {
+func (r *ConnectionPool) GetConnection() (LeasedConnectionIfc, error) {
 	var connection PooledConnectionIfc
 
-	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
+	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// 1) An already established connection that is available (not leased out to another consumer)
-	connection = cp.findAvailableConnection()
+	connection = r.findAvailableConnection()
 
 	// 2) A newly created connection if the total number of connections is below the max
-	if nil == connection { connection = cp.createNewConnection() }
+	if nil == connection { connection = r.createNewConnection() }
 
 	// 3) An already established connection that is leased out, but past the lease time for idle connections
-	if nil == connection { connection = cp.findExpiredLeaseConnection() }
+	if nil == connection { connection = r.findExpiredLeaseConnection() }
 
 	if nil == connection { return nil, errors.New("No available pooled connections!") }
 
 	// Establish a lease for this connection which is ours now
-	return (*cp).leasedConnections.GetLeaseForConnection(connection), nil
+	return r.leasedConnections.GetLeaseForConnection(connection), nil
 }
 
-func (cp *connectionPool) Release(leaseKey int64) error {
-	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
-	if ! (*cp).leasedConnections.Release(leaseKey) {
+func (r *ConnectionPool) Release(leaseKey int64) error {
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	if ! r.leasedConnections.Release(leaseKey) {
 		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
 	}
 	return nil
 }
 
 // Max Idle has a default, but may be overridden by configuration; this gets access to the current setting value
-func (cp *connectionPool) GetMaxIdle() int {
-	return (*cp).maxIdle
+func (r ConnectionPool) GetMaxIdle() int {
+	return r.maxIdle
 }
 
-func (cp *connectionPool) ClosePool() {
-	(*cp).mutex.Lock(); defer (*cp).mutex.Unlock()
+func (r *ConnectionPool) ClosePool() {
+	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
-	(*cp).dsn = ""
+	r.dsn = ""
 
 	// Drop all open leases
-	(*cp).leasedConnections = NewLeasedConnections()
+	r.leasedConnections = NewLeasedConnections()
 
 	// Disconnect all open connections
-	for _, c := range (*cp).connections { c.Disconnect() }
+	for _, connection := range (*r).connections { connection.Disconnect() }
 }
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc Private Interface
 // -------------------------------------------------------------------------------------------------
 
-func (cp *connectionPool) findAvailableConnection() PooledConnectionIfc {
-	for _, connection := range (*cp).connections {
+func (r *ConnectionPool) findAvailableConnection() PooledConnectionIfc {
+	for _, connection := range (*r).connections {
 		if ! connection.IsLeased() { return connection }
 	}
 	return nil
 }
 
-func (cp *connectionPool) createNewConnection() PooledConnectionIfc {
+func (r *ConnectionPool) createNewConnection() PooledConnectionIfc {
 	// if we are at capacity, then we can't create a new connection
-	if len((*cp).connections) >= cap((*cp).connections) { return nil }
+	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
-	newConnection, err := NewPooledConnection((*cp).dsn, cp)
-	if nil == err { (*cp).connections = append((*cp).connections, newConnection) }
+	newConnection, err := NewPooledConnection(r.dsn, r)
+	if nil == err { r.connections = append(r.connections, newConnection) }
 	return newConnection // nil if there was an error
 }
 
-func (cp *connectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
-	for _, connection := range (*cp).connections {
+func (r ConnectionPool) findExpiredLeaseConnection() PooledConnectionIfc {
+	for _, connection := range r.connections {
 		if connection.IsLeased() && connection.IsExpired() { return connection }
 	}
 	return nil
 }
 
-func (cp *connectionPool) establishMinConnections() {
+func (r *ConnectionPool) establishMinConnections() {
 	// If the minimum resource count has gone up, fill up the difference
-	for ci := len((*cp).connections); ci < (*cp).minConnections; ci++ {
-		_ = cp.createNewConnection()
+	for ci := len(r.connections); ci < r.minConnections; ci++ {
+		_ = r.createNewConnection()
 	}
 }
