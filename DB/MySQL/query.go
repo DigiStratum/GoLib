@@ -29,7 +29,6 @@ that this is needed.
 */
 
 import (
-	"errors"
 	"strings"
 	db "database/sql"
 
@@ -37,8 +36,7 @@ import (
 )
 
 type QueryIfc interface {
-	// Public Interface
-	AttachConnection(connection interface{}) error
+	AttachConnection(connection ConnectionIfc) error
 	Run(args ...interface{}) (ResultIfc, error)
 	RunReturnValue(receiver interface{}, args ...interface{}) error
 	RunReturnInt(args ...interface{}) (*int, error)
@@ -46,21 +44,18 @@ type QueryIfc interface {
 	RunReturnOne(args ...interface{}) (ResultRowIfc, error)
 	RunReturnAll(args ...interface{}) (ResultSetIfc, error)
 	RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
-
-	// Private interface
-	resolveQuery(args ... interface{}) (*string, error)
 }
 
-type query struct {
+type Query struct {
 	connection	ConnectionIfc
 	query		string
 	statement	*db.Stmt
 }
 
 // Make a new one of these!
-// Returns nil if there is any problem setting up the query...!
-func NewQuery(connection interface{}, qry string) (QueryIfc, error) {
-	q := query{
+// Returns nil+error if there is any problem setting up the query...!
+func NewQuery(connection ConnectionIfc, qry string) (*Query, error) {
+	q := Query{
 		query:		qry,
 	}
 
@@ -73,39 +68,34 @@ func NewQuery(connection interface{}, qry string) (QueryIfc, error) {
 // QueryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (q *query) AttachConnection(connection interface{}) error {
-	// We are going to allow multiple interfaces to be passed in here and convert to ConnectionIfc (or fail)
-	var c ConnectionIfc
-	var ok bool
-	if c, ok = connection.(ConnectionIfc); ! ok { return errors.New("Does not satisfy ConnectionIfc!") }
-
+func (r *Query) AttachConnection(connection ConnectionIfc) error {
 	// If the query does NOT contain a list for expansion ('???') then we can use a prepared statement
 	// Note: a literal string value of '???' would be encoded as '\\?\\?\\?'
 	// https://pkg.go.dev/database/sql#Stmt
 	var statement *db.Stmt
 	var err error
-	if ! strings.Contains((*q).query, "???") {
-		statement, err = c.Prepare((*q).query)
+	if ! strings.Contains(r.query, "???") {
+		statement, err = connection.Prepare(r.query)
 		if nil != err { return err }
 	}
 
-	(*q).connection = c
-	(*q).statement = statement
+	r.connection = connection
+	r.statement = statement
 	return nil
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (q *query) Run(args ...interface{}) (ResultIfc, error) {
+func (r Query) Run(args ...interface{}) (ResultIfc, error) {
 	var result db.Result
 	var err error
-	if nil != (*q).statement {
+	if nil != r.statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		result, err = (*q).connection.StmtExec((*q).statement, args...)
+		result, err = r.connection.StmtExec(r.statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
-		qry, err := q.resolveQuery(args...)
+		qry, err := r.resolveQuery(args...)
 		if nil != err { return nil, err }
-		result, err = (*q).connection.Exec(*qry, args...)
+		result, err = r.connection.Exec(*qry, args...)
 	}
 	return NewResult(result), err
 }
@@ -113,18 +103,18 @@ func (q *query) Run(args ...interface{}) (ResultIfc, error) {
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single value (any type pointed at by receiver) as the only column
 // of the only row of the result
-func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error {
+func (r Query) RunReturnValue(receiver interface{}, args ...interface{}) error {
 	var row *db.Row
 	var err error
 
-	if nil != (*q).statement {
+	if nil != r.statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		row = (*q).connection.StmtQueryRow((*q).statement, args...)
+		row = r.connection.StmtQueryRow(r.statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
-		qry, err := q.resolveQuery(args...)
+		qry, err := r.resolveQuery(args...)
 		if nil != err { return err }
-		row = (*q).connection.QueryRow(*qry, args...)
+		row = r.connection.QueryRow(*qry, args...)
 	}
 
 	if nil == row { return nil }
@@ -136,26 +126,26 @@ func (q *query) RunReturnValue(receiver interface{}, args ...interface{}) error 
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single int value as the only column of the only row of the result
-func (q *query) RunReturnInt(args ...interface{}) (*int, error) {
+func (r Query) RunReturnInt(args ...interface{}) (*int, error) {
 	var value int
-	err := q.RunReturnValue(&value, args...)
+	err := r.RunReturnValue(&value, args...)
 	if nil == err { return &value, nil }
 	return nil, err
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single string value as the only column of the only row of the result
-func (q *query) RunReturnString(args ...interface{}) (*string, error) {
+func (r Query) RunReturnString(args ...interface{}) (*string, error) {
 	var value string
-	err := q.RunReturnValue(&value, args...)
+	err := r.RunReturnValue(&value, args...)
 	if nil == err { return &value, nil }
 	return nil, err
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single ResultRowIfc value as the only row of the result
-func (q *query) RunReturnOne(args ...interface{}) (ResultRowIfc, error) {
-	results, err := q.RunReturnSome(1, args...)
+func (r Query) RunReturnOne(args ...interface{}) (ResultRowIfc, error) {
+	results, err := r.RunReturnSome(1, args...)
 	if nil != err { return nil, err }
 	if (nil == results) || (0 == results.Len()) { return nil, nil }
 	return results.Get(0), nil
@@ -163,25 +153,42 @@ func (q *query) RunReturnOne(args ...interface{}) (ResultRowIfc, error) {
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns all result rows as a set
-func (q *query) RunReturnAll(args ...interface{}) (ResultSetIfc, error) {
-	return q.RunReturnSome(0, args...)
+func (r Query) RunReturnAll(args ...interface{}) (ResultSetIfc, error) {
+	return r.RunReturnSome(0, args...)
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error) {
+func (r Query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error) {
 	var rows *db.Rows
 	var err error
 
-	if nil != (*q).statement {
+	if nil != r.statement {
 		// Prepared statement need not specify a query (the statement is the query)
-		rows, err = (*q).connection.StmtQuery((*q).statement, args...)
+		rows, err = r.connection.StmtQuery(r.statement, args...)
 	} else {
 		// Resolve a non-prepared statement query with any of our own substitutions
-		qry, err := q.resolveQuery(args...)
+		qry, err := r.resolveQuery(args...)
 		if nil != err { return nil, err }
-		rows, err = (*q).connection.Query(*qry, args...)
+		rows, err = r.connection.Query(*qry, args...)
+	}
+
+	// Return a slice of values and pointers to those values for Scan() to map result into
+	makeScanReceiver := func(size int) (*[]string, *[]interface{}) {
+		columnPointers := make([]interface{}, size)
+		columns := make([]string, size)
+		for i, _ := range columns { columnPointers[i] = &columns[i] }
+		return &columns, &columnPointers
+	}
+
+	// Create our map, and retrieve the value for each column from the pointers,
+	// slice, storing it in the map with the name of the column as the key.
+	// Note: names and values array len() must match. If they don't, then the Universe is off balance
+	convertScanReceiverToResultRow := func(names, values *[]string) ResultRowIfc {
+		result := NewResultRow()
+		for i, name := range *names { result.Set(name, nullables.NewNullable((*values)[i])) }
+		return result
 	}
 
 	// If the query returned no results, handle it specifically...
@@ -207,29 +214,8 @@ func (q *query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error
 // -------------------------------------------------------------------------------------------------
 
 // Placeholder to support resolving magic expander tags, etc within our query
-func (q *query) resolveQuery(args ... interface{}) (*string, error) {
-	protoQuery := (*q).query
+func (r Query) resolveQuery(args ... interface{}) (*string, error) {
+	protoQuery := r.query
 	finalQuery := protoQuery
 	return &finalQuery, nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// Private supporting functions
-// -------------------------------------------------------------------------------------------------
-
-// Return a slice of values and pointers to those values for Scan() to map result into
-func makeScanReceiver(size int) (*[]string, *[]interface{}) {
-	columnPointers := make([]interface{}, size)
-	columns := make([]string, size)
-	for i, _ := range columns { columnPointers[i] = &columns[i] }
-	return &columns, &columnPointers
-}
-
-// Create our map, and retrieve the value for each column from the pointers,
-// slice, storing it in the map with the name of the column as the key.
-// Note: names and values array len() must match. If they don't, then the Universe is off balance
-func convertScanReceiverToResultRow(names, values *[]string) ResultRowIfc {
-	result := NewResultRow()
-	for i, name := range *names { result.Set(name, nullables.NewNullable((*values)[i])) }
-	return result
 }
