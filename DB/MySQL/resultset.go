@@ -5,54 +5,61 @@ import (
 )
 
 type ResultSetIfc interface {
-	// Public
-	Get(rowNum int) ResultRowIfc
+	Get(rowNum int) ResultRow
 	Len() int
 	IsEmpty() bool
+	Add(result ResultRowIfc)
+	IsFinalized() bool
+	Finalize()
 	ToJson() (*string, error)
-	// Private
-	add(result ResultRowIfc)
 }
 
-type resultSet struct {
-	results		[]ResultRowIfc
+type ResultSet struct {
+	results		[]ResultRow
+	isFinalized	bool
 }
 
-func NewResultSet() ResultSetIfc {
-	rs := resultSet{
-		results:	make([]ResultRowIfc, 0),
+func NewResultSet() *ResultSet {
+	return &ResultSet{
+		results:	make([]ResultRow, 0),
 	}
-	return &rs
 }
 
 // -------------------------------------------------------------------------------------------------
 // ResultSetIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (rs *resultSet) Get(rowNum int) ResultRowIfc {
-	if rowNum >= rs.Len() { return nil }
-	return (*rs).results[rowNum]
+func (r ResultSet) Get(rowNum int) ResultRow {
+	if rowNum >= r.Len() { return nil }
+	return r.results[rowNum]
 }
 
-func (rs *resultSet) Len() int {
-	return len((*rs).results)
+func (r ResultSet) Len() int {
+	return len(r.results)
 }
 
-func (rs *resultSet) IsEmpty() bool {
-	return rs.Len() == 0
+func (r ResultSet) IsEmpty() bool {
+	return r.Len() == 0
 }
 
-func (rs *resultSet) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(rs)
+func (r *ResultSet) Add(result ResultRowIfc) {
+	// No more changes (immutable) after finalization
+	if r.IsFinalized() { return }
+	resultRow := result.(*ResultRow)
+	(*r).results = append((*r).results, *resultRow)
+}
+
+func (r ResultSet) IsFinalized() bool {
+	return r.isFinalized
+}
+
+func (r *ResultSet) Finalize() {
+	r.isFinalized = true
+}
+
+func (r ResultSet) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(r)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// ResultSetIfc Private Interface
-// -------------------------------------------------------------------------------------------------
-
-func (rs *resultSet) add(result ResultRowIfc) {
-	(*rs).results = append((*rs).results, result)
 }

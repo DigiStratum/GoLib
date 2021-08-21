@@ -37,13 +37,13 @@ import (
 
 type QueryIfc interface {
 	AttachConnection(connection ConnectionIfc) error
-	Run(args ...interface{}) (ResultIfc, error)
+	Run(args ...interface{}) (*Result, error)
 	RunReturnValue(receiver interface{}, args ...interface{}) error
 	RunReturnInt(args ...interface{}) (*int, error)
 	RunReturnString(args ...interface{}) (*string, error)
-	RunReturnOne(args ...interface{}) (ResultRowIfc, error)
-	RunReturnAll(args ...interface{}) (ResultSetIfc, error)
-	RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
+	RunReturnOne(args ...interface{}) (*ResultRow, error)
+	RunReturnAll(args ...interface{}) (*ResultSet, error)
+	RunReturnSome(max int, args ...interface{}) (*ResultSet, error)
 }
 
 type Query struct {
@@ -85,7 +85,7 @@ func (r *Query) AttachConnection(connection ConnectionIfc) error {
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (r Query) Run(args ...interface{}) (ResultIfc, error) {
+func (r Query) Run(args ...interface{}) (*Result, error) {
 	var result db.Result
 	var err error
 	if nil != r.statement {
@@ -144,23 +144,24 @@ func (r Query) RunReturnString(args ...interface{}) (*string, error) {
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns only a single ResultRowIfc value as the only row of the result
-func (r Query) RunReturnOne(args ...interface{}) (ResultRowIfc, error) {
+func (r Query) RunReturnOne(args ...interface{}) (*ResultRow, error) {
 	results, err := r.RunReturnSome(1, args...)
 	if nil != err { return nil, err }
 	if (nil == results) || (0 == results.Len()) { return nil, nil }
-	return results.Get(0), nil
+	result := results.Get(0)
+	return &result, nil
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns all result rows as a set
-func (r Query) RunReturnAll(args ...interface{}) (ResultSetIfc, error) {
+func (r Query) RunReturnAll(args ...interface{}) (*ResultSet, error) {
 	return r.RunReturnSome(0, args...)
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func (r Query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error) {
+func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
 	var rows *db.Rows
 	var err error
 
@@ -185,7 +186,7 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
 	// Create our map, and retrieve the value for each column from the pointers,
 	// slice, storing it in the map with the name of the column as the key.
 	// Note: names and values array len() must match. If they don't, then the Universe is off balance
-	convertScanReceiverToResultRow := func(names, values *[]string) ResultRowIfc {
+	convertScanReceiverToResultRow := func(names, values *[]string) *ResultRow {
 		result := NewResultRow()
 		for i, name := range *names {
 			nullableValue := nullables.NewNullable((*values)[i])
@@ -207,7 +208,7 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (ResultSetIfc, error)
 		columnValues, columnPointers := makeScanReceiver(len(cols))
 		if err := rows.Scan(*columnPointers...); err != nil { return nil, err }
 		result := convertScanReceiverToResultRow(&cols, columnValues)
-		results.add(result)
+		results.Add(result)
 	}
 	return results, nil
 }
