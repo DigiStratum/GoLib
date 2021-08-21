@@ -16,18 +16,18 @@ type ManagerIfc interface {
 	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
 
 	// Private interface
-	getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
+	//getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc
 }
 
 // Set of connections, keyed on DSN
-type manager struct {
+type Manager struct {
 	connectionPools		map[string]ConnectionPoolIfc
 	mutex			sync.Mutex
 }
 
 // Make a new one of these!
-func NewManager() ManagerIfc {
-	return &manager{
+func NewManager() *Manager {
+	return &Manager{
 		connectionPools: make(map[string]ConnectionPoolIfc),
 	}
 }
@@ -36,26 +36,24 @@ func NewManager() ManagerIfc {
 // ManagerIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (mgr *manager) NewConnectionPool(dsn string) DBKeyIfc {
+func (r *Manager) NewConnectionPool(dsn string) DBKeyIfc {
 	dbKey := NewDBKeyFromDSN(dsn)
-	(*mgr).mutex.Lock()
-	defer (*mgr).mutex.Unlock()
-	(*mgr).connectionPools[dbKey.GetKey()] = NewConnectionPool(dsn)
+	r.mutex.Lock();	defer r.mutex.Unlock()
+	r.connectionPools[dbKey.GetKey()] = NewConnectionPool(dsn)
 	return dbKey
 }
 
-func (mgr *manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
-	connPool := mgr.getConnectionPool(dbKey)
+func (r *Manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
+	connPool := r.getConnectionPool(dbKey)
 	if nil == connPool { return nil }
 	conn, err := connPool.GetConnection()
 	if nil != err { fmt.Println("error: %s", err.Error()) }
 	return conn
 }
 
-func (mgr *manager) CloseConnectionPool(dbKey DBKeyIfc) {
-	(*mgr).mutex.Lock()
-	defer (*mgr).mutex.Unlock()
-	connPool := mgr.getConnectionPool(dbKey)
+func (r *Manager) CloseConnectionPool(dbKey DBKeyIfc) {
+	r.mutex.Lock();	defer r.mutex.Unlock()
+	connPool := r.getConnectionPool(dbKey)
 	if nil == connPool { return }
 	connPool.ClosePool()
 }
@@ -65,8 +63,8 @@ func (mgr *manager) CloseConnectionPool(dbKey DBKeyIfc) {
 // -------------------------------------------------------------------------------------------------
 
 // Get the connection pool for the specified key
-func (mgr *manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
-	if connPool, ok := mgr.connectionPools[dbKey.GetKey()]; ok {
+func (r *Manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
+	if connPool, ok := r.connectionPools[dbKey.GetKey()]; ok {
 		return connPool
 	}
 	return nil
