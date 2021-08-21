@@ -148,8 +148,7 @@ func (r Query) RunReturnOne(args ...interface{}) (*ResultRow, error) {
 	results, err := r.RunReturnSome(1, args...)
 	if nil != err { return nil, err }
 	if (nil == results) || (0 == results.Len()) { return nil, nil }
-	result := results.Get(0)
-	return &result, nil
+	return results.Get(0), nil
 }
 
 // Run this query against the supplied database Connection with the provided query arguments

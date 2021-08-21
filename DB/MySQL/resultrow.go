@@ -23,36 +23,39 @@ type ResultRowIfc interface {
 	ToJson() (*string, error)
 }
 
-type ResultRow map[string]nullables.Nullable
+type ResultRow struct {
+	values		map[string]nullables.Nullable
+}
 
 func NewResultRow() *ResultRow {
-	rr := make(ResultRow)
-	return &rr
+	return &ResultRow{
+		values:		make(map[string]nullables.Nullable),
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
 // ResultRowIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ResultRow) Get(field string) nullables.NullableIfc {
-	if value, ok := (*r)[field]; ok { return &value }
+func (r ResultRow) Get(field string) nullables.NullableIfc {
+	if value, ok := r.values[field]; ok { return &value }
 	return nil
 }
 
 func (r *ResultRow) Set(field string, value nullables.Nullable) {
-	(*r)[field] = value
+	r.values[field] = value
 }
 
 // Pluck the fields out of the result and just return them so that caller can iterate with Get()
-func (r *ResultRow) Fields() []string {
-	fields := make([]string, len(*r))
+func (r ResultRow) Fields() []string {
+	fields := make([]string, len(r.values))
 	i := 0
-	for field, _ := range (*r) { fields[i] = field; i++ }
+	for field, _ := range r.values { fields[i] = field; i++ }
 	return fields
 }
 
 func (r ResultRow) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(r)
+	jsonBytes, err := json.Marshal(r.values)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil

@@ -5,7 +5,7 @@ import (
 )
 
 type ResultSetIfc interface {
-	Get(rowNum int) ResultRow
+	Get(rowNum int) *ResultRow
 	Len() int
 	IsEmpty() bool
 	Add(result ResultRowIfc)
@@ -29,9 +29,9 @@ func NewResultSet() *ResultSet {
 // ResultSetIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r ResultSet) Get(rowNum int) ResultRow {
+func (r ResultSet) Get(rowNum int) *ResultRow {
 	if rowNum >= r.Len() { return nil }
-	return r.results[rowNum]
+	return &r.results[rowNum]
 }
 
 func (r ResultSet) Len() int {
