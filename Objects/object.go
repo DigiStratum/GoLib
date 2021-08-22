@@ -22,12 +22,22 @@ import (
 )
 
 type ObjectIfc interface {
-	SetContentFromString(content *string)
-	SetEncodedContentFromString(encodedContent *string)
-	SetContentFromFile(path string) error
-	GetContent() *string
-	GetEncodedContent() *string
-	GetFieldType(fieldName string) string
+	// Import
+	FromString(content *string, encodingScheme EncodingScheme) error
+	FromBytes(bytes *[]byte, encodingScheme EncodingScheme) error
+	FromFile(path string, encodingScheme EncodingScheme) error
+
+	// Export
+	ToString(encodingScheme EncodingScheme) (*string, error)
+	ToBytes(encodingScheme EncodingScheme) (*[]byte, error)
+	ToFile(path string, encodingScheme EncodingScheme) error
+	ToJson() (*string, error)
+
+	// Fields
+	AddField(fieldName string, value *string, ofType OFType) error
+	SetFieldValue(fieldName string, value *string) error
+	HasField(fieldName string)
+	GetFieldType(fieldName string) *ObjectFieldType
 }
 
 // A static Object that we're going to codify

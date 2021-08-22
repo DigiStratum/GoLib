@@ -10,7 +10,9 @@ type ObjectField struct {
 	Value		*string			// Significance varies with Type
 }
 
+// -------------------------------------------------------------------------------------------------
 // Factory Functions
+// -------------------------------------------------------------------------------------------------
 
 func NewObjectField() *ObjectField {
 	return &ObjectField{

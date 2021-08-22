@@ -36,7 +36,9 @@ const (
 	OFT_MBCHAR	// any multibyte single character
 )
 
+// -------------------------------------------------------------------------------------------------
 // Factory functions
+// -------------------------------------------------------------------------------------------------
 
 func NewObjectFieldType() *ObjectFieldType {
 	return &ObjectFieldType{}
