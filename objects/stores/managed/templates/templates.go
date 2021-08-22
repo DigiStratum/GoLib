@@ -1,8 +1,8 @@
-package objects
+package templates
 
 /*
 
-Mustache template handling
+Mustache template handling via Managed ObjectStore
 
 FIXME: Make sure that this is thread-safe for managing the cache structure
 

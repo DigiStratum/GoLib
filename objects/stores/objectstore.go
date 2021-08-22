@@ -4,7 +4,8 @@ package objects
 
 ObjectStore for Objects (immutable)
 
-TODO: Add some supporting funcs to Object to get a list of Objects below a given path (i.e. everything in a dir)
+TODO:
+ * Add some supporting funcs to ObjectStore to get a list of Objects below a given path (i.e. everything in a dir)
 
 */
 

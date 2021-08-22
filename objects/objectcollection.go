@@ -5,7 +5,11 @@ package objects
 Collection of Objects organized by path; useful for memory-mapped ObjectStores and/or cache type
 structures.
 
-FIXME: Add some thread concurrency safety around this things accessor functions
+FIXME:
+ * Add some thread concurrency safety around this things accessor functions
+
+TODO:
+ * Obsolete the Channel based iterator in favor of a closure function that returns pairs on iteration
 
 */
 
@@ -13,6 +17,13 @@ import (
 	"sync"
 	lib "github.com/DigiStratum/GoLib"
 )
+
+type ObjectCollectionIfc interface {
+	GetObject(path string) *Object
+	HasObject(path string) bool
+	PutObject(path string, object *Object) error
+	IterateChannel() <-chan PathObjectPair
+}
 
 type objectMap map[string]*Object
 
@@ -52,6 +63,10 @@ type ObjectFieldRule struct {
 	ControlValue	string			// Significance varies with Field and Condition
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new one of these
 func NewObjectCollection() *ObjectCollection {
 	om := make(objectMap)
@@ -60,6 +75,11 @@ func NewObjectCollection() *ObjectCollection {
 	}
 	return &objectCollection
 }
+
+// -------------------------------------------------------------------------------------------------
+// ObjectCollectionIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 
 // Get a Object out of the Collection by path
 func (oc *ObjectCollection) GetObject(path string) *Object {

@@ -44,6 +44,12 @@ func NewObjectFieldType() *ObjectFieldType {
 	return &ObjectFieldType{}
 }
 
+func NewObjectFieldTypeFromString(strType string) *ObjectFieldType {
+	oft := NewObjectFieldType()
+	oft.ofType := oft.getOFType(strType)
+	return &ObjectFieldType{}
+}
+
 // -------------------------------------------------------------------------------------------------
 // ObjectFieldTypeIfc Public Interface
 // -------------------------------------------------------------------------------------------------
@@ -86,4 +92,30 @@ func (r ObjectFieldType) IsValid(value *string) bool {
 		case OFT_UNKNOWN: return false
 	}
 	return true
+}
+
+// -------------------------------------------------------------------------------------------------
+// ObjectFieldTypeIfc Private Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ObjectFieldType) getOFType(strType string) OFType {
+	switch (strType) {
+		case "uninitialized": return OFT_UNKNOWN
+		case "numeric": return OFT_NUMERIC
+		case "textual": return OFT_TEXTUAL
+		case "datetime": return OFT_DATETIME
+		case "boolean": return OFT_BOOLEAN
+		case "byte": return OFT_BYTE
+		case "short": return OFT_SHORT
+		case "int": return OFT_INT
+		case "long": return OFT_LONG
+		case "float": return OFT_FLOAT
+		case "double": return OFT_DOUBLE
+		case "fixed": return OFT_FIXED
+		case "string": return OFT_STRING
+		case "char": return OFT_CHAR
+		case "mbstring": return OFT_MBSTRING
+		case "mbchar": return OFT_MBCHAR
+		default: return OFT_UNKNOWN
+	}
 }
