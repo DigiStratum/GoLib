@@ -4,20 +4,21 @@ package objects
 An ObjectFieldType allows us to emulate loose typing for ObjectField Values
 */
 
+type OFType int
+
 type ObjectFieldTypeIfc interface {
-	SetType(ofType objectFieldType)
-	GetType() objectFieldType
+	SetType(ofType OFType)
+	GetType() OFType
 	ToString() string
+	IsValid(value *string) bool
 }
 
-type objectFieldType int
-
 type ObjectFieldType struct {
-	ofType		objectFieldType
+	ofType		OFType
 }
 
 const (
-	OFT_UNKNOWN objectFieldType = iota
+	OFT_UNKNOWN OFType = iota
 	OFT_NUMERIC	// Any base 10 numeric form
 	OFT_TEXTUAL	// Any string/text form
 	OFT_DATETIME	// Any valid date and/or time form
@@ -45,11 +46,11 @@ func NewObjectFieldType() *ObjectFieldType {
 // ObjectFieldTypeIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectFieldType) SetType(ofType objectFieldType) {
+func (r *ObjectFieldType) SetType(ofType OFType) {
 	r.ofType = ofType
 }
 
-func (r ObjectFieldType) GetType() objectFieldType {
+func (r ObjectFieldType) GetType() OFType {
 	return r.ofType
 }
 
@@ -74,4 +75,13 @@ func (r ObjectFieldType) ToString() string {
 		case OFT_MBCHAR: return "mbchar"
 		default: return "unknown type"
 	}
+}
+
+// Validate the supplied value against our type
+func (r ObjectFieldType) IsValid(value *string) bool {
+	// TODO: Switch against r.ofType to check the value against the expected type
+	switch (r.ofType) {
+		case OFT_UNKNOWN: return false
+	}
+	return true
 }

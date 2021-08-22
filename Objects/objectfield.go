@@ -12,7 +12,7 @@ type ObjectField struct {
 
 // Factory Functions
 
-func NewObjectField *ObjectField {
+func NewObjectField() *ObjectField {
 	return &ObjectField{
 		Type:	NewObjectFieldType(),
 	}
