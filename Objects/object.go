@@ -30,19 +30,10 @@ type ObjectIfc interface {
 	GetFieldType(fieldName string) string
 }
 
-type objectEncodingScheme int
-
-const (
-	OES_UNKNOWN objectEncodingScheme = iota
-	OES_NONE					// No Encoding
-	OES_BASE64					// Base64 Encoding
-)
-
 // A static Object that we're going to codify
 type Object struct {
-	encodingScheme	objectEncodingScheme		// What method of encoding is used?
-	content		*string				// Non-fielded Object "BLOB" representation
-	fields		map[string]ObjectField		// Field name to value map
+	transcodedContent	Transcoder
+	fields			map[string]ObjectField		// Field name to value map
 }
 
 // Factory Functions
