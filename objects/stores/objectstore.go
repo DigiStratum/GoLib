@@ -29,6 +29,10 @@ type ObjectStore struct {
 	collection	*ObjectCollection
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new one of these
 func NewObjectStore() *ObjectStore {
 	objectStore := ObjectStore{
@@ -45,20 +49,24 @@ func NewObjectStorePreloaded(collection *ObjectCollection) *ObjectStore {
 	return &objectStore
 }
 
+// -------------------------------------------------------------------------------------------------
+// ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Satisfies ObjectStoreIfc
 // Any ObjectStore implementation should override this as needed
-func (os *ObjectStore) Configure(storeConfig lib.ConfigIfc) error {
+func (r *ObjectStore) Configure(storeConfig lib.ConfigIfc) error {
 	// There is no configuration data required for this objectStore type
 	return nil
 }
 
 // Satisfies ObjectStoreIfc
-func (os *ObjectStore) GetObject(path string) *Object {
-	return os.collection.GetObject(path)
+func (r ObjectStore) GetObject(path string) *Object {
+	return r.collection.GetObject(path)
 }
 
 // Satisfies ObjectStoreIfc
-func (os *ObjectStore) HasObject(path string) bool {
-	return os.collection.HasObject(path)
+func (r ObjectStore) HasObject(path string) bool {
+	return r.collection.HasObject(path)
 }
 

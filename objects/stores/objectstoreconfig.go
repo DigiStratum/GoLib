@@ -17,8 +17,12 @@ import (
 	lib "github.com/DigiStratum/GoLib"
 )
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new Config initialized with properties from a JSON Object
-func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.ConfigIfc, error) {
+func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Config, error) {
 
 	// Check the ObjectStore
 	if nil == objectStore {

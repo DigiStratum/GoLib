@@ -22,6 +22,10 @@ type MutableObjectStore struct {
 	ObjectStore	// Embed ObjectStore properties
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new one of these!
 func NewMutableObjectStore() *MutableObjectStore {
 	// Ref: https://travix.io/type-embedding-in-go-ba40dd4264df
@@ -33,6 +37,10 @@ func NewMutableObjectStore() *MutableObjectStore {
 	}
 	return &objectStore
 }
+
+// -------------------------------------------------------------------------------------------------
+// MutableObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
 
 // Put the supplied Object into this ObjectStore at the specified path
 func (r *MutableObjectStore) PutObject(path string, object ObjectIfc) error {

@@ -80,38 +80,37 @@ func NewObjectCollection() *ObjectCollection {
 // ObjectCollectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-
 // Get a Object out of the Collection by path
-func (oc *ObjectCollection) GetObject(path string) *Object {
-	if oc.HasObject(path) { return (*oc.collection)[path] }
+func (r ObjectCollection) GetObject(path string) *Object {
+	if r.HasObject(path) { return r.collection[path] }
 	return nil
 }
 
 // Check whether a Object is in the Collection by path
-func (oc *ObjectCollection) HasObject(path string) bool {
-	_, ok := (*oc.collection)[path]
+func (r ObjectCollection) HasObject(path string) bool {
+	_, ok := r.collection[path]
 	return ok
 }
 
 // Put a Object into the Collection by path
-func (oc *ObjectCollection) PutObject(path string, object *Object) error {
+func (r *ObjectCollection) PutObject(path string, object *Object) error {
 	if nil == object {
 		return lib.GetLogger().Warn("ObjectCollection.PutObject() - object can't be nil")
 	}
-	(*oc.collection)[path] = object
+	r.collection[path] = object
 	return nil
 }
 
 // Iterate over the objects for this collectino and send all the Path-Object Pairs to a channel
-func (oc *ObjectCollection) IterateChannel() <-chan PathObjectPair {
-	ch := make(chan PathObjectPair, len(*oc.collection))
+func (r ObjectCollection) IterateChannel() <-chan PathObjectPair {
+	ch := make(chan PathObjectPair, len(r.collection))
 	defer close(ch)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	// Fire off a go routine to fill up the channel
 	go func() {
-		for p, o := range *oc.collection {
+		for p, o := range r.collection {
 			ch <- PathObjectPair{ Path: p, Obj: o }
 		}
 		wg.Done()
