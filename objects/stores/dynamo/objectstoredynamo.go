@@ -1,4 +1,4 @@
-package objects
+package dynamo
 
 /*
 
@@ -38,12 +38,19 @@ import (
 	"github.com/DigiStratum/GoLib/Cloud"
 )
 
+type ObjectStoreDynamoIfc interface {
+}
+
 type ObjectStoreDynamo struct {
 	storeConfig	lib.ConfigIfc
 	readCache	*MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 	awsDynamoDB	*dynamodb.DynamoDB
 }
+
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
 func NewObjectStoreDynamo() *ObjectStoreDynamo {
@@ -53,40 +60,42 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 	return &r
 }
 
-// Satisfies RespositoryIfc
-func (os *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
+
+// -------------------------------------------------------------------------------------------------
+// ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for AWS Dynamo!
 	requiredConfig := []string{ "awsregion", "tablename", "primarykey" }
 	if ! (config.HasAll(&requiredConfig)) {
 		return errors.New("Incomplete ObjectStoreDynamo configuration provided")
 	}
-	os.storeConfig = config
+	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
-	os.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
+	r.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
 	return nil
 }
 
-// Satisfies ObjectStoreIfc
 // Note that this precludes usage of Dynamo's support for "sort keys"; who
 // would have thought that two keys would be required for an object store?
-func (os *ObjectStoreDynamo) GetObject(path string) *Object {
+// Use read-through cache which requires us to mutate state
+func (r *ObjectStoreDynamo) GetObject(path string) *Object {
 	// If it's not yet in the cache
-	if ! os.readCache.HasObject(path) {
+	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from our Dynamo Table into cache
 		key := map[string]*dynamodb.AttributeValue{
-			os.storeConfig.Get("primarykey"): {
+			r.storeConfig.Get("primarykey"): {
 				S: aws.String(path),
 			},
 		}
 		input := &dynamodb.GetItemInput{
 			Key: key,
-			TableName: aws.String(os.storeConfig.Get("tablename")),
+			TableName: aws.String(r.storeConfig.Get("tablename")),
 		}
-		result, err := os.awsDynamoDB.GetItem(input)
-
-		// Error = no Object!
+		result, err := r.awsDynamoDB.GetItem(input)
 		if nil != err {
 			lib.GetLogger().Error(fmt.Sprintf(
 				"ObjectStoreDynamo.GetObject() : DynamoDB.GetItem() : Error: '%s'",
@@ -111,32 +120,37 @@ func (os *ObjectStoreDynamo) GetObject(path string) *Object {
 			return nil
 		}
 
-		os.readCache.PutObject(path, NewObjectFromString(item.Content))
+		r.readCache.PutObject(path, NewObjectFromString(item.Content))
 	}
-	return os.readCache.GetObject(path)
+	return r.readCache.GetObject(path)
 }
 
-// Satisfies ObjectStoreIfc
-func (os *ObjectStoreDynamo) HasObject(path string) bool {
+func (r ObjectStoreDynamo) HasObject(path string) bool {
 	// If it's already in the cache, then we know we have it!
-	if os.readCache.HasObject(path) { return true }
+	if r.readCache.HasObject(path) { return true }
 
 	// TODO: Figure out if Dynamo has this object without necessarily retrieving it
 	var err error
 	return nil == err
 }
 
-// Satisfies MutableObjectStoreIfc
-func (os *ObjectStoreDynamo) PutObject(path string, object *Object) error {
+// -------------------------------------------------------------------------------------------------
+// MutableObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ObjectStoreDynamo) PutObject(path string, object *Object) error {
 	// TODO: Actually implement WRITE operation to Dynamo here
 	return errors.New("Not Yet Implemented!")
 }
 
-// Get the DynamoDB service session
-func (os *ObjectStoreDynamo) getDynamoService() *dynamodb.DynamoDB {
-	if nil == os.awsDynamoDB {
-		os.awsDynamoDB = dynamodb.New(os.awsHelper.GetSession())
-	}
-	return os.awsDynamoDB
-}
+// -------------------------------------------------------------------------------------------------
+// ObjectStoreDynamoIfc Private Interface
+// -------------------------------------------------------------------------------------------------
 
+// Get the DynamoDB service session
+func (r *ObjectStoreDynamo) getDynamoService() *dynamodb.DynamoDB {
+	if nil == r.awsDynamoDB {
+		r.awsDynamoDB = dynamodb.New(r.awsHelper.GetSession())
+	}
+	return r.awsDynamoDB
+}
