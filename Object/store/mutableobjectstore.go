@@ -1,4 +1,5 @@
-package stores
+package store
+
 
 /*
 
