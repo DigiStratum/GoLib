@@ -1,4 +1,4 @@
-package objects
+package objectstoremysql
 
 /*
 
@@ -8,7 +8,6 @@ Ref: https://www.golangprograms.com/example-of-golang-crud-using-mysql-from-scra
 
 Configuration:
 	* dsn	- Data Source Name (DSN) for MySQL database connection
-
 
 */
 
@@ -52,6 +51,10 @@ type ObjectStoreMySQL struct {
 	objectSpecs		map[string]objectSpec	// Object spec names must be part of object "path"
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new one of these!
 func NewObjectStoreMySQL() *ObjectStoreMySQL {
 	r := ObjectStoreMySQL{
@@ -61,38 +64,40 @@ func NewObjectStoreMySQL() *ObjectStoreMySQL {
 	return &r
 }
 
+// -------------------------------------------------------------------------------------------------
+// ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Satisfies RespositoryIfc
-func (os *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
+func (r *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for MySQL!
 	requiredConfig := []string{ "dsn" }
 	if ! (config.HasAll(&requiredConfig)) {
 		return errors.New("Incomplete ObjectStoreMySQL configuration provided")
 	}
-	os.storeConfig = config
+	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
 	//os.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
 	return nil
 }
 
-// Satisfies ObjectStoreIfc
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
-func (os *ObjectStoreMySQL) GetObject(path string) *Object {
+func (r *ObjectStoreMySQL) GetObject(path string) *Object {
 	// If it's not yet in the cache
-	if ! os.readCache.HasObject(path) {
+	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from MySQL into cache
 	}
-	return os.readCache.GetObject(path)
+	return r.readCache.GetObject(path)
 }
 
-// Satisfies ObjectStoreIfc
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
-func (os *ObjectStoreMySQL) HasObject(path string) bool {
+func (r *ObjectStoreMySQL) HasObject(path string) bool {
 /*
 	// TODO @HERE reactivate this; disabled for build
 	// If it's already in the cache, then we know we have it!
-	if os.readCache.HasObject(path) { return true }
+	if r.readCache.HasObject(path) { return true }
 
 	// If MySQL has a non-zero count of this record, then there's an Object!
 	ps, err := os.parsePath(path)
@@ -106,7 +111,7 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	}
 
 	// Get our Object Spec for this path spec...
-	objectSpec, ok := os.objectSpecs[ps.ObjectSpecName]
+	objectSpec, ok := r.objectSpecs[ps.ObjectSpecName]
 	if ! ok {
 		lib.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
 		return false
@@ -115,24 +120,34 @@ func (os *ObjectStoreMySQL) HasObject(path string) bool {
 	// TODO: look it up in the DB since it's not in the cache
 	// TODO: use the objectSpec.queries["has"], prepared statement, (feed args into Query method if
 	// possible? - this would prevent us from using arbitrary field ordering/spec in the path
-	// query string... alpha-sort the keys and require same sorting in prepared query?)
+	// query string... alpha-sort the keys and reobjectsquire same sorting in prepared query?)
 
 	// ref: http://go-database-sql.org/prepared.html
 
 	return false
 }
 
-// Satisfies MutableObjectStoreIfc
+// -------------------------------------------------------------------------------------------------
+// MutableObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
 // blank keys to create with autoincrement; INSERT ... ON DUPLICATE KEY UPDATE syntax for create/update
-func (os *ObjectStoreMySQL) PutObject(path string, object *Object) error {
+func (r *ObjectStoreMySQL) PutObject(path string, object *Object) error {
 	// TODO: Actually implement WRITE operation to MySQL here
 	return errors.New("Not Yet Implemented!")
 }
 
+// -------------------------------------------------------------------------------------------------
+// ObjectStoreMySQL Private Interface
+// -------------------------------------------------------------------------------------------------
+
+// TODO: Move these supporting functions to a more generalized location such as ObjectStore
+// if they don't end up with any implementation that is contextualized by ObjectStoreMySQL
+
 // parse URL-Encoded path string into logical structure
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
-func (os *ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
+func (r ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 
 	// Separate object spec name from keys
 	pathParts := strings.Split(path, "?")
@@ -178,7 +193,7 @@ func (os *ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 
 // Parse a given "name=value" string such that name and.r value may be URL-encoded
 // Return the name and value decoded strings or an error if there was a problem
-func (os *ObjectStoreMySQL) parseURLKeyValuePair(keyValuePair string) (string, string, error) {
+func (r *ObjectStoreMySQL) parseURLKeyValuePair(keyValuePair string) (string, string, error) {
 	keyParts := strings.Split(keyValuePair, "=")
 	if len(keyParts) > 2 {
 		// Hmm - there should only be one '=' in it...
