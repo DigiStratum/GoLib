@@ -1,4 +1,4 @@
-package objects
+package objectfield
 
 /*
 An ObjectFieldType allows us to emulate loose typing for ObjectField Values
@@ -95,7 +95,7 @@ func (r ObjectFieldType) IsValid(value *string) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ObjectFieldTypeIfc Private Interface
+// ObjectFieldType Private Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *ObjectFieldType) getOFType(strType string) OFType {

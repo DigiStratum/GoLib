@@ -1,4 +1,4 @@
-package objects
+package objectcollection
 
 /*
 
@@ -16,24 +16,23 @@ TODO:
 import (
 	"sync"
 	lib "github.com/DigiStratum/GoLib"
+	obj "github.com/DigiStratum/GoLib/objects"
 )
 
 type ObjectCollectionIfc interface {
-	GetObject(path string) *Object
+	GetObject(path string) *obj.Object
 	HasObject(path string) bool
-	PutObject(path string, object *Object) error
+	PutObject(path string, object *obj.Object) error
 	IterateChannel() <-chan PathObjectPair
 }
 
-type objectMap map[string]*Object
-
 type ObjectCollection struct {
-	collection	*objectMap
+	collection	*map[string]*obj.Object
 }
 
 type PathObjectPair struct {
 	Path	string
-	Obj	*Object
+	Obj	*obj.Object
 }
 
 type ObjectFieldCondition int
@@ -69,7 +68,7 @@ type ObjectFieldRule struct {
 
 // Make a new one of these
 func NewObjectCollection() *ObjectCollection {
-	om := make(objectMap)
+	om := make(map[string]*obj.Object)
 	objectCollection := ObjectCollection {
 		collection:	&om,
 	}
@@ -81,7 +80,7 @@ func NewObjectCollection() *ObjectCollection {
 // -------------------------------------------------------------------------------------------------
 
 // Get a Object out of the Collection by path
-func (r ObjectCollection) GetObject(path string) *Object {
+func (r ObjectCollection) GetObject(path string) *obj.Object {
 	if r.HasObject(path) { return r.collection[path] }
 	return nil
 }
@@ -93,7 +92,7 @@ func (r ObjectCollection) HasObject(path string) bool {
 }
 
 // Put a Object into the Collection by path
-func (r *ObjectCollection) PutObject(path string, object *Object) error {
+func (r *ObjectCollection) PutObject(path string, object *obj.Object) error {
 	if nil == object {
 		return lib.GetLogger().Warn("ObjectCollection.PutObject() - object can't be nil")
 	}
@@ -118,4 +117,3 @@ func (r ObjectCollection) IterateChannel() <-chan PathObjectPair {
 	wg.Wait()
 	return ch
 }
-

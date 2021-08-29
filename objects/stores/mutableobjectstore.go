@@ -1,4 +1,4 @@
-package objects
+package stores
 
 /*
 
@@ -10,12 +10,15 @@ TODO:
    source (write-through? implementation dependent?)
 
 */
+import (
+	obj "github.com/DigiStratum/GoLib/objects"
+)
 
 type MutableObjectStoreIfc interface {
 	ObjectStoreIfc	// Embed ObjectStore interface
 
 	// Put the supplied Object into this ObjectStore at the specified path
-	PutObject(path string, object ObjectIfc) error
+	PutObject(path string, object obj.ObjectIfc) error
 }
 
 type MutableObjectStore struct {
@@ -43,6 +46,6 @@ func NewMutableObjectStore() *MutableObjectStore {
 // -------------------------------------------------------------------------------------------------
 
 // Put the supplied Object into this ObjectStore at the specified path
-func (r *MutableObjectStore) PutObject(path string, object ObjectIfc) error {
+func (r *MutableObjectStore) PutObject(path string, object obj.ObjectIfc) error {
 	return r.collection.PutObject(path, object)
 }

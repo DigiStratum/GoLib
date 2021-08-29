@@ -1,4 +1,4 @@
-package objects
+package objectfield
 
 /*
 An ObjectField encapsulates the properties of a single field for a given Object

@@ -1,4 +1,4 @@
-package objects
+package stores
 
 /*
 
@@ -11,6 +11,8 @@ TODO:
 
 import (
 	lib "github.com/DigiStratum/GoLib"
+	obj "github.com/DigiStratum/GoLib/objects"
+	objc "github.com/DigiStratum/GoLib/objects/collection"
 )
 
 type ObjectStoreIfc interface {
@@ -19,14 +21,14 @@ type ObjectStoreIfc interface {
 	Configure(storeConfig lib.ConfigIfc) error
 
 	// Get the Object located at this path, or nil if none
-	GetObject(path string) *Object
+	GetObject(path string) *obj.Object
 
 	// Check whether there is a Object located at this path, true if so
 	HasObject(path string) bool
 }
 
 type ObjectStore struct {
-	collection	*ObjectCollection
+	collection	*objc.ObjectCollection
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -36,13 +38,13 @@ type ObjectStore struct {
 // Make a new one of these
 func NewObjectStore() *ObjectStore {
 	objectStore := ObjectStore{
-		collection: NewObjectCollection(),
+		collection: objc.NewObjectCollection(),
 	}
 	return &objectStore
 }
 
 // Make a new one of these, preloaded with a ObjectCollection
-func NewObjectStorePreloaded(collection *ObjectCollection) *ObjectStore {
+func NewObjectStorePreloaded(collection *objc.ObjectCollection) *ObjectStore {
 	objectStore := ObjectStore{
 		collection: collection,
 	}
@@ -53,20 +55,16 @@ func NewObjectStorePreloaded(collection *ObjectCollection) *ObjectStore {
 // ObjectStoreIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// Satisfies ObjectStoreIfc
 // Any ObjectStore implementation should override this as needed
 func (r *ObjectStore) Configure(storeConfig lib.ConfigIfc) error {
 	// There is no configuration data required for this objectStore type
 	return nil
 }
 
-// Satisfies ObjectStoreIfc
-func (r ObjectStore) GetObject(path string) *Object {
+func (r ObjectStore) GetObject(path string) *obj.Object {
 	return r.collection.GetObject(path)
 }
 
-// Satisfies ObjectStoreIfc
 func (r ObjectStore) HasObject(path string) bool {
 	return r.collection.HasObject(path)
 }
-

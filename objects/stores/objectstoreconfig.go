@@ -1,4 +1,4 @@
-package objects
+package stores
 
 /*
 
@@ -60,4 +60,3 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Conf
 
 	return config, nil
 }
-
