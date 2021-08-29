@@ -1,4 +1,4 @@
-package stores
+package store
 
 /*
 
@@ -12,7 +12,6 @@ right out of our compiled binary at runtime.
 
 import (
 	"fmt"
-	"errors"
 
 	lib "github.com/DigiStratum/GoLib"
 )
@@ -26,24 +25,21 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Conf
 
 	// Check the ObjectStore
 	if nil == objectStore {
-		err := errors.New("Config: ObjectStore was nil")
-		lib.GetLogger().Error(err.Error())
+		err := fmt.Errorf("Config: ObjectStore was nil")
 		return nil, err
 	}
 
 	// Request the JSON Object
 	configObject := objectStore.GetObject(objectPath)
 	if nil == configObject {
-		err := errors.New(fmt.Sprintf("Config: ObjectStore does not have Object with path: '%s'", objectPath))
-		lib.GetLogger().Error(err.Error())
+		err := fmt.Errorf("Config: ObjectStore does not have Object with path: '%s'", objectPath)
 		return nil, err
 	}
 
 	// Get the JSON Object content
 	configJson := configObject.GetContent()
 	if nil == configJson {
-		err := errors.New(fmt.Sprintf("Config: ObjectStore gave no data for Object with path: '%s'", objectPath))
-		lib.GetLogger().Error(err.Error())
+		err := fmt.Errorf("Config: ObjectStore gave no data for Object with path: '%s'", objectPath)
 		return nil, err
 	}
 
@@ -53,8 +49,7 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Conf
 	// Load up a Config structure from the JSON
 	config := lib.NewConfig()
 	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
-		lib.GetLogger().Error(fmt.Sprintf("Config: Error parsing ObjectStore JSON ('%s'): %s", objectPath, err.Error()))
-		return nil, err
+		return nil, fmt.Errorf("Config: Error parsing ObjectStore JSON ('%s'): %s", objectPath, err.Error())
 	}
 //config.Dump()
 
