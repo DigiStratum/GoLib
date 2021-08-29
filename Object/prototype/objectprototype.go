@@ -1,8 +1,13 @@
-package objects
+package prototype
 
 /*
 An ObjectPrototype is an established collection of named and typed fields from which to derive new Objects
 */
+
+import (
+	obj "github.com/DigiStratum/GoLib/Object"
+	objf "github.com/DigiStratum/GoLib/Object/field"
+}
 
 type ObjectPrototypeIfc interface {
 	SetFieldType(fieldName string, ofType objectFieldType)
@@ -10,7 +15,7 @@ type ObjectPrototypeIfc interface {
 }
 
 type ObjectPrototype struct {
-	fields		map[string]ObjectFieldType
+	fields		map[string]objf.ObjectFieldType
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -20,7 +25,7 @@ type ObjectPrototype struct {
 // Make a new one of these!
 func NewObjectPrototype() *ObjectPrototype {
 	return &ObjectPrototype{
-		fields:		make(map[string]ObjectFieldType),
+		fields:		make(map[string]objf.ObjectFieldType),
 	}
 }
 
@@ -35,16 +40,16 @@ func NewObjectPrototypeFromJson(json *string) *ObjectPrototype {
 // ObjectPrototypeIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectPrototype) SetFieldType(fieldName string, ofType objectFieldType) {
-	oft := NewObjectFieldType()
+func (r *ObjectPrototype) SetFieldType(fieldName string, ofType objf.ObjectFieldType) {
+	oft := objf.NewObjectFieldType()
 	oft.SetType(ofType)
 	r.fields[fieldName] = oft
 }
 
-func (r ObjectPrototype) NewObject() *Object {
-	object := NewObject()
+func (r ObjectPrototype) NewObject() *obj.Object {
+	object := obj.NewObject()
 	for fieldName, ofType, := range r.fields {
-		objectField := NewObjectField()
+		objectField := objf.NewObjectField()
 		objectField.Type = ofType
 		object.SetField(fieldName, objectField)
 	}

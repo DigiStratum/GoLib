@@ -28,18 +28,15 @@ TODO: Add a check for whether we have been Configure()'d before allowing usage
 
 import (
 	"fmt"
-	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	lib "github.com/DigiStratum/GoLib"
+	obj "github.com/DigiStratum/GoLib/Object"
 	"github.com/DigiStratum/GoLib/Cloud"
 )
-
-type ObjectStoreDynamoIfc interface {
-}
 
 type ObjectStoreDynamo struct {
 	storeConfig	lib.ConfigIfc
@@ -62,7 +59,7 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 
 
 // -------------------------------------------------------------------------------------------------
-// ObjectStoreIfc Public Interface
+// Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
@@ -79,10 +76,17 @@ func (r *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
 	return nil
 }
 
+// -------------------------------------------------------------------------------------------------
+// Satisfies ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Note that this precludes usage of Dynamo's support for "sort keys"; who
 // would have thought that two keys would be required for an object store?
 // Use read-through cache which requires us to mutate state
-func (r *ObjectStoreDynamo) GetObject(path string) *Object {
+func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
+	// Require configuration
+	if nil == r.storeConfig { return nil, fmt.Errorf("Not Configured!") }
+
 	// If it's not yet in the cache
 	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from our Dynamo Table into cache
@@ -96,13 +100,10 @@ func (r *ObjectStoreDynamo) GetObject(path string) *Object {
 			TableName: aws.String(r.storeConfig.Get("tablename")),
 		}
 		result, err := r.awsDynamoDB.GetItem(input)
-		if nil != err {
-			lib.GetLogger().Error(fmt.Sprintf(
-				"ObjectStoreDynamo.GetObject() : DynamoDB.GetItem() : Error: '%s'",
-				err.Error(),
-			))
-			return nil
-		}
+		if nil != err {	return nil, fmt.Errorf(
+			"ObjectStoreDynamo.GetObject() : DynamoDB.GetItem() : Error: '%s'",
+			err.Error(),
+		)}
 
 		// Unmarshall the Dynamo result into a basic map of key=value strings
 		// ref: https://stackoverflow.com/questions/11066946/partly-json-unmarshal-into-a-map-in-go
@@ -112,20 +113,20 @@ func (r *ObjectStoreDynamo) GetObject(path string) *Object {
 		}
 		item := obj{}
 		err = dynamodbattribute.UnmarshalMap(result.Item, &item)
-		if err != nil {
-			lib.GetLogger().Error(fmt.Sprintf(
-				"ObjectStoreDynamo.GetObject() JSON UnmarshallMap() : Error: '%s'",
-				err.Error(),
-			))
-			return nil
-		}
+		if err != nil { return nil, fmt.Errorf(
+			"ObjectStoreDynamo.GetObject() JSON UnmarshallMap() : Error: '%s'",
+			err.Error(),
+		)}
 
 		r.readCache.PutObject(path, NewObjectFromString(item.Content))
 	}
-	return r.readCache.GetObject(path)
+	return r.readCache.GetObject(path), nil
 }
 
-func (r ObjectStoreDynamo) HasObject(path string) bool {
+func (r ObjectStoreDynamo) HasObject(path string) (bool, error) {
+	// Require configuration
+	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
+
 	// If it's already in the cache, then we know we have it!
 	if r.readCache.HasObject(path) { return true }
 
@@ -135,16 +136,19 @@ func (r ObjectStoreDynamo) HasObject(path string) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// MutableObjectStoreIfc Public Interface
+// Satisfies MutableObjectStoreIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectStoreDynamo) PutObject(path string, object *Object) error {
+func (r *ObjectStoreDynamo) PutObject(path string, object *obj.Object) error {
+	// Require configuration
+	if nil == r.storeConfig { return fmt.Errorf("Not Configured!") }
+
 	// TODO: Actually implement WRITE operation to Dynamo here
-	return errors.New("Not Yet Implemented!")
+	return fmt.Errorf("Not Yet Implemented!")
 }
 
 // -------------------------------------------------------------------------------------------------
-// ObjectStoreDynamoIfc Private Interface
+// ObjectStoreDynamo Private Interface
 // -------------------------------------------------------------------------------------------------
 
 // Get the DynamoDB service session

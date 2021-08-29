@@ -16,7 +16,7 @@ TODO:
 import (
 	"sync"
 	lib "github.com/DigiStratum/GoLib"
-	obj "github.com/DigiStratum/GoLib/objects"
+	obj "github.com/DigiStratum/GoLib/Object"
 )
 
 type ObjectCollectionIfc interface {

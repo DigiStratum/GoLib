@@ -25,18 +25,15 @@ Configuration:
 
 import (
 	"fmt"
-	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	lib "github.com/DigiStratum/GoLib"
+	obj "github.com/DigiStratum/GoLib/Object"
 	"github.com/DigiStratum/GoLib/Cloud"
 )
-
-type ObjectStoreS3Ifc interface {
-}
 
 type ObjectStoreS3 struct {
 	storeConfig	lib.ConfigIfc
@@ -59,7 +56,7 @@ func NewObjectStoreS3() *ObjectStoreS3 {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ObjectStoreIfc Public Interface
+// Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *ObjectStoreS3) Configure(config lib.ConfigIfc) error {
@@ -67,7 +64,7 @@ func (r *ObjectStoreS3) Configure(config lib.ConfigIfc) error {
 	// Validate that the config has what we need for S3!
 	requiredConfig := []string{ "awsregion", "s3bucket", "s3folder" }
 	if ! (config.HasAll(&requiredConfig)) {
-		return errors.New("Incomplete ObjectStoreS3 configuration provided")
+		return fmt.Errorf("Incomplete ObjectStoreS3 configuration provided")
 	}
 	r.storeConfig = config
 
@@ -76,8 +73,15 @@ func (r *ObjectStoreS3) Configure(config lib.ConfigIfc) error {
 	return nil
 }
 
+// -------------------------------------------------------------------------------------------------
+// Satisfies ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Ref: https://stackoverflow.com/questions/41645377/golang-s3-download-to-buffer-using-s3manager-downloader
-func (r *ObjectStoreS3) GetObject(path string) *Object {
+func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
+	// Require configuration
+	if nil == r.storeConfig { return nil, fmt.Errorf("Not Configured!") }
+
 	// If it's not yet in the cache
 	if ! r.readCache.HasObject(path) {
 		// Read the Object from our S3 bucket into cache
@@ -98,19 +102,22 @@ func (r *ObjectStoreS3) GetObject(path string) *Object {
 			},
 		)
 		// Error = no Object!
-		if nil != err {
-			lib.GetLogger().Error(fmt.Sprintf("ObjectStoreS3.GetObject(%s) Error : '%s'", path, err.Error()))
-			return nil
-		}
+		if nil != err { return nil, fmt.Errorf(
+			"ObjectStoreS3.GetObject(%s) Error : '%s'",
+			path,
+			err.Error(),
+		)}
 		r.readCache.PutObject(path, NewObjectFromString(string(buff.Bytes())))
 	}
-	return r.readCache.GetObject(path)
+	return r.readCache.GetObject(path), nil
 }
 
-// Satisfies ObjectStoreIfc
-func (r ObjectStoreS3) HasObject(path string) bool {
+func (r ObjectStoreS3) HasObject(path string) (bool, error) {
+	// Require configuration
+	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
+
 	// If it's already in the cache, then we know we have it!
-	if r.readCache.HasObject(path) { return true }
+	if r.readCache.HasObject(path) { return true, nil }
 
 	// If there's S3 metadata with no error, then there's a Object!
 	// ref: github.com/aws/aws-sdk-go/service/s3/examples_test.go ("HeadObject")
@@ -120,16 +127,19 @@ func (r ObjectStoreS3) HasObject(path string) bool {
 			Key:	aws.String(r.storeConfig.Get("s3folder") + "/" + path),
 		},
 	)
-	return nil == err
+	return nil == err, err
 }
 
 // -------------------------------------------------------------------------------------------------
-// MutableObjectStoreIfc Public Interface
+// Satisfies MutableObjectStoreIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectStoreS3) PutObject(path string, object *Object) error {
+func (r *ObjectStoreS3) PutObject(path string, object *obj.Object) error {
+	// Require configuration
+	if nil == r.storeConfig { return fmt.Errorf("Not Configured!") }
+
 	// TODO: Actually implement WRITE operation to S3 here
-	return errors.New("Not Yet Implemented!")
+	return fmt.Errorf("Not Yet Implemented!")
 }
 
 // -------------------------------------------------------------------------------------------------

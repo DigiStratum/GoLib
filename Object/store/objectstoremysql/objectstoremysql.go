@@ -9,15 +9,18 @@ Ref: https://www.golangprograms.com/example-of-golang-crud-using-mysql-from-scra
 Configuration:
 	* dsn	- Data Source Name (DSN) for MySQL database connection
 
+FIXME:
+ * This is not yet really implemented - we need to fill it in!
+
 */
 
 import (
 	"fmt"
 	"errors"
-	"strings"
 	"net/url"
 
 	lib "github.com/DigiStratum/GoLib"
+	obj "github.com/DigiStratum/GoLib/Object"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 	cloud "github.com/DigiStratum/GoLib/Cloud"
 )
@@ -65,16 +68,15 @@ func NewObjectStoreMySQL() *ObjectStoreMySQL {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ObjectStoreIfc Public Interface
+// Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// Satisfies RespositoryIfc
 func (r *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
 
 	// Validate that the config has what we need for MySQL!
 	requiredConfig := []string{ "dsn" }
 	if ! (config.HasAll(&requiredConfig)) {
-		return errors.New("Incomplete ObjectStoreMySQL configuration provided")
+		return fmt.Errorf("Incomplete ObjectStoreMySQL configuration provided")
 	}
 	r.storeConfig = config
 
@@ -83,17 +85,27 @@ func (r *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
 	return nil
 }
 
+// -------------------------------------------------------------------------------------------------
+// Satisfies ObjectStoreIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
-func (r *ObjectStoreMySQL) GetObject(path string) *Object {
+func (r *ObjectStoreMySQL) GetObject(path string) (*obj.Object, error) {
+	// Require configuration
+	if nil == r.storeConfig { return nil, fmt.Errorf("Not Configured!") }
+
 	// If it's not yet in the cache
 	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from MySQL into cache
 	}
-	return r.readCache.GetObject(path)
+	return r.readCache.GetObject(path), nil
 }
 
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
-func (r *ObjectStoreMySQL) HasObject(path string) bool {
+func (r *ObjectStoreMySQL) HasObject(path string) (bool, error) {
+	// Require configuration
+	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
+
 /*
 	// TODO @HERE reactivate this; disabled for build
 	// If it's already in the cache, then we know we have it!
@@ -128,14 +140,17 @@ func (r *ObjectStoreMySQL) HasObject(path string) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// MutableObjectStoreIfc Public Interface
+// Satisfies MutableObjectStoreIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
 // blank keys to create with autoincrement; INSERT ... ON DUPLICATE KEY UPDATE syntax for create/update
-func (r *ObjectStoreMySQL) PutObject(path string, object *Object) error {
+func (r *ObjectStoreMySQL) PutObject(path string, object *obj.Object) error {
+	// Require configuration
+	if nil == r.storeConfig { return fmt.Errorf("Not Configured!") }
+
 	// TODO: Actually implement WRITE operation to MySQL here
-	return errors.New("Not Yet Implemented!")
+	return fmt.Errorf("Not Yet Implemented!")
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -144,6 +159,7 @@ func (r *ObjectStoreMySQL) PutObject(path string, object *Object) error {
 
 // TODO: Move these supporting functions to a more generalized location such as ObjectStore
 // if they don't end up with any implementation that is contextualized by ObjectStoreMySQL
+// (or are otherwise generally useful)
 
 // parse URL-Encoded path string into logical structure
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
@@ -151,24 +167,20 @@ func (r ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 
 	// Separate object spec name from keys
 	pathParts := strings.Split(path, "?")
-	if len(pathParts) > 2 {
-		// Hmm - there should only be one '?' in the path...
-		return nil, errors.New(fmt.Sprintf(
-			"ObjectStoreMySQL: Bad path spec (more than one '?'): '%s'",
-			path,
-		))
-	}
+	// There should only be one '?' in the path...
+	if len(pathParts) > 2 { return nil, fmt.Errorf(
+		"ObjectStoreMySQL: Bad path spec (more than one '?'): '%s'",
+		path,
+	)}
 
 	// Decode Object Spec Name, just in case it's been URL-encoded for some specialness
 	objectSpecName, err := url.QueryUnescape(pathParts[0])
-	if nil != err {
-		return nil, errors.New(fmt.Sprintf(
-			"ObjectStoreMySQL: Failed to unescape the Object Spec Name from path: '%s'",
-			pathParts[0],
-		))
-	}
+	if nil != err { return nil, fmt.Errorf(
+		"ObjectStoreMySQL: Failed to unescape the Object Spec Name from path: '%s'",
+		pathParts[0],
+	)}
 
-	// Okay, make a pathspec so that we have a home for everything we find next
+	// Make a pathspec so that we have a home for everything we find next
 	ps := pathSpec{
 		ObjectSpecName: objectSpecName,
 		Keys:		make(map[string]string),
@@ -195,27 +207,22 @@ func (r ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 // Return the name and value decoded strings or an error if there was a problem
 func (r *ObjectStoreMySQL) parseURLKeyValuePair(keyValuePair string) (string, string, error) {
 	keyParts := strings.Split(keyValuePair, "=")
-	if len(keyParts) > 2 {
-		// Hmm - there should only be one '=' in it...
-		return "", "", errors.New(fmt.Sprintf(
-			"ObjectStoreMySQL: Bad key-value pair in path (more than one '='): '%s'",
-			keyValuePair,
-		))
-	}
+	// There should only be one '=' in it...
+	if len(keyParts) > 2 { return "", "", fmt.Errorf(
+		"ObjectStoreMySQL: Bad key-value pair in path (more than one '='): '%s'",
+		keyValuePair,
+	)}
+
 	name, err := url.QueryUnescape(keyParts[0])
-	if nil != err {
-		return "", "", errors.New(fmt.Sprintf(
-			"ObjectStoreMySQL: Failed to unescape the Key Name from path: '%s'",
-			keyParts[0],
-		))
-	}
+	if nil != err { return "", "", fmt.Errorf(
+		"ObjectStoreMySQL: Failed to unescape the Key Name from path: '%s'",
+		keyParts[0],
+	)}
+
 	value, err := url.QueryUnescape(keyParts[1])
-	if nil != err {
-		return "", "", errors.New(fmt.Sprintf(
-			"ObjectStoreMySQL: Failed to unescape the Key Value from path: '%s'",
-			keyParts[1],
-		))
-	}
+	if nil != err { return "", "", fmt.Errorf(
+		"ObjectStoreMySQL: Failed to unescape the Key Value from path: '%s'",
+		keyParts[1],
+	)}
 	return name, value, nil
 }
-
