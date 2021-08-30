@@ -1,5 +1,5 @@
 // DigiStratum GoLib - Cache
-package golib
+package cache
 
 /*
 
@@ -46,7 +46,11 @@ type CacheIfc interface {
 	Flush()
 }
 
+// -------------------------------------------------------------------------------------------------
 // Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+// Mak a new one of these
 func NewCache() *Cache {
 	return &Cache{
 		cache:	make(map[string]cacheItem),
@@ -106,7 +110,7 @@ func (r Cache) HasAll(keys *[]string) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// CacheIfc Private Interface
+// Cache Private Interface
 // -------------------------------------------------------------------------------------------------
 
 // Purge expired cache items

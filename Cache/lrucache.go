@@ -1,5 +1,5 @@
 // DigiStratum GoLib - LRU Cache
-package golib
+package cache
 
 /*
 
@@ -220,4 +220,3 @@ func (r *lruCache) lock() {
 func (r *lruCache) unlock() {
 	r.mutex.Unlock()
 }
-

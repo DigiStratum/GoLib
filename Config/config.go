@@ -1,5 +1,5 @@
 // DigiStratum GoLib - Config
-package golib
+package config
 
 /*
 
@@ -16,7 +16,6 @@ unauthorized tampering.
 
 In addition to the explicit imports below, we use the following classes from this same package:
  * HashMap
- * Logger
  * Json
 
 */
@@ -24,16 +23,12 @@ In addition to the explicit imports below, we use the following classes from thi
 import(
 	"strings"
 	"fmt"
+
+	"github.com/DigiStratum/GoLib/HashMap"
 )
 
 // Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
 const MAX_REFERENCE_DEPTH = 100
-
-
-// Any type that implements ConfigurableIfc should be ready to receive configuration data one time as so:
-type ConfigurableIfc interface {
-	Configure(config ConfigIfc) error
-}
 
 type ConfigIfc interface {
 	HashMapIfc	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
@@ -48,12 +43,12 @@ type ConfigIfc interface {
 
 // Config embeds a HashMap so that we can extend it
 type Config struct {
-	HashMap
+	hashmap.HashMap
 }
 
 // Factory Functions
 func NewConfig() *Config {
-	return &Config{ HashMap: NewHashMap() }
+	return &Config{ HashMap: hashmap.NewHashMap() }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -63,11 +58,6 @@ func NewConfig() *Config {
 // Merge configuration data
 func (r *Config) MergeConfig(mergeCfg ConfigIfc) {
 	r.HashMap.Merge(mergeCfg)
-	/*
-	if mc, ok := mergeCfg.(HashMapIfc); ok {
-		r.HashMap.Merge(mc)
-	}
-	*/
 }
 
 // Get configuration datum whose keys begin with the prefix...
@@ -139,7 +129,7 @@ func (r *Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Private implementation
+// Config Private Interface
 // -------------------------------------------------------------------------------------------------
 
 // Get configuration datum whose keys Do/Don't begin with the prefix...

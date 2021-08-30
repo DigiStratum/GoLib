@@ -1,5 +1,5 @@
 // DigiStratum GoLib - JSON
-package golib
+package data
 
 /*
 
@@ -23,7 +23,10 @@ type Json struct {
 	json	*string
 }
 
+// -------------------------------------------------------------------------------------------------
 // Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewJson(jsonString *string) *Json {
 	return &Json{ json: jsonString, source: "string" }
 }

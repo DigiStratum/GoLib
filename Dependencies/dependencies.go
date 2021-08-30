@@ -1,5 +1,5 @@
 // DigiStratum GoLib - Dependency Injection
-package golib
+package dependencies
 
 /*
 Dependencies - Implement a container to hold named dependencies and an interface for injection
@@ -15,10 +15,9 @@ type DependenciesIfc interface {
 	HasAll(names *[]string) bool
 }
 
-// Whatever implements this interface is able to receive dependencies
-type DependencyInjectableIfc interface {
-        InjectDependencies(deps DependenciesIfc) error
-}
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
 func NewDependencies() *Dependencies {

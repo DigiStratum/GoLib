@@ -1,5 +1,5 @@
 // DigiStratum GoLib - File handling
-package golib
+package fileio
 
 import(
 	"os"

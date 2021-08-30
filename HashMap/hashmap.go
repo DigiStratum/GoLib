@@ -1,5 +1,5 @@
 // DigiStratum GoLib - HashMap
-package golib
+package hashmap
 
 /*
 
@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 )
 
-type KeyValuePair struct {
+type keyValuePair struct {
 	Key	string
 	Value	string
 }
@@ -32,8 +32,8 @@ type HashMapIfc interface {
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	IterateCallback(callback func(kvp KeyValuePair))
-	IterateChannel() <-chan KeyValuePair
+	IterateCallback(callback func(kvp keyValuePair))
+	IterateChannel() <-chan keyValuePair
 	ToJson() (*string, error)
 }
 
@@ -146,19 +146,19 @@ func (r HashMap) GetKeys() []string {
 
 // Iterate over the keys for this HashMap and call a callback for each
 // ref: https://ewencp.org/blog/golang-iterators/index.html
-func (r HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
-	for k, v := range r.hash { callback(KeyValuePair{ Key: k, Value: v}) }
+func (r HashMap) IterateCallback(callback func(kvp keyValuePair)) {
+	for k, v := range r.hash { callback(keyValuePair{ Key: k, Value: v}) }
 }
 
-// Iterate over the keys for this HashMap and send all the KeyValuePairs to a channel
+// Iterate over the keys for this HashMap and send all the keyValuePairs to a channel
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 // ref: https://blog.golang.org/pipelines
 // ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
-func (r HashMap) IterateChannel() <-chan KeyValuePair {
-	ch := make(chan KeyValuePair, len(r.hash))
+func (r HashMap) IterateChannel() <-chan keyValuePair {
+	ch := make(chan keyValuePair, len(r.hash))
 	defer close(ch)
 	for k, v := range r.hash {
-		ch <- KeyValuePair{ Key: k, Value: v }
+		ch <- keyValuePair{ Key: k, Value: v }
 	}
 	return ch
 }

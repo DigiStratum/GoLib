@@ -1,4 +1,4 @@
-package templates
+package template
 
 /*
 
@@ -18,17 +18,17 @@ import(
 	"bytes"
 	"errors"
 
-	osm "github.com/DigiStratum/GoLib/objects/stores/objectstoremanager"
+	osm "github.com/DigiStratum/GoLib/Object/store/objectstoremanager"
 	"github.com/DigiStratum/Go-cbroglie-mustache"
 )
 
-type TemplatesIfc interface {
+type TemplateIfc interface {
 	HydrateTemplate(templateName string, language string, data *map[string]string) (*string, error)
 }
 
 type templateCache		map[string]*mustache.Template
 
-type Templates struct {
+type Template struct {
 	cache			templateCache
 	objectStoreManager	*osm.ObjectStoreManager
 }
@@ -38,8 +38,8 @@ type Templates struct {
 // -------------------------------------------------------------------------------------------------
 
 // Make a new one of these
-func NewTemplates(objectStoreManager *osm.ObjectStoreManager) *Templates {
-	t := Templates{
+func NewTemplates(objectStoreManager *osm.ObjectStoreManager) *Template {
+	t := Template{
 		cache:			make(templateCache),
 		objectStoreManager:	objectStoreManager,
 	}
@@ -51,7 +51,7 @@ func NewTemplates(objectStoreManager *osm.ObjectStoreManager) *Templates {
 // -------------------------------------------------------------------------------------------------
 
 // Hydrate a named mustache template with the supplied data (name-value pair strings as a map)
-func (r *Templates) HydrateTemplate(templateName string, language string, data *map[string]string) (*string, error) {
+func (r *Template) HydrateTemplate(templateName string, language string, data *map[string]string) (*string, error) {
 	var template, err = r.getTemplate(templateName, language)
 	if nil != err { return nil, err }
 	var renderedTemplate bytes.Buffer
@@ -61,11 +61,11 @@ func (r *Templates) HydrateTemplate(templateName string, language string, data *
 }
 
 // -------------------------------------------------------------------------------------------------
-// Templates Private Implementation
+// Template Private Implementation
 // -------------------------------------------------------------------------------------------------
 
 // Read-through cache of named mustache templates
-func (r *Templates) getTemplate(templateName string, language string) (*mustache.Template, error) {
+func (r *Template) getTemplate(templateName string, language string) (*mustache.Template, error) {
 	templateKey := language + "." + templateName
 
 	// If it's already in the cache, just return it!

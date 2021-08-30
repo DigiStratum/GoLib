@@ -1,5 +1,5 @@
 // DigiStratum GoLib - Logger
-package golib
+package logger
 
 /*
 
