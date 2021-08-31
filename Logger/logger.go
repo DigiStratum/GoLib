@@ -139,7 +139,7 @@ func (r Logger) Fatal(format string, a ...interface{}) error {
 // Logger Private Interface
 // -------------------------------------------------------------------------------------------------
 
-// Log some output
+// Log some output; return a matching error for WARN|ERROR|FATAL, else nil
 func (r Logger) log(level LogLevel, format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
 	logMsg := fmt.Sprintf("%5s %s", level.ToString(), msg)
