@@ -26,16 +26,20 @@ import (
 type CacheIfc interface {
 	IsEmpty() bool
 	Size() int
+	Count() int
 	Set(key string, value interface{}, expires int64)
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
+	Drop(key string) bool
+	DropAll(keys *[]string) int
 	Flush()
 }
 
 type Cache struct {
 	cache			map[string]cacheItem
 	mutex			sync.Mutex
+	totalSize		int64
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -45,7 +49,8 @@ type Cache struct {
 // Mak a new one of these
 func NewCache() *Cache {
 	return &Cache{
-		cache:	make(map[string]cacheItem),
+		cache:		make(map[string]cacheItem),
+		totalSize:	0,
 	}
 }
 
@@ -66,6 +71,11 @@ func (r Cache) IsEmpty() bool {
 
 // Get the number of properties in this Cache
 func (r Cache) Size() int {
+	r.purgeExpired()
+	return len(r.cache)
+}
+// Return the count of entries currently being held in this cache
+func (r Cache) Count() int {
 	r.purgeExpired()
 	return len(r.cache)
 }
@@ -97,6 +107,23 @@ func (r Cache) HasAll(keys *[]string) bool {
 		if ! r.Has(key) { return false }
 	}
 	return true
+}
+
+// Drop an item from the cache with the supplied key
+// return true if we drop it, else false
+func (r *Cache) Drop(key string) bool {
+	r.mutex.lock(); defer r.mutex.unlock()
+	return r.drop(key)
+}
+
+// Check whether we have configuration elements for all the key names
+// return count of items actually dropped
+func (r *Cache) DropAll(keys *[]string) int {
+	numDropped := 0
+	for _, key := range *keys {
+		if r.Drop(key) { numDropped++ }
+	}
+	return numDropped
 }
 
 // -------------------------------------------------------------------------------------------------

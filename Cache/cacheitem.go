@@ -3,11 +3,13 @@ package cache
 type cacheItemIfc interface {
 	IsExpired() bool
 	GetValue() interface{}
+	GetSize() int64
 }
 
 type cacheItem struct {
 	value	interface{}
 	expires	int64
+	size	int64
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -17,6 +19,7 @@ func NewCacheItem(value interface{}, expires int64) *cacheItem {
 	return &cacheItem{
 		value: 		value,
 		expires:	expires,
+		size:		len(value),
 	}
 }
 
@@ -30,4 +33,8 @@ func (r cacheItem) IsExpired() bool {
 
 func (r cacheItem) GetValue() interface{} {
 	return r.value
+}
+
+func (r cacheItem) GetSize() int64 {
+	return r.size
 }

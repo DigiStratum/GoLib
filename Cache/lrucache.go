@@ -27,33 +27,37 @@ import (
 	"container/list"
 )
 
-type LruCacheIfc interface {
+type LRUCacheIfc interface {
+	CacheIfc
+	/*
 	Has(key string) bool
 	Set(key, content string) bool
 	Get(key string) *string
 	Drop(key string) bool
 	Size() int
 	Count() int
+	*/
 	SetLimits(sizeLimit, countLimit int)
 }
-
+/*
 type lruCacheItem struct {
 	Key, Content		string
 	Size			int
 }
-
-type lruCache struct {
-	count, countLimit	int
-	size, sizeLimit		int
+*/
+type LRUCache struct {
+	Cache
+	countLimit		int
+	sizeLimit		int
 	ageList			*list.List
 	elements		map[string]*list.Element
 	mutex			*sync.Mutex
 }
 
 // Make a new one of these
-func NewLRUCache() *lruCache {
+func NewLRUCache() *LRUCache {
 	return &lruCache{
-		count:		0,
+		Cache:		NewCache(),
 		countLimit:	0,
 		size:		0,
 		sizeLimit:	0,
@@ -67,18 +71,31 @@ func NewLRUCache() *lruCache {
 // LruCacheIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// Add a content item to the cache with the supplied key
+// return true if we set it, else false
+func (r *lruCache) Set(key, value interface{}, expires int64) bool {
+	if ! r.pruneToFit(key, len(content)) { return false }
+	r.drop(key)
+	r.elements[key] = r.ageList.PushFront(lruCacheItem{
+		Key: key,
+		Content: content,
+		Size: len(content),
+	})
+	r.size += len(content)
+	r.count++
+	return true
+
+
+	return r.set(key, content)
+}
+
+
+/*
 // Check whether we have an item in the cache with the supplied key
 func (r lruCache) Has(key string) bool {
 	return (nil != r.find(key, true))
 }
 
-// Add a content item to the cache with the supplied key
-// return true if we set it, else false
-func (r *lruCache) Set(key, content string) bool {
-	r.lock()
-	defer r.unlock()
-	return r.set(key, content)
-}
 
 // Retrieve an item from the cache with the supplied key (or nil if there isn't one)
 func (r lruCache) Get(key string) *string {
@@ -103,12 +120,7 @@ func (r *lruCache) Drop(key string) bool {
 func (r lruCache) Size() int {
 	return r.size
 }
-
-// Return the count of entries currently being held in this cache
-func (r lruCache) Count() int {
-	return r.count
-}
-
+*/
 // Set the limits for size/count on this cache; 0 means unlimited (default for both)
 func (r *lruCache) SetLimits(sizeLimit, countLimit int) {
 	r.lock()
