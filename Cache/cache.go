@@ -8,7 +8,8 @@ for dealing with simple key/value pair data where the values are objects (interf
 strings. An important differentiator of a cache vs. a hashmap is that the cache entries have time-
 based expirations to ensure that none of the entries outlive their prescribed freshness.
 
-TODO: Set up go routine thread to regularly purgeExpired; track the next nearest expire time so that
+TODO:
+ * Set up go routine thread to regularly purgeExpired; track the next nearest expire time so that
 we can land right on it (certainly no sooner than necessary?) How do we stop the go routine when the
 underlying struct is dead (like the caller creates/uses cache, then throws it away)? the go routine
 should stop if the struct is "dead"
@@ -22,20 +23,6 @@ import (
 	"sync"
 )
 
-type cacheItem struct {
-	Value	interface{}
-	Expires	int64
-}
-
-func (ci cacheItem) IsExpired() bool {
-	return time.Now().Unix() < ci.Expires
-}
-
-type Cache struct {
-	cache			map[string]cacheItem
-	mutex			sync.Mutex
-}
-
 type CacheIfc interface {
 	IsEmpty() bool
 	Size() int
@@ -44,6 +31,11 @@ type CacheIfc interface {
 	Has(key string) bool
 	HasAll(keys *[]string) bool
 	Flush()
+}
+
+type Cache struct {
+	cache			map[string]cacheItem
+	mutex			sync.Mutex
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -81,16 +73,14 @@ func (r Cache) Size() int {
 // Set a single cache element key to the specified value
 func (r *Cache) Set(key string, value interface{}, expires int64) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	r.cache[key] = cacheItem{
-		Value:		value,
-		Expires:	expires,
-	}
+	ci := NewCacheItem(value, expires)
+	r.cache[key] = *item
 }
 
 // Get a single cache element by key name
 func (r Cache) Get(key string) interface{} {
 	if ci, ok := r.cache[key]; ok {
-		if ! ci.IsExpired() { return ci.Value }
+		if ! ci.IsExpired() { return ci.GetValue() }
 	}
 	return nil
 }
