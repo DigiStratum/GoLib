@@ -23,6 +23,7 @@ const (
 // -------------------------------------------------------------------------------------------------
 
 var logLevels map[LogLevel]string
+var logLabels map[string]LogLevel
 
 func init() {
 	logLevels := make(map[LogLevel]string)
@@ -33,6 +34,16 @@ func init() {
 	logLevels[WARN] = "WARN"
 	logLevels[ERROR] = "ERROR"
 	logLevels[FATAL] = "FATAL"
+
+	logLabels := make(map[string]LogLevel])
+	logLabels["CRAZY"] = CRAZY
+	logLabels["TRACE"] = TRACE
+	logLabels["DEBUG"] = DEBUG
+	logLabels["INFO"] = INFO
+	logLabels["WARN"] = WARN
+	logLabels["ERROR"] = ERROR
+	logLabels["FATAL"] = FATAL
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -40,15 +51,7 @@ func init() {
 // -------------------------------------------------------------------------------------------------
 
 func StringToLogLevel(logLevelStr string) (*LogLevel, error) {
-	switch logLevelStr {
-		case "CRAZY": return ll := CRAZY; return &ll, nil
-		case "TRACE": return ll := TRACE; return &ll, nil
-		case "DEBUG": return ll := DEBUG; return &ll, nil
-		case "INFO": return ll := INFO; return &ll, nil
-		case "WARN": return ll := WARN; return &ll, nil
-		case "ERROR": return ll := ERROR; return &ll, nil
-		case "FATAL": return ll := FATAL; return &ll, nil
-	}
+	if logLevel, ok := logLabels[logLevelStr]; ok { return &logLevel, nil }
 	return nil, fmt.Errorf("Specifier is not a valid LogLevel [%s]", logLevelStr)
 }
 
