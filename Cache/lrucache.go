@@ -20,11 +20,16 @@ to remove the LRU items from the list, we can just pop them off the back.
 
 ref: https://golang.org/pkg/container/list/
 
+TODO:
+ * Refactor to use a go routine + channel in place of mutex
+
 */
 
 import (
 	"sync"
 	"container/list"
+
+	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
 
 type LRUCacheIfc interface {
@@ -56,6 +61,7 @@ type LRUCache struct {
 
 // Make a new one of these
 func NewLRUCache() *LRUCache {
+
 	return &lruCache{
 		Cache:		NewCache(),
 		countLimit:	0,
@@ -73,13 +79,14 @@ func NewLRUCache() *LRUCache {
 
 // Add a content item to the cache with the supplied key
 // return true if we set it, else false
-func (r *lruCache) Set(key, value interface{}, expires int64) bool {
-	if ! r.pruneToFit(key, len(content)) { return false }
+func (r *lruCache) Set(key string, value interface{}, expires int64) bool {
+	size := sizeable.Size(value)
+	if ! r.pruneToFit(key, size) { return false }
 	r.drop(key)
 	r.elements[key] = r.ageList.PushFront(lruCacheItem{
 		Key: key,
 		Content: content,
-		Size: len(content),
+		Size: size,
 	})
 	r.size += len(content)
 	r.count++
