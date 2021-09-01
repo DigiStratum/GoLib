@@ -18,4 +18,7 @@ Go Library code, generally reusable bits
 # Don't produce error log output from library functions where it can be left to the consumer
 # ONE exported struct+interface per source file will make the code easier to read (with exceptions)
 # Log Trace() messages to track entry into library functions with calling arguments as appropriate
+# Implement io.Closer interface for any class that opens/managers precious and/or external resources which should be closed/freed upon release/shutdown, etc.
+** ref: https://pkg.go.dev/io#Closer
+** ref: https://stackoverflow.com/questions/32768243/go-destructors/32781054
 
