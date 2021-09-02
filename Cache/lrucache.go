@@ -80,9 +80,15 @@ func NewLRUCache() *LRUCache {
 // Add a content item to the cache with the supplied key
 // return true if we set it, else false
 func (r *lruCache) Set(key string, value interface{}, expires int64) bool {
+	// Get the size of the value
 	size := sizeable.Size(value)
-	if ! r.pruneToFit(key, size) { return false }
+
+	// If size limit is in play and this value is bigger than that, then it won't fit
+	if (0 < r.sizeLimit) && (size > r.sizeLimit) { return false }
+
 	r.drop(key)
+
+	if ! r.pruneToFit(key, size) { return false }
 	r.elements[key] = r.ageList.PushFront(lruCacheItem{
 		Key: key,
 		Content: content,
@@ -140,7 +146,7 @@ func (r *lruCache) SetLimits(sizeLimit, countLimit int) {
 // LruCacheIfc Private Interface
 // -------------------------------------------------------------------------------------------------
 
-// How many existing cache entries must be pruned to fit this new one?
+// How many existing cache entries must be pruned to fit one of this size?
 func (r lruCache) numToPrune(key string, size int) int {
 	var pruneCount, replaceCount, replaceSize int
 	if element := r.find(key, false); nil != element {
@@ -212,9 +218,9 @@ func (r *lruCache) set(key, content string) bool {
 
 // Drop if exists (don't bump on the find since we're going to drop it!)
 // return bool true is we drop it, else false
-func (r *lruCache) drop(key string) bool {
+func (r *lruCache) Drop(key string) bool {
 	if element := r.find(key, false); nil != element {
-		r.size -= len(element.Value.(lruCacheItem).Content)
+		r.size -= sizeable.Size(element.Value.(lruCacheItem))
 		r.count--
 		r.ageList.Remove(element)
 		delete(r.elements, key)
