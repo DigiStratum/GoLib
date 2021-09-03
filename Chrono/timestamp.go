@@ -1,14 +1,11 @@
 package chrono
 
 /*
-Abstraction of time-based considerations for basic timestamp handling so that we can more easily
-refactor later without bothering consumers. All times will be based on UTC, unix timestamps. Initial
+Abstraction of time-based considerations for basic timeStamp handling so that we can more easily
+refactor later without bothering consumers. All times will be based on UTC, unix timeStamps. Initial
 implementation uses Go runtime environment which could vary from one host to the next.
 
-TODO:
- * A centralized time source, such as MySQL database, may end up being more reliable for cross-host
-   comparisons (?)
-
+Defaults to local TimeSource
 */
 
 import (
@@ -16,41 +13,49 @@ import (
 	"time"
 )
 
-type TimestampIfc interface {
-	Add(offset int64) *Timestamp
-	Compare(ts Timestamp) int
-	Diff(ts Timestamp) int64
+type TimeStampIfc interface {
+	Add(offset int64) *TimeStamp
+	Compare(ts TimeStamp) int
+	Diff(ts TimeStamp) int64
 }
 
-type Timestamp struct {
-	timestamp	int64
+type TimeStamp struct {
+	timeStamp	int64
+	timeSource	TimeSourceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewTimestamp() *Timestamp {
-	return &Timestamp{
-		timestamp:	time.Now().Unix(),
-	}
+func NewTimeStamp() *TimeStamp {
+	timeStamp := TimeStamp{}
+	return timeStamp.SetTimeSource(NewTimeSource())
 }
 
 // -------------------------------------------------------------------------------------------------
-// TimestampIfc Public Interface
+// TimeStampIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *Timestamp) Add(offset int64) *Timestamp {
-	r.timestamp += offset
+// Chainable
+func (r *TimeStamp) SetTimeSource(timeSource NewTimeSourceIfc) *TimeStamp {
+	r.timeSource = timeSource
+	r.timeStamp = timeSource.Now()
 	return r
 }
 
-func (r Timestamp) Compare(ts Timestamp) int {
-	if r.timestamp == ts.timestamp { return 0 }
-	if r.timestamp < ts.timestamp { return -1 }
+// Chainable
+func (r *TimeStamp) Add(offset int64) *TimeStamp {
+	r.timeStamp += offset
+	return r
+}
+
+func (r TimeStamp) Compare(ts TimeStamp) int {
+	if r.timeStamp == ts.timeStamp { return 0 }
+	if r.timeStamp < ts.timeStamp { return -1 }
 	return 1
 }
 
-func (r Timestamp) Diff(ts Timestamp) int64 {
-	return r.timestamp - ts.timestamp
+func (r TimeStamp) Diff(ts TimeStamp) int64 {
+	return r.timeStamp - ts.timeStamp
 }
