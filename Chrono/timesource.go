@@ -11,6 +11,7 @@ TODO:
 
 type TimeSourceIfc interface {
 	Now() int64
+	NewTimeStamp() *TimeStamp
 }
 
 type TimeSource struct {
@@ -30,4 +31,8 @@ func NewTimeSource() *TimeSource {
 
 func (r TimeSource) Now() int64 {
 	return time.Now().Unix()
+}
+
+func (r TimeSource) NewTimeStamp() *TimeStamp {
+	return NewTimeStamp(r)
 }

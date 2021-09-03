@@ -28,21 +28,16 @@ type TimeStamp struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewTimeStamp() *TimeStamp {
-	timeStamp := TimeStamp{}
-	return timeStamp.SetTimeSource(NewTimeSource())
+func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
+	return &TimeStamp{
+		timeSource: timeSource,
+		timeStamp: timeSource.Now(),
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
 // TimeStampIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-
-// Chainable
-func (r *TimeStamp) SetTimeSource(timeSource NewTimeSourceIfc) *TimeStamp {
-	r.timeSource = timeSource
-	r.timeStamp = timeSource.Now()
-	return r
-}
 
 // Chainable
 func (r *TimeStamp) Add(offset int64) *TimeStamp {
