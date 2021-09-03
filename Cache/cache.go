@@ -19,15 +19,18 @@ ref: https://yourbasic.org/golang/wait-for-goroutines-waitgroup/
 */
 
 import (
+	"fmt"
 	"time"
 	"sync"
 )
 
 type CacheIfc interface {
+	Configure(config cfg.ConfigIfc) error	// cfg.ConfigurableIfc
 	IsEmpty() bool
 	Size() int
 	Count() int
 	Set(key string, value interface{}, expires int64)
+	SetExpires(key string, expires int64)
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -38,8 +41,15 @@ type CacheIfc interface {
 
 type Cache struct {
 	cache			map[string]cacheItem
-	mutex			sync.Mutex
+	ageList			*list.List
+
+	totalCountLimit		int
+	totalSizeLimit		int
+	newItemExpires		int64
+
 	totalSize		int64
+
+	mutex			sync.Mutex
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -50,7 +60,34 @@ type Cache struct {
 func NewCache() *Cache {
 	return &Cache{
 		cache:		make(map[string]cacheItem),
-		totalSize:	0,
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+// cfg.ConfigurableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Cache) Configure(config cfg.ConfigIfc) error {
+	if nil == config { return fmt.Errorf("Cache.Configure() - Configuration was nil") }
+
+	// New items added to cache will expire in this count of seconds; 0 (default) = no expiration
+	if config.Has["newItemExpires"] {
+		newItemExpires := config.GetInt64("newItemExpires")
+		if nil != newItemExpires { r.newItemExpires = *newItemExpires }
+	}
+
+	// New items added to cache won't drive total count above this; 0 (default) = unlimited
+	// When a limit is in place, the Least Recently Used (LRU) item will be evicted to make room for the new one
+	if config.Has["totalCountLimit"] {
+		totalCountLimit := config.GetInt64("totalCountLimit")
+		if nil != totalCountLimit { r.totalCountLimit = int(*totalCountLimit) }
+	}
+
+	// New items  added to cache we won't drive total size of all items above this; 0 = unlimited
+	// When a limit is in place, the Least Recently Used (LRU) item(s) will be evicted to make room for the new one
+	if config.Has["totalSizeLimit"] {
+		totalSizeLimit := config.GetInt64("totalSizeLimit")
+		if nil != totalSizeLimit { r.totalSizeLimit = int(*totalSizeLimit) }
 	}
 }
 
@@ -81,10 +118,18 @@ func (r Cache) Count() int {
 }
 
 // Set a single cache element key to the specified value
-func (r *Cache) Set(key string, value interface{}, expires int64) {
+func (r *Cache) Set(key string, value interface{}) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
+	var expires int64 = 0
+	if 0 < r.newItemExpires {
+
+	}
 	ci := NewCacheItem(value, expires)
 	r.cache[key] = *item
+}
+
+func (r *Cache) SetExpires(key string, expires int64) {
+	if r.Has(key) { r.cache[key].SetExpires(expires) }
 }
 
 // Get a single cache element by key name

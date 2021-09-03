@@ -36,12 +36,12 @@ type LRUCacheIfc interface {
 	CacheIfc
 	/*
 	Has(key string) bool
-	Set(key, content string) bool
 	Get(key string) *string
-	Drop(key string) bool
 	Size() int
 	Count() int
 	*/
+	Set(key string, value interface{}, expires int64) bool
+	Drop(key string) bool
 	SetLimits(sizeLimit, countLimit int)
 }
 /*
@@ -55,7 +55,7 @@ type LRUCache struct {
 	countLimit		int
 	sizeLimit		int
 	ageList			*list.List
-	elements		map[string]*list.Element
+	//elements		map[string]*list.Element
 	mutex			*sync.Mutex
 }
 
