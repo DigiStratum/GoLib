@@ -218,7 +218,7 @@ func (r *lruCache) set(key, content string) bool {
 
 // Drop if exists (don't bump on the find since we're going to drop it!)
 // return bool true is we drop it, else false
-func (r *lruCache) Drop(key string) bool {
+func (r *lruCache) drop(key string) bool {
 	if element := r.find(key, false); nil != element {
 		r.size -= sizeable.Size(element.Value.(lruCacheItem))
 		r.count--

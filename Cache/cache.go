@@ -16,6 +16,11 @@ should stop if the struct is "dead"
 ref: https://stackoverflow.com/questions/6807590/how-to-stop-a-goroutine
 ref: https://yourbasic.org/golang/wait-for-goroutines-waitgroup/
 
+
+TODO:
+ * Add SetLogger() to set a logger for output; don't just assume default logger in a library. Consumer
+   gets to control. purgeExpired() should be logging when it does work, and maybe Trace() log output
+   from every operation.
 */
 
 import (
@@ -28,7 +33,7 @@ import (
 )
 
 type CacheIfc interface {
-	Configure(config cfg.ConfigIfc) error	// cfg.ConfigurableIfc
+	Configure(config cfg.ConfigIfc) error			// cfg.ConfigurableIfc
 	SetTimeSource(timeSource chrono.TimeSourceIfc)
 	IsEmpty() bool
 	Size() int64
@@ -47,6 +52,7 @@ type CacheIfc interface {
 type Cache struct {
 	cache			map[string]cacheItem
 	ageList			*list.List
+	ageListElements		map[string]*list.Element
 
 	totalCountLimit		int
 	totalSizeLimit		int
@@ -185,10 +191,9 @@ func (r *Cache) Drop(key string) bool {
 // Check whether we have configuration elements for all the key names
 // return count of items actually dropped
 func (r *Cache) DropAll(keys *[]string) int {
+	r.mutex.lock(); defer r.mutex.unlock()
 	numDropped := 0
-	for _, key := range *keys {
-		if r.Drop(key) { numDropped++ }
-	}
+	for _, key := range *keys { if r.drop(key) { numDropped++ } }
 	return numDropped
 }
 
@@ -216,9 +221,11 @@ func (r Cache) isClosed() bool {
 }
 
 // Purge expired cache items
-func (r *Cache) purgeExpired() {
+func (r *Cache) pruneExpired() {
 	// While the Cache has not been closed...
 	for (! r.isClosed() {
+		r.mutex.Lock(); defer r.mutex.Unlock()
+
 		// Find which keys we need to purge because their cacheItem is expired
 		purgeKeys := []string{}
 		for key, ci := range r.cache {
@@ -231,10 +238,32 @@ func (r *Cache) purgeExpired() {
 			}
 		}
 		// Purge them!
-		for _, key := range purgeKeys { delete(r.cache, key) }
+		for _, key := range purgeKeys { r.drop(key) }
 
 		sleep(60)
 	}
+}
+
+// Prune the currently cached element collection to fit the new element within limits
+// return boolean true if it will fit, else false (true doesn't indicate whether we did any pruning)
+func (r *Cache) pruneToFit(key string, size int) bool {
+
+	// Will it fit at all?
+	if (r.sizeLimit > 0) && (size > r.sizeLimit) { return false }
+	pruneCount := r.numToPrune(key, size)
+	if 0 == pruneCount { return true }
+
+	// TODO: Make sure we're not pruning more than some percentage threshold
+	// (to minimize performance hits due to statistical outliers)
+
+	// Prune starting at the back of the age list for the count we need to prune
+	element := r.ageList.Back()
+	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
+		dropKey := element.Value.(cacheItem).Key
+		element = element.Next()
+		r.drop(dropKey)
+	}
+	return true
 }
 
 // Add content to front of age List and remember it by key in elements map
@@ -242,8 +271,21 @@ func (r *Cache) purgeExpired() {
 func (r *Cache) set(key string, ci cacheItem) bool {
 	if ! r.pruneToFit(key, ci.GetSize() { return false }
 	r.drop(key)
-	r.elements[key] = r.ageList.PushFront(ci)
+	r.ageListElements[key] = r.ageList.PushFront(ci)
 	r.size += ci.GetSize()
 	r.count++
 	return true
+}
+
+// Drop if exists (don't bump on the find since we're going to drop it!)
+// return bool true is we drop it, else false
+func (r *lruCache) drop(key string) bool {
+	if element := r.find(key, false); nil != element {
+		r.size -= sizeable.Size(element.Value.(lruCacheItem))
+		r.count--
+		r.ageList.Remove(element)
+		delete(r.ageListElements, key)
+		return true
+	}
+	return false
 }
