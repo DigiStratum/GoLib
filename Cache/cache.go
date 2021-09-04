@@ -31,7 +31,7 @@ type CacheIfc interface {
 	Configure(config cfg.ConfigIfc) error	// cfg.ConfigurableIfc
 	SetTimeSource(timeSource chrono.TimeSourceIfc)
 	IsEmpty() bool
-	Size() int
+	Size() int64
 	Count() int
 	Set(key string, value interface{})
 	SetExpires(key string, expires chrono.TimeStampIfc)
@@ -65,10 +65,14 @@ type Cache struct {
 
 // Mak a new one of these
 func NewCache() *Cache {
-	return &Cache{
+	cache := Cache{
 		cache:		make(map[string]cacheItem),
+		ageList:	list.New(),
 		timeSource:	chrono.NewTimeSource(),
 	}
+	// Set up a go routine that will run continuously until we get Close()ed
+	go cache.purgeExpired()
+	return &cache
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -113,21 +117,32 @@ func (r Cache) IsEmpty() bool {
 }
 
 // Get the number of properties in this Cache
-func (r Cache) Size() int {
-	r.purgeExpired()
-	return len(r.cache)
+func (r Cache) Size() int64 {
+	return r.totalSize
 }
 // Return the count of entries currently being held in this cache
 func (r Cache) Count() int {
-	r.purgeExpired()
 	return len(r.cache)
 }
 
 // Set a single cache element key to the specified value
 func (r *Cache) Set(key string, value interface{}) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	var expires chrono.TimeSta
-	if 0 < r.newItemExpires {
+
+	// Get the size of the value
+	size := sizeable.Size(value)
+
+	// If size limit is in play and this value is bigger than that, then it won't fit
+	if (0 < r.sizeLimit) && (size > r.sizeLimit) { return false }
+
+	r.drop(key)
+
+
+
+	var expires chrono.TimeStampIfc
+	if 0 == r.newItemExpires {
+		expires = chrono.NewTimeStampForever()
+	} else {
 		expires = r.TimeSource.NewTimeStamp().Add(r.newItemExpires)
 	}
 	ci := NewCacheItem(value, expires)
@@ -207,11 +222,28 @@ func (r *Cache) purgeExpired() {
 		// Find which keys we need to purge because their cacheItem is expired
 		purgeKeys := []string{}
 		for key, ci := range r.cache {
-			if ci.IsExpired() { purgeKeys = append(purgeKeys, key) }
+			if ci.IsExpired() {
+				// Expired items should be removed
+				purgeKeys = append(purgeKeys, key)
+			} else {
+				// The first non-expired one we find means all others after it are non-expired!
+				break
+			}
 		}
 		// Purge them!
 		for _, key := range purgeKeys { delete(r.cache, key) }
 
 		sleep(60)
 	}
+}
+
+// Add content to front of age List and remember it by key in elements map
+// return true if we set it, else false
+func (r *Cache) set(key string, ci cacheItem) bool {
+	if ! r.pruneToFit(key, ci.GetSize() { return false }
+	r.drop(key)
+	r.elements[key] = r.ageList.PushFront(ci)
+	r.size += ci.GetSize()
+	r.count++
+	return true
 }
