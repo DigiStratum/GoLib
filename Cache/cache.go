@@ -22,21 +22,26 @@ import (
 	"fmt"
 	"time"
 	"sync"
+
+	"github.com/DigiStratum/GoLib/Chrono"
+	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
 
 type CacheIfc interface {
 	Configure(config cfg.ConfigIfc) error	// cfg.ConfigurableIfc
+	SetTimeSource(timeSource chrono.TimeSourceIfc)
 	IsEmpty() bool
 	Size() int
 	Count() int
-	Set(key string, value interface{}, expires int64)
-	SetExpires(key string, expires int64)
+	Set(key string, value interface{})
+	SetExpires(key string, expires chrono.TimeStampIfc)
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
 	Drop(key string) bool
 	DropAll(keys *[]string) int
 	Flush()
+	Close() error
 }
 
 type Cache struct {
@@ -46,10 +51,12 @@ type Cache struct {
 	totalCountLimit		int
 	totalSizeLimit		int
 	newItemExpires		int64
+	timeSource		chrono.TimeSourceIfc
 
 	totalSize		int64
 
 	mutex			sync.Mutex
+	closed			bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -60,6 +67,7 @@ type Cache struct {
 func NewCache() *Cache {
 	return &Cache{
 		cache:		make(map[string]cacheItem),
+		timeSource:	chrono.NewTimeSource(),
 	}
 }
 
@@ -95,10 +103,8 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 // CacheIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// Flush all the items out of the cache
-func (r *Cache) Flush() {
-	r.mutex.Lock(); defer r.mutex.Unlock()
-	r.cache = make(map[string]cacheItem)
+func (r *Cache) SetTimeSource(timeSource chrono.TimeSourceIfc) {
+	if nil != timeSource { r.timeSource = timeSource }
 }
 
 // Check whether this Cache is empty (has no properties)
@@ -120,16 +126,16 @@ func (r Cache) Count() int {
 // Set a single cache element key to the specified value
 func (r *Cache) Set(key string, value interface{}) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	var expires int64 = 0
+	var expires chrono.TimeSta
 	if 0 < r.newItemExpires {
-
+		expires = r.TimeSource.NewTimeStamp().Add(r.newItemExpires)
 	}
 	ci := NewCacheItem(value, expires)
 	r.cache[key] = *item
 }
 
-func (r *Cache) SetExpires(key string, expires int64) {
-	if r.Has(key) { r.cache[key].SetExpires(expires) }
+func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) {
+	if r.Has(key) { r.cache[key].SetExpires(chrono.TimeStampIfc) }
 }
 
 // Get a single cache element by key name
@@ -171,17 +177,41 @@ func (r *Cache) DropAll(keys *[]string) int {
 	return numDropped
 }
 
+// Flush all the items out of the cache
+func (r *Cache) Flush() {
+	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.cache = make(map[string]cacheItem)
+}
+
+// -------------------------------------------------------------------------------------------------
+// io.Closer Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Cache) Close() error {
+	r.closed = true
+	r.Flush()
+}
+
 // -------------------------------------------------------------------------------------------------
 // Cache Private Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r Cache) isClosed() bool {
+	return r.closed
+}
+
 // Purge expired cache items
 func (r *Cache) purgeExpired() {
-	// Find which keys we need to purge because their cacheItem is expired
-	purgeKeys := []string{}
-	for key, ci := range r.cache {
-		if ci.IsExpired() { purgeKeys = append(purgeKeys, key) }
+	// While the Cache has not been closed...
+	for (! r.isClosed() {
+		// Find which keys we need to purge because their cacheItem is expired
+		purgeKeys := []string{}
+		for key, ci := range r.cache {
+			if ci.IsExpired() { purgeKeys = append(purgeKeys, key) }
+		}
+		// Purge them!
+		for _, key := range purgeKeys { delete(r.cache, key) }
+
+		sleep(60)
 	}
-	// Purge them!
-	for _, key := range purgeKeys { delete(r.cache, key) }
 }
