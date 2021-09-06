@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
+	"container/list"
 
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
@@ -52,7 +53,6 @@ type CacheIfc interface {
 type Cache struct {
 	cache			map[string]cacheItem
 	ageList			*list.List
-	ageListElements		map[string]*list.Element
 
 	totalCountLimit		int
 	totalSizeLimit		int
@@ -69,7 +69,7 @@ type Cache struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-// Mak a new one of these
+// Make a new one of these!
 func NewCache() *Cache {
 	cache := Cache{
 		cache:		make(map[string]cacheItem),
@@ -141,9 +141,7 @@ func (r *Cache) Set(key string, value interface{}) {
 	// If size limit is in play and this value is bigger than that, then it won't fit
 	if (0 < r.sizeLimit) && (size > r.sizeLimit) { return false }
 
-	r.drop(key)
-
-
+	_ = r.drop(key)
 
 	var expires chrono.TimeStampIfc
 	if 0 == r.newItemExpires {
@@ -238,7 +236,7 @@ func (r *Cache) pruneExpired() {
 			}
 		}
 		// Purge them!
-		for _, key := range purgeKeys { r.drop(key) }
+		for _, key := range purgeKeys { _ = r.drop(key) }
 
 		sleep(60)
 	}
@@ -261,7 +259,7 @@ func (r *Cache) pruneToFit(key string, size int) bool {
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		dropKey := element.Value.(cacheItem).Key
 		element = element.Next()
-		r.drop(dropKey)
+		_ = r.drop(dropKey)
 	}
 	return true
 }
@@ -270,7 +268,7 @@ func (r *Cache) pruneToFit(key string, size int) bool {
 // return true if we set it, else false
 func (r *Cache) set(key string, ci cacheItem) bool {
 	if ! r.pruneToFit(key, ci.GetSize() { return false }
-	r.drop(key)
+	_ = r.drop(key)
 	r.ageListElements[key] = r.ageList.PushFront(ci)
 	r.size += ci.GetSize()
 	r.count++
@@ -278,7 +276,7 @@ func (r *Cache) set(key string, ci cacheItem) bool {
 }
 
 // Drop if exists (don't bump on the find since we're going to drop it!)
-// return bool true is we drop it, else false
+// return bool true if we drop it, else false
 func (r *lruCache) drop(key string) bool {
 	if element := r.find(key, false); nil != element {
 		r.size -= sizeable.Size(element.Value.(lruCacheItem))
