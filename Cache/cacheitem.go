@@ -1,34 +1,36 @@
 package cache
 
+import(
+	"github.com/DigiStratum/GoLib/Chrono"
+	"github.com/DigiStratum/GoLib/Data/sizeable"
+)
 /*
 
 An item in the cache which may hold any arbitrary value with an expiration timestamp. The value is
 stored as an interface{}, so the consumer must be able to assert into the form it needs upon retrieval.
-
-The expires value is specified as a UTC() timestamp. If 0, then the item never expires.
 */
 
 type cacheItemIfc interface {
 	IsExpired() bool
-	SetExpires(expires int64)
+	SetExpires(expires chrono.TimeStampIfc)
 	GetValue() interface{}
 	GetSize() int64
 }
 
 type cacheItem struct {
-	value	interface{}
-	expires	int64
-	size	int64
+	value		interface{}
+	expires		chrono.TimeStampIfc
+	size		int64
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
-func NewCacheItem(value interface{}, expires int64) *cacheItem {
+func NewCacheItem(value interface{}, expires chrono.TimeStampIfc) *cacheItem {
 	return &cacheItem{
 		value: 		value,
 		expires:	expires,
-		size:		len(value),
+		size:		sizeable.Size(value),
 	}
 }
 
@@ -37,10 +39,11 @@ func NewCacheItem(value interface{}, expires int64) *cacheItem {
 // -------------------------------------------------------------------------------------------------
 
 func (r cacheItem) IsExpired() bool {
-	return (expires > 0) && (time.Now().Unix() < r.expires)
+	if nil != r.expires { return r.expires.IsPast() }
+	return false
 }
 
-func (r *cacheItem) SetExpires(expires int64) {
+func (r *cacheItem) SetExpires(expires chrono.TimeStampIfc) {
 	r.expires = expires
 }
 
