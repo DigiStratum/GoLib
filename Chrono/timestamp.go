@@ -19,7 +19,10 @@ type TimeStampIfc interface {
 	CompareToNow() int
 	Diff(ts TimeStamp) int64
 	DiffNow() int64
+
 	IsForever() bool
+	IsPast() bool
+	IsFuture() bool
 }
 
 type TimeStamp struct {
@@ -39,7 +42,7 @@ func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
 	}
 }
 
-func NewTimeStampForever() * TimeStamp {
+func NewTimeStampForever() *TimeStamp {
 	return &TimeStamp{
 		isForever:	true,
 	}
@@ -56,29 +59,35 @@ func (r *TimeStamp) Add(offset int64) *TimeStamp {
 }
 
 func (r TimeStamp) Compare(ts TimeStamp) int {
-	if r.isForever { return 1 }
+	if r.isForever { return 1 } // Forever is always in the future
 	if r.timeStamp == ts.timeStamp { return 0 }
 	if r.timeStamp < ts.timeStamp { return -1 }
 	return 1
 }
 
 func (r TimeStamp) CompareToNow() int {
-	if r.isForever { return 1 }
+	if r.isForever { return 1 } // Forever is always in the future
 	return r.Compare(r.timeSource.Now())
 }
 
 func (r TimeStamp) Diff(ts TimeStamp) int64 {
-	// The difference between any time and forever is undefined (-1)
-	if r.isForever { return -1 }
+	if r.isForever { return 1 } // Forever is always in the future
 	return r.timeStamp - ts.timeStamp
 }
 
 func (r TimeStamp) DiffNow() int64 {
-	// The difference between any time and forever is undefined (-1)
-	if r.isForever { return -1 }
+	if r.isForever { return 1 } // Forever is always in the future
 	return r.Diff(r.timeSource.Now())
 }
 
 func (r TimeStamp) IsForever() bool {
 	return r.isForever
+}
+
+func (r TimeStamp) IsPast() bool {
+	return (r.DiffNow() == -1)
+}
+
+func (r TimeStamp) IsFuture() bool {
+	return (r.DiffNow() == 1)
 }
