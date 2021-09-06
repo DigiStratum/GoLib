@@ -52,14 +52,17 @@ type CacheIfc interface {
 
 type Cache struct {
 	cache			map[string]cacheItem
+	totalCountLimit		int
+
+	// A list of cache keys with least recently used at back
 	ageList			*list.List
 
-	totalCountLimit		int
-	totalSizeLimit		int
-	newItemExpires		int64
+	// Default TimeSource; can change to a different TimeSource, but cannot be nil
 	timeSource		chrono.TimeSourceIfc
+	newItemExpires		int64
 
 	totalSize		int64
+	totalSizeLimit		int64
 
 	mutex			sync.Mutex
 	closed			bool
@@ -105,7 +108,7 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 	// When a limit is in place, the Least Recently Used (LRU) item(s) will be evicted to make room for the new one
 	if config.Has["totalSizeLimit"] {
 		totalSizeLimit := config.GetInt64("totalSizeLimit")
-		if nil != totalSizeLimit { r.totalSizeLimit = int(*totalSizeLimit) }
+		if nil != totalSizeLimit { r.totalSizeLimit = *totalSizeLimit }
 	}
 }
 
@@ -244,7 +247,7 @@ func (r *Cache) pruneExpired() {
 
 // Prune the currently cached element collection to fit the new element within limits
 // return boolean true if it will fit, else false (true doesn't indicate whether we did any pruning)
-func (r *Cache) pruneToFit(key string, size int) bool {
+func (r *Cache) pruneToFit(key string, size int64) bool {
 
 	// Will it fit at all?
 	if (r.sizeLimit > 0) && (size > r.sizeLimit) { return false }
@@ -257,9 +260,9 @@ func (r *Cache) pruneToFit(key string, size int) bool {
 	// Prune starting at the back of the age list for the count we need to prune
 	element := r.ageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
-		dropKey := element.Value.(cacheItem).Key
-		element = element.Next()
+		dropKey := element.Value.(string)
 		_ = r.drop(dropKey)
+		element = element.Next()
 	}
 	return true
 }
@@ -269,9 +272,8 @@ func (r *Cache) pruneToFit(key string, size int) bool {
 func (r *Cache) set(key string, ci cacheItem) bool {
 	if ! r.pruneToFit(key, ci.GetSize() { return false }
 	_ = r.drop(key)
-	r.ageListElements[key] = r.ageList.PushFront(ci)
+	_ = r.ageList.PushFront(key)
 	r.size += ci.GetSize()
-	r.count++
 	return true
 }
 
@@ -282,7 +284,6 @@ func (r *lruCache) drop(key string) bool {
 		r.size -= sizeable.Size(element.Value.(lruCacheItem))
 		r.count--
 		r.ageList.Remove(element)
-		delete(r.ageListElements, key)
 		return true
 	}
 	return false
