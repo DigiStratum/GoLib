@@ -217,6 +217,10 @@ func (r *Cache) Close() error {
 // Cache Private Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *Cache) worker() {
+}
+
+
 func (r Cache) isClosed() bool {
 	return r.closed
 }
@@ -245,12 +249,15 @@ func (r *Cache) pruneExpired() {
 	}
 }
 
-// Prune the currently cached element collection to fit the new element within limits
-// return boolean true if it will fit, else false (true doesn't indicate whether we did any pruning)
-func (r *Cache) pruneToFit(key string, size int64) bool {
-
-	// Will it fit at all?
+func (r *Cache) itemCanFit(key string, size int64) bool {
+	// If it's bigger than the size limit, then it's impossible
 	if (r.sizeLimit > 0) && (size > r.sizeLimit) { return false }
+	return true
+}
+
+// Prune the currently cached element collection to established limits
+func (r *Cache) pruneToFit(key string, size int64) {
+
 	pruneCount := r.numToPrune(key, size)
 	if 0 == pruneCount { return true }
 
@@ -270,10 +277,11 @@ func (r *Cache) pruneToFit(key string, size int64) bool {
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
 func (r *Cache) set(key string, ci cacheItem) bool {
-	if ! r.pruneToFit(key, ci.GetSize() { return false }
+	if ! r.itemCanFit(key, ci.GetSize())
 	_ = r.drop(key)
 	_ = r.ageList.PushFront(key)
 	r.size += ci.GetSize()
+	r.pruneToLimits(key, ci.GetSize())
 	return true
 }
 
