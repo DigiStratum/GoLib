@@ -18,6 +18,7 @@ type cacheItemIfc interface {
 }
 
 type cacheItem struct {
+	key		string
 	value		interface{}
 	expires		chrono.TimeStampIfc
 	size		int64
@@ -26,8 +27,9 @@ type cacheItem struct {
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
-func NewCacheItem(value interface{}, expires chrono.TimeStampIfc) *cacheItem {
+func NewCacheItem(key string, value interface{}, expires chrono.TimeStampIfc) *cacheItem {
 	return &cacheItem{
+		key:		key,
 		value: 		value,
 		expires:	expires,
 		size:		sizeable.Size(value),
@@ -45,6 +47,10 @@ func (r cacheItem) IsExpired() bool {
 
 func (r *cacheItem) SetExpires(expires chrono.TimeStampIfc) {
 	r.expires = expires
+}
+
+func (r cacheItem) GetKey() string {
+	return r.key
 }
 
 func (r cacheItem) GetValue() interface{} {

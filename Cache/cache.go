@@ -21,6 +21,9 @@ TODO:
  * Add SetLogger() to set a logger for output; don't just assume default logger in a library. Consumer
    gets to control. purgeExpired() should be logging when it does work, and maybe Trace() log output
    from every operation.
+ * Replace expiresList with a Binary Tree implementation that will allow us to quickly insert new items
+   and find the expired ones for purging without having to scan the entire collection
+
 */
 
 import (
@@ -32,6 +35,12 @@ import (
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
+
+type expiringItems []*cacheItem
+
+func (r *expiringItems) insert(*cacheItem) {
+	// TODO: insert this item into the slice at the right location relative to the others' expiration times
+}
 
 type CacheIfc interface {
 	Configure(config cfg.ConfigIfc) error			// cfg.ConfigurableIfc
@@ -55,7 +64,9 @@ type Cache struct {
 	totalCountLimit		int
 
 	// A list of cache keys with least recently used at back
-	ageList			*list.List
+	usageList			*list.List
+	// A list of cache keys sorted by expiration
+	expiresList			expiringItems
 
 	// Default TimeSource; can change to a different TimeSource, but cannot be nil
 	timeSource		chrono.TimeSourceIfc
@@ -76,7 +87,8 @@ type Cache struct {
 func NewCache() *Cache {
 	cache := Cache{
 		cache:		make(map[string]cacheItem),
-		ageList:	list.New(),
+		usageList:	list.New(),
+		expiresList:	make(expiringItems),
 		timeSource:	chrono.NewTimeSource(),
 	}
 	// Set up a go routine that will run continuously until we get Close()ed
@@ -152,7 +164,7 @@ func (r *Cache) Set(key string, value interface{}) {
 	} else {
 		expires = r.TimeSource.NewTimeStamp().Add(r.newItemExpires)
 	}
-	ci := NewCacheItem(value, expires)
+	ci := NewCacheItem(key, value, expires)
 	r.cache[key] = *item
 }
 
@@ -265,7 +277,7 @@ func (r *Cache) pruneToFit(key string, size int64) {
 	// (to minimize performance hits due to statistical outliers)
 
 	// Prune starting at the back of the age list for the count we need to prune
-	element := r.ageList.Back()
+	element := r.usageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		dropKey := element.Value.(string)
 		_ = r.drop(dropKey)
@@ -279,7 +291,7 @@ func (r *Cache) pruneToFit(key string, size int64) {
 func (r *Cache) set(key string, ci cacheItem) bool {
 	if ! r.itemCanFit(key, ci.GetSize())
 	_ = r.drop(key)
-	_ = r.ageList.PushFront(key)
+	_ = r.usageList.PushFront(key)
 	r.size += ci.GetSize()
 	r.pruneToLimits(key, ci.GetSize())
 	return true
@@ -291,7 +303,7 @@ func (r *lruCache) drop(key string) bool {
 	if element := r.find(key, false); nil != element {
 		r.size -= sizeable.Size(element.Value.(lruCacheItem))
 		r.count--
-		r.ageList.Remove(element)
+		r.usageList.Remove(element)
 		return true
 	}
 	return false
