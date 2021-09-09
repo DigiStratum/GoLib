@@ -1,5 +1,5 @@
 // DigiStratum GoLib - JSON
-package data
+package json
 
 /*
 
