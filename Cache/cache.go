@@ -287,7 +287,9 @@ func (r *Cache) itemCanFit(key string, size int64) bool {
 func (r *Cache) pruneToFit(key string, size int64) {
 
 	// Does this item fit right now without any prune/purge?
-	if (r.sizeLimit == 0) || (r.totalSize + size < r.sizeLimit) { return }
+	if (r.totalSizeLimit == 0) || (r.totalSize + size < r.totalSizeLimit) {
+		if (r.totalCountLimit == 0) || (len(r.cache) + 1 < r.totalCountLimit) { return }
+	}
 
 	pruneCount := r.numToPrune(key, size)
 	if 0 == pruneCount { return true }
