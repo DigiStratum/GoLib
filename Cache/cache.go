@@ -34,6 +34,7 @@ import (
 
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
+	"github.com/DigiStratum/GoLib/Process/runnable"
 )
 
 type expiringItems []*cacheItem
@@ -85,14 +86,8 @@ type Cache struct {
 
 // Make a new one of these!
 func NewCache() *Cache {
-	cache := Cache{
-		cache:		make(map[string]cacheItem),
-		usageList:	list.New(),
-		expiresList:	make(expiringItems),
-		timeSource:	chrono.NewTimeSource(),
-	}
-	// Set up a go routine that will run continuously until we get Close()ed
-	go cache.purgeExpired()
+	cache := Cache{}
+	cache.init()
 	return &cache
 }
 
@@ -226,39 +221,60 @@ func (r *Cache) Close() error {
 }
 
 // -------------------------------------------------------------------------------------------------
+// GoLib/Process/runnable/RunnableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Cache) Run() {
+	if r.IsRunning() { return }
+	r.init()
+	go r.runLoop()
+}
+
+func (r Cache) IsRunning() {
+	return ! r.closed
+}
+
+func (r *Cache) Stop() {
+	r.Close()
+}
+
+// -------------------------------------------------------------------------------------------------
 // Cache Private Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *Cache) worker() {
+func (r *Cache) init() {
+	r.cache = make(map[string]cacheItem)
+	r.usageList = list.New()
+	r.expiresList = make(expiringItems)
+	r.timeSource = chrono.NewTimeSource()
+	r.closed = false
 }
 
-
-func (r Cache) isClosed() bool {
-	return r.closed
+func (r *Cache) runLoop() {
+	// While the Cache has not been closed...
+	for r.IsRunning() {
+		r.pruneExpired()
+		sleep(60)
+	}
 }
 
 // Purge expired cache items
 func (r *Cache) pruneExpired() {
-	// While the Cache has not been closed...
-	for (! r.isClosed() {
-		r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock(); defer r.mutex.Unlock()
 
-		// Find which keys we need to purge because their cacheItem is expired
-		purgeKeys := []string{}
-		for key, ci := range r.cache {
-			if ci.IsExpired() {
-				// Expired items should be removed
-				purgeKeys = append(purgeKeys, key)
-			} else {
-				// The first non-expired one we find means all others after it are non-expired!
-				break
-			}
+	// Find which keys we need to purge because their cacheItem is expired
+	purgeKeys := []string{}
+	for key, ci := range r.cache {
+		if ci.IsExpired() {
+			// Expired items should be removed
+			purgeKeys = append(purgeKeys, key)
+		} else {
+			// The first non-expired one we find means all others after it are non-expired!
+			break
 		}
-		// Purge them!
-		for _, key := range purgeKeys { _ = r.drop(key) }
-
-		sleep(60)
 	}
+	// Purge them!
+	for _, key := range purgeKeys { _ = r.drop(key) }
 }
 
 func (r *Cache) itemCanFit(key string, size int64) bool {
