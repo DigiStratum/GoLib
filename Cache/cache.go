@@ -23,6 +23,8 @@ TODO:
    from every operation.
  * Replace expiresList with a Binary Tree implementation that will allow us to quickly insert new items
    and find the expired ones for purging without having to scan the entire collection
+ * Add support and/or change interface to make expires relative offset from NOW. This would allow a
+   Touch() to use the same value if we store the offset with the cacheItem.
 
 */
 
