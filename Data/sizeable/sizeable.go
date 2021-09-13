@@ -19,18 +19,20 @@ TODO:
    opposed to transferring data: https://cs.opensource.google/go/go/+/refs/tags/go1.17:src/encoding/gob/encode.go
 */
 
-type Sizeable interface {
+type SizeableIfc interface {
 	Size() int64
 }
 
 func Size(value interface{}) int64 {
 	// If the value is Sizeable...
-	if sizeableValue, ok := value.(Sizeable); ok { return sizeableValue.Size() }
+	if sizeableValue, ok := value.(SizeableIfc); ok { return sizeableValue.Size() }
 
+	// We could at least guess the size based on the exported fields...
 	// If we can gob Encode it...
 	b := new(bytes.Buffer)
-	if err := gob.NewEncoder(b).Encode(value); err == nil { return b.Len() }
+	err := gob.NewEncoder(b).Encode(value)
+	if err == nil { return int64(b.Len()) }
 
-	// Otherwise the size is not knowable
-	return -1
+	// Otherwise the size is not knowable (or 0...!)
+	return 0
 }
