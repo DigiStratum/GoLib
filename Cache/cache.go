@@ -283,6 +283,39 @@ func (r *Cache) itemCanFit(key string, size int64) bool {
 	return true
 }
 
+// How many existing cache entries must be pruned to fit one of this size?
+func (r Cache) numToPrune(key string, size int) int {
+	var pruneCount, replaceCount, replaceSize int
+	if element := r.find(key, false); nil != element {
+		replaceCount = 1
+		replaceSize = element.Value.(lruCacheItem).Size
+	}
+
+	// If there is a count limit in effect...
+	if r.countLimit > 0 {
+		futureCount := r.count + 1 - replaceCount
+		if futureCount > r.countLimit { pruneCount = futureCount - r.countLimit }
+	}
+
+	// If there is a size limit in effect...
+	if r.sizeLimit > 0 {
+		// If we add this to the cache without pruning, future size would be...
+		futureSize := r.size + size - replaceSize
+		// If we break the size limit by adding...
+		if futureSize > r.sizeLimit {
+			pruneSize := futureSize - r.sizeLimit
+			num := 0
+			element := r.ageList.Back()
+			for ; (nil != element) && (pruneSize > 0); num++ {
+				pruneSize -= element.Value.(lruCacheItem).Size
+				element = element.Next()
+			}
+			if num > pruneCount { pruneCount = num }
+		}
+	}
+	return pruneCount
+}
+
 // Prune the currently cached element collection to established limits
 func (r *Cache) pruneToFit(key string, size int64) {
 
@@ -320,7 +353,7 @@ func (r *Cache) set(key string, ci cacheItem) bool {
 
 // Drop if exists (don't bump on the find since we're going to drop it!)
 // return bool true if we drop it, else false
-func (r *lruCache) drop(key string) bool {
+func (r *Cache) drop(key string) bool {
 	if element := r.find(key, false); nil != element {
 		r.size -= sizeable.Size(element.Value.(lruCacheItem))
 		r.count--
@@ -328,4 +361,18 @@ func (r *lruCache) drop(key string) bool {
 		return true
 	}
 	return false
+}
+
+func (r *Cache) find(key string, bump bool) *list.Element {
+	if element, ok := r.cache[key]; ok {
+		if bump { r.bump(element) }
+		return element
+	}
+	return nil
+}
+
+// Pull the element forward in the ageList
+// TODO: Also touch the expiration time
+func (r *Cache) bump(element *list.Element) {
+	r.ageList.MoveToFront(element) }
 }
