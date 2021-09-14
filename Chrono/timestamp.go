@@ -8,16 +8,11 @@ implementation uses Go runtime environment which could vary from one host to the
 Defaults to local TimeSource
 */
 
-import (
-	"math"
-	"time"
-)
-
 type TimeStampIfc interface {
 	Add(offset int64) *TimeStamp
-	Compare(ts TimeStamp) int
+	Compare(ts *TimeStamp) int
 	CompareToNow() int
-	Diff(ts TimeStamp) int64
+	Diff(ts *TimeStamp) int64
 	DiffNow() int64
 
 	IsForever() bool
@@ -37,8 +32,8 @@ type TimeStamp struct {
 
 func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
 	return &TimeStamp{
+		timeStamp: timeSource.NowUnixTimeStamp(),
 		timeSource: timeSource,
-		timeStamp: timeSource.Now(),
 	}
 }
 
@@ -58,7 +53,7 @@ func (r *TimeStamp) Add(offset int64) *TimeStamp {
 	return r
 }
 
-func (r TimeStamp) Compare(ts TimeStamp) int {
+func (r TimeStamp) Compare(ts *TimeStamp) int {
 	if r.isForever { return 1 } // Forever is always in the future
 	if r.timeStamp == ts.timeStamp { return 0 }
 	if r.timeStamp < ts.timeStamp { return -1 }
@@ -70,7 +65,7 @@ func (r TimeStamp) CompareToNow() int {
 	return r.Compare(r.timeSource.Now())
 }
 
-func (r TimeStamp) Diff(ts TimeStamp) int64 {
+func (r TimeStamp) Diff(ts *TimeStamp) int64 {
 	if r.isForever { return 1 } // Forever is always in the future
 	return r.timeStamp - ts.timeStamp
 }

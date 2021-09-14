@@ -9,9 +9,13 @@ TODO:
 
 */
 
+import (
+	"time"
+)
+
 type TimeSourceIfc interface {
-	Now() int64
-	NewTimeStamp() *TimeStamp
+	Now() *TimeStamp
+	NowUnixTimeStamp() int64
 }
 
 type TimeSource struct {
@@ -29,10 +33,10 @@ func NewTimeSource() *TimeSource {
 // TimeSourceIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r TimeSource) Now() int64 {
+func (r TimeSource) NowUnixTimeStamp() int64 {
 	return time.Now().Unix()
 }
 
-func (r TimeSource) NewTimeStamp() *TimeStamp {
+func (r TimeSource) Now() *TimeStamp {
 	return NewTimeStamp(r)
 }
