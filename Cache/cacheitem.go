@@ -15,6 +15,7 @@ type cacheItemIfc interface {
 	SetExpires(expires chrono.TimeStampIfc)
 	GetValue() interface{}
 	GetSize() int64
+	GetKey() string
 }
 
 type cacheItem struct {
