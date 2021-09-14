@@ -26,7 +26,7 @@ func NewTimeSource() *TimeSource {
 }
 
 // -------------------------------------------------------------------------------------------------
-// TimeSourceIfc Public Implementation
+// TimeSourceIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r TimeSource) Now() int64 {
