@@ -3,9 +3,8 @@ package cache
 import(
 	"testing"
 
-	. "github.com/DigiStratum/GoTools/test"
+	. "github.com/DigiStratum/GoLib/Testing"
 
-	"github.com/DigiStratum/GoLib/Data/sizeable"
 	"github.com/DigiStratum/GoLib/Chrono"
 )
 
@@ -23,10 +22,14 @@ func (r sizeable_target) Size() int64 {
 }
 
 
-func TestThat_CacheItem_Uses_Sizeable(t *testing.T) {
+func TestThat_CacheItem_GetSize_Returns_Sizeable_Value(t *testing.T) {
 	// Setup
-	timestamp := NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp
-	value := sizeable_target{}
-	sut := NewCacheItem("bogus", value, expires chrono.TimeStampIfc) *cacheItem
+	sut := NewCacheItem(
+		"boguscacheitemkey",
+		sizeable_target{},
+		chrono.NewTimeSource().Now(),
+	)
+
 	// Verify
+	ExpectInt64(FIXED_SIZE, sut.GetSize(), t)
 }
