@@ -2,7 +2,7 @@ package cache
 
 /*
 
-Unit Tests for LRUCache
+Unit Tests for Cache
 
 */
 
@@ -11,20 +11,19 @@ import(
 	"testing"
 
 	. "github.com/DigiStratum/GoTools/test"
-	lib "github.com/DigiStratum/GoLib"
 )
 
-func TestThat_LRUCache_Size_Is0_WhenNew(t *testing.T) {
+func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Verify
 	ExpectInt(0, sut.Size(), t)
 }
 
-func TestThat_LRUCache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
+func TestThat_Cache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	expectedSize := 0;
@@ -39,33 +38,33 @@ func TestThat_LRUCache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
 	ExpectInt(expectedSize, sut.Size(), t)
 }
 
-func TestThat_LRUCache_Count_Is0_WhenNew(t *testing.T) {
+func TestThat_Cache_Count_Is0_WhenNew(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Verify
 	ExpectInt(0, sut.Count(), t)
 }
 
-func TestThat_LRUCache_Get_ReturnsNil_ForMissingKeys(t *testing.T) {
+func TestThat_Cache_Get_ReturnsNil_ForMissingKeys(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Verify
 	ExpectNil(sut.Get("boguskey"), t)
 }
 
-func TestThat_LRUCache_Has_ReturnsFalse_ForMissingKeys(t *testing.T) {
+func TestThat_Cache_Has_ReturnsFalse_ForMissingKeys(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Verify
 	ExpectFalse(sut.Has("boguskey"), t)
 }
 
-func TestThat_LRUCache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
+func TestThat_Cache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	key := "fixedsizekey"
@@ -80,9 +79,9 @@ func TestThat_LRUCache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 	ExpectString(content, *res, t)
 }
 
-func TestThat_LRUCache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
+func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	key := "fixedsizekey"
@@ -98,17 +97,17 @@ func TestThat_LRUCache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 	ExpectString(content, *res, t)
 }
 
-func TestThat_LRUCache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
+func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Verify
 	ExpectFalse(sut.Drop("boguskey"), t)
 }
 
-func TestThat_LRUCache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
+func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	key := "fixedsizekey"
@@ -119,9 +118,9 @@ func TestThat_LRUCache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 	ExpectInt(0, sut.Size(), t)
 }
 
-func TestThat_LRUCache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
+func TestThat_Cache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	countLimit := 5
@@ -145,9 +144,9 @@ func TestThat_LRUCache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 	}
 }
 
-func TestThat_LRUCache_SetLimits_LimitsSize_WhenSetAddsEntries(t *testing.T) {
+func TestThat_Cache_SetLimits_LimitsSize_WhenSetAddsEntries(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	count := 5
@@ -171,9 +170,9 @@ func TestThat_LRUCache_SetLimits_LimitsSize_WhenSetAddsEntries(t *testing.T) {
 	}
 }
 
-func TestThat_LRUCache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testing.T) {
+func TestThat_Cache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	countLimit := 5
@@ -205,9 +204,9 @@ func TestThat_LRUCache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testin
 	}
 }
 
-func TestThat_LRUCache_SetLimits_PreventsSet_WhenEntryAddsExceedsLimit(t *testing.T) {
+func TestThat_Cache_SetLimits_PreventsSet_WhenEntryAddsExceedsLimit(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	sizeLimit := 5
@@ -217,9 +216,9 @@ func TestThat_LRUCache_SetLimits_PreventsSet_WhenEntryAddsExceedsLimit(t *testin
 	ExpectFalse(sut.Set("anykey", "1234567890"),t)
 }
 
-func TestThat_LRUCache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
+func TestThat_Cache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	sizeLimit := 5
@@ -229,9 +228,9 @@ func TestThat_LRUCache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T)
 	ExpectTrue(sut.Set("anykey", "12345"),t)
 }
 
-func TestThat_LRUCache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
+func TestThat_Cache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
 	// Setup
-	sut := lib.NewLRUCache()
+	sut := NewCache()
 
 	// Test
 	key := "anykey"

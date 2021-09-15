@@ -30,20 +30,17 @@ TODO:
 
 import (
 	"fmt"
-	"time"
 	"sync"
+	"time"
 	"container/list"
 
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
-	"github.com/DigiStratum/GoLib/Process/runnable"
+	cfg "github.com/DigiStratum/GoLib/Config"
+	//"github.com/DigiStratum/GoLib/Process/runnable"
 )
 
 type expiringItems []*cacheItem
-
-func (r *expiringItems) insert(*cacheItem) {
-	// TODO: insert this item into the slice at the right location relative to the others' expiration times
-}
 
 type CacheIfc interface {
 	Configure(config cfg.ConfigIfc) error			// cfg.ConfigurableIfc
@@ -101,24 +98,26 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 	if nil == config { return fmt.Errorf("Cache.Configure() - Configuration was nil") }
 
 	// New items added to cache will expire in this count of seconds; 0 (default) = no expiration
-	if config.Has["newItemExpires"] {
+	if config.Has("newItemExpires") {
 		newItemExpires := config.GetInt64("newItemExpires")
 		if nil != newItemExpires { r.newItemExpires = *newItemExpires }
 	}
 
 	// New items added to cache won't drive total count above this; 0 (default) = unlimited
 	// When a limit is in place, the Least Recently Used (LRU) item will be evicted to make room for the new one
-	if config.Has["totalCountLimit"] {
+	if config.Has("totalCountLimit") {
 		totalCountLimit := config.GetInt64("totalCountLimit")
 		if nil != totalCountLimit { r.totalCountLimit = int(*totalCountLimit) }
 	}
 
 	// New items  added to cache we won't drive total size of all items above this; 0 = unlimited
 	// When a limit is in place, the Least Recently Used (LRU) item(s) will be evicted to make room for the new one
-	if config.Has["totalSizeLimit"] {
+	if config.Has("totalSizeLimit") {
 		totalSizeLimit := config.GetInt64("totalSizeLimit")
 		if nil != totalSizeLimit { r.totalSizeLimit = *totalSizeLimit }
 	}
+
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -151,7 +150,7 @@ func (r *Cache) Set(key string, value interface{}) {
 	size := sizeable.Size(value)
 
 	// If size limit is in play and this value is bigger than that, then it won't fit
-	if (0 < r.sizeLimit) && (size > r.sizeLimit) { return false }
+	if (0 < r.totalSizeLimit) && (size > r.totalSizeLimit) { return }
 
 	_ = r.drop(key)
 
@@ -159,14 +158,17 @@ func (r *Cache) Set(key string, value interface{}) {
 	if 0 == r.newItemExpires {
 		expires = chrono.NewTimeStampForever()
 	} else {
-		expires = r.TimeSource.NewTimeStamp().Add(r.newItemExpires)
+		expires = r.timeSource.Now().Add(r.newItemExpires)
 	}
 	ci := NewCacheItem(key, value, expires)
-	r.cache[key] = *item
+	r.cache[key] = *ci
 }
 
 func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) {
-	if r.Has(key) { r.cache[key].SetExpires(chrono.TimeStampIfc) }
+	if r.Has(key) {
+		ci := (*r).cache[key]
+		ci.SetExpires(expires)
+	}
 }
 
 // Get a single cache element by key name
@@ -194,14 +196,14 @@ func (r Cache) HasAll(keys *[]string) bool {
 // Drop an item from the cache with the supplied key
 // return true if we drop it, else false
 func (r *Cache) Drop(key string) bool {
-	r.mutex.lock(); defer r.mutex.unlock()
+	r.mutex.Lock(); defer r.mutex.Unlock()
 	return r.drop(key)
 }
 
 // Check whether we have configuration elements for all the key names
 // return count of items actually dropped
 func (r *Cache) DropAll(keys *[]string) int {
-	r.mutex.lock(); defer r.mutex.unlock()
+	r.mutex.Lock(); defer r.mutex.Unlock()
 	numDropped := 0
 	for _, key := range *keys { if r.drop(key) { numDropped++ } }
 	return numDropped
@@ -220,6 +222,7 @@ func (r *Cache) Flush() {
 func (r *Cache) Close() error {
 	r.closed = true
 	r.Flush()
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -232,7 +235,7 @@ func (r *Cache) Run() {
 	go r.runLoop()
 }
 
-func (r Cache) IsRunning() {
+func (r Cache) IsRunning() bool {
 	return ! r.closed
 }
 
@@ -247,7 +250,7 @@ func (r *Cache) Stop() {
 func (r *Cache) init() {
 	r.cache = make(map[string]cacheItem)
 	r.usageList = list.New()
-	r.expiresList = make(expiringItems)
+	r.expiresList = make(expiringItems, 0)
 	r.timeSource = chrono.NewTimeSource()
 	r.closed = false
 }
@@ -256,7 +259,7 @@ func (r *Cache) runLoop() {
 	// While the Cache has not been closed...
 	for r.IsRunning() {
 		r.pruneExpired()
-		sleep(60)
+		time.Sleep(60)
 	}
 }
 
@@ -281,35 +284,36 @@ func (r *Cache) pruneExpired() {
 
 func (r *Cache) itemCanFit(key string, size int64) bool {
 	// If it's bigger than the size limit, then it's impossible
-	if (r.sizeLimit > 0) && (size > r.sizeLimit) { return false }
+	if (r.totalSizeLimit > 0) && (size > r.totalSizeLimit) { return false }
 	return true
 }
 
 // How many existing cache entries must be pruned to fit one of this size?
-func (r Cache) numToPrune(key string, size int) int {
-	var pruneCount, replaceCount, replaceSize int
+func (r Cache) numToPrune(key string, size int64) int {
+	var pruneCount, replaceCount int
+	var replaceSize int64
 	if element := r.find(key, false); nil != element {
 		replaceCount = 1
-		replaceSize = element.Value.(lruCacheItem).Size
+		replaceSize = element.Value.(cacheItem).GetSize()
 	}
 
 	// If there is a count limit in effect...
-	if r.countLimit > 0 {
-		futureCount := r.count + 1 - replaceCount
-		if futureCount > r.countLimit { pruneCount = futureCount - r.countLimit }
+	if r.totalCountLimit > 0 {
+		futureCount := len(r.cache) + 1 - replaceCount
+		if futureCount > r.totalCountLimit { pruneCount = futureCount - r.totalCountLimit }
 	}
 
 	// If there is a size limit in effect...
-	if r.sizeLimit > 0 {
+	if r.totalSizeLimit > 0 {
 		// If we add this to the cache without pruning, future size would be...
-		futureSize := r.size + size - replaceSize
+		futureSize := r.totalSize + size - replaceSize
 		// If we break the size limit by adding...
-		if futureSize > r.sizeLimit {
-			pruneSize := futureSize - r.sizeLimit
+		if futureSize > r.totalSizeLimit {
+			pruneSize := futureSize - r.totalSizeLimit
 			num := 0
-			element := r.ageList.Back()
+			element := r.usageList.Back()
 			for ; (nil != element) && (pruneSize > 0); num++ {
-				pruneSize -= element.Value.(lruCacheItem).Size
+				pruneSize -= element.Value.(cacheItem).GetSize()
 				element = element.Next()
 			}
 			if num > pruneCount { pruneCount = num }
@@ -327,7 +331,7 @@ func (r *Cache) pruneToFit(key string, size int64) {
 	}
 
 	pruneCount := r.numToPrune(key, size)
-	if 0 == pruneCount { return true }
+	if 0 == pruneCount { return }
 
 	// TODO: Make sure we're not pruning more than some percentage threshold
 	// (to minimize performance hits due to statistical outliers)
@@ -336,18 +340,17 @@ func (r *Cache) pruneToFit(key string, size int64) {
 	element := r.usageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		dropKey := element.Value.(string)
-		_ = r.drop(dropKey)
+		r.drop(dropKey)
 		element = element.Next()
 	}
-	return true
 }
 
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
 func (r *Cache) set(key string, ci cacheItem) bool {
-	if ! r.itemCanFit(key, ci.GetSize())
-	_ = r.drop(key)
-	_ = r.usageList.PushFront(key)
+	if ! r.itemCanFit(key, ci.GetSize()) { return false }
+	r.drop(key)
+	r.usageList.PushFront(key)
 	r.size += ci.GetSize()
 	r.pruneToLimits(key, ci.GetSize())
 	return true
@@ -376,5 +379,5 @@ func (r *Cache) find(key string, bump bool) *list.Element {
 // Pull the element forward in the ageList
 // TODO: Also touch the expiration time
 func (r *Cache) bump(element *list.Element) {
-	r.ageList.MoveToFront(element) }
+	r.usageList.MoveToFront(element)
 }
