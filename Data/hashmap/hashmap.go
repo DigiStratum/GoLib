@@ -11,7 +11,9 @@ dealing with simple key/value pair data. *Should* be thread-safe.
 import (
 	"sync"
 	"strconv"
-	"encoding/json"
+	gojson "encoding/json"
+
+	"github.com/DigiStratum/GoLib/Data/json"
 )
 
 type keyValuePair struct {
@@ -21,7 +23,7 @@ type keyValuePair struct {
 
 // HashMap public interface
 type HashMapIfc interface {
-	LoadFromJsonString(json *string) error
+	LoadFromJsonString(jsonStr *string) error
 	LoadFromJsonFile(jsonFile string) error
 	IsEmpty() bool
 	Size() int
@@ -75,15 +77,15 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 // -------------------------------------------------------------------------------------------------
 
 // Load our hash map with JSON data from a string (or return an error)
-func (r *HashMap) LoadFromJsonString(json *string) error {
+func (r *HashMap) LoadFromJsonString(jsonStr *string) error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	return NewJson(json).Load(&r.hash)
+	return json.NewJson(jsonStr).Load(&r.hash)
 }
 
 // Load our hash map with JSON data from a file (or return an error)
 func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	return NewJsonFromFile(jsonFile).Load(&r.hash)
+	return json.NewJsonFromFile(jsonFile).Load(&r.hash)
 }
 
 // Check whether this HashMap is empty (has no properties)
@@ -164,7 +166,7 @@ func (r HashMap) IterateChannel() <-chan keyValuePair {
 }
 
 func (r HashMap) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(r.hash)
+	jsonBytes, err := gojson.Marshal(r.hash)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
