@@ -18,7 +18,7 @@ func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
 	sut := NewCache()
 
 	// Verify
-	ExpectInt(0, sut.Size(), t)
+	ExpectInt64(0, sut.Size(), t)
 }
 
 func TestThat_Cache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
@@ -26,16 +26,17 @@ func TestThat_Cache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
 	sut := NewCache()
 
 	// Test
-	expectedSize := 0;
+	var expectedSize int64 = 0;
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%d", i)
-		expectedSize += len(content)
-		ExpectTrue(sut.Set(key, content), t)
+		expectedSize += int64(len(content))
+		sut.Set(key, content)
+		ExpectTrue(sut.Has(key), t)
 	}
 
 	// Verify
-	ExpectInt(expectedSize, sut.Size(), t)
+	ExpectInt64(expectedSize, sut.Size(), t)
 }
 
 func TestThat_Cache_Count_Is0_WhenNew(t *testing.T) {
@@ -74,7 +75,7 @@ func TestThat_Cache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
-	ExpectInt(10, sut.Size(), t)
+	ExpectInt64(10, sut.Size(), t)
 	ExpectTrue(sut.Has(key), t)
 	ExpectString(content, *res, t)
 }
@@ -92,7 +93,7 @@ func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
-	ExpectInt(10, sut.Size(), t)
+	ExpectInt64(10, sut.Size(), t)
 	ExpectTrue(sut.Has(key), t)
 	ExpectString(content, *res, t)
 }
@@ -115,7 +116,7 @@ func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 
 	// Verify
 	ExpectTrue(sut.Drop(key), t)
-	ExpectInt(0, sut.Size(), t)
+	ExpectInt64(0, sut.Size(), t)
 }
 
 func TestThat_Cache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {

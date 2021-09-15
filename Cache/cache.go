@@ -323,7 +323,7 @@ func (r Cache) numToPrune(key string, size int64) int {
 }
 
 // Prune the currently cached element collection to established limits
-func (r *Cache) pruneToFit(key string, size int64) {
+func (r *Cache) pruneToLimits(key string, size int64) {
 
 	// Does this item fit right now without any prune/purge?
 	if (r.totalSizeLimit == 0) || (r.totalSize + size < r.totalSizeLimit) {
@@ -348,11 +348,12 @@ func (r *Cache) pruneToFit(key string, size int64) {
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
 func (r *Cache) set(key string, ci cacheItem) bool {
-	if ! r.itemCanFit(key, ci.GetSize()) { return false }
+	size := ci.GetSize()
+	if ! r.itemCanFit(key, size) { return false }
 	r.drop(key)
 	r.usageList.PushFront(key)
-	r.size += ci.GetSize()
-	r.pruneToLimits(key, ci.GetSize())
+	r.totalSize += size
+	r.pruneToLimits(key, size)
 	return true
 }
 
@@ -360,8 +361,7 @@ func (r *Cache) set(key string, ci cacheItem) bool {
 // return bool true if we drop it, else false
 func (r *Cache) drop(key string) bool {
 	if element := r.find(key, false); nil != element {
-		r.size -= sizeable.Size(element.Value.(lruCacheItem))
-		r.count--
+		r.totalSize -= sizeable.Size(element.Value.(cacheItem))
 		r.usageList.Remove(element)
 		return true
 	}
@@ -369,9 +369,19 @@ func (r *Cache) drop(key string) bool {
 }
 
 func (r *Cache) find(key string, bump bool) *list.Element {
-	if element, ok := r.cache[key]; ok {
-		if bump { r.bump(element) }
-		return element
+	// If the key is in the cache at all...
+	if _, ok := r.cache[key]; ok {
+		// Find the usageList element whose e.Value == key
+		for e := r.usageList.Front(); e != nil; e = e.Next() {
+			if ek, ok := e.Value.(string); ok {
+				if ek != key { continue }
+				// Found it!
+				if bump { r.bump(e) }
+				return e
+			} else {
+				// e.Value is not a string? Strange problem to have... ignore!
+			}
+		}
 	}
 	return nil
 }
