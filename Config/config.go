@@ -24,14 +24,14 @@ import(
 	"strings"
 	"fmt"
 
-	"github.com/DigiStratum/GoLib/HashMap"
+	"github.com/DigiStratum/GoLib/Data/hashmap"
 )
 
 // Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
 const MAX_REFERENCE_DEPTH = 100
 
 type ConfigIfc interface {
-	HashMapIfc	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
+	hashmap.HashMapIfc	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
 	MergeConfig(mergeCfg ConfigIfc)
 	GetSubset(prefix string) *Config
 	GetInverseSubset(prefix string) *Config
