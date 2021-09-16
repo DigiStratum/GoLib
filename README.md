@@ -21,4 +21,7 @@ Go Library code, generally reusable bits
 # Implement io.Closer interface for any class that opens/managers precious and/or external resources which should be closed/freed upon release/shutdown, etc.
 ** ref: https://pkg.go.dev/io#Closer
 ** ref: https://stackoverflow.com/questions/32768243/go-destructors/32781054
+# Handle r == nil receivers
+** ref: https://tour.golang.org/methods/12
+
 
