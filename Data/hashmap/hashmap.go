@@ -9,6 +9,7 @@ dealing with simple key/value pair data. *Should* be thread-safe.
 */
 
 import (
+	"fmt"
 	"sync"
 	"strconv"
 	gojson "encoding/json"
@@ -16,7 +17,7 @@ import (
 	"github.com/DigiStratum/GoLib/Data/json"
 )
 
-type keyValuePair struct {
+type KeyValuePair struct {
 	Key	string
 	Value	string
 }
@@ -28,14 +29,14 @@ type HashMapIfc interface {
 	IsEmpty() bool
 	Size() int
 	Merge(mergeHash HashMapIfc)
-	Set(key string, value string)
+	Set(key, value string)
 	Get(key string) *string
 	GetInt64(key string) *int64
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	IterateCallback(callback func(kvp keyValuePair))
-	IterateChannel() <-chan keyValuePair
+	IterateCallback(callback func(kvp KeyValuePair))
+	IterateChannel() <-chan KeyValuePair
 	ToJson() (*string, error)
 }
 
@@ -45,8 +46,8 @@ type HashMap struct {
 }
 
 // Factory Functions
-func NewHashMap() HashMap {
-	return HashMap{
+func NewHashMap() *HashMap {
+	return &HashMap{
 		hash:	make(map[string]string),
 	}
 }
@@ -55,21 +56,22 @@ func NewHashMap() HashMap {
 // This is so that we can give away a copy to someone else without allowing them to tamper with us
 // ref: https://developer20.com/be-aware-of-coping-in-go/
 func CopyHashMap(source *HashMap) *HashMap {
+	if nil == source { return nil }
 	r := NewHashMap()
 	for k, v := range (*source).hash { r.hash[k] = v }
-	return &r
+	return r
 }
 
 func NewHashMapFromJsonString(json *string) (*HashMap, error) {
 	r := NewHashMap()
 	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
-	return &r, nil
+	return r, nil
 }
 
 func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 	r := NewHashMap()
 	if err := r.LoadFromJsonFile(jsonFile); nil != err { return nil, err }
-	return &r, nil
+	return r, nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -78,12 +80,14 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 
 // Load our hash map with JSON data from a string (or return an error)
 func (r *HashMap) LoadFromJsonString(jsonStr *string) error {
+	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	return json.NewJson(jsonStr).Load(&r.hash)
 }
 
 // Load our hash map with JSON data from a file (or return an error)
 func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
+	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	return json.NewJsonFromFile(jsonFile).Load(&r.hash)
 }
@@ -100,18 +104,19 @@ func (r HashMap) Size() int {
 
 // Merge some additional data on top of our own
 func (r *HashMap) Merge(mergeHash HashMapIfc) {
+	if nil == r { return }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	keys := mergeHash.GetKeys()
 	for _, key := range keys {
 		value := mergeHash.Get(key)
-		if nil != value { r.Set(key, *value) }
+		if nil != value { r.set(key, *value) }
 	}
 }
 
 // Set a single data element key to the specified value
-func (r *HashMap) Set(key string, value string) {
-	r.mutex.Lock(); defer r.mutex.Unlock()
-	r.hash[key] = value
+func (r *HashMap) Set(key, value string) {
+	if nil == r { return }
+	r.set(key, value)
 }
 
 // Get a single data element by key name
@@ -148,26 +153,40 @@ func (r HashMap) GetKeys() []string {
 
 // Iterate over the keys for this HashMap and call a callback for each
 // ref: https://ewencp.org/blog/golang-iterators/index.html
-func (r HashMap) IterateCallback(callback func(kvp keyValuePair)) {
-	for k, v := range r.hash { callback(keyValuePair{ Key: k, Value: v}) }
+func (r HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
+	for k, v := range r.hash { callback(KeyValuePair{ Key: k, Value: v}) }
 }
 
-// Iterate over the keys for this HashMap and send all the keyValuePairs to a channel
+// Iterate over the keys for this HashMap and send all the KeyValuePairs to a channel
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 // ref: https://blog.golang.org/pipelines
 // ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
-func (r HashMap) IterateChannel() <-chan keyValuePair {
-	ch := make(chan keyValuePair, len(r.hash))
+func (r HashMap) IterateChannel() <-chan KeyValuePair {
+	ch := make(chan KeyValuePair, len(r.hash))
 	defer close(ch)
 	for k, v := range r.hash {
-		ch <- keyValuePair{ Key: k, Value: v }
+		ch <- KeyValuePair{ Key: k, Value: v }
 	}
 	return ch
 }
+
+// -------------------------------------------------------------------------------------------------
+// JsonSerializable Public Interface
+// -------------------------------------------------------------------------------------------------
 
 func (r HashMap) ToJson() (*string, error) {
 	jsonBytes, err := gojson.Marshal(r.hash)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// HashMapIfc Private Interface
+// -------------------------------------------------------------------------------------------------
+
+// Set a single data element key to the specified value
+func (r *HashMap) set(key, value string) {
+	if nil == r { return }
+	r.hash[key] = value
 }
