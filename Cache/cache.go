@@ -114,7 +114,10 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 	// When a limit is in place, the Least Recently Used (LRU) item(s) will be evicted to make room for the new one
 	if config.Has("totalSizeLimit") {
 		totalSizeLimit := config.GetInt64("totalSizeLimit")
-		if nil != totalSizeLimit { r.totalSizeLimit = *totalSizeLimit }
+		if nil != totalSizeLimit {
+			r.totalSizeLimit = *totalSizeLimit
+//fmt.Printf("Setting totalSizeLimit=%d\n", r.totalSizeLimit)
+		}
 	}
 
 	return nil
@@ -152,7 +155,11 @@ func (r *Cache) Set(key string, value interface{}) {
 	// If size limit is in play and this value is bigger than that, then it won't fit
 	if (0 < r.totalSizeLimit) && (size > r.totalSizeLimit) { return }
 
-	_ = r.drop(key)
+	if r.Has(key) {
+		if ! r.drop(key) {
+fmt.Printf("Failed to drop key '%s' before set\n", key)
+		}
+	}
 
 	var expires chrono.TimeStampIfc
 	if 0 == r.newItemExpires {
@@ -160,8 +167,9 @@ func (r *Cache) Set(key string, value interface{}) {
 	} else {
 		expires = r.timeSource.Now().Add(r.newItemExpires)
 	}
+
 	ci := NewCacheItem(key, value, expires)
-	r.cache[key] = *ci
+	r.set(key, ci)
 }
 
 func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) {
@@ -347,10 +355,11 @@ func (r *Cache) pruneToLimits(key string, size int64) {
 
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
-func (r *Cache) set(key string, ci cacheItem) bool {
+func (r *Cache) set(key string, ci *cacheItem) bool {
 	size := ci.GetSize()
 	if ! r.itemCanFit(key, size) { return false }
 	r.drop(key)
+	r.cache[key] = *ci
 	r.usageList.PushFront(key)
 	r.totalSize += size
 	r.pruneToLimits(key, size)
@@ -360,11 +369,16 @@ func (r *Cache) set(key string, ci cacheItem) bool {
 // Drop if exists (don't bump on the find since we're going to drop it!)
 // return bool true if we drop it, else false
 func (r *Cache) drop(key string) bool {
-	if element := r.find(key, false); nil != element {
-		r.totalSize -= sizeable.Size(element.Value.(cacheItem))
-		r.usageList.Remove(element)
-		return true
+	if r.Has(key) {
+		size := r.cache[key].GetSize()
+		r.totalSize -= size
+//fmt.Printf("Size dropped=[%d]\n", size)
+		if element := r.find(key, false); nil != element {
+			r.usageList.Remove(element)
+			return true
+		}
 	}
+//fmt.Printf("Failed to drop key '%s'\n", key)
 	return false
 }
 
@@ -373,6 +387,7 @@ func (r *Cache) find(key string, bump bool) *list.Element {
 	if _, ok := r.cache[key]; ok {
 		// Find the usageList element whose e.Value == key
 		for e := r.usageList.Front(); e != nil; e = e.Next() {
+//fmt.Printf("@Here\n")
 			if ek, ok := e.Value.(string); ok {
 				if ek != key { continue }
 				// Found it!
