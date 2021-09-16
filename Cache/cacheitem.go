@@ -14,8 +14,8 @@ type cacheItemIfc interface {
 	IsExpired() bool
 	SetExpires(expires chrono.TimeStampIfc)
 	GetValue() interface{}
-	GetSize() int64
 	GetKey() string
+	Size() int64
 }
 
 type cacheItem struct {
@@ -58,6 +58,10 @@ func (r cacheItem) GetValue() interface{} {
 	return r.value
 }
 
-func (r cacheItem) GetSize() int64 {
+// -------------------------------------------------------------------------------------------------
+// SizeableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r cacheItem) Size() int64 {
 	return r.size
 }
