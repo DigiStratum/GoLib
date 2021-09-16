@@ -11,6 +11,8 @@ import(
 	"testing"
 
 	. "github.com/DigiStratum/GoTools/test"
+
+	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
@@ -72,12 +74,13 @@ func TestThat_Cache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 	content := "1234567890"
 	sut.Set(key, content)	// Set our content
 	res := sut.Get(key)	// And retrieve the same to check it out
+	val := res.(string)
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
 	ExpectInt64(10, sut.Size(), t)
 	ExpectTrue(sut.Has(key), t)
-	ExpectString(content, *res, t)
+	ExpectString(content, val, t)
 }
 
 func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
@@ -90,12 +93,13 @@ func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 	sut.Set(key, "oldgarbage")	// First set some old garbage
 	sut.Set(key, content)		// Then replace it with our contet
 	res := sut.Get(key)		// And retrieve the same to check it out
+	val := res.(string)
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
 	ExpectInt64(10, sut.Size(), t)
 	ExpectTrue(sut.Has(key), t)
-	ExpectString(content, *res, t)
+	ExpectString(content, val, t)
 }
 
 func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
@@ -125,12 +129,15 @@ func TestThat_Cache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 
 	// Test
 	countLimit := 5
-	sizeLimit := 0
-	sut.SetLimits(sizeLimit, countLimit - 1) // count limit is one less than we want
+	config := cfg.NewConfig()
+	config.Set("totalCountLimit", string(countLimit - 1)) // count limit is one less than we want
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
 	for i := 0; i < countLimit; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content%d", i)
-		ExpectTrue(sut.Set(key, content), t)
+		sut.Set(key, content)
 	}
 
 	// Verify
@@ -141,22 +148,26 @@ func TestThat_Cache_SetLimits_LimitsCount_WhenSetAddsEntries(t *testing.T) {
 		content := fmt.Sprintf("content%d", i)
 		ExpectTrue(sut.Has(key), t)
 		res := sut.Get(key)
-		ExpectString(content, *res, t)
+		val := res.(string)
+		ExpectString(content, val, t)
 	}
 }
 
 func TestThat_Cache_SetLimits_LimitsSize_WhenSetAddsEntries(t *testing.T) {
 	// Setup
 	sut := NewCache()
-
-	// Test
 	count := 5
 	sizeLimit := (count - 1) * 10	// Limit size at 10 chars * our count, less one
-	sut.SetLimits(sizeLimit, 0)
+
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", string(sizeLimit))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%d", i)
-		ExpectTrue(sut.Set(key, content), t)
+		sut.Set(key, content)
 	}
 
 	// Verify
@@ -167,30 +178,35 @@ func TestThat_Cache_SetLimits_LimitsSize_WhenSetAddsEntries(t *testing.T) {
 		content := fmt.Sprintf("content--%d", i)
 		ExpectTrue(sut.Has(key), t)
 		res := sut.Get(key)
-		ExpectString(content, *res, t)
+		val := res.(string)
+		ExpectString(content, val, t)
 	}
 }
 
 func TestThat_Cache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testing.T) {
 	// Setup
 	sut := NewCache()
-
-	// Test
 	countLimit := 5
 	sizeLimit := (countLimit - 1) * 10	// Limit size at 10 chars * our count, less one
-	sut.SetLimits(sizeLimit, countLimit - 1) // count limit is one less than we want
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", string(sizeLimit))
+	config.Set("totalCountLimit", string(countLimit - 1)) // count limit is one less than we want
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
 	for i := 0; i < countLimit; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%d", i)
-		ExpectTrue(sut.Set(key, content), t)
+		sut.Set(key, content)
 	}
 	// Drop in a double-sized item which should displace two regular ones
 	expectedKey := fmt.Sprintf("key%d", countLimit)
 	expectedContent := "12345678901234567890"
-	ExpectTrue(sut.Set(expectedKey, expectedContent), t)
+	sut.Set(expectedKey, expectedContent)
 	ExpectTrue(sut.Has(expectedKey), t)
 	res := sut.Get(expectedKey)
-	ExpectString(expectedContent, *res, t)
+	val := res.(string)
+	ExpectString(expectedContent, val, t)
 
 	// Verify
 	ExpectInt(countLimit - 1, sut.Count(), t) // should only have count limit less TWO
@@ -201,7 +217,8 @@ func TestThat_Cache_SetLimits_LimitsCountAndSize_WhenSetAddsEntries(t *testing.T
 		content := fmt.Sprintf("content--%d", i)
 		ExpectTrue(sut.Has(key), t)
 		res := sut.Get(key)
-		ExpectString(content, *res, t)
+		val := res.(string)
+		ExpectString(content, val, t)
 	}
 }
 
@@ -211,10 +228,14 @@ func TestThat_Cache_SetLimits_PreventsSet_WhenEntryAddsExceedsLimit(t *testing.T
 
 	// Test
 	sizeLimit := 5
-	sut.SetLimits(sizeLimit, 0)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", string(sizeLimit))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+	sut.Set("anykey", "1234567890")
 
 	// Verify
-	ExpectFalse(sut.Set("anykey", "1234567890"),t)
+	ExpectFalse(sut.Has("anykey"), t)
 }
 
 func TestThat_Cache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
@@ -223,10 +244,14 @@ func TestThat_Cache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 
 	// Test
 	sizeLimit := 5
-	sut.SetLimits(sizeLimit, 0)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", string(sizeLimit))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
 
 	// Verify
-	ExpectTrue(sut.Set("anykey", "12345"),t)
+	sut.Set("anykey", "12345")
+	ExpectTrue(sut.Has("anykey"),t)
 }
 
 func TestThat_Cache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
@@ -236,14 +261,21 @@ func TestThat_Cache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *test
 	// Test
 	key := "anykey"
 	sizeLimit := 5
-	sut.SetLimits(sizeLimit, 0)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", string(sizeLimit))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
 
 	// Verify
-	ExpectTrue(sut.Set(key, "12345"), t)
+	sut.Set(key, "12345")
+	ExpectTrue(sut.Has(key), t)
+	ExpectInt(1, sut.Count(), t)
+
 	content := "54321"
-	ExpectTrue(sut.Set(key, content), t)
+	sut.Set(key, content)
+	ExpectTrue(sut.Has(key), t)
 	ExpectInt(1, sut.Count(), t)
 	res := sut.Get(key)
-	ExpectString(content, *res, t)
+	val := res.(string)
+	ExpectString(content, val, t)
 }
-
