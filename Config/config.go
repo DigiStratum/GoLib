@@ -43,7 +43,7 @@ type ConfigIfc interface {
 
 // Config embeds a HashMap so that we can extend it
 type Config struct {
-	hashmap.HashMap
+	*hashmap.HashMap
 }
 
 // Factory Functions
