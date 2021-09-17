@@ -24,4 +24,8 @@ Go Library code, generally reusable bits
 # Handle r == nil receivers
 ** ref: https://tour.golang.org/methods/12
 
+## TEST
+go test -count=1 cache_test.go cache.go cacheitem.go
+^^ the -count=1 bypasses the test execution cache to force the tests to run each time.
+
 

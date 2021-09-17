@@ -76,6 +76,7 @@ type Cache struct {
 	totalSizeLimit		int64
 
 	mutex			sync.Mutex
+	pruneMutex		sync.Mutex
 	closed			bool
 }
 
@@ -277,17 +278,20 @@ func (r *Cache) itemCanFit(key string, size int64) bool {
 
 // How many existing cache entries must be pruned to fit one of this size?
 func (r Cache) numToPrune(key string, size int64) int {
+fmt.Printf("numToPrune() - START!\n")
 	var pruneCount, replaceCount int
 	var replaceSize int64
 	if element := r.findUsageListElementByKey(key, false); nil != element {
 		replaceCount = 1
-		replaceSize = element.Value.(cacheItem).Size()
+		ci := r.cache[key]
+		replaceSize = ci.Size()
 	}
 
 	// If there is a count limit in effect...
 	if r.totalCountLimit > 0 {
 		futureCount := len(r.cache) + 1 - replaceCount
 		if futureCount > r.totalCountLimit { pruneCount = futureCount - r.totalCountLimit }
+fmt.Printf("numToPrune() - (count limit) prune count=%d\n", pruneCount)
 	}
 
 	// If there is a size limit in effect...
@@ -300,17 +304,29 @@ func (r Cache) numToPrune(key string, size int64) int {
 			num := 0
 			element := r.usageList.Back()
 			for ; (nil != element) && (pruneSize > 0); num++ {
-				pruneSize -= element.Value.(cacheItem).Size()
+				pruneKey := element.Value.(string)
+				ci := r.cache[pruneKey]
+				pruneSize -= ci.Size()
 				element = element.Next()
 			}
 			if num > pruneCount { pruneCount = num }
+fmt.Printf(
+	"numToPrune() - (size limit=%d, current size=%d, new size=%d) prune count=%d\n",
+	r.totalSizeLimit,
+	r.totalSize,
+	r.totalSize+pruneSize,
+	pruneCount,
+)
 		}
 	}
+
+fmt.Printf("numToPrune() - DONE!\n")
 	return pruneCount
 }
 
 // Prune the currently cached element collection to established limits
 func (r *Cache) pruneToLimits(key string, size int64) {
+	r.pruneMutex.Lock(); defer r.pruneMutex.Unlock()
 
 	// Does this item fit right now without any prune/purge?
 	if (r.totalSizeLimit == 0) || (r.totalSize + size < r.totalSizeLimit) {
