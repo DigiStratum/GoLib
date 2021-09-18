@@ -23,7 +23,7 @@ func (r sizeableTarget) Size() int64 {
 }
 
 
-func TestThat_CacheItem_GetSize_Returns_Sizeable_Value(t *testing.T) {
+func TestThat_CacheItem_Size_Returns_Sizeable_Value(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -32,10 +32,10 @@ func TestThat_CacheItem_GetSize_Returns_Sizeable_Value(t *testing.T) {
 	)
 
 	// Verify
-	ExpectInt64(FIXED_SIZE, sut.GetSize(), t)
+	ExpectInt64(FIXED_SIZE, sut.Size(), t)
 }
 
-func TestThat_CacheItem_GetSize_Returns_Regular_Value(t *testing.T) {
+func TestThat_CacheItem_Size_Returns_Regular_Value(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -44,7 +44,7 @@ func TestThat_CacheItem_GetSize_Returns_Regular_Value(t *testing.T) {
 	)
 
 	// Verify
-	ExpectInt64(120, sut.GetSize(), t)
+	ExpectInt64(120, sut.Size(), t)
 }
 
 func TestThat_CacheItem_IsExpired_Returns_False(t *testing.T) {

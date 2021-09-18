@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "cache_test.go"
+go test -count=1 cache_test.go cache.go cacheitem.go
+echo ""
+
+echo "cacheitem_test.go"
+go test -count=1 cacheitem_test.go cacheitem.go
+echo ""
+
