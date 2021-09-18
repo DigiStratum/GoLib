@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Which directory should we return to upon death? Defaults to no change on exit (it stays where it dies)
+DEATH_DIR="."
+
 # Reset debug logging
 debugLog=debug.log
 if [ -f "$debugLog" ]; then
@@ -20,10 +23,16 @@ say() {
 	echo -e "$msg" >&2
 }
 
+# Set the directory that death will return us to (should just be called once by the parent script)
+set_death_dir() {
+	DEATH_DIR="$1"
+}
+
 # Use this to die with a message
 die() {
 	say "$1"
 	# We need this to exit ths script, not just the function
+	cd $DEATH_DIR
 	kill -s TERM $TOP_PID
 }
 

@@ -1,9 +1,10 @@
 #!/bin/bash
 
-. ../Testing/shell.sh
+TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+. $TESTRUNNER_DIR/../Testing/shell.sh
 
-cwd=`pwd`
-say "BEGIN: $cwd"
+say "BEGIN: $TESTRUNNER_DIR"
+cd $TESTRUNNER_DIR
 
 say "\n >> cacheitem_test.go"
 go test -count=1 cacheitem_test.go cacheitem.go
@@ -13,5 +14,5 @@ say "\n >> cache_test.go"
 go test -count=1 cache_test.go cache.go cacheitem.go
 die_on_error $? "ERROR!"
 
-say "\nDONE: $cwd"
+say "\nDONE: $TESTRUNNER_DIR"
 
