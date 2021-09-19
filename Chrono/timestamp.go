@@ -18,6 +18,8 @@ type TimeStampIfc interface {
 	IsForever() bool
 	IsPast() bool
 	IsFuture() bool
+
+	ToUnixTimeStamp() int64
 }
 
 type TimeStamp struct {
@@ -31,8 +33,12 @@ type TimeStamp struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
+	return NewFromUnixTimeStamp(timeSource, timeSource.NowUnixTimeStamp())
+}
+
+func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeStamp {
 	return &TimeStamp{
-		timeStamp: timeSource.NowUnixTimeStamp(),
+		timeStamp: unixTimeStamp,
 		timeSource: timeSource,
 	}
 }
@@ -85,4 +91,8 @@ func (r TimeStamp) IsPast() bool {
 
 func (r TimeStamp) IsFuture() bool {
 	return (r.DiffNow() == 1)
+}
+
+func (r TimeStamp) ToUnixTimeStamp() int64 {
+	return r.timeStamp
 }
