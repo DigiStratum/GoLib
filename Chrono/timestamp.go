@@ -33,10 +33,13 @@ type TimeStamp struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
+	if nil == timeSource { return nil }
 	return NewFromUnixTimeStamp(timeSource, timeSource.NowUnixTimeStamp())
 }
 
 func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeStamp {
+	// Require a TimeSource
+	if nil == timeSource { return nil }
 	return &TimeStamp{
 		timeStamp: unixTimeStamp,
 		timeSource: timeSource,

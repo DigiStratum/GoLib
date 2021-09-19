@@ -9,6 +9,14 @@ import(
 
 const TEST_MSEC_STEP = 10
 
+func TestThat_TimeSource_NewTimeSource_ReturnsSomething(t *testing.T) {
+	// Setup
+	sut := NewTimeSource()
+
+	// Verify
+	ExpectNonNil(sut, t)
+}
+
 func TestThat_Timesource_NowUnixTimeStamp_UpdatesOncePerSecond(t *testing.T) {
 	// Setup
 	sut := NewTimeSource()

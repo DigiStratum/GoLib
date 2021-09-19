@@ -10,5 +10,9 @@ say "\n >> timesource_test.go"
 go test -count=1 timesource_test.go timesource.go timestamp.go
 die_on_error $? "ERROR!"
 
+say "\n >> timestamp_test.go"
+go test -count=1 timestamp_test.go timesource.go timestamp.go
+die_on_error $? "ERROR!"
+
 say "\nDONE: $TESTRUNNER_DIR"
 
