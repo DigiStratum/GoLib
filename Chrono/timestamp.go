@@ -89,13 +89,14 @@ func (r TimeStamp) IsForever() bool {
 }
 
 func (r TimeStamp) IsPast() bool {
-	return (r.DiffNow() == -1)
+	return (r.DiffNow() < 0)
 }
 
 func (r TimeStamp) IsFuture() bool {
-	return (r.DiffNow() == 1)
+	return (r.DiffNow() > 0)
 }
 
 func (r TimeStamp) ToUnixTimeStamp() int64 {
+	if r.isForever { return 0 } // Forever has no definite timestamp
 	return r.timeStamp
 }
