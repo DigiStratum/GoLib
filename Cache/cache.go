@@ -278,7 +278,6 @@ func (r *Cache) itemCanFit(key string, size int64) bool {
 
 // How many existing cache entries must be pruned to fit one of this size?
 func (r Cache) numToPrune(key string, size int64) int {
-fmt.Printf("numToPrune() - START!\n")
 	var pruneCount, replaceCount int
 	var replaceSize int64
 	if element := r.findUsageListElementByKey(key, false); nil != element {
@@ -291,7 +290,6 @@ fmt.Printf("numToPrune() - START!\n")
 	if r.totalCountLimit > 0 {
 		futureCount := len(r.cache) + 1 - replaceCount
 		if futureCount > r.totalCountLimit { pruneCount = futureCount - r.totalCountLimit }
-fmt.Printf("numToPrune() - (count limit) prune count=%d\n", pruneCount)
 	}
 
 	// If there is a size limit in effect...
@@ -310,17 +308,9 @@ fmt.Printf("numToPrune() - (count limit) prune count=%d\n", pruneCount)
 				element = element.Next()
 			}
 			if num > pruneCount { pruneCount = num }
-fmt.Printf(
-	"numToPrune() - (size limit=%d, current size=%d, new size=%d) prune count=%d\n",
-	r.totalSizeLimit,
-	r.totalSize,
-	r.totalSize+pruneSize,
-	pruneCount,
-)
 		}
 	}
 
-fmt.Printf("numToPrune() - DONE!\n")
 	return pruneCount
 }
 

@@ -1,14 +1,13 @@
 package chrono
 
 import(
-	//"fmt"
 	"time"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-const TEST_MSEC_STEP = 5
+const TEST_MSEC_STEP = 10
 
 func TestThat_TimeSource_NewTimeSource_ReturnsSomething(t *testing.T) {
 	// Setup
@@ -23,27 +22,12 @@ func TestThat_Timesource_NowUnixTimeStamp_UpdatesOncePerSecond(t *testing.T) {
 	sut := NewTimeSource()
 
 	// Test
-	res, t1 := waitForSecondChange(sut)
-	ExpectTrue(res, t)
-
-	msecElapsed := 0
-	// Count how many milliseconds until TimeStamp changes again...
-	for ; msecElapsed < 1500; msecElapsed += TEST_MSEC_STEP {
-		t2 := sut.NowUnixTimeStamp()
-		if t2 > t1 { break; }
-		time.Sleep(TEST_MSEC_STEP * time.Millisecond)
-	}
+	t1 := sut.NowUnixTimeStamp()
+	time.Sleep(1 * time.Second)
+	t2 := sut.NowUnixTimeStamp()
 
 	// Verity
-	// Expect 1000msec between TimeStamp changes +/- 10 msec for test imprecision
-//fmt.Printf("Elapsed: %d", msecElapsed)
-// Precision here got inexplicably worse when system performance improved, but somehow left us only 940-945msec for our time
-// FIXME: this should be tripping closer to 1000 +/- step size
-	ExpectTrue(
-		//(msecElapsed >= (1000 - TEST_MSEC_STEP)) && (msecElapsed <= (1000 + TEST_MSEC_STEP)),
-		(msecElapsed >= (945 - TEST_MSEC_STEP)) && (msecElapsed <= (945 + TEST_MSEC_STEP)),
-		t,
-	)
+	ExpectInt64(1, (t2 - t1), t)
 }
 
 func TestThat_Timesource_Now_Returns_GoodTimeStamp(t *testing.T) {
@@ -64,14 +48,17 @@ func TestThat_Timesource_Now_Returns_GoodTimeStamp(t *testing.T) {
 
 // Get us to within 5msec of the next change of TimeStamp according to this TimeSource
 func waitForSecondChange(ts *TimeSource) (bool, int64) {
-	t1 := ts.NowUnixTimeStamp()
-	t2 := t1
-	maxIter := 250
+	maxIter := 600
 	for ; maxIter > 0; maxIter-- {
-		t2 = ts.NowUnixTimeStamp()
-		if t2 > t1 { return true, t2 }
-		time.Sleep(5 * time.Millisecond)
+		t2 := ts.NowUnixTimeStampMilli()
+		msec :=  t2 % 1000
+		if msec <= 20 {
+//fmt.Printf("Time approached second boundary with %d msec over in %d cycles!\n", msec, maxIter)
+			return true, t2 / 1000
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 	// If >= 250 * 5msec transition from one second to next, then time is broken
+//fmt.Printf("Time is broken!\n")
 	return false, -1
 }
