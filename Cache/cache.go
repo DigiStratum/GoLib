@@ -49,7 +49,7 @@ type CacheIfc interface {
 	Size() int64
 	Count() int
 	Set(key string, value interface{}) bool
-	SetExpires(key string, expires chrono.TimeStampIfc)
+	SetExpires(key string, expires chrono.TimeStampIfc) bool
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -134,7 +134,7 @@ func (r *Cache) SetTimeSource(timeSource chrono.TimeSourceIfc) {
 
 // Check whether this Cache is empty (has no properties)
 func (r Cache) IsEmpty() bool {
-	return 0 == r.Size()
+	return 0 == r.Count()
 }
 
 // Get the number of properties in this Cache
@@ -152,11 +152,13 @@ func (r *Cache) Set(key string, value interface{}) bool {
 	return r.set(key, value)
 }
 
-func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) {
-	if r.Has(key) {
-		ci := (*r).cache[key]
-		ci.SetExpires(expires)
-	}
+// Set the expiration timestamp for a given Cache item; returns true if set, else false
+func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) bool {
+	if ! r.Has(key) { return false }
+	if nil == expires { return false }
+	ci := (*r).cache[key]
+	ci.SetExpires(expires)
+	return true
 }
 
 // Get a single cache element by key name
@@ -200,7 +202,7 @@ func (r *Cache) DropAll(keys *[]string) int {
 // Flush all the items out of the cache
 func (r *Cache) Flush() {
 	r.mutex.Lock(); defer r.mutex.Unlock()
-	r.cache = make(map[string]cacheItem)
+	r.flush()
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -209,7 +211,7 @@ func (r *Cache) Flush() {
 
 func (r *Cache) Close() error {
 	r.closed = true
-	r.Flush()
+	r.flush()
 	return nil
 }
 
@@ -236,11 +238,16 @@ func (r *Cache) Stop() {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Cache) init() {
+	r.flush()
+	r.timeSource = chrono.NewTimeSource()
+	r.closed = false
+}
+
+func (r *Cache) flush() {
 	r.cache = make(map[string]cacheItem)
 	r.usageList = list.New()
 	r.expiresList = make(expiringItems, 0)
-	r.timeSource = chrono.NewTimeSource()
-	r.closed = false
+	r.totalSize = 0
 }
 
 func (r *Cache) runLoop() {

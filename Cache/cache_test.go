@@ -14,10 +14,54 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
+	"github.com/DigiStratum/GoLib/Process/runnable"
 )
 
 const GOROUTINE_WAIT_MSEC	= 25
+
+func TestThat_Cache_SetTimeSource_SetsTimeSource_WhenNonNil(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	ts := chrono.NewTimeSource()
+	// Reset the timeSource to nil so that we can observe it change
+	sut.timeSource = nil
+
+	// Test
+	sut.SetTimeSource(ts)
+
+	// Verify
+	ExpectNonNil(sut.timeSource, t)
+}
+
+func TestThat_Cache_SetTimeSource_DoesNotSetTimeSource_WhenNil(t *testing.T) {
+	// Setup
+	sut := NewCache()
+
+	// Test
+	sut.SetTimeSource(nil)
+
+	// Verify
+	ExpectNonNil(sut.timeSource, t)
+}
+
+func TestThat_Cache_IsEmpty_ReturnsTrue_WhenEmpty(t *testing.T) {
+	// Setup
+	sut := NewCache()
+
+	// Verify
+	ExpectTrue(sut.IsEmpty(), t)
+}
+
+func TestThat_Cache_IsEmpty_ReturnsFalse_WhenNonEmpty(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	sut.Set("boguskey", "bogus value")
+
+	// Verify
+	ExpectFalse(sut.IsEmpty(), t)
+}
 
 func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
 	// Setup
@@ -53,7 +97,7 @@ func TestThat_Cache_Count_Is0_WhenNew(t *testing.T) {
 	ExpectInt(0, sut.Count(), t)
 }
 
-func TestThat_Cache_Get_ReturnsNil_ForMissingKeys(t *testing.T) {
+func TestThat_Cache_Get_ReturnsNil_ForMissingKey(t *testing.T) {
 	// Setup
 	sut := NewCache()
 
@@ -61,7 +105,7 @@ func TestThat_Cache_Get_ReturnsNil_ForMissingKeys(t *testing.T) {
 	ExpectNil(sut.Get("boguskey"), t)
 }
 
-func TestThat_Cache_Has_ReturnsFalse_ForMissingKeys(t *testing.T) {
+func TestThat_Cache_Has_ReturnsFalse_ForMissingKey(t *testing.T) {
 	// Setup
 	sut := NewCache()
 
@@ -106,6 +150,33 @@ func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 	ExpectInt64(sizeable.Size(content), sut.Size(), t)
 	ExpectTrue(sut.Has(key), t)
 	ExpectString(content, val, t)
+}
+
+func TestThat_Cache_SetExpires_ReturnsFalse_ForMissingKey(t *testing.T) {
+		// Setup
+        	sut := NewCache()
+
+        	// Verify
+        	ExpectFalse(sut.SetExpires("boguskey", nil), t)
+}
+
+func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyBadTimeStamp(t *testing.T) {
+		// Setup
+        	sut := NewCache()
+		sut.Set("boguskey", "bogus value")
+
+        	// Verify
+        	ExpectFalse(sut.SetExpires("boguskey", nil), t)
+}
+
+func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyGoodTimeStamp(t *testing.T) {
+		// Setup
+        	sut := NewCache()
+		sut.Set("boguskey", "bogus value")
+		ts := chrono.NewTimeSource()
+
+        	// Verify
+        	ExpectTrue(sut.SetExpires("boguskey", ts.Now()), t)
 }
 
 func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
@@ -299,4 +370,105 @@ func TestThat_Cache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *test
 	ExpectNonNil(res, t)
 	val := res.(string)
 	ExpectString(content, val, t)
+}
+
+func TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	keys := []string{ "key1", "key2" }
+	sut.Set("key1", "value1")
+	sut.Set("key2", "value2")
+
+	// Verify
+	ExpectTrue(sut.HasAll(&keys), t)
+}
+
+func TestThat_Cache_HasAll_ReturnsFalse_IfCacheDoesNotHaveAllKeys(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	keys := []string{ "key1", "key2" }
+	sut.Set("key1", "value1")
+
+	// Verify
+	ExpectFalse(sut.HasAll(&keys), t)
+}
+
+func TestThat_Cache_DropAll_DropsSomeKeys_ForPartiallyMatchingKeySet(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	keys := []string{ "key1", "key2" }
+	sut.Set("key1", "value1")
+
+	// Verify
+	ExpectInt(len(keys) - 1, sut.DropAll(&keys), t)
+}
+func TestThat_Cache_DropAll_DropsAllKeys_ForFullyMatchingKeySet(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	keys := []string{ "key1", "key2" }
+	sut.Set("key1", "value1")
+	sut.Set("key2", "value2")
+
+	// Verify
+	ExpectInt(len(keys), sut.DropAll(&keys), t)
+}
+
+func TestThat_Cache_Flush_DropsAllKeys(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	sut.Set("key1", "value1")
+	sut.Set("key2", "value2")
+
+	// Test
+	sut.Flush()
+
+	// Verify
+	ExpectTrue(sut.IsEmpty(), t)
+	ExpectInt64(0, sut.Size(), t)
+	ExpectInt(0, sut.Count(), t)
+}
+
+func TestThat_Cache_Implements_RunnableIfc(t *testing.T) {
+	// Setup
+	var sut interface{} = NewCache()
+	_, ok := sut.(runnable.RunnableIfc)
+
+	// Verify
+	ExpectTrue(ok, t)
+}
+
+func TestThat_Cache_IsRunning_ReturnsTrue_AfterInitialization(t *testing.T) {
+	// Setup
+	sut := NewCache()
+
+	// Verify
+	ExpectTrue(sut.IsRunning(), t)
+}
+
+func TestThat_Cache_IsRunning_ReturnsFalse_AfterClose(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	sut.Close()
+
+	// Verify
+	ExpectFalse(sut.IsRunning(), t)
+}
+
+func TestThat_Cache_IsRunning_ReturnsFalse_AfterStop(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	sut.Stop()
+
+	// Verify
+	ExpectFalse(sut.IsRunning(), t)
+}
+
+func TestThat_Cache_IsRunning_ReturnsTrue_AfterRun(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	sut.Stop()
+	sut.Run()
+
+	// Verify
+	ExpectTrue(sut.IsRunning(), t)
 }
