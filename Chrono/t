@@ -6,12 +6,7 @@ TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 say "BEGIN: $TESTRUNNER_DIR"
 cd $TESTRUNNER_DIR
 
-say "\n >> timesource_test.go"
-go test -v -count=1 -covermode=atomic -coverprofile=timesource_test_coverage.txt timesource_test.go timesource.go timestamp.go
-die_on_error $? "ERROR!"
-
-say "\n >> timestamp_test.go"
-go test -v -count=1 -covermode=atomic -coverprofile=timestamp_test_coverage.txt timestamp_test.go timesource.go timestamp.go
+go test -v -count=1 -covermode=atomic -coverprofile=timesource_test_coverage.txt *.go
 die_on_error $? "ERROR!"
 
 say "\nDONE: $TESTRUNNER_DIR"
