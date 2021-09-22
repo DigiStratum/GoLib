@@ -26,7 +26,7 @@ func TestThat_Timesource_NowUnixTimeStamp_UpdatesOncePerSecond(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	t2 := sut.NowUnixTimeStamp()
 
-	// Verity
+	// Verify
 	ExpectInt64(1, (t2 - t1), t)
 }
 
