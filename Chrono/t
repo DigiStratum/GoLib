@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-. $TESTRUNNER_DIR/../Testing/shell.sh
+. $TESTRUNNER_DIR/../tools/shell.sh
 
 say "BEGIN: $TESTRUNNER_DIR"
 cd $TESTRUNNER_DIR
