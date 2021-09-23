@@ -268,8 +268,10 @@ func (r *Cache) pruneExpired() {
 		if ci.IsExpired() {
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
+fmt.Printf("Expired key: '%s'\n", key)
 		} else {
 			// The first non-expired one we find means all others after it are non-expired!
+fmt.Printf("NOT expired key: '%s'!\n", key)
 			break
 		}
 	}

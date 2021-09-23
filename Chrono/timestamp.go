@@ -8,6 +8,8 @@ implementation uses Go runtime environment which could vary from one host to the
 Defaults to local TimeSource
 */
 
+import("fmt")
+
 type TimeStampIfc interface {
 	Add(offset int64) *TimeStamp
 	Compare(ts *TimeStamp) int
@@ -43,6 +45,7 @@ func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeSt
 	return &TimeStamp{
 		timeStamp: unixTimeStamp,
 		timeSource: timeSource,
+		isForever: false,
 	}
 }
 
@@ -63,25 +66,28 @@ func (r *TimeStamp) Add(offset int64) *TimeStamp {
 }
 
 func (r TimeStamp) Compare(ts *TimeStamp) int {
-	if r.isForever { return 1 } // Forever is always in the future
-	if r.timeStamp == ts.timeStamp { return 0 }
-	if r.timeStamp < ts.timeStamp { return -1 }
-	return 1
+	if r.isForever { return 1 } 			// Forever is always in the future
+	if r.timeStamp < ts.timeStamp { return -1 }	// Past
+	if r.timeStamp == ts.timeStamp { return 0 }	// Present
+	return 1 					// Future
 }
 
 func (r TimeStamp) CompareToNow() int {
-	if r.isForever { return 1 } // Forever is always in the future
+	if r.isForever { return 1 } 			// Forever is always in the future
 	return r.Compare(r.timeSource.Now())
 }
 
 func (r TimeStamp) Diff(ts *TimeStamp) int64 {
-	if r.isForever { return 1 } // Forever is always in the future
+	if r.isForever { return 1 } 			// Forever is always in the future
 	return r.timeStamp - ts.timeStamp
 }
 
 func (r TimeStamp) DiffNow() int64 {
-	if r.isForever { return 1 } // Forever is always in the future
-	return r.Diff(r.timeSource.Now())
+fmt.Printf("ts.DiffNow() isForever=%b\n", r.isForever)
+	if r.isForever { return 1 } 			// Forever is always in the future
+	now := r.timeSource.Now()
+fmt.Printf("ts.DiffNow() now=%d\n", now)
+	return r.Diff(now)
 }
 
 func (r TimeStamp) IsForever() bool {
@@ -89,7 +95,9 @@ func (r TimeStamp) IsForever() bool {
 }
 
 func (r TimeStamp) IsPast() bool {
-	return (r.DiffNow() < 0)
+	diff := r.DiffNow()
+fmt.Printf("ts.IsPast() diff=%d\n", diff)
+	return (diff < 0)
 }
 
 func (r TimeStamp) IsFuture() bool {

@@ -472,3 +472,32 @@ func TestThat_Cache_IsRunning_ReturnsTrue_AfterRun(t *testing.T) {
 	// Verify
 	ExpectTrue(sut.IsRunning(), t)
 }
+
+func TestThat_Cache_purgeExpired_PurgesExpiredItems(t *testing.T) {
+	// Setup
+	sut := NewCache()
+	ts := chrono.NewTimeSource()
+
+	sut.Set("expiredkey", "value1")
+	pastTimeStamp := ts.Now().Add(-1000)
+	futureTimeStamp := ts.Now().Add(1000)
+fmt.Printf(
+	"\npast: %d, now: %d, future: %d\n",
+	pastTimeStamp.ToUnixTimeStamp(),
+	ts.NowUnixTimeStamp(),
+	futureTimeStamp.ToUnixTimeStamp(),
+)
+	sut.SetExpires("expiredkey",pastTimeStamp )
+
+	sut.Set("futurekey", "value2")
+	sut.SetExpires("futurekey", futureTimeStamp)
+
+	// Test
+	sut.pruneExpired()
+	isExpired := sut.cache["expiredkey"].IsExpired()
+
+	// Verify
+	ExpectTrue(isExpired, t)
+	ExpectInt(1, sut.Count(), t)
+}
+

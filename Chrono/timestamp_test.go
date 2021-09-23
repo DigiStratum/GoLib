@@ -84,7 +84,7 @@ func TestThat_TimeStamp_Add_ReturnsGoodTimeStamp_ForNegativeValue(t *testing.T) 
 	ExpectTrue(sut.ToUnixTimeStamp() == -1000, t)
 }
 
-func TestThat_TimeStamp_Compare_ReturnsNegative_WhenTimeStampIsOlderThanSupplied(t *testing.T) {
+func TestThat_TimeStamp_Comparisons_ReturnNegative_WhenTimeStampIsOlderThanSupplied(t *testing.T) {
 	// Setup
 	ts := NewTimeSource()
 	sut := NewTimeStamp(ts)
@@ -93,7 +93,7 @@ func TestThat_TimeStamp_Compare_ReturnsNegative_WhenTimeStampIsOlderThanSupplied
 	sut.Add(-1000)
 
 	// Verify
-	ExpectTrue(sut.Compare(NewTimeStamp(ts)) == -1, t)
+	ExpectInt(-1, sut.Compare(NewTimeStamp(ts)), t)
 	ExpectTrue(sut.CompareToNow() == -1, t)
 	ExpectTrue(sut.Diff(NewTimeStamp(ts)) == -1000, t)
 	ExpectTrue(sut.IsPast(), t)
@@ -102,7 +102,7 @@ func TestThat_TimeStamp_Compare_ReturnsNegative_WhenTimeStampIsOlderThanSupplied
 	ExpectTrue(sut.DiffNow() == -1000, t)
 }
 
-func TestThat_TimeStamp_Compare_ReturnsPositive_WhenTimeStampIsNewerThanSupplied(t *testing.T) {
+func TestThat_TimeStamp_Comparisons_ReturnPositive_WhenTimeStampIsNewerThanSupplied(t *testing.T) {
 	// Setup
 	ts := NewTimeSource()
 	sut := NewTimeStamp(ts)
@@ -120,7 +120,7 @@ func TestThat_TimeStamp_Compare_ReturnsPositive_WhenTimeStampIsNewerThanSupplied
 	ExpectTrue(sut.DiffNow() == 1000, t)
 }
 
-func TestThat_TimeStamp_Compare_ReturnsZero_WhenTimeStampIsSameAsSupplied(t *testing.T) {
+func TestThat_TimeStamp_Comparisons_ReturnZero_WhenTimeStampIsSameAsSupplied(t *testing.T) {
 	// Setup
 	ts := NewTimeSource()
 	sut := NewTimeStamp(ts)

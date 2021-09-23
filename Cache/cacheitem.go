@@ -1,6 +1,8 @@
 package cache
 
 import(
+	"fmt"
+
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
@@ -43,6 +45,7 @@ func NewCacheItem(key string, value interface{}, expires chrono.TimeStampIfc) *c
 
 func (r cacheItem) IsExpired() bool {
 	if nil != r.expires { return r.expires.IsPast() }
+fmt.Printf("ci.IsExpired() -> false")
 	return false
 }
 

@@ -22,7 +22,6 @@ func (r sizeableTarget) Size() int64 {
 	return FIXED_SIZE
 }
 
-
 func TestThat_CacheItem_Size_Returns_Sizeable_Value(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
@@ -35,7 +34,7 @@ func TestThat_CacheItem_Size_Returns_Sizeable_Value(t *testing.T) {
 	ExpectInt64(FIXED_SIZE, sut.Size(), t)
 }
 
-func TestThat_CacheItem_Size_Returns_Regular_Value(t *testing.T) {
+func TestThat_CacheItem_Size_ReturnsRegularValue(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -47,7 +46,7 @@ func TestThat_CacheItem_Size_Returns_Regular_Value(t *testing.T) {
 	ExpectInt64(120, sut.Size(), t)
 }
 
-func TestThat_CacheItem_IsExpired_Returns_False(t *testing.T) {
+func TestThat_CacheItem_IsExpired_ReturnsFalse(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -59,7 +58,7 @@ func TestThat_CacheItem_IsExpired_Returns_False(t *testing.T) {
 	ExpectFalse(sut.IsExpired(), t)
 }
 
-func TestThat_CacheItem_IsExpired_Returns_True(t *testing.T) {
+func TestThat_CacheItem_IsExpired_ReturnsTrue(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -71,7 +70,7 @@ func TestThat_CacheItem_IsExpired_Returns_True(t *testing.T) {
 	ExpectTrue(sut.IsExpired(), t)
 }
 
-func TestThat_CacheItem_SetExpires_Pushes_Causes_Expiration(t *testing.T) {
+func TestThat_CacheItem_SetExpires_CausesExpiration(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -86,7 +85,7 @@ func TestThat_CacheItem_SetExpires_Pushes_Causes_Expiration(t *testing.T) {
 	ExpectTrue(sut.IsExpired(), t)
 }
 
-func TestThat_CacheItem_SetExpires_Pushes_Prevents_Expiration(t *testing.T) {
+func TestThat_CacheItem_SetExpires_PreventsExpiration(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
@@ -101,7 +100,7 @@ func TestThat_CacheItem_SetExpires_Pushes_Prevents_Expiration(t *testing.T) {
 	ExpectFalse(sut.IsExpired(), t)
 }
 
-func TestThat_CacheItem_GetValue_Returns_Original(t *testing.T) {
+func TestThat_CacheItem_GetValue_ReturnsOriginal(t *testing.T) {
 	// Setup
 	inputItem := sizeableTarget{ Tag: "verificationtag!" }
 	sut := NewCacheItem(
@@ -118,7 +117,7 @@ func TestThat_CacheItem_GetValue_Returns_Original(t *testing.T) {
 	ExpectTrue(ok && (sizeableTargetItem.Tag == "verificationtag!"), t)
 }
 
-func TestThat_CacheItem_GetKey_Returns_Key(t *testing.T) {
+func TestThat_CacheItem_GetKey_ReturnsKey(t *testing.T) {
 	// Setup
 	sut := NewCacheItem(
 		"boguscacheitemkey",
