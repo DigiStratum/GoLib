@@ -1,8 +1,6 @@
 package cache
 
 import(
-	"fmt"
-
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
@@ -15,6 +13,7 @@ stored as an interface{}, so the consumer must be able to assert into the form i
 type cacheItemIfc interface {
 	IsExpired() bool
 	SetExpires(expires chrono.TimeStampIfc)
+	GetExpires() chrono.TimeStampIfc
 	GetValue() interface{}
 	GetKey() string
 	Size() int64
@@ -44,13 +43,16 @@ func NewCacheItem(key string, value interface{}, expires chrono.TimeStampIfc) *c
 // -------------------------------------------------------------------------------------------------
 
 func (r cacheItem) IsExpired() bool {
-	if nil != r.expires { return r.expires.IsPast() }
-fmt.Printf("ci.IsExpired() -> false")
-	return false
+	res := (nil != r.expires) && r.expires.IsPast()
+	return res
 }
 
 func (r *cacheItem) SetExpires(expires chrono.TimeStampIfc) {
 	r.expires = expires
+}
+
+func (r cacheItem) GetExpires() chrono.TimeStampIfc {
+	return r.expires
 }
 
 func (r cacheItem) GetKey() string {

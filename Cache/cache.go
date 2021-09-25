@@ -37,7 +37,6 @@ import (
 	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 	cfg "github.com/DigiStratum/GoLib/Config"
-	//"github.com/DigiStratum/GoLib/Process/runnable"
 )
 
 type expiringItems []*cacheItem
@@ -50,6 +49,7 @@ type CacheIfc interface {
 	Count() int
 	Set(key string, value interface{}) bool
 	SetExpires(key string, expires chrono.TimeStampIfc) bool
+	GetExpires(key string) chrono.TimeStampIfc
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -60,7 +60,7 @@ type CacheIfc interface {
 }
 
 type Cache struct {
-	cache			map[string]cacheItem
+	cache			map[string]*cacheItem
 	totalCountLimit		int
 
 	// A list of cache keys with least recently used at back
@@ -117,7 +117,6 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 		totalSizeLimit := config.GetInt64("totalSizeLimit")
 		if nil != totalSizeLimit {
 			r.totalSizeLimit = *totalSizeLimit
-//fmt.Printf("Setting totalSizeLimit=%d\n", r.totalSizeLimit)
 		}
 	}
 
@@ -156,9 +155,14 @@ func (r *Cache) Set(key string, value interface{}) bool {
 func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) bool {
 	if ! r.Has(key) { return false }
 	if nil == expires { return false }
-	ci := (*r).cache[key]
-	ci.SetExpires(expires)
+	r.cache[key].SetExpires(expires)
 	return true
+}
+
+// Get the expiration timestamp for a given Cache item; returns nil if not set
+func (r Cache) GetExpires(key string) chrono.TimeStampIfc {
+	if ! r.Has(key) { return nil }
+	return r.cache[key].GetExpires()
 }
 
 // Get a single cache element by key name
@@ -244,7 +248,7 @@ func (r *Cache) init() {
 }
 
 func (r *Cache) flush() {
-	r.cache = make(map[string]cacheItem)
+	r.cache = make(map[string]*cacheItem)
 	r.usageList = list.New()
 	r.expiresList = make(expiringItems, 0)
 	r.totalSize = 0
@@ -268,10 +272,8 @@ func (r *Cache) pruneExpired() {
 		if ci.IsExpired() {
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
-fmt.Printf("Expired key: '%s'\n", key)
 		} else {
 			// The first non-expired one we find means all others after it are non-expired!
-fmt.Printf("NOT expired key: '%s'!\n", key)
 			break
 		}
 	}
@@ -381,7 +383,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 		// Add the new item
 		r.usageList.PushFront(key)
 	}
-	r.cache[key] = *ci
+	r.cache[key] = ci
 	r.totalSize += (newSize - oldSize)
 
 	// Go do some pruning, async so that we can get back to the caller now
@@ -398,7 +400,6 @@ func (r *Cache) drop(key string) bool {
 	element := r.findUsageListElementByKey(key, false)
 	if nil == element {
 		// ERROR: Somehow we have desynched r.cache[] with r.usageList; they should have the same keys!
-//fmt.Printf("Failed to drop key '%s'\n", key)
 		return false
 	}
 
@@ -407,33 +408,31 @@ func (r *Cache) drop(key string) bool {
 	// Drop from the cache map
 	size := r.cache[key].Size()
 	r.totalSize -= size
-//fmt.Printf("Size dropped=[%d]\n", size)
 	delete(r.cache, key)
 	return true
 }
 
 func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Element {
 	// If the key is in the cache at all...
-	if _, ok := r.cache[key]; ok {
-		// Find the usageList element whose e.Value == key
-		for e := r.usageList.Front(); e != nil; e = e.Next() {
-//fmt.Printf("@Here\n")
-			if ek, ok := e.Value.(string); ok {
-				if ek != key { continue }
-				// Found it!
-				if rejuvenate {
-					// Pull the element forward in the ageList
-					r.usageList.MoveToFront(e)
-					// Also touch the expiration time
-					expires := r.timeSource.Now().Add(r.newItemExpires)
-					ci := r.cache[key]
-					ci.SetExpires(expires)
-				}
-				return e
-			} else {
-				// e.Value is not a string? Strange problem to have... ignore!
+	if _, ok := r.cache[key]; !ok { return nil }
+
+	// Find the usageList element whose e.Value == key
+	for e := r.usageList.Front(); e != nil; e = e.Next() {
+		if ek, ok := e.Value.(string); ok {
+			if ek != key { continue }
+			// Found it!
+			if rejuvenate {
+				// Pull the element forward in the ageList
+				r.usageList.MoveToFront(e)
+				// Also touch the expiration time
+				expires := r.timeSource.Now().Add(r.newItemExpires)
+				r.cache[key].SetExpires(expires)
 			}
+			return e
+		} else {
+			// e.Value is not a string? Strange problem to have... ignore!
 		}
 	}
+
 	return nil
 }

@@ -8,8 +8,6 @@ implementation uses Go runtime environment which could vary from one host to the
 Defaults to local TimeSource
 */
 
-import("fmt")
-
 type TimeStampIfc interface {
 	Add(offset int64) *TimeStamp
 	Compare(ts *TimeStamp) int
@@ -42,17 +40,19 @@ func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
 func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeStamp {
 	// Require a TimeSource
 	if nil == timeSource { return nil }
-	return &TimeStamp{
+	ts := TimeStamp{
 		timeStamp: unixTimeStamp,
 		timeSource: timeSource,
 		isForever: false,
 	}
+	return &ts
 }
 
 func NewTimeStampForever() *TimeStamp {
-	return &TimeStamp{
+	ts := TimeStamp{
 		isForever:	true,
 	}
+	return &ts
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -79,14 +79,13 @@ func (r TimeStamp) CompareToNow() int {
 
 func (r TimeStamp) Diff(ts *TimeStamp) int64 {
 	if r.isForever { return 1 } 			// Forever is always in the future
+
 	return r.timeStamp - ts.timeStamp
 }
 
 func (r TimeStamp) DiffNow() int64 {
-fmt.Printf("ts.DiffNow() isForever=%b\n", r.isForever)
 	if r.isForever { return 1 } 			// Forever is always in the future
 	now := r.timeSource.Now()
-fmt.Printf("ts.DiffNow() now=%d\n", now)
 	return r.Diff(now)
 }
 
@@ -95,16 +94,17 @@ func (r TimeStamp) IsForever() bool {
 }
 
 func (r TimeStamp) IsPast() bool {
+	if r.isForever { return false } 		// Forever is never in the past
 	diff := r.DiffNow()
-fmt.Printf("ts.IsPast() diff=%d\n", diff)
 	return (diff < 0)
 }
 
 func (r TimeStamp) IsFuture() bool {
+	if r.isForever { return true } 			// Forever is always in the future
 	return (r.DiffNow() > 0)
 }
 
 func (r TimeStamp) ToUnixTimeStamp() int64 {
-	if r.isForever { return 0 } // Forever has no definite timestamp
+	if r.isForever { return 0 } 			// Forever has no definite timestamp
 	return r.timeStamp
 }
