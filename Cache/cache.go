@@ -281,7 +281,7 @@ func (r *Cache) pruneExpired() {
 	for _, key := range purgeKeys { _ = r.drop(key) }
 }
 
-func (r *Cache) itemCanFit(key string, size int64) bool {
+func (r *Cache) itemCanFit(size int64) bool {
 	// If it's bigger than the size limit, then it's impossible
 	if (r.totalSizeLimit > 0) && (size > r.totalSizeLimit) { return false }
 	return true
@@ -358,7 +358,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 	// If size limit is in play and this value is bigger than that, then it won't fit
 	if (0 < r.totalSizeLimit) && (newSize > r.totalSizeLimit) { return false }
-	if ! r.itemCanFit(key, newSize) { return false }
+	if ! r.itemCanFit(newSize) { return false }
 
 	// Make a new cacheItem...
 
@@ -434,5 +434,6 @@ func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Ele
 		}
 	}
 
+	// Somehow key in cache, but NOT usageList? Strange problem to have... ignore!
 	return nil
 }

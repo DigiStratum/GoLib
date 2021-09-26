@@ -238,7 +238,6 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	count := 5
 	contentFormat := "content--##"
 	sizeLimit := (count - 1) * int(sizeable.Size(contentFormat) + 1)	// Limit size at 10 chars * our count, less one
-
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", sizeLimit))
 	err := sut.Configure(config)
@@ -310,7 +309,7 @@ func TestThat_Cache_SetCausesPruning_WhenBothOverLimit(t *testing.T) {
 	}
 }
 
-func TestThat_Cache_SetLimits_PreventsSet_WhenEntryAddedExceedsLimit(t *testing.T) {
+func TestThat_Cache_Configure_PreventsSet_WhenEntryAddedExceedsLimit(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 
@@ -327,7 +326,7 @@ func TestThat_Cache_SetLimits_PreventsSet_WhenEntryAddedExceedsLimit(t *testing.
 	ExpectFalse(sut.Has("anykey"), t)
 }
 
-func TestThat_Cache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
+func TestThat_Cache_Configure_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 
@@ -344,7 +343,7 @@ func TestThat_Cache_SetLimits_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 	ExpectTrue(sut.Has("anykey"),t)
 }
 
-func TestThat_Cache_SetLimits_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
+func TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 
@@ -518,4 +517,152 @@ func TestThat_Cache_purgeExpired_PurgesExpiredItems(t *testing.T) {
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
+}
+
+func TestThat_Cache_itemCanFit_ReturnsTrue_WhenUnlimited(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	var size int64 = 1000
+
+	// Verify
+	ExpectTrue(sut.itemCanFit(size), t)
+}
+
+func TestThat_Cache_itemCanFit_ReturnsTrue_WhenItemSizeUnderOrAtLimit(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	var size int64 = 1000
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
+	// Verify
+	ExpectTrue(sut.itemCanFit(size), t)
+	ExpectTrue(sut.itemCanFit(size / 2), t)
+}
+
+func TestThat_Cache_itemCanFit_ReturnsFalse_WhenItemSizeOverLimit(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	var size int64 = 1000
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
+	// Verify
+	ExpectFalse(sut.itemCanFit(size + 1), t)
+	ExpectFalse(sut.itemCanFit(size * 2), t)
+}
+
+func TestThat_Cache_numToPrune_ReturnsZero_WhenEmpty(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	key := "newkey"
+	var size int64 = 1000
+
+	// Verify
+	ExpectInt(0, sut.numToPrune(key, size), t)
+}
+
+func TestThat_Cache_numToPrune_ReturnsZero_ForExistingItemKeyUnderSizeLimit(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	key := "key"
+	content := "12345"
+	size := sizeable.Size(content)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
+	// Test
+	sut.Set(key, content)
+
+	// Verify
+	ExpectInt(0, sut.numToPrune(key, size + 1), t)
+}
+
+func TestThat_Cache_numToPrune_ReturnsOne_ForNewItemKeyUnderSizeLimit(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	key := "existingkey"
+	content := "12345"
+	size := sizeable.Size(content)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
+	// Test
+	sut.Set(key, content)
+
+	// Verify
+	ExpectInt(1, sut.numToPrune("newkey", size + 1), t)
+}
+
+func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	key := "existingkey"
+	content := "12345"
+	size := sizeable.Size(content)
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+	newKey := "newkey"
+
+	// Test
+	sut.Set(key, content)
+	sut.Set(newKey, content)
+	sut.pruneToLimits(newKey, size)
+
+	// Verify
+	ExpectInt(1, sut.Count(), t)
+}
+
+func TestThat_Cache_findUsageListElementByKey_ReturnsNil_ForMissingKey(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+
+	// Verify
+	ExpectNil(sut.findUsageListElementByKey("boguskey", false), t)
+}
+
+func TestThat_Cache_findUsageListElementByKey_ReturnsNonNil_ForExistingKey(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	key := "key"
+
+	// Test
+	sut.Set(key, "content")
+
+	// Verify
+	ExpectNonNil(sut.findUsageListElementByKey(key, false), t)
+}
+
+func TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToDrop(t *testing.T) {
+	// Setup
+	sut := NewCache(); defer sut.Close()
+	content := "12345"
+	size := sizeable.Size(content)
+	sizeLimit := (size * 2)+ (size / 2)	// Big enough to hold two of these, but not three!
+	config := cfg.NewConfig()
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", sizeLimit))
+	err := sut.Configure(config)
+	ExpectTrue((nil == err), t)
+
+	// Test
+	sut.Set("firstkey", content)
+	sut.Set("secondkey", content)
+	sut.findUsageListElementByKey("firstkey", true)
+	sut.Set("thirdkey", content)
+	sut.pruneToLimits("thirdkey", size)
+
+	// Verify
+	ExpectInt(2, sut.Count(), t)
+	// LRU: with firstkey bumped, we expect secondkey pruned when thirdkey set
+	ExpectFalse(sut.Has("secondkey"), t)
 }
