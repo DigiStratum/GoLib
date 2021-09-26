@@ -264,7 +264,8 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	}
 }
 
-func TestThat_Cache_SetCausesPruning_WhenBothOverLimit(t *testing.T) {
+// FIXME: This test fails occasionally when system is busy/multi-tasking
+func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 	countLimit := 5
@@ -486,7 +487,7 @@ func TestThat_Cache_Set_SetsForeverTimeStamp_WhenCacheHasDefaultExpiresSetting(t
 	ExpectTrue(timeStamp.IsForever(), t)
 }
 
-func TestThat_Cache_purgeExpired_LeavesItemsThatNeverExpire(t *testing.T) {
+func TestThat_Cache_pruneExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 
@@ -499,7 +500,8 @@ func TestThat_Cache_purgeExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 	ExpectInt(1, sut.Count(), t)
 }
 
-func TestThat_Cache_purgeExpired_PurgesExpiredItems(t *testing.T) {
+// FIXME: This test fails occasionally when system is busy/multi-tasking
+func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 	ts := chrono.NewTimeSource()
