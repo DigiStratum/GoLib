@@ -264,7 +264,42 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	}
 }
 
-// FIXME: This test fails occasionally when system is busy/multi-tasking
+/*
+FIXME: This test fails occasionally when system is busy/multi-tasking
+=== RUN   TestThat_Cache_SetCausesPruning_WhenBothOverLimit
+    expect.go:49:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:298
+        Expect: '4', Actual: '3'
+    expect.go:64:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:303:
+        Expect: 'true', Actual: 'false'
+    expect.go:88:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:305:
+        Expect: non-nil, Actual: nil
+--- FAIL: TestThat_Cache_SetCausesPruning_WhenBothOverLimit (0.15s)
+panic: interface conversion: interface {} is nil, not string [recovered]
+	panic: interface conversion: interface {} is nil, not string
+
+goroutine 82 [running]:
+testing.tRunner.func1.2({0x520c00, 0xc00019a6f0})
+	/usr/local/go/src/testing/testing.go:1209 +0x24e
+testing.tRunner.func1()
+	/usr/local/go/src/testing/testing.go:1212 +0x218
+panic({0x520c00, 0xc00019a6f0})
+	/usr/local/go/src/runtime/panic.go:1038 +0x215
+command-line-arguments.TestThat_Cache_SetCausesPruning_WhenBothOverLimit(0xc000182340)
+	/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:306 +0x913
+testing.tRunner(0xc000182340, 0x549738)
+	/usr/local/go/src/testing/testing.go:1259 +0x102
+created by testing.(*T).Run
+	/usr/local/go/src/testing/testing.go:1306 +0x35a
+FAIL	command-line-arguments	0.434s
+FAIL
+ERROR!
+*/
 func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
@@ -500,7 +535,15 @@ func TestThat_Cache_pruneExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 	ExpectInt(1, sut.Count(), t)
 }
 
-// FIXME: This test fails occasionally when system is busy/multi-tasking
+/*
+FIXME: This test fails occasionally when system is busy/multi-tasking
+=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
+    expect.go:49:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:519
+        Expect: '1', Actual: '2'
+--- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
+*/
 func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()

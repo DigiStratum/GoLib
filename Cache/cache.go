@@ -25,6 +25,9 @@ TODO:
    and find the expired ones for purging without having to scan the entire collection
  * Add support and/or change interface to make expires relative offset from NOW. This would allow a
    Touch() to use the same value if we store the offset with the cacheItem.
+ * Support optional Logger dependency injection (pass configuration in through DI as well) so that we
+   can log errors, stats, and more
+ * Capture stats for things like sets, drops, hits, misses, purge operations, etc.
 
 */
 
@@ -53,8 +56,8 @@ type CacheIfc interface {
 	Get(key string) interface{}
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	Drop(key string) bool
-	DropAll(keys *[]string) int
+	Drop(key string) (bool, error)
+	DropAll(keys *[]string) (int, error)
 	Flush()
 	Close() error
 }
@@ -189,18 +192,22 @@ func (r Cache) HasAll(keys *[]string) bool {
 
 // Drop an item from the cache with the supplied key
 // return true if we drop it, else false
-func (r *Cache) Drop(key string) bool {
+func (r *Cache) Drop(key string) (bool, error) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	return r.drop(key)
 }
 
 // Check whether we have configuration elements for all the key names
 // return count of items actually dropped
-func (r *Cache) DropAll(keys *[]string) int {
+func (r *Cache) DropAll(keys *[]string) (int, error) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	numDropped := 0
-	for _, key := range *keys { if r.drop(key) { numDropped++ } }
-	return numDropped
+	for _, key := range *keys {
+		dropped, err := r.drop(key)
+		if nil != err { return 0, err }
+		if dropped { numDropped++ }
+	}
+	return numDropped, nil
 }
 
 // Flush all the items out of the cache
@@ -263,7 +270,7 @@ func (r *Cache) runLoop() {
 }
 
 // Purge expired cache items
-func (r *Cache) pruneExpired() {
+func (r *Cache) pruneExpired() error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Find which keys we need to purge because their cacheItem is expired
@@ -278,7 +285,10 @@ func (r *Cache) pruneExpired() {
 		}
 	}
 	// Purge them!
-	for _, key := range purgeKeys { _ = r.drop(key) }
+	for _, key := range purgeKeys {
+		if _, err := r.drop(key); nil != err { return err }
+	}
+	return nil
 }
 
 func (r *Cache) itemCanFit(size int64) bool {
@@ -326,16 +336,16 @@ func (r Cache) numToPrune(key string, size int64) int {
 }
 
 // Prune the currently cached element collection to established limits
-func (r *Cache) pruneToLimits(key string, size int64) {
+func (r *Cache) pruneToLimits(key string, size int64) error {
 	r.pruneMutex.Lock(); defer r.pruneMutex.Unlock()
 
 	// Does this item fit right now without any prune/purge?
 	if (r.totalSizeLimit == 0) || (r.totalSize + size < r.totalSizeLimit) {
-		if (r.totalCountLimit == 0) || (len(r.cache) + 1 < r.totalCountLimit) { return }
+		if (r.totalCountLimit == 0) || (len(r.cache) + 1 < r.totalCountLimit) { return nil }
 	}
 
 	pruneCount := r.numToPrune(key, size)
-	if 0 == pruneCount { return }
+	if 0 == pruneCount { return nil }
 
 	// TODO: Make sure we're not pruning more than some percentage threshold
 	// (to minimize performance hits due to statistical outliers)
@@ -344,9 +354,11 @@ func (r *Cache) pruneToLimits(key string, size int64) {
 	element := r.usageList.Back()
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		dropKey := element.Value.(string)
-		r.drop(dropKey)
+		_, err := r.drop(dropKey)
+		if nil != err { return err }
 		element = element.Next()
 	}
+	return nil
 }
 
 // Add content to front of age List and remember it by key in elements map
@@ -387,6 +399,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 	r.totalSize += (newSize - oldSize)
 
 	// Go do some pruning, async so that we can get back to the caller now
+	// TODO: Capture error from pruneToLimits() in stats... or log... or something!
 	go r.pruneToLimits(key, newSize)
 
 	return true
@@ -394,13 +407,15 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 // Drop if exists
 // return bool true if we drop it, else false
-func (r *Cache) drop(key string) bool {
+func (r *Cache) drop(key string) (bool, error) {
 	if ! r.Has(key) { return false }
 	// Don't rejuvenate on the find since we're going to drop it!
 	element := r.findUsageListElementByKey(key, false)
 	if nil == element {
-		// ERROR: Somehow we have desynched r.cache[] with r.usageList; they should have the same keys!
-		return false
+		return false, fmt.Errorf(
+			"Cache.drop() - cache desync found (cache['%s'] exists, but same key not in element list)",
+			key,
+		)
 	}
 
 	// Drop from the ordered usage list
@@ -409,7 +424,7 @@ func (r *Cache) drop(key string) bool {
 	size := r.cache[key].Size()
 	r.totalSize -= size
 	delete(r.cache, key)
-	return true
+	return true, nil
 }
 
 func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Element {
