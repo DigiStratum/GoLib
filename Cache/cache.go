@@ -25,7 +25,7 @@ TODO:
    and find the expired ones for purging without having to scan the entire collection
  * Add support and/or change interface to make expires relative offset from NOW. This would allow a
    Touch() to use the same value if we store the offset with the cacheItem.
- * Support optional Logger dependency injection (pass configuration in through DI as well) so that we
+ * Support optional Logger dependency injection (pass configuration in through DI as well?) so that we
    can log errors, stats, and more
  * Capture stats for things like sets, drops, hits, misses, purge operations, etc.
 
@@ -408,7 +408,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 // Drop if exists
 // return bool true if we drop it, else false
 func (r *Cache) drop(key string) (bool, error) {
-	if ! r.Has(key) { return false }
+	if ! r.Has(key) { return false, nil }
 	// Don't rejuvenate on the find since we're going to drop it!
 	element := r.findUsageListElementByKey(key, false)
 	if nil == element {

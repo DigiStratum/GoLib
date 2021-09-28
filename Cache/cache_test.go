@@ -183,8 +183,12 @@ func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
 	// Setup
 	sut := NewCache(); defer sut.Close()
 
+	// Test
+	res, err := sut.Drop("boguskey")
+
 	// Verify
-	ExpectFalse(sut.Drop("boguskey"), t)
+	ExpectNil(err, t)
+	ExpectFalse(res, t)
 }
 
 func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
@@ -194,9 +198,11 @@ func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 	// Test
 	key := "fixedsizekey"
 	sut.Set(key, "0123456789")
+	res, err := sut.Drop(key)
 
 	// Verify
-	ExpectTrue(sut.Drop(key), t)
+	ExpectNil(err, t)
+	ExpectTrue(res, t)
 	ExpectInt64(0, sut.Size(), t)
 }
 
@@ -434,8 +440,12 @@ func TestThat_Cache_DropAll_DropsSomeKeys_ForPartiallyMatchingKeySet(t *testing.
 	keys := []string{ "key1", "key2" }
 	sut.Set("key1", "value1")
 
+	// Test
+	res, err := sut.DropAll(&keys)
+
 	// Verify
-	ExpectInt(len(keys) - 1, sut.DropAll(&keys), t)
+	ExpectNil(err, t)
+	ExpectInt(len(keys) - 1, res, t)
 }
 func TestThat_Cache_DropAll_DropsAllKeys_ForFullyMatchingKeySet(t *testing.T) {
 	// Setup
@@ -444,8 +454,12 @@ func TestThat_Cache_DropAll_DropsAllKeys_ForFullyMatchingKeySet(t *testing.T) {
 	sut.Set("key1", "value1")
 	sut.Set("key2", "value2")
 
+	// Test
+	res, err := sut.DropAll(&keys)
+
 	// Verify
-	ExpectInt(len(keys), sut.DropAll(&keys), t)
+	ExpectNil(err, t)
+	ExpectInt(len(keys), res, t)
 }
 
 func TestThat_Cache_Flush_DropsAllKeys(t *testing.T) {
