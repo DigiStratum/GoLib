@@ -14,8 +14,6 @@ import (
 
         "github.com/aws/aws-sdk-go/aws"
         "github.com/aws/aws-sdk-go/aws/session"
-
-	lib "github.com/DigiStratum/GoLib"
 )
 
 type AWSHelperIfc interface {
