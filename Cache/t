@@ -6,7 +6,8 @@ TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 say "BEGIN: $TESTRUNNER_DIR"
 cd $TESTRUNNER_DIR
 
-go test -v -count=1 -covermode=atomic -coverprofile=cacheitem_test_coverage.txt *.go
+#go test -v -count=1 -covermode=atomic -coverprofile=cache_test_coverage.txt *.go
+go test -v -count=1 -covermode=atomic *.go
 die_on_error $? "ERROR!"
 
 say "\nDONE: $TESTRUNNER_DIR"

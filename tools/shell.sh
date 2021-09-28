@@ -4,9 +4,14 @@
 DEATH_DIR="."
 
 # Reset debug logging
-debugLog=debug.log
+#debugLog="debug.log"
+debugLog=""
 if [ -f "$debugLog" ]; then
         rm -f $debugLog
+fi
+
+if [ "$debugLog" != "" ]; then
+        touch $debugLog
 fi
 
 #-------------------------------------------------------------------------------
@@ -19,7 +24,9 @@ export TOP_PID=$$
 # Use this to echo to the console AND log the output
 say() {
 	local msg="$1"
-	echo -e "$msg" >> $debugLog
+  if [ -f "$debugLog" ]; then
+	  echo -e "$msg" >> $debugLog
+  fi
 	echo -e "$msg" >&2
 }
 

@@ -19,7 +19,7 @@ import (
 )
 
 type AWSHelperIfc interface {
-	GetSession() *session.Session
+	GetSession() (*session.Session, error)
 }
 
 type AWSHelper struct {
@@ -34,22 +34,24 @@ func NewAWSHelper(awsRegion string) *AWSHelper {
 	}
 }
 
+// -------------------------------------------------------------------------------------------------
+// AWSHelperIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Get our AWS session
-func (r *AWSHelper) GetSession() *session.Session {
+func (r *AWSHelper) GetSession() (*session.Session, error) {
 	if nil == r.awsSession {
 		sess, err := session.NewSession(
 			&aws.Config{ Region: aws.String(r.awsRegion) },
 		)
 		if nil != err {
-			lib.GetLogger().Error(fmt.Sprintf(
+			return nil, fmt.Errorf(
 				"Failed to establish an AWS session in region '%s': '%s'",
 				r.awsRegion,
 				err.Error(),
-			))
-			return nil
+			)
 		}
 		r.awsSession = sess
 	}
-	return r.awsSession
+	return r.awsSession, nil
 }
-
