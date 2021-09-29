@@ -15,9 +15,20 @@ import(
 
 func TestThat_AWSHelper_NewAWSHelper_ReturnsSomething(t *testing.T) {
 	// Setup
-	awsRegion := "us-west-2"
-	sut := NewAWSHelper(awsRegion)
+	sut := NewAWSHelper()
 
 	// Verify
 	ExpectNonNil(sut, t)
+}
+
+func TestThat_AWSHelper_GetSession_ReturnsSessionNoError(t *testing.T) {
+	// Setup
+	sut := NewAWSHelper()
+
+	// Test
+	session, err := sut.GetSession()
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectNonNil(session, t)
 }
