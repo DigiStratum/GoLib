@@ -1,13 +1,6 @@
 package dsaws
 
-/*
-
-Unit Tests for Cloud
-
-*/
-
 import(
-	//"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"

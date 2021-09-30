@@ -1,0 +1,14 @@
+#!/bin/bash
+
+TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+. $TESTRUNNER_DIR/../tools/shell.sh
+
+say "BEGIN: $TESTRUNNER_DIR"
+cd $TESTRUNNER_DIR
+
+#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt *.go
+go test -v -count=1 -covermode=atomic *.go
+die_on_error $? "ERROR!"
+
+say "\nDONE: $TESTRUNNER_DIR"
+
