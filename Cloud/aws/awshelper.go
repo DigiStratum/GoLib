@@ -1,4 +1,4 @@
-package cloud
+package dsaws
 
 /*
 Cloud helper library for AWS services.
@@ -76,16 +76,20 @@ func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
 // Get our AWS session
 func (r *AWSHelper) GetSession() (*session.Session, error) {
 	if nil == r.awsSession {
-		sess, err := session.NewSession(
-			&aws.Config{
-				Region: aws.String(r.awsRegion),
-				Credentials: credentials.NewStaticCredentials(
-					r.awsAccessKeyId,
-					r.awsSecretAccessKeyId,
-					r.awsSessionToken,
-				),
-			},
-		)
+		config := aws.Config{}
+		if len(r.awsRegion) > 0 {
+                	config.Region = aws.String(r.awsRegion)
+		}
+		if ((len(r.awsAccessKeyId) > 0) ||
+			(len(r.awsSecretAccessKeyId) > 0) ||
+			(len(r.awsSessionToken) > 0)) {
+			config.Credentials = credentials.NewStaticCredentials(
+				r.awsAccessKeyId,
+				r.awsSecretAccessKeyId,
+				r.awsSessionToken,
+			)
+		}
+		sess, err := session.NewSession(&config)
 		if nil != err {
 			return nil, fmt.Errorf(
 				"Failed to establish an AWS session in region '%s': '%s'",
