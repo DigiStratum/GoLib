@@ -123,13 +123,17 @@ func (r *Config) DereferenceAll(referenceConfigs ...ConfigIfc) int {
 // Returns true if fully dereferenced, false, if more refereces may be hiding
 func (r *Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 	localMax := maxLoops
-	if localMax > MAX_REFERENCE_DEPTH { localMax = MAX_REFERENCE_DEPTH; }
+	if localMax > MAX_REFERENCE_DEPTH { localMax = MAX_REFERENCE_DEPTH }
+	totalSubs := 0
 	for loop := 0; loop < localMax; loop++ {
 		subs := r.Dereference(referenceConfig)
-		if subs == 0 { return true; }
+		totalSubs += subs
+fmt.Printf("Loop:%d, subs:%d, totalSubs:%d, localMax:%d\n", loop, subs, totalSubs, localMax)
+		if subs == 0 { return totalSubs > 0; }
 	}
 	// TODO: Figure out if new/additional references show up as a result
 	// of dereferencing, otherwise, we can't be sure, so return false
+fmt.Printf("totalSubs:%d, localMax:%d\n", totalSubs, localMax)
 	return false
 }
 

@@ -221,3 +221,76 @@ func TestThat_Config_DereferenceAll_SubstitutesValuesInOurConfig_WhenProvidedRef
 		ExpectString(fmt.Sprintf("--value2%d--", k), *key, t)
 	}
 }
+
+func TestThat_Config_DereferenceLoop_ChangesNothing_WhenProvidedNothing(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	var ref ConfigIfc
+	numKeys := 3
+	for k := 0; k < numKeys; k++ {
+		sut.Set(fmt.Sprintf("key%d", k), fmt.Sprintf("--%%ref%d%%--", k))
+	}
+
+	// Test
+	res := sut.DereferenceLoop(10, ref)
+
+	// Verify
+	ExpectFalse(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("--%%ref%d%%--", k), *key, t)
+	}
+}
+
+func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeys(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	ref1 := NewConfig()
+	numKeys := 3
+	for k := 0; k < numKeys; k++ {
+		sut.Set(fmt.Sprintf("key%d", k), fmt.Sprintf("-%%ref1%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref1%d", k), fmt.Sprintf("-%%ref2%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
+	}
+
+	// Test
+	res := sut.DereferenceLoop(10, ref1)
+
+	// Verify
+	ExpectTrue(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("---value%d---", k), *key, t)
+	}
+}
+
+func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeys(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	ref1 := NewConfig()
+	numKeys := 3
+	for k := 0; k < numKeys; k++ {
+		sut.Set(fmt.Sprintf("key%d", k), fmt.Sprintf("-%%ref1%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref1%d", k), fmt.Sprintf("-%%ref2%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
+	}
+
+	// Test / Verify
+	res := sut.DereferenceLoop(0, ref1)
+	ExpectFalse(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("-%%ref1%d%%-", k), *key, t)
+	}
+sutJson, _ := sut.ToJson()
+fmt.Printf("json:%s\n", *sutJson)
+
+	res = sut.DereferenceLoop(1, ref1)
+	ExpectFalse(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("--%%ref2%d%%--", k), *key, t)
+	}
+sutJson, _ = sut.ToJson()
+fmt.Printf("json:%s\n", *sutJson)
+}
