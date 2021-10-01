@@ -37,7 +37,7 @@ type ConfigIfc interface {
 	GetInverseSubset(prefix string) *Config
 	DereferenceString(str string) *string
 	Dereference(referenceConfig ConfigIfc) int
-	DereferenceAll(referenceConfigs ...ConfigIfc)
+	DereferenceAll(referenceConfigs ...ConfigIfc) int
 	DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool
 }
 
@@ -96,11 +96,13 @@ func (r Config) DereferenceString(str string) *string {
 // Dereference any values we have that %reference% keys in the referenceConfig
 // returns count of references substituted
 func (r *Config) Dereference(referenceConfig ConfigIfc) int {
+	if nil == referenceConfig { return 0 }
 	subs := 0
 	// For each of our key/value pairs...
 	for cpair := range r.IterateChannel() {
 		tstr := referenceConfig.DereferenceString(cpair.Value)
-		if nil == tstr { continue }
+		// Nothing to do if nothing was done...
+		if (nil == tstr) || (cpair.Value == *tstr) { continue }
 		r.Set(cpair.Key, *tstr)
 		subs++
 	}
@@ -108,10 +110,13 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 }
 
 // Dereference against a list of other referenceConfigs
-func (r *Config) DereferenceAll(referenceConfigs ...ConfigIfc) {
+func (r *Config) DereferenceAll(referenceConfigs ...ConfigIfc) int {
+	subs := 0
 	for _, referenceConfig := range referenceConfigs {
-		r.Dereference(referenceConfig)
+		res := r.Dereference(referenceConfig)
+		subs += res
 	}
+	return subs
 }
 
 // Dereference until result comes back 0 or maxLoops iterations are completed
