@@ -37,7 +37,7 @@ type HashMapIfc interface {
 	HasAll(keys *[]string) bool
 	//IterateCallback(callback func(kvp KeyValuePair))
 	//IterateChannel() <-chan KeyValuePair
-	Iterate() (func() *KeyValuePair, bool)
+	GetIterator() func () interface{}
 	ToJson() (*string, error)
 }
 
@@ -123,6 +123,10 @@ func (r *HashMap) Set(key, value string) {
 // Get a single data element by key name
 func (r HashMap) Get(key string) *string {
 	if val, ok := r.hash[key]; ok { return &val }
+fmt.Printf("[[MISS]] k='%s', len=%d, v='%s' type='%T'\n", key, len(r.hash), r.hash[key], r.hash[key])
+hJson, _ := r.ToJson()
+fmt.Printf("hashmapjson: %s\n", *hJson)
+
 	return nil
 }
 
@@ -152,6 +156,28 @@ func (r HashMap) GetKeys() []string {
 	return keys
 }
 
+// -------------------------------------------------------------------------------------------------
+// IterableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+// ref: https://ewencp.org/blog/golang-iterators/index.html
+func (r HashMap) GetIterator() func () interface{} {
+	kvps := make([]KeyValuePair, r.Size())
+	var idx int = 0
+	for k, v := range r.hash {
+		kvps[idx] = KeyValuePair{ Key: k, Value: v }
+		idx++
+	}
+	idx = 0
+	var data_len = r.Size()
+	return func () interface{} {
+		// If we're done iterating, return do nothing
+		if idx >= data_len { return nil }
+		prev_idx := idx
+		idx++
+		return &kvps[prev_idx]
+	}
+}
+
 /*
 // Iterate over the keys for this HashMap and call a callback for each
 // ref: https://ewencp.org/blog/golang-iterators/index.html
@@ -172,25 +198,6 @@ func (r HashMap) IterateChannel() <-chan KeyValuePair {
 	return ch
 }
 */
-
-// ref: https://ewencp.org/blog/golang-iterators/index.html
-func (r HashMap) Iterate() (func() *KeyValuePair, bool) {
-	kvps := make([]KeyValuePair, r.Size())
-	var idx int = 0
-	for k, v := range r.hash {
-		kvps[idx] = KeyValuePair{ Key: k, Value: v }
-		idx++
-	}
-	idx = 0
-	var data_len = r.Size()
-	return func() *KeyValuePair {
-		// If we're done iterating, return do nothing
-		if idx >= data_len { return nil }
-		prev_idx := idx
-		idx++
-		return &kvps[prev_idx]
-	}, (idx < data_len)
-}
 
 // -------------------------------------------------------------------------------------------------
 // JsonSerializable Public Interface

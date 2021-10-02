@@ -75,6 +75,7 @@ func (r Config) GetInverseSubset(prefix string) *Config {
 // Rereference any %key% references to our own keys in the supplied string
 // returns dereferenced string
 func (r Config) DereferenceString(str string) *string {
+/*
 	// For each of our key/value pairs...
 	for cpair := range r.IterateChannel() {
 		// Exit if there are no references in the string
@@ -90,6 +91,25 @@ func (r Config) DereferenceString(str string) *string {
 		tmp := strings.Replace(str, reference, cpair.Value, -1)
 		str = tmp
 	}
+*/
+cfgJson, _ := r.ToJson()
+fmt.Printf("json: %s\n", *cfgJson)
+	keys, err := r.getReferenceKeysFromString(str)
+	if nil != err {
+		// TODO: Log the error or pass it back to the caller
+fmt.Printf("[[ERROR]]\n")
+		return nil
+	}
+	for _, key := range keys {
+		value := r.Get(key)
+		if nil == value { fmt.Printf("[[NIL]] key='%s'\n", key);continue }
+/*
+		ref := fmt.Sprintf("%%%s%%", key)
+fmt.Printf("replacing key '%s' before: '%s'", ref, str)
+		str = strings.Replace(str, ref, *value, -1)
+fmt.Printf("after: '%s'\n", str)
+*/
+	}
 	return &str
 }
 
@@ -99,12 +119,16 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 	if nil == referenceConfig { return 0 }
 	subs := 0
 	// For each of our key/value pairs...
-	for cpair := range r.IterateChannel() {
-		tstr := referenceConfig.DereferenceString(cpair.Value)
-//fmt.Printf("Dereference() '%s': '%s' -> '%s'\n", cpair.Key, cpair.Value, *tstr)
+	//for cpair := range r.IterateChannel() {
+	it := r.GetIterator()
+	for kvpi := it(); nil != kvpi; kvpi = it() {
+		kvp, ok := kvpi.(*hashmap.KeyValuePair)
+		if ! ok { continue } // TODO: Error/Warning warranted?
+		tstr := referenceConfig.DereferenceString(kvp.Value)
+//fmt.Printf("Dereference() '%s': '%s' -> '%s'\n", kvp.Key, kvp.Value, *tstr)
 		// Nothing to do if nothing was done...
-		if (nil == tstr) || (cpair.Value == *tstr) { continue }
-		r.Set(cpair.Key, *tstr)
+		if (nil == tstr) || (kvp.Value == *tstr) { continue }
+		r.Set(kvp.Key, *tstr)
 		subs++
 	}
 	return subs
@@ -146,16 +170,54 @@ func (r *Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 // Return the matches if keepMatches, else return the NON-matches
 func (r Config) getSubset(prefix string, keepMatches bool) *Config {
 	res := NewConfig()
-	for pair := range r.IterateChannel() {
-		matches := strings.HasPrefix(pair.Key, prefix)
+	//for pair := range r.IterateChannel() {
+	it := r.GetIterator()
+	for kvpi := it(); nil != kvpi; kvpi = it() {
+		kvp, ok := kvpi.(*hashmap.KeyValuePair)
+		if ! ok { continue } // TODO: Error/Warning warranted?
+
+		matches := strings.HasPrefix(kvp.Key, prefix)
 		if (matches) {
 			if ! keepMatches { continue }
-			strippedKey := pair.Key[len(prefix):]
-			res.Set(strippedKey, pair.Value)
+			strippedKey := kvp.Key[len(prefix):]
+			res.Set(strippedKey, kvp.Value)
 		} else {
 			if keepMatches { continue }
-			res.Set(pair.Key, pair.Value)
+			res.Set(kvp.Key, kvp.Value)
 		}
 	}
 	return res
+}
+
+func (r Config) getReferenceKeysFromString(str string) ([]string, error) {
+	runes := []rune(str)
+	keys := make([]string, 0)
+	inKey := false
+	var keyRunes []rune
+	for i := 0; i < len(runes); i++ {
+		// Marker!
+		if runes[i] == '%' {
+			// If we're working on a key...
+			if inKey {
+				// This is the end!
+				key := string(keyRunes)
+				keys = append(keys, key)
+				//fmt.Printf("found key:'%s'\n", key)
+				inKey = false
+			} else {
+				// This is the begining!
+				keyRunes = make([]rune, len(str))
+				inKey = true
+			}
+		} else {
+			// If we're working on a key...
+			if inKey {
+				// Add this rune to it
+				keyRunes = append(keyRunes, runes[i])
+			}
+		}
+	}
+	var err error
+	if inKey { err = fmt.Errorf("Unmatched reference key marker in string '%s'", str) }
+	return keys, err
 }
