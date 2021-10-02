@@ -101,6 +101,7 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 	// For each of our key/value pairs...
 	for cpair := range r.IterateChannel() {
 		tstr := referenceConfig.DereferenceString(cpair.Value)
+//fmt.Printf("Dereference() '%s': '%s' -> '%s'\n", cpair.Key, cpair.Value, *tstr)
 		// Nothing to do if nothing was done...
 		if (nil == tstr) || (cpair.Value == *tstr) { continue }
 		r.Set(cpair.Key, *tstr)
@@ -128,12 +129,12 @@ func (r *Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 	for loop := 0; loop < localMax; loop++ {
 		subs := r.Dereference(referenceConfig)
 		totalSubs += subs
-fmt.Printf("Loop:%d, subs:%d, totalSubs:%d, localMax:%d\n", loop, subs, totalSubs, localMax)
+//fmt.Printf("Loop:%d, subs:%d, totalSubs:%d, localMax:%d\n", loop, subs, totalSubs, localMax)
 		if subs == 0 { return totalSubs > 0; }
 	}
 	// TODO: Figure out if new/additional references show up as a result
 	// of dereferencing, otherwise, we can't be sure, so return false
-fmt.Printf("totalSubs:%d, localMax:%d\n", totalSubs, localMax)
+//fmt.Printf("totalSubs:%d, localMax:%d\n", totalSubs, localMax)
 	return false
 }
 

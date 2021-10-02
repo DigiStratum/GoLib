@@ -242,6 +242,26 @@ func TestThat_Config_DereferenceLoop_ChangesNothing_WhenProvidedNothing(t *testi
 	}
 }
 
+func TestThat_Config_DereferenceLoop_ChangesNothing_WhenMaxLoopsZero(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	ref1 := NewConfig()
+	numKeys := 3
+	for k := 0; k < numKeys; k++ {
+		sut.Set(fmt.Sprintf("key%d", k), fmt.Sprintf("-%%ref1%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref1%d", k), fmt.Sprintf("-%%ref2%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
+	}
+
+	// Test / Verify
+	res := sut.DereferenceLoop(0, ref1)
+	ExpectFalse(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("-%%ref1%d%%-", k), *key, t)
+	}
+}
+
 func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeys(t *testing.T) {
 	// Setup
 	sut := NewConfig()
@@ -275,22 +295,15 @@ func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvid
 		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
 	}
 
-	// Test / Verify
-	res := sut.DereferenceLoop(0, ref1)
+//sutJson, _ := sut.ToJson()
+//fmt.Printf("json:%s\n", *sutJson)
+	// Fully dereferences, depending on the order in which keys are processes in DereferenceString()
+	res := sut.DereferenceLoop(1, ref1)
 	ExpectFalse(res, t)
 	for k := 0; k < numKeys; k++ {
 		key := sut.Get(fmt.Sprintf("key%d", k))
-		ExpectString(fmt.Sprintf("-%%ref1%d%%-", k), *key, t)
+		ExpectString(fmt.Sprintf("---value%d---", k), *key, t)
 	}
-sutJson, _ := sut.ToJson()
-fmt.Printf("json:%s\n", *sutJson)
-
-	res = sut.DereferenceLoop(1, ref1)
-	ExpectFalse(res, t)
-	for k := 0; k < numKeys; k++ {
-		key := sut.Get(fmt.Sprintf("key%d", k))
-		ExpectString(fmt.Sprintf("--%%ref2%d%%--", k), *key, t)
-	}
-sutJson, _ = sut.ToJson()
-fmt.Printf("json:%s\n", *sutJson)
+//sutJson, _ = sut.ToJson()
+//fmt.Printf("json:%s\n", *sutJson)
 }
