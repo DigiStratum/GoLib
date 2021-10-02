@@ -35,8 +35,9 @@ type HashMapIfc interface {
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	IterateCallback(callback func(kvp KeyValuePair))
-	IterateChannel() <-chan KeyValuePair
+	//IterateCallback(callback func(kvp KeyValuePair))
+	//IterateChannel() <-chan KeyValuePair
+	Iterate() (func() *KeyValuePair, bool)
 	ToJson() (*string, error)
 }
 
@@ -151,6 +152,7 @@ func (r HashMap) GetKeys() []string {
 	return keys
 }
 
+/*
 // Iterate over the keys for this HashMap and call a callback for each
 // ref: https://ewencp.org/blog/golang-iterators/index.html
 func (r HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
@@ -168,6 +170,26 @@ func (r HashMap) IterateChannel() <-chan KeyValuePair {
 		ch <- KeyValuePair{ Key: k, Value: v }
 	}
 	return ch
+}
+*/
+
+// ref: https://ewencp.org/blog/golang-iterators/index.html
+func (r HashMap) Iterate() (func() *KeyValuePair, bool) {
+	kvps := make([]KeyValuePair, r.Size())
+	var idx int = 0
+	for k, v := range r.hash {
+		kvps[idx] = KeyValuePair{ Key: k, Value: v }
+		idx++
+	}
+	idx = 0
+	var data_len = r.Size()
+	return func() *KeyValuePair {
+		// If we're done iterating, return do nothing
+		if idx >= data_len { return nil }
+		prev_idx := idx
+		idx++
+		return &kvps[prev_idx]
+	}, (idx < data_len)
 }
 
 // -------------------------------------------------------------------------------------------------
