@@ -35,8 +35,6 @@ type HashMapIfc interface {
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
-	//IterateCallback(callback func(kvp KeyValuePair))
-	//IterateChannel() <-chan KeyValuePair
 	GetIterator() func () interface{}
 	ToJson() (*string, error)
 }

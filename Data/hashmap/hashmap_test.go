@@ -94,9 +94,150 @@ func TestThat_HashMap_Get_ReturnsNil_ForUnsetKey(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 
-	// Verify
+	// Test
 	actual := sut.Get("boguskey")
+
+	// Verify
 	ExpectNil(actual, t)
+}
+
+func TestThat_HashMap_GetInt64_ReturnsValue_ForSetKeyWithParseableInt(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	key := "testkey"
+	var expected int64 = 1234567
+
+	// Test
+	sut.Set(key, fmt.Sprintf("%d", expected))
+	actual := sut.GetInt64(key)
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectInt64(expected, *actual, t)
+}
+
+func TestThat_HashMap_GetInt64_ReturnsNil_ForSetKeyWithoutParseableInt(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	key := "testkey"
+
+	// Test
+	sut.Set(key, "bogusvalue")
+	actual := sut.GetInt64(key)
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_HashMap_GetInt64_ReturnsNil_ForUnsetKey(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	actual := sut.GetInt64("boguskey")
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_HashMap_GetKeys_ReturnsNothing_ForEmptyMap(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	actual := sut.GetKeys()
+
+	// Verify
+	ExpectInt(0, len(actual), t)
+}
+
+func TestThat_HashMap_GetKeys_ReturnsKeys_ForNonEmptyMap(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	sut.Set("k1", "v1")
+	sut.Set("k2", "v2")
+
+	// Test
+	actual := sut.GetKeys()
+
+	// Verify
+	ExpectInt(2, len(actual), t)
+	ExpectTrue(((actual[0]=="k1")&&(actual[1]=="k2"))||((actual[1]=="k1")&&(actual[0]=="k2")), t)
+}
+
+//ToJson() (*string, error)
+func TestThat_HashMap_ToJson_ReturnsEmptyJson_ForEmptyMap(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	expected := "{}"
+
+	// Test
+	actual, err := sut.ToJson()
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectString(expected, *actual, t)
+}
+
+func TestThat_HashMap_ToJson_ReturnsPopulatedJson_ForNonEmptyMap(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	sut.Set("k1", "v1")
+	sut.Set("k2", "v2")
+
+	expected := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
+
+	// Test
+	actual, err := sut.ToJson()
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectString(expected, *actual, t)
+}
+//LoadFromJsonString(jsonStr *string) error
+func TestThat_HashMap_LoadFromJsonString_PopulatesMap_ForPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(2, sut.Size(), t)
+	ExpectTrue(sut.Has("k1"), t)
+	ExpectTrue(sut.Has("k2"), t)
+	v1 := sut.Get("k1")
+	ExpectString("v1", *v1, t)
+	v2 := sut.Get("k2")
+	ExpectString("v2", *v2, t)
+}
+
+func TestThat_HashMap_LoadFromJsonString_ChangesNothing_ForNonPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "{}"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_LoadFromJsonString_ReturnsError_ForInvalidJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "}{"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectInt(0, sut.Size(), t)
 }
 
 func TestThat_HashMap_Merge_AddsNothing_ForEmptyMaps(t *testing.T) {
