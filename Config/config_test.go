@@ -262,7 +262,7 @@ func TestThat_Config_DereferenceLoop_ChangesNothing_WhenMaxLoopsZero(t *testing.
 	}
 }
 
-func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeys(t *testing.T) {
+func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeysNoLimit(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	ref1 := NewConfig()
@@ -284,7 +284,7 @@ func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvide
 	}
 }
 
-func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeys(t *testing.T) {
+func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeysLimit1(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	ref1 := NewConfig()
@@ -295,17 +295,33 @@ func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvid
 		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
 	}
 
-//sutJson, _ := sut.ToJson()
-//fmt.Printf("json:%s\n", *sutJson)
 	// Fully dereferences, depending on the order in which keys are processes in DereferenceString()
 	res := sut.DereferenceLoop(1, ref1)
 	ExpectFalse(res, t)
 	for k := 0; k < numKeys; k++ {
 		key := sut.Get(fmt.Sprintf("key%d", k))
+		ExpectString(fmt.Sprintf("--%%ref2%d%%--", k), *key, t)
+	}
+}
+
+func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvidedReferenceConfigsWithMatchingKeysLimit2(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	ref1 := NewConfig()
+	numKeys := 3
+	for k := 0; k < numKeys; k++ {
+		sut.Set(fmt.Sprintf("key%d", k), fmt.Sprintf("-%%ref1%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref1%d", k), fmt.Sprintf("-%%ref2%d%%-", k))
+		ref1.Set(fmt.Sprintf("ref2%d", k), fmt.Sprintf("-value%d-", k))
+	}
+
+	// Fully dereferences, depending on the order in which keys are processes in DereferenceString()
+	res := sut.DereferenceLoop(2, ref1)
+	ExpectFalse(res, t)
+	for k := 0; k < numKeys; k++ {
+		key := sut.Get(fmt.Sprintf("key%d", k))
 		ExpectString(fmt.Sprintf("---value%d---", k), *key, t)
 	}
-//sutJson, _ = sut.ToJson()
-//fmt.Printf("json:%s\n", *sutJson)
 }
 
 func TestThat_Config_getReferenceKeysFromString_ReturnsExpectedKeys(t *testing.T) {

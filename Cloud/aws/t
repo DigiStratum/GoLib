@@ -1,13 +1,19 @@
 #!/bin/bash
 
 TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-. $TESTRUNNER_DIR/../../tools/shell.sh
+. $TESTRUNNER_DIR/../tools/shell.sh
+
+if [ "$#" -eq 1 ]; then
+	RUN_TEST="-run $1"
+else
+	RUN_TEST=""
+fi
 
 say "BEGIN: $TESTRUNNER_DIR"
 cd $TESTRUNNER_DIR
 
-#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt *.go
-go test -v -count=1 -covermode=atomic *.go
+#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt $RUN_TEST *.go
+go test -v -count=1 -covermode=atomic $RUN_TEST *.go
 die_on_error $? "ERROR!"
 
 say "\nDONE: $TESTRUNNER_DIR"

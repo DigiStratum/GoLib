@@ -11,7 +11,6 @@ dealing with simple key/value pair data. *Should* be thread-safe.
 import (
 	"fmt"
 	"sync"
-	"strings"
 	"strconv"
 	gojson "encoding/json"
 
@@ -123,15 +122,7 @@ func (r *HashMap) Set(key, value string) {
 
 // Get a single data element by key name
 func (r HashMap) Get(key string) *string {
-	if strings.Compare(key, "k1") == 0 { v := r.hash["k1"]; return &v }
-	if strings.Compare(key, "k2") == 0 { v := r.hash["k2"]; return &v }
-
 	if val, ok := r.hash[key]; ok { return &val }
-//val, _ := r.hash[key]
-//fmt.Printf("[[MISS]] k='%s', len=%d, v='%s' vtype='%T', ktype='%T'\n", key, len(r.hash), val, val, key)
-//hJson, _ := r.ToJson()
-//fmt.Printf("hashmapjson: %s\n", *hJson)
-
 	return nil
 }
 
@@ -182,27 +173,6 @@ func (r HashMap) GetIterator() func () interface{} {
 		return &kvps[prev_idx]
 	}
 }
-
-/*
-// Iterate over the keys for this HashMap and call a callback for each
-// ref: https://ewencp.org/blog/golang-iterators/index.html
-func (r HashMap) IterateCallback(callback func(kvp KeyValuePair)) {
-	for k, v := range r.hash { callback(KeyValuePair{ Key: k, Value: v}) }
-}
-
-// Iterate over the keys for this HashMap and send all the KeyValuePairs to a channel
-// ref: https://ewencp.org/blog/golang-iterators/index.html
-// ref: https://blog.golang.org/pipelines
-// ref: https://programming.guide/go/wait-for-goroutines-waitgroup.html
-func (r HashMap) IterateChannel() <-chan KeyValuePair {
-	ch := make(chan KeyValuePair, len(r.hash))
-	defer close(ch)
-	for k, v := range r.hash {
-		ch <- KeyValuePair{ Key: k, Value: v }
-	}
-	return ch
-}
-*/
 
 // -------------------------------------------------------------------------------------------------
 // JsonSerializable Public Interface
