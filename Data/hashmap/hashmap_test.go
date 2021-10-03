@@ -162,6 +162,22 @@ func TestThat_HashMap_Set_DoesNothing_WhenNil(t *testing.T) {
 	sut.Set("testkey", "testvalue")
 }
 
+func TestThat_HashMap_Set_OverwritesValue_ForExistingKey(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	key := "somekey"
+	sut.Set(key, "unexpected")
+
+	// Test
+	expected := "expected"
+	sut.Set(key, expected)
+
+	// Verify
+	actual := sut.Get(key)
+	ExpectNonNil(actual, t)
+	ExpectString(expected, *actual, t)
+}
+
 func TestThat_HashMap_HasAll_ReturnsTrue_WhenKeysEmptySet(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
@@ -192,22 +208,6 @@ func TestThat_HashMap_HasAll_ReturnsTrue_WhenAllKeysExist(t *testing.T) {
 
 	// Test
 	ExpectBool(true, sut.HasAll(&keys), t)
-}
-
-func TestThat_HashMap_Set_OverwritesValue_ForExistingKey(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	key := "somekey"
-	sut.Set(key, "unexpected")
-
-	// Test
-	expected := "expected"
-	sut.Set(key, expected)
-
-	// Verify
-	actual := sut.Get(key)
-	ExpectNonNil(actual, t)
-	ExpectString(expected, *actual, t)
 }
 
 func TestThat_HashMap_CopyHashMap_ReturnsNil_WhenNil(t *testing.T) {
@@ -253,6 +253,7 @@ func TestThat_HashMap_CopyHashMap_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
 	}
 }
 
+/*
 func TestThat_HashMap_IterateCallback_Panics_WhenNil(t *testing.T) {
 	// Setup
 	defer ExpectPanic(t)
@@ -366,3 +367,4 @@ func TestThat_HashMap_IterateChannel_YieldsOneEntryPerKey_WhenNonEmpty(t *testin
 		ExpectString(*expected, actual, t)
 	}
 }
+*/
