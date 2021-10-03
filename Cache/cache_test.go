@@ -557,6 +557,15 @@ FIXME: This test fails occasionally when system is busy/multi-tasking
         @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:519
         Expect: '1', Actual: '2'
 --- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
+
+FIXME: Got another one because of bad luck when the system was not at all busy:
+=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
+    expect.go:49:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:578
+        Expect: '1', Actual: '2'
+--- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
+
 */
 func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
