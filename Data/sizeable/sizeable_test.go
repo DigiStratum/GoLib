@@ -1,10 +1,9 @@
 package sizeable
 
 import(
-	//"fmt"
 	"testing"
 
-	. "github.com/DigiStratum/GoTools/test"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 const FIXED_SIZE = 333
