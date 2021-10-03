@@ -324,7 +324,7 @@ func TestThat_Config_DereferenceLoop_SubstitutesAllValuesInOurConfig_WhenProvide
 	}
 }
 
-func TestThat_Config_getReferenceKeysFromString_ReturnsExpectedKeys(t *testing.T) {
+func TestThat_Config_getReferenceKeysFromString_ReturnsExpectedKeys_WhenProvidedStringWithReferenceKeys(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	k1 := "k1"
@@ -345,4 +345,16 @@ func TestThat_Config_getReferenceKeysFromString_ReturnsExpectedKeys(t *testing.T
 	ExpectInt(len(k2), len(br2), t)
 	ExpectInt(len(k2), len(res[1]), t)
 	ExpectString(k2, res[1], t)
+}
+
+func TestThat_Config_getReferenceKeysFromString_ReturnsNothing_WhenProvidedEmptyString(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+
+	// Test
+	res, err := sut.getReferenceKeysFromString("")
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(0, len(res), t)
 }
