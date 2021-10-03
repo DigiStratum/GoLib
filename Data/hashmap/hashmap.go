@@ -44,7 +44,10 @@ type HashMap struct {
 	mutex		sync.Mutex
 }
 
+// -------------------------------------------------------------------------------------------------
 // Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewHashMap() *HashMap {
 	return &HashMap{
 		hash:	make(map[string]string),
@@ -153,7 +156,8 @@ func (r HashMap) GetKeys() []string {
 // -------------------------------------------------------------------------------------------------
 // IterableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-// ref: https://ewencp.org/blog/golang-iterators/index.html
+
+// Iterate over all of our items, returning each as a *KeyValuePair in the form of an interface{}
 func (r HashMap) GetIterator() func () interface{} {
 	kvps := make([]KeyValuePair, r.Size())
 	var idx int = 0

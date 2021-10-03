@@ -19,11 +19,240 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-func TestThat_HashMap_Size_Is0_WhenNew(t *testing.T) {
+func TestThat_HashMap_NewHashMap_ReturnsEmptyHashMap(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 
 	// Verify
+	ExpectNonNil(sut, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_CopyHashMap_ReturnsNil_WhenNil(t *testing.T) {
+	// Setup
+	var sut *HashMap	// nil
+
+	// Verify
+	actual := CopyHashMap(sut)
+	ExpectNil(actual, t)
+}
+
+func TestThat_HashMap_CopyHashMap_ReturnsEmpty_WhenEmpty(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	actual := CopyHashMap(sut)
+
+	// Verify
+	ExpectInt(0, actual.Size(), t)
+}
+
+func TestThat_HashMap_CopyHashMap_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	num := 25
+	for i := 0; i < num; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		value := fmt.Sprintf("value-%d", i)
+		sut.Set(key, value)
+	}
+
+	// Test
+	actual := CopyHashMap(sut)
+
+	// Verify
+	ExpectInt(num, actual.Size(), t)
+	for i := 0; i < num; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		expectedValue := fmt.Sprintf("value-%d", i)
+		actualValue := actual.Get(key)
+		ExpectString(expectedValue, *actualValue, t)
+	}
+}
+
+func TestThat_HashMap_NewHashMapFromJsonString_ReturnsPopulatedHashMap_ForPopulatedJson(t *testing.T) {
+	// Setup
+	jsonStr := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
+
+	// Test
+	sut, err := NewHashMapFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(2, sut.Size(), t)
+	ExpectTrue(sut.Has("k1"), t)
+	ExpectTrue(sut.Has("k2"), t)
+	v1 := sut.Get("k1")
+	ExpectString("v1", *v1, t)
+	v2 := sut.Get("k2")
+	ExpectString("v2", *v2, t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonString_ReturnsEmptyHashMap_ForNonPopulatedJson(t *testing.T) {
+	// Setup
+	jsonStr := "{}"
+
+	// Test
+	sut, err := NewHashMapFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonString_ReturnsError_ForInvalidJson(t *testing.T) {
+	// Setup
+	jsonStr := "}{"
+
+	// Test
+	sut, err := NewHashMapFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectNil(sut, t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonFile_ReturnsPopulatedMap_ForPopulatedJson(t *testing.T) {
+	// Test
+	sut, err := NewHashMapFromJsonFile("hashmap_test.json")
+
+	// Verify
+	ExpectNonNil(sut, t)
+	ExpectNil(err, t)
+	ExpectInt(2, sut.Size(), t)
+	ExpectTrue(sut.Has("k1"), t)
+	ExpectTrue(sut.Has("k2"), t)
+	v1 := sut.Get("k1")
+	ExpectString("v1", *v1, t)
+	v2 := sut.Get("k2")
+	ExpectString("v2", *v2, t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonFile_ReturnsEmptyMap_ForNonPopulatedJson(t *testing.T) {
+	// Test
+	sut, err := NewHashMapFromJsonFile("hashmap_test_empty.json")
+
+	// Verify
+	ExpectNonNil(sut, t)
+	ExpectNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonFile_ReturnsError_ForInvalidJson(t *testing.T) {
+	// Test
+	sut, err := NewHashMapFromJsonFile("hashmap_test_invalid.json")
+
+	// Verify
+	ExpectNil(sut, t)
+	ExpectNonNil(err, t)
+}
+
+func TestThat_HashMap_NewHashMapFromJsonFile_ReturnsError_ForMissingJson(t *testing.T) {
+	// Test
+	sut, err := NewHashMapFromJsonFile("missingfile.json")
+
+	// Verify
+	ExpectNil(sut, t)
+	ExpectNonNil(err, t)
+}
+
+func TestThat_HashMap_LoadFromJsonString_PopulatesMap_ForPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(2, sut.Size(), t)
+	ExpectTrue(sut.Has("k1"), t)
+	ExpectTrue(sut.Has("k2"), t)
+	v1 := sut.Get("k1")
+	ExpectString("v1", *v1, t)
+	v2 := sut.Get("k2")
+	ExpectString("v2", *v2, t)
+}
+
+func TestThat_HashMap_LoadFromJsonString_ChangesNothing_ForNonPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "{}"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_LoadFromJsonString_ReturnsError_ForInvalidJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	jsonStr := "}{"
+
+	// Test
+	err := sut.LoadFromJsonString(&jsonStr)
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_LoadFromJsonFile_PopulatesMap_ForPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	err := sut.LoadFromJsonFile("hashmap_test.json")
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(2, sut.Size(), t)
+	ExpectTrue(sut.Has("k1"), t)
+	ExpectTrue(sut.Has("k2"), t)
+	v1 := sut.Get("k1")
+	ExpectString("v1", *v1, t)
+	v2 := sut.Get("k2")
+	ExpectString("v2", *v2, t)
+}
+
+func TestThat_HashMap_LoadFromJsonFile_ChangesNothing_ForNonPopulatedJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	err := sut.LoadFromJsonFile("hashmap_test_empty.json")
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_LoadFromJsonFile_ReturnsError_ForInvalidJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	err := sut.LoadFromJsonFile("hashmap_test_invalid.json")
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_LoadFromJsonFile_ReturnsError_ForMissingJson(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+
+	// Test
+	err := sut.LoadFromJsonFile("missingfile.json")
+
+	// Verify
+	ExpectNonNil(err, t)
 	ExpectInt(0, sut.Size(), t)
 }
 
@@ -55,24 +284,91 @@ func TestThat_HashMap_IsEmpty_IsFalse_WhenNonEmpty(t *testing.T) {
 	ExpectBool(false, sut.IsEmpty(), t)
 }
 
-func TestThat_HashMap_Has_IsFalse_WhenKeyMissing(t *testing.T) {
+func TestThat_HashMap_Size_Is0_WhenNew(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 
 	// Verify
-	ExpectBool(false, sut.Has("boguskey"), t)
+	ExpectInt(0, sut.Size(), t)
 }
 
-func TestThat_HashMap_Has_IsTrue_WhenKeyExists(t *testing.T) {
+func TestThat_HashMap_Merge_AddsNothing_ForEmptyMaps(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	key := "testkey"
+	otherMap := NewHashMap()
 
 	// Test
-	sut.Set(key, "testvalue")
+	sut.Merge(otherMap)
 
 	// Verify
+	ExpectInt(0, sut.Size(), t)
+}
+
+func TestThat_HashMap_Merge_AddsEntries_ForNonEmptyMaps(t *testing.T) {
+	// Setup
+	key := "tweedle"
+	expected := "deedle"
+	other := NewHashMap()
+	other.Set(key, expected)
+	sut := NewHashMap()
+
+	// Test
+	sut.Merge(other)
+
+	// Verify
+	ExpectBool(false, sut.IsEmpty(), t)
+	ExpectInt(1, sut.Size(), t)
 	ExpectBool(true, sut.Has(key), t)
+	actual := sut.Get(key)
+	ExpectNonNil(actual, t)
+	ExpectString(expected, *actual, t)
+}
+
+func TestThat_HashMap_Merge_DoesNothing_WhenNilForEmptySet(t *testing.T) {
+	// Setup
+	var sut *HashMap	// nil
+
+	// Test
+	sut.Merge(NewHashMap())
+
+	// Verify
+	ExpectNil(sut, t)
+}
+
+func TestThat_HashMap_Merge_DoesNothing_WhenNilForNonEmptySet(t *testing.T) {
+	// Setup
+	//defer ExpectPanic(t)
+	other := NewHashMap()
+	other.Set("beep", "boop")
+	var sut *HashMap	// nil
+
+	// Test
+	sut.Merge(other)
+}
+
+func TestThat_HashMap_Set_DoesNothing_WhenNil(t *testing.T) {
+	// Setup
+	//defer ExpectPanic(t)
+	var sut *HashMap	// nil
+
+	// Test
+	sut.Set("testkey", "testvalue")
+}
+
+func TestThat_HashMap_Set_OverwritesValue_ForExistingKey(t *testing.T) {
+	// Setup
+	sut := NewHashMap()
+	key := "somekey"
+	sut.Set(key, "unexpected")
+
+	// Test
+	expected := "expected"
+	sut.Set(key, expected)
+
+	// Verify
+	actual := sut.Get(key)
+	ExpectNonNil(actual, t)
+	ExpectString(expected, *actual, t)
 }
 
 func TestThat_HashMap_Get_ReturnsValue_ForSetKey(t *testing.T) {
@@ -165,158 +461,24 @@ func TestThat_HashMap_GetKeys_ReturnsKeys_ForNonEmptyMap(t *testing.T) {
 	ExpectTrue(((actual[0]=="k1")&&(actual[1]=="k2"))||((actual[1]=="k1")&&(actual[0]=="k2")), t)
 }
 
-//ToJson() (*string, error)
-func TestThat_HashMap_ToJson_ReturnsEmptyJson_ForEmptyMap(t *testing.T) {
+func TestThat_HashMap_Has_IsFalse_WhenKeyMissing(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	expected := "{}"
-
-	// Test
-	actual, err := sut.ToJson()
 
 	// Verify
-	ExpectNil(err, t)
-	ExpectString(expected, *actual, t)
+	ExpectBool(false, sut.Has("boguskey"), t)
 }
 
-func TestThat_HashMap_ToJson_ReturnsPopulatedJson_ForNonEmptyMap(t *testing.T) {
+func TestThat_HashMap_Has_IsTrue_WhenKeyExists(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	sut.Set("k1", "v1")
-	sut.Set("k2", "v2")
-
-	expected := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
+	key := "testkey"
 
 	// Test
-	actual, err := sut.ToJson()
+	sut.Set(key, "testvalue")
 
 	// Verify
-	ExpectNil(err, t)
-	ExpectString(expected, *actual, t)
-}
-//LoadFromJsonString(jsonStr *string) error
-func TestThat_HashMap_LoadFromJsonString_PopulatesMap_ForPopulatedJson(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	jsonStr := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
-
-	// Test
-	err := sut.LoadFromJsonString(&jsonStr)
-
-	// Verify
-	ExpectNil(err, t)
-	ExpectInt(2, sut.Size(), t)
-	ExpectTrue(sut.Has("k1"), t)
-	ExpectTrue(sut.Has("k2"), t)
-	v1 := sut.Get("k1")
-	ExpectString("v1", *v1, t)
-	v2 := sut.Get("k2")
-	ExpectString("v2", *v2, t)
-}
-
-func TestThat_HashMap_LoadFromJsonString_ChangesNothing_ForNonPopulatedJson(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	jsonStr := "{}"
-
-	// Test
-	err := sut.LoadFromJsonString(&jsonStr)
-
-	// Verify
-	ExpectNil(err, t)
-	ExpectInt(0, sut.Size(), t)
-}
-
-func TestThat_HashMap_LoadFromJsonString_ReturnsError_ForInvalidJson(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	jsonStr := "}{"
-
-	// Test
-	err := sut.LoadFromJsonString(&jsonStr)
-
-	// Verify
-	ExpectNonNil(err, t)
-	ExpectInt(0, sut.Size(), t)
-}
-
-func TestThat_HashMap_Merge_AddsNothing_ForEmptyMaps(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	otherMap := NewHashMap()
-
-	// Test
-	sut.Merge(otherMap)
-
-	// Verify
-	ExpectInt(0, sut.Size(), t)
-}
-
-func TestThat_HashMap_Merge_AddsEntries_ForNonEmptyMaps(t *testing.T) {
-	// Setup
-	key := "tweedle"
-	expected := "deedle"
-	other := NewHashMap()
-	other.Set(key, expected)
-	sut := NewHashMap()
-
-	// Test
-	sut.Merge(other)
-
-	// Verify
-	ExpectBool(false, sut.IsEmpty(), t)
-	ExpectInt(1, sut.Size(), t)
 	ExpectBool(true, sut.Has(key), t)
-	actual := sut.Get(key)
-	ExpectNonNil(actual, t)
-	ExpectString(expected, *actual, t)
-}
-
-func TestThat_HashMap_Merge_DoesNothing_WhenNilForEmptySet(t *testing.T) {
-	// Setup
-	var sut *HashMap	// nil
-
-	// Test
-	sut.Merge(NewHashMap())
-
-	// Verify
-	ExpectNil(sut, t)
-}
-
-func TestThat_HashMap_Merge_DoesNothing_WhenNilForNonEmptySet(t *testing.T) {
-	// Setup
-	//defer ExpectPanic(t)
-	other := NewHashMap()
-	other.Set("beep", "boop")
-	var sut *HashMap	// nil
-
-	// Test
-	sut.Merge(other)
-}
-
-func TestThat_HashMap_Set_DoesNothing_WhenNil(t *testing.T) {
-	// Setup
-	//defer ExpectPanic(t)
-	var sut *HashMap	// nil
-
-	// Test
-	sut.Set("testkey", "testvalue")
-}
-
-func TestThat_HashMap_Set_OverwritesValue_ForExistingKey(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	key := "somekey"
-	sut.Set(key, "unexpected")
-
-	// Test
-	expected := "expected"
-	sut.Set(key, expected)
-
-	// Verify
-	actual := sut.Get(key)
-	ExpectNonNil(actual, t)
-	ExpectString(expected, *actual, t)
 }
 
 func TestThat_HashMap_HasAll_ReturnsTrue_WhenKeysEmptySet(t *testing.T) {
@@ -351,161 +513,81 @@ func TestThat_HashMap_HasAll_ReturnsTrue_WhenAllKeysExist(t *testing.T) {
 	ExpectBool(true, sut.HasAll(&keys), t)
 }
 
-func TestThat_HashMap_CopyHashMap_ReturnsNil_WhenNil(t *testing.T) {
-	// Setup
-	var sut *HashMap	// nil
-
-	// Verify
-	actual := CopyHashMap(sut)
-	ExpectNil(actual, t)
-}
-
-func TestThat_HashMap_CopyHashMap_ReturnsEmpty_WhenEmpty(t *testing.T) {
+func TestThat_HashMap_GetIterator_ReturnsIterator_WhenEmpty(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 
 	// Test
-	actual := CopyHashMap(sut)
+	it := sut.GetIterator()
 
 	// Verify
-	ExpectInt(0, actual.Size(), t)
+	ExpectNonNil(it, t)
+	item := it()
+	ExpectNil(item, t)
 }
 
-func TestThat_HashMap_CopyHashMap_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
+func TestThat_HashMap_GetIterator_ReturnsWorkingIterator_WhenNonEmpty(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	num := 25
-	for i := 0; i < num; i++ {
-		key := fmt.Sprintf("key-%d", i)
-		value := fmt.Sprintf("value-%d", i)
+	expectedItems := make(map[string]string)
+	numItems := 10
+	for i :=0; i < numItems; i++ {
+		key := fmt.Sprintf("k%d", i)
+		value := fmt.Sprintf("v%d", i)
 		sut.Set(key, value)
+		expectedItems[key] = value
 	}
 
 	// Test
-	actual := CopyHashMap(sut)
+	it := sut.GetIterator()
 
 	// Verify
-	ExpectInt(num, actual.Size(), t)
-	for i := 0; i < num; i++ {
-		key := fmt.Sprintf("key-%d", i)
-		expectedValue := fmt.Sprintf("value-%d", i)
-		actualValue := actual.Get(key)
-		ExpectString(expectedValue, *actualValue, t)
-	}
-}
-
-/*
-func TestThat_HashMap_IterateCallback_Panics_WhenNil(t *testing.T) {
-	// Setup
-	defer ExpectPanic(t)
-	var sut *HashMap	// nil
-
-	// Test
-	sut.IterateCallback(func (kvp KeyValuePair) {})
-}
-
-func TestThat_HashMap_IterateCallback_MakesNoCalls_WhenEmpty(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	callbackCounter := 0
-
-	// Test
-	sut.IterateCallback(func (kvp KeyValuePair) { callbackCounter++ })
-
-	// Verify
-	ExpectInt(0, callbackCounter, t)
-}
-
-func TestThat_HashMap_IterateCallback_MakesOneCallPerKey_WhenNonEmpty(t *testing.T) {
-	// Setup
-	sut := NewHashMap()
-	num := 25
-	keys := make([]string, num)
-	for i := 0; i < num; i++ {
-		key := fmt.Sprintf("key-%d", i)
-		value := fmt.Sprintf("value-%d", i)
-		sut.Set(key, value)
-		keys[i] = key
-	}
-	type kvpdata struct {
-		Value	string
-		Num	int
-	}
-	callbacks := make(map[string]*kvpdata)
-
-	// Test
-	sut.IterateCallback(func (kvp KeyValuePair) {
-		if _, ok := callbacks[kvp.Key]; ! ok {
-			callbacks[kvp.Key] = &kvpdata{ Value: kvp.Value, Num: 0 }
+	ExpectNonNil(it, t)
+	// Iterator will return items in whatever natural order the map sees fit; we must look up and eliminate each one
+	for itemi := it(); itemi != nil; itemi = it() {
+		ExpectNonNil(itemi, t)
+		if kvp, ok := itemi.(*KeyValuePair); ok {
+			ExpectTrue(ok, t)
+			actualKey := kvp.Key
+			actualValue := kvp.Value
+			if expectedValue, isExpectedKey := expectedItems[actualKey]; isExpectedKey {
+				ExpectTrue(isExpectedKey, t)
+				ExpectString(expectedValue, actualValue, t)
+				delete(expectedItems, actualKey)
+			} else {
+				ExpectTrue(false, t)
+			}
+		} else {
+			ExpectTrue(false, t)
 		}
-		(*callbacks[kvp.Key]).Num++
-	})
-
-	// Verify
-	ExpectInt(num, len(callbacks), t)
-	for i := 0; i < num; i++ {
-		ExpectInt(1, callbacks[keys[i]].Num, t)
-		expected := sut.Get(keys[i])
-		actual := callbacks[keys[i]].Value
-		ExpectString(*expected, actual, t)
 	}
+	ExpectInt(0, len(expectedItems), t)
 }
 
-// TODO: Add HashMap.IterateChannel() coverage
-
-func TestThat_HashMap_IterateChannel_Panics_WhenNil(t *testing.T) {
-	// Setup
-	defer ExpectPanic(t)
-	var sut *HashMap	// nil
-
-	// Test
-	for _ = range sut.IterateChannel() {}
-}
-
-func TestThat_HashMap_IterateChannel_YieldsNoEntries_WhenEmpty(t *testing.T) {
+func TestThat_HashMap_ToJson_ReturnsEmptyJson_ForEmptyMap(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	entryCounter := 0
+	expected := "{}"
 
 	// Test
-	for _ = range sut.IterateChannel() { entryCounter++ }
+	actual, err := sut.ToJson()
 
 	// Verify
-	ExpectInt(0, entryCounter, t)
+	ExpectNil(err, t)
+	ExpectString(expected, *actual, t)
 }
 
-func TestThat_HashMap_IterateChannel_YieldsOneEntryPerKey_WhenNonEmpty(t *testing.T) {
+func TestThat_HashMap_ToJson_ReturnsPopulatedJson_ForNonEmptyMap(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
-	num := 25
-	keys := make([]string, num)
-	for i := 0; i < num; i++ {
-		key := fmt.Sprintf("key-%d", i)
-		value := fmt.Sprintf("value-%d", i)
-		sut.Set(key, value)
-		keys[i] = key
-	}
-	type kvpdata struct {
-		Value	string
-		Num	int
-	}
-	entries := make(map[string]*kvpdata)
+	sut.Set("k1", "v1")
+	sut.Set("k2", "v2")
+	expected := "{\"k1\":\"v1\",\"k2\":\"v2\"}"
 
 	// Test
-	for kvp := range sut.IterateChannel() {
-		if _, ok := entries[kvp.Key]; ! ok {
-			entries[kvp.Key] = &kvpdata{ Value: kvp.Value, Num: 0 }
-		}
-		(*entries[kvp.Key]).Num++
-	}
+	actual, err := sut.ToJson()
 
 	// Verify
-	ExpectInt(num, len(entries), t)
-	for i := 0; i < num; i++ {
-		ExpectInt(1, entries[keys[i]].Num, t)
-		expected := sut.Get(keys[i])
-		actual := entries[keys[i]].Value
-		ExpectString(*expected, actual, t)
-	}
+	ExpectNil(err, t)
+	ExpectString(expected, *actual, t)
 }
-*/
