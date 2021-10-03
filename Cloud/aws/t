@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-. $TESTRUNNER_DIR/../tools/shell.sh
+. $TESTRUNNER_DIR/../../tools/shell.sh
 
 if [ "$#" -eq 1 ]; then
 	RUN_TEST="-run $1"
