@@ -11,6 +11,7 @@ dealing with simple key/value pair data. *Should* be thread-safe.
 import (
 	"fmt"
 	"sync"
+	"strings"
 	"strconv"
 	gojson "encoding/json"
 
@@ -122,10 +123,14 @@ func (r *HashMap) Set(key, value string) {
 
 // Get a single data element by key name
 func (r HashMap) Get(key string) *string {
+	if strings.Compare(key, "k1") == 0 { v := r.hash["k1"]; return &v }
+	if strings.Compare(key, "k2") == 0 { v := r.hash["k2"]; return &v }
+
 	if val, ok := r.hash[key]; ok { return &val }
-fmt.Printf("[[MISS]] k='%s', len=%d, v='%s' type='%T'\n", key, len(r.hash), r.hash[key], r.hash[key])
-hJson, _ := r.ToJson()
-fmt.Printf("hashmapjson: %s\n", *hJson)
+//val, _ := r.hash[key]
+//fmt.Printf("[[MISS]] k='%s', len=%d, v='%s' vtype='%T', ktype='%T'\n", key, len(r.hash), val, val, key)
+//hJson, _ := r.ToJson()
+//fmt.Printf("hashmapjson: %s\n", *hJson)
 
 	return nil
 }

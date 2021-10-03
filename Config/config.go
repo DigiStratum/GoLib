@@ -92,23 +92,23 @@ func (r Config) DereferenceString(str string) *string {
 		str = tmp
 	}
 */
-cfgJson, _ := r.ToJson()
-fmt.Printf("json: %s\n", *cfgJson)
+//cfgJson, _ := r.ToJson()
+//fmt.Printf("json: %s\n", *cfgJson)
 	keys, err := r.getReferenceKeysFromString(str)
 	if nil != err {
 		// TODO: Log the error or pass it back to the caller
-fmt.Printf("[[ERROR]]\n")
+//fmt.Printf("[[ERROR]]\n")
 		return nil
 	}
 	for _, key := range keys {
 		value := r.Get(key)
-		if nil == value { fmt.Printf("[[NIL]] key='%s'\n", key);continue }
-/*
+		if nil == value { /*fmt.Printf("[[NIL]] key='%s'\n", key);*/ continue }
+
 		ref := fmt.Sprintf("%%%s%%", key)
-fmt.Printf("replacing key '%s' before: '%s'", ref, str)
+//fmt.Printf("replacing key '%s' before: '%s'", ref, str)
 		str = strings.Replace(str, ref, *value, -1)
-fmt.Printf("after: '%s'\n", str)
-*/
+//fmt.Printf("after: '%s'\n", str)
+
 	}
 	return &str
 }
@@ -205,8 +205,8 @@ func (r Config) getReferenceKeysFromString(str string) ([]string, error) {
 				//fmt.Printf("found key:'%s'\n", key)
 				inKey = false
 			} else {
-				// This is the begining!
-				keyRunes = make([]rune, len(str))
+				// This is the beginning!
+				keyRunes = make([]rune, 0)
 				inKey = true
 			}
 		} else {

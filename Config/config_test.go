@@ -307,3 +307,26 @@ func TestThat_Config_DereferenceLoop_SubstitutesSomeValuesInOurConfig_WhenProvid
 //sutJson, _ = sut.ToJson()
 //fmt.Printf("json:%s\n", *sutJson)
 }
+
+func TestThat_Config_getReferenceKeysFromString_ReturnsExpectedKeys(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	k1 := "k1"
+	k2 := "k2"
+	kstr := fmt.Sprintf("-%%%s%%-%%%s%%-", k1, k2)
+
+	// Test
+	res, err := sut.getReferenceKeysFromString(kstr)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectInt(2, len(res), t)
+	br1 := []byte(res[0])
+	ExpectInt(len(k1), len(br1), t)
+	ExpectInt(len(k1), len(res[0]), t)
+	ExpectString(k1, res[0], t)
+	br2 := []byte(res[1])
+	ExpectInt(len(k2), len(br2), t)
+	ExpectInt(len(k2), len(res[1]), t)
+	ExpectString(k2, res[1], t)
+}
