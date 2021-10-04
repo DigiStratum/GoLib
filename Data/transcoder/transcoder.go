@@ -2,9 +2,12 @@
 package transcoder
 
 import (
-	"fmt"
-	"encoding/base64"
+	//"fmt"
+	//"encoding/base64"
+
+	"github.com/DigiStratum/GoLib/FileIO"
 )
+
 
 type TranscoderIfc interface {
 	FromString(content *string, encodingScheme EncodingScheme) error
@@ -49,9 +52,9 @@ func (r *Transcoder) FromBytes(bytes *[]byte, encodingScheme EncodingScheme) err
 }
 
 func (r *Transcoder) FromFile(path string, encodingScheme EncodingScheme) error {
-	bytes, err := lib.ReadFileBytes(path)
+	bytes, err := fileio.ReadFileBytes(path)
 	if nil != err { return err }
-	return r.FromString(bytes, encodingScheme)
+	return r.FromBytes(bytes, encodingScheme)
 }
 
 func (r *Transcoder) ToString(encodingScheme EncodingScheme) (*string, error) {
