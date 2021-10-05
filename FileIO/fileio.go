@@ -25,9 +25,7 @@ func ReadFileString(path string) (*string, error) {
 
 // Read the file located at the specified path and return the contents as a *[]byte
 func ReadFileBytes(path string) (*[]byte, error) {
-	var tbuf []byte
-	var err error
-	tbuf, err = ioutil.ReadFile(path)
+	tbuf, err := ioutil.ReadFile(path)
 	if nil != err {
 		return nil, fmt.Errorf("Error reading '%s': %s", path, err.Error())
 	}
