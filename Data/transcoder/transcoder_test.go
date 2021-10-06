@@ -127,3 +127,18 @@ func TestThat_Transcoder_FromFile_SetterChangesNothing_WithErrorForMissingFile(t
 	// Verify
 	ExpectNonNil(res, t)
 }
+
+func TestThat_Transcoder_ToString_ReturnsString_WithoutErrorResult(t *testing.T) {
+	// Setup
+	sut := NewTranscoder()
+	expected := "Vegetable Soup!"
+	sut.FromString(&expected, ES_NONE)
+
+	// Testing
+	res, err := sut.ToString(ES_NONE)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectNonNil(res, t)
+	ExpectString(expected, *res, t)
+}

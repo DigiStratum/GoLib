@@ -59,7 +59,12 @@ func (r *Transcoder) FromFile(path string, encodingScheme EncodingScheme) error 
 }
 
 func (r *Transcoder) ToString(requestedEncodingScheme EncodingScheme) (*string, error) {
-	if nil == r.content { return nil, fmt.Errorf("Content not initialized") }
+	if 0 == len(r.content) { return nil, fmt.Errorf("Content not initialized") }
+	contentBytes, ok := r.content[requestedEncodingScheme]
+	if ! ok {
+		// This encodingScheme veriant of the content is not in the map yet - let's get it (or fail)!
+		return nil, nil
+	}
 	/*
 	switch r.encodingScheme {
 		case ES_AUTO:			// Automagically detect Encoding
@@ -73,7 +78,8 @@ func (r *Transcoder) ToString(requestedEncodingScheme EncodingScheme) (*string, 
 	}
 	return string(), nil
 	*/
-	return nil, nil
+	content := string(contentBytes)
+	return &content, nil
 }
 
 func (r *Transcoder) ToBytes(encodingScheme EncodingScheme) (*[]byte, error) {
