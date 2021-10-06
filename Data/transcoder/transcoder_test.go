@@ -13,7 +13,7 @@ func TestThat_Transcoder_NewTranscoder_ReturnsNewTranscoder_WithUnknownEncodingS
 
 	// Verify
 	ExpectNonNil(sut, t)
-	ExpectTrue(sut.encodingScheme == ES_UNKNOWN, t)
+	ExpectInt(0, len(sut.content), t)
 }
 
 func TestThat_Transcoder_FromString_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
@@ -22,13 +22,14 @@ func TestThat_Transcoder_FromString_SetterRetainsProperties_WithoutErrorResult(t
 	expected := "Vegetable Soup!"
 
 	// Testing
-	sut.FromString(&expected, ES_NONE)
+	res := sut.FromString(&expected, ES_NONE)
 
 	// Verify
-	ExpectNonNil(sut, t)
-	ExpectTrue(sut.encodingScheme == ES_NONE, t)
-	actual := string(sut.content)
-	ExpectString(expected, actual, t)
+	ExpectNil(res, t)
+	ExpectInt(1, len(sut.content), t)
+	actual, ok := sut.content[ES_NONE]
+	ExpectTrue(ok, t)
+	ExpectString(expected, string(actual), t)
 }
 
 func TestThat_Transcoder_FromBytes_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
@@ -38,13 +39,14 @@ func TestThat_Transcoder_FromBytes_SetterRetainsProperties_WithoutErrorResult(t 
 	expectedBytes := []byte(expected)
 
 	// Testing
-	sut.FromBytes(&expectedBytes, ES_NONE)
+	res := sut.FromBytes(&expectedBytes, ES_NONE)
 
 	// Verify
-	ExpectNonNil(sut, t)
-	ExpectTrue(sut.encodingScheme == ES_NONE, t)
-	actual := string(sut.content)
-	ExpectString(expected, actual, t)
+	ExpectNil(res, t)
+	ExpectInt(1, len(sut.content), t)
+	actual, ok := sut.content[ES_NONE]
+	ExpectTrue(ok, t)
+	ExpectString(expected, string(actual), t)
 }
 
 func TestThat_Transcoder_FromFile_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
@@ -53,11 +55,23 @@ func TestThat_Transcoder_FromFile_SetterRetainsProperties_WithoutErrorResult(t *
 	expected := "Vegetable Soup!"
 
 	// Testing
-	sut.FromFile("transcoder_test.vegetable_soup.txt", ES_NONE)
+	res := sut.FromFile("transcoder_test.vegetable_soup.txt", ES_NONE)
 
 	// Verify
-	ExpectNonNil(sut, t)
-	ExpectTrue(sut.encodingScheme == ES_NONE, t)
-	actual := string(sut.content)
-	ExpectString(expected, actual, t)
+	ExpectNil(res, t)
+	ExpectInt(1, len(sut.content), t)
+	actual, ok := sut.content[ES_NONE]
+	ExpectTrue(ok, t)
+	ExpectString(expected, string(actual), t)
+}
+
+func TestThat_Transcoder_FromFile_SetterChangesNothing_WithErrorForMissingFile(t *testing.T) {
+	// Setup
+	sut := NewTranscoder()
+
+	// Testing
+	res := sut.FromFile("bogus_filename.txt", ES_NONE)
+
+	// Verify
+	ExpectNonNil(res, t)
 }
