@@ -29,7 +29,7 @@ func TestThat_Transcoder_FromString_SetterRetainsProperties_WithoutErrorResult(t
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_NONE]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromString_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
@@ -46,7 +46,7 @@ func TestThat_Transcoder_FromString_SetterReplacesProperties_WithoutErrorResult(
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_UNKNOWN]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromBytes_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
@@ -63,7 +63,7 @@ func TestThat_Transcoder_FromBytes_SetterRetainsProperties_WithoutErrorResult(t 
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_NONE]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromBytes_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
@@ -81,7 +81,7 @@ func TestThat_Transcoder_FromBytes_SetterReplacesProperties_WithoutErrorResult(t
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_UNKNOWN]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromFile_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
@@ -97,7 +97,7 @@ func TestThat_Transcoder_FromFile_SetterRetainsProperties_WithoutErrorResult(t *
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_NONE]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromFile_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
@@ -114,7 +114,7 @@ func TestThat_Transcoder_FromFile_SetterReplacesProperties_WithoutErrorResult(t 
 	ExpectInt(1, len(sut.content), t)
 	actual, ok := sut.content[ES_UNKNOWN]
 	ExpectTrue(ok, t)
-	ExpectString(expected, string(actual), t)
+	ExpectString(expected, string(*actual), t)
 }
 
 func TestThat_Transcoder_FromFile_SetterChangesNothing_WithErrorForMissingFile(t *testing.T) {
