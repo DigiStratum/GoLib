@@ -70,14 +70,14 @@ func (r *Transcoder) ToString(requestedEncodingScheme EncodingScheme) (*string, 
 
 func (r *Transcoder) ToBytes(requestedEncodingScheme EncodingScheme) (*[]byte, error) {
 	if 0 == len(r.content) { return nil, fmt.Errorf("Content not initialized") }
-	contentBytes, ok := r.content[requestedEncodingScheme]
+	pContentBytes, ok := r.content[requestedEncodingScheme]
 	if ! ok {
 		// This encodingScheme veriant of the content is not in the map yet - let's get it (or fail)!
 		var err error
-		contentBytes, err = r.convertEncodingScheme(requestedEncodingScheme)
+		pContentBytes, err = r.convertEncodingScheme(requestedEncodingScheme)
 		if nil != err { return nil, err }
 	}
-	return contentBytes, nil
+	return pContentBytes, nil
 }
 
 func (r *Transcoder) ToFile(path string, encodingScheme EncodingScheme) error {
@@ -89,17 +89,47 @@ func (r *Transcoder) ToFile(path string, encodingScheme EncodingScheme) error {
 // Transcoder Private Implementation
 // -------------------------------------------------------------------------------------------------
 
-func (r *Transcoder) convertEncodingScheme(targetEncodingScheme EncodingScheme)  (*[]byte, error) {
+func (r *Transcoder) convertEncodingScheme(targetEncodingScheme EncodingScheme) (*[]byte, error) {
 	pContentBytes, err := r.decodeContent()
 	if nil != err { return nil, err }
-	// TODO: Now call another function to encode the pContentBytes in the targetEncodingScheme
+
+	// If the target is ES_NONE, decodeContent() gets us that!
+	if ES_NONE == targetEncodingScheme { return pContentBytes, nil }
+
+	// Otherwise, we must encode the content to the new scheme
+	return r.encodeContent(targetEncodingScheme)
+}
+
+// Convert cached content with ES_NONE encoding to target encoding scheme, cache it, and return pointer, else return nil + error
+func (r *Transcoder) encodeContent(targetEncodingScheme EncodingScheme) (*[]byte, error) {
+	// If we don't already have non-encoded content cached... (ensure decodeContent() called first!)
+	pContentBytes, ok := r.content[ES_NONE];
+	if ! ok { return nil, fmt.Errorf("Content not initialized") }
+
+	// If the target is ES_NONE, we already have that!
+	if ES_NONE == targetEncodingScheme { return pContentBytes, nil }
+
+	// TODO: encode the contentBytes to the target encoding scheme, error on ES_AUTO or ES_UNKNOWN
+/*
+	switch (targetEncodingScheme) {
+		case ES_AUTO:		// error!
+			fallthrough
+		case ES_UNKNOWN:	// error!
+			return nil, fmt.Errorf("Cannot encode to non-Specific encoding scheme")
+		// TODO: Dec
+		case ES_BASE64:		// Base 64 Encoding
+		case ES_UUENCODE:	// UU-Encoding (EMAIL)
+		case ES_HTTPESCAPE:	// HTTP Escaped Encoding (HTTP/URL/form-post)
+	}
+*/
 	return nil, nil
 }
 
-func (r *Transcoder) decodeContent()  (*[]byte, error) {
+// Convert cached content as needed to ensure that cache contains ES_NONE encoding and return pointer, else nil + error
+func (r *Transcoder) decodeContent() (*[]byte, error) {
 	// Do we already have non-encoded content cached?
-	if contentBytes, ok := r.content[ES_NONE]; ok {
-		return &contentBytes, nil
+	if pContentBytes, ok := r.content[ES_NONE]; ok {
+		return pContentBytes, nil
 	}
 
 	// TODO: find some cache entry to decode, possibly in order of least to greatest computational cost
