@@ -55,7 +55,9 @@ func NewConnection(dsn string) (*Connection, error) {
 	connection := Connection{
 		dsn:	dsn,
 	}
-	return &connection, connection.Connect()
+	err := connection.Connect()
+	if nil != err { return nil, err }
+	return &connection, nil
 }
 
 // -------------------------------------------------------------------------------------------------

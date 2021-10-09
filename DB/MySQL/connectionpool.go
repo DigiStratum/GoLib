@@ -24,7 +24,8 @@ import (
 	"fmt"
 	"errors"
 	"sync"
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Data/hashmap"
 )
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
@@ -72,12 +73,16 @@ func NewConnectionPool(dsn string) *ConnectionPool {
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
-func (r *ConnectionPool) Configure(config lib.ConfigIfc) error {
+func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 	// If we have already been configured, do not accept a second configuration
 	if r.configured { return nil }
 
 	// Capture optional configs
-	for kvp := range config.IterateChannel() {
+	//for kvp := range config.IterateChannel() {
+	it := config.GetIterator()
+	for kvpi := it(); nil != kvpi; kvpi = it() {
+		kvp, ok := kvpi.(hashmap.KeyValuePair)
+		if ! ok { continue }
 		switch kvp.Key {
 			case "min_connections":
 				value := config.GetInt64("min_connections")

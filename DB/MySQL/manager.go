@@ -43,7 +43,7 @@ func (r *Manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
 	connPool := r.getConnectionPool(dbKey)
 	if nil == connPool { return nil }
 	conn, err := connPool.GetConnection()
-	if nil != err { fmt.Println("error: %s", err.Error()) }
+	if nil != err { fmt.Printf("error: %s\n", err.Error()) }
 	return conn
 }
 
