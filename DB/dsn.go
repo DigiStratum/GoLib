@@ -13,7 +13,7 @@ import (
 	"crypto/md5"
 )
 
-func MakeDSN (user, pass, host, port, name string) string {
+func MakeDSN(user, pass, host, port, name string) string {
 	// ref: https://stackoverflow.com/questions/23550453/golang-how-to-open-a-remote-mysql-connection
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
         return dsn
