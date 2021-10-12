@@ -78,7 +78,6 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 	if r.configured { return nil }
 
 	// Capture optional configs
-	//for kvp := range config.IterateChannel() {
 	it := config.GetIterator()
 	for kvpi := it(); nil != kvpi; kvpi = it() {
 		kvp, ok := kvpi.(hashmap.KeyValuePair)
