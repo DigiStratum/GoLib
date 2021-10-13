@@ -11,7 +11,7 @@ type Dependencies struct {
 type DependenciesIfc interface {
 	Set(name string, dep interface{})
 	Get(name string) interface{}
-	Has(names string) bool
+	Has(name string) bool
 	HasAll(names *[]string) bool
 }
 
