@@ -26,6 +26,7 @@ import (
 	"sync"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
@@ -38,6 +39,7 @@ type ConnectionPoolIfc interface {
 
 type ConnectionPool struct {
 	configured		bool
+	dbConnectionFactory	db.DBConnectionFactoryIfc
 	dsn			string
 	minConnections		int
 	maxConnections		int
@@ -52,9 +54,10 @@ const DEFAULT_MAX_CONNECTIONS = 1
 const DEFAULT_MAX_IDLE = 60
 
 // Make a new one of these
-func NewConnectionPool(dsn string) *ConnectionPool {
+func NewConnectionPool(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string) *ConnectionPool {
 	cp := ConnectionPool{
 		configured:		false,
+		dbConnectionFactory:	dbConnectionFactory,
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
@@ -173,6 +176,7 @@ func (r *ConnectionPool) ClosePool() {
 
 	// Wipe the DSN to prevent new connections from being established
 	r.dsn = ""
+	r.dbConnectionFactory = nil
 
 	// Drop all open leases
 	r.leasedConnections = NewLeasedConnections()
@@ -196,7 +200,7 @@ func (r *ConnectionPool) createNewConnection() PooledConnectionIfc {
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
-	newConnection, err := NewPooledConnection(r.dsn, r)
+	newConnection, err := NewPooledConnection(r.dbConnectionFactory, r.dsn, r)
 	if nil == err { r.connections = append(r.connections, newConnection) }
 	return newConnection // nil if there was an error
 }

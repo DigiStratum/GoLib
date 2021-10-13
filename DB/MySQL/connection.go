@@ -11,7 +11,9 @@ ref: https://pkg.go.dev/database/sql#Tx.Stmt
 
 import (
 	"errors"
-	db "database/sql"
+	"database/sql"
+
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 type ConnectionCommonIfc interface {
@@ -28,32 +30,36 @@ type ConnectionIfc interface {
 	Connect() error
 	Disconnect()
 	Reconnect()
+	GetConnection() *db.DBConnection
 
 	// Transactions
 	ConnectionCommonIfc
 
 	// Operations
-	Prepare(query string) (*db.Stmt, error)
-	Exec(query string, args ...interface{}) (db.Result, error)
-	Query(query string, args ...interface{}) (*db.Rows, error)
-	QueryRow(query string, args ...interface{}) *db.Row
+	Prepare(query string) (*sql.Stmt, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
 
 	// Statements
-	StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error)
-	StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error)
-	StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row
+	StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error)
+	StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error)
+	StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row
 }
 
 type Connection struct {
-	dsn		string		// Full Data Source Name for this connection
-	conn		*db.DB		// Read-Write Connection
-	transaction	*db.Tx		// Our transaction, if we're in the middle of one
+	dsn			string			// Full Data Source Name for this connection
+	dbConnectionFactory	DBConnectionFactoryIfc
+	conn			*db.DBConnection	// Read-Write Connection
+	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
 }
 
 // Make a new one of these and connect!
-func NewConnection(dsn string) (*Connection, error) {
+//func NewConnection(dsn string) (*Connection, error) {
+func NewConnection(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string) (*db.DBConnection, error) {
 	connection := Connection{
-		dsn:	dsn,
+		dsn:			dsn,
+		dbConnectionFactory:	dbConnectionFactory,
 	}
 	err := connection.Connect()
 	if nil != err { return nil, err }
@@ -79,7 +85,7 @@ func (r *Connection) Connect() error {
 	// If we're already connected, nothing to do
 	if r.IsConnected() { return nil }
 	var err error
-	r.conn, err = db.Open("mysql", r.dsn)
+	r.conn, err = r.dbConnectionFactory.NewConnection(r.dsn)
 	return err
 }
 
@@ -95,9 +101,16 @@ func (r *Connection) Reconnect() {
 	if r.IsConnected() { r.Disconnect() }
 	r.Connect()
 }
+		
+
+
+
+
+
+
 
 // Get the underlying connection for the caller to put it to work!
-func (r *Connection) GetConnection() *db.DB {
+func (r *Connection) GetConnection() *db.DBConnection {
 	return r.conn
 }
 
@@ -149,17 +162,17 @@ func (r Connection) Prepare(query string) (*db.Stmt, error) {
 	return r.conn.Prepare(query)
 }
 
-func (r Connection) Exec(query string, args ...interface{}) (db.Result, error) {
+func (r Connection) Exec(query string, args ...interface{}) (sql.Result, error) {
 	if r.InTransaction() { return r.transaction.Exec(query, args...) }
 	return r.conn.Exec(query, args...)
 }
 
-func (r Connection) Query(query string, args ...interface{}) (*db.Rows, error) {
+func (r Connection) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	if r.InTransaction() { return r.transaction.Query(query, args...) }
 	return r.conn.Query(query, args...)
 }
 
-func (r Connection) QueryRow(query string, args ...interface{}) *db.Row {
+func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
 	if r.InTransaction() { return r.transaction.QueryRow(query, args...) }
 	return r.conn.QueryRow(query, args...)
 }
@@ -168,19 +181,19 @@ func (r Connection) QueryRow(query string, args ...interface{}) *db.Row {
 // Statements
 // ------------
 
-func (r Connection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) {
+func (r Connection) StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error) {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
 	if r.InTransaction() { return r.transaction.Stmt(stmt).Exec(args...) }
 	return stmt.Exec(args...)
 }
 
-func (r Connection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
+func (r Connection) StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error) {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
 	if r.InTransaction() { return r.transaction.Stmt(stmt).Query(args...) }
 	return stmt.Query(args...)
 }
 
-func (r Connection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
+func (r Connection) StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
 	if r.InTransaction() { return r.transaction.Stmt(stmt).QueryRow(args...) }
 	return stmt.QueryRow(args...)

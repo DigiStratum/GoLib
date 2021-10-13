@@ -11,7 +11,9 @@ TODO: Add support for restoring the state of the connection in the event that we
 import (
 	"time"
 	"sync"
-	db "database/sql"
+
+	"database/sql"
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 type PooledConnectionIfc interface {
@@ -37,40 +39,42 @@ type PooledConnectionIfc interface {
 	Rollback() error
 
 	// Operations
-	Prepare(query string) (*db.Stmt, error)
-	Exec(query string, args ...interface{}) (db.Result, error)
-	Query(query string, args ...interface{}) (*db.Rows, error)
-	QueryRow(query string, args ...interface{}) *db.Row
+	Prepare(query string) (*sql.Stmt, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
 
 	// Statements
-	StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error)
-	StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error)
-	StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row
+	StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error)
+	StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error)
+	StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row
 }
 
 type PooledConnection struct {
-	pool		ConnectionPoolIfc	// The pool that this pooled connection lives in
-	connection	ConnectionIfc		// Our underlying database connection
-	establishedAt	int64			// Time that this connection was established to the DB
-	lastActiveAt	int64			// Last time this connection saw activity from the consumer
-	lastLeasedAt	int64			// Last time this connection was leased out
-	isLeased	bool			// Is this connection currently leased out?
-	leaseKey	int64			// This is the lease key for the current lease holder
-	mutex		sync.Mutex
+	pool			ConnectionPoolIfc	// The pool that this pooled connection lives in
+	dbConnectionFactory	db.DBConnectionFactoryIfc
+	connection		ConnectionIfc		// Our underlying database connection
+	establishedAt		int64			// Time that this connection was established to the DB
+	lastActiveAt		int64			// Last time this connection saw activity from the consumer
+	lastLeasedAt		int64			// Last time this connection was leased out
+	isLeased		bool			// Is this connection currently leased out?
+	leaseKey		int64			// This is the lease key for the current lease holder
+	mutex			sync.Mutex
 }
 
-func NewPooledConnection(dsn string, connPool ConnectionPoolIfc) (*PooledConnection, error) {
-	connection, err := NewConnection(dsn)
+func NewPooledConnection(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string, connPool ConnectionPoolIfc) (*PooledConnection, error) {
+	connection, err := NewConnection(dbConnectionFactory, dsn)
 	if nil != err { return nil, err }
 	now := time.Now().Unix()
 	pc := PooledConnection{
-		pool:		connPool,
-		connection:	connection,
-		establishedAt:	now,
-		lastActiveAt:	0,
-		lastLeasedAt:	0,
-		isLeased:	false,
-		leaseKey:	0,
+		pool:			connPool,
+		dbConnectionFactory:	dbConnectionFactory,
+		connection:		connection,
+		establishedAt:		now,
+		lastActiveAt:		0,
+		lastLeasedAt:		0,
+		isLeased:		false,
+		leaseKey:		0,
 	}
 	return &pc, nil
 }
@@ -135,12 +139,12 @@ func (r *PooledConnection) Begin() error { return r.connection.Begin() }
 func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
-func (r *PooledConnection) Prepare(query string) (*db.Stmt, error) { return r.connection.Prepare(query) }
-func (r *PooledConnection) Exec(query string, args ...interface{}) (db.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
-func (r *PooledConnection) Query(query string, args ...interface{}) (*db.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
-func (r *PooledConnection) QueryRow(query string, args ...interface{}) *db.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
+func (r *PooledConnection) Prepare(query string) (*sql.Stmt, error) { return r.connection.Prepare(query) }
+func (r *PooledConnection) Exec(query string, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
+func (r *PooledConnection) Query(query string, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
+func (r *PooledConnection) QueryRow(query string, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
 
 // Statements
-func (r *PooledConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) { r.Touch(); return r.connection.StmtExec(stmt, args...) }
-func (r *PooledConnection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {  r.Touch(); return r.connection.StmtQuery(stmt, args...) }
-func (r *PooledConnection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {  r.Touch(); return r.connection.StmtQueryRow(stmt, args...) }
+func (r *PooledConnection) StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.StmtExec(stmt, args...) }
+func (r *PooledConnection) StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error) {  r.Touch(); return r.connection.StmtQuery(stmt, args...) }
+func (r *PooledConnection) StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row {  r.Touch(); return r.connection.StmtQueryRow(stmt, args...) }

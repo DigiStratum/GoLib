@@ -6,7 +6,7 @@ explicit struct instead of interface which prevents creating mocks/stubs for tes
 */
 
 import(
-	db "database/sql"
+	"database/sql"
 )
 
 // Clone of the set of member functions called out in: https://pkg.go.dev/database/sql#DB
@@ -34,11 +34,11 @@ type DBConnectionIfc interface {
 }
 
 type DBConnection struct {
-	db.DB
+	sql.DB
 }
 
 func NewDBConnection(driverName, dataSourceName string) *DBConnection {
 	return &DBConnection{
-		db.DB: 	db.Open(driverName, dataSourceName),
+		sql.DB: 	sql.Open(driverName, dataSourceName),
 	}
 }

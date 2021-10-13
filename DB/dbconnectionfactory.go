@@ -4,12 +4,8 @@ package db
 Factory for producing DBConnections; we can use Dependency Injection to enable unit testing of DB-integrations
 */
 
-import(
-	db "database/sql"
-)
-
 type DBConnectionFactoryIfc interface {
-	NewConnection() (*MySQLConnection, error)
+	NewConnection() (*DBConnection, error)
 }
 
 type DBConnectionFactory struct {
