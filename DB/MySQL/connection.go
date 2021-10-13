@@ -101,7 +101,7 @@ func (r *Connection) Reconnect() {
 	if r.IsConnected() { r.Disconnect() }
 	r.Connect()
 }
-		
+
 
 
 

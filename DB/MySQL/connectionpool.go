@@ -54,10 +54,9 @@ const DEFAULT_MAX_CONNECTIONS = 1
 const DEFAULT_MAX_IDLE = 60
 
 // Make a new one of these
-func NewConnectionPool(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string) *ConnectionPool {
+func NewConnectionPool(dsn string) *ConnectionPool {
 	cp := ConnectionPool{
 		configured:		false,
-		dbConnectionFactory:	dbConnectionFactory,
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
@@ -69,6 +68,22 @@ func NewConnectionPool(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string
 	cp.establishMinConnections()
 
 	return &cp
+}
+
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ConnectionPool) InjectDependencies(deps DependenciesIfc) error {
+	if nil == deps { return fmt.Errorf("Dependencies were nil") }
+
+	depName := "dbConnectionFactory"
+	if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
+	dep := deps.Get(depName)
+	if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
+	dbConnectionFactory, ok := dep.(db.DBConnectionFactoryIfc)
+	if ! ok { return fmt.Errorf("Dependency was nil: %s", depName) }
+	r.dbConnectionFactory = dbConnectionFactory
 }
 
 // -------------------------------------------------------------------------------------------------
