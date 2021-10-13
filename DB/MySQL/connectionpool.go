@@ -17,14 +17,18 @@ all of the open connections to see if any others have been sitting open and idle
 
 TODO:
  * Change mutex to go-routine+channel for multithreaded orchestration
+ * Look more closely at sql.DB which is a connection pool natively; would it give us enough control/visibility over state?
+   * ref: https://pkg.go.dev/database/sql#DB
 
 */
 
 import (
+	"io"
 	"fmt"
 	"errors"
 	"sync"
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
 	"github.com/DigiStratum/GoLib/DB"
 )
@@ -34,7 +38,6 @@ type ConnectionPoolIfc interface {
 	GetConnection() (LeasedConnectionIfc, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
-	ClosePool()
 }
 
 type ConnectionPool struct {
@@ -74,7 +77,7 @@ func NewConnectionPool(dsn string) *ConnectionPool {
 // DependencyInjectableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ConnectionPool) InjectDependencies(deps DependenciesIfc) error {
+func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 	if nil == deps { return fmt.Errorf("Dependencies were nil") }
 
 	depName := "dbConnectionFactory"
@@ -84,6 +87,7 @@ func (r *ConnectionPool) InjectDependencies(deps DependenciesIfc) error {
 	dbConnectionFactory, ok := dep.(db.DBConnectionFactoryIfc)
 	if ! ok { return fmt.Errorf("Dependency was nil: %s", depName) }
 	r.dbConnectionFactory = dbConnectionFactory
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -186,7 +190,11 @@ func (r ConnectionPool) GetMaxIdle() int {
 	return r.maxIdle
 }
 
-func (r *ConnectionPool) ClosePool() {
+// -------------------------------------------------------------------------------------------------
+// io.Closer Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ConnectionPool) Close() error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
@@ -197,11 +205,17 @@ func (r *ConnectionPool) ClosePool() {
 	r.leasedConnections = NewLeasedConnections()
 
 	// Disconnect all open connections
-	for _, connection := range (*r).connections { connection.Disconnect() }
+	for _, pooledConnection := range (*r).connections {
+		if closeableConnection, ok := pooledConnection.(io.Closer); ok {
+			closeableConnection.Close()
+		}
+	}
+
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConfigurableIfc Private Interface
+// Configurable (Package-Private) Implementation
 // -------------------------------------------------------------------------------------------------
 
 func (r *ConnectionPool) findAvailableConnection() PooledConnectionIfc {
@@ -211,13 +225,20 @@ func (r *ConnectionPool) findAvailableConnection() PooledConnectionIfc {
 	return nil
 }
 
+// TODO: Pass errors back to caller and on up the chain for visibility/logging
 func (r *ConnectionPool) createNewConnection() PooledConnectionIfc {
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
-	newConnection, err := NewPooledConnection(r.dbConnectionFactory, r.dsn, r)
-	if nil == err { r.connections = append(r.connections, newConnection) }
-	return newConnection // nil if there was an error
+	conn, err := r.dbConnectionFactory.NewConnection(r.dsn)
+	if nil != err { return nil }
+	// Wrap the raw connection into a Connection
+	newConnection, err := NewConnection(conn)
+	if nil != err { return nil }
+	// Wrap the new connection into a pooled connection to maintain state
+	newPooledConnection, err := NewPooledConnection(newConnection, r)
+	if nil == err { r.connections = append(r.connections, newPooledConnection) }
+	return newPooledConnection // nil if there was an error
 }
 
 func (r ConnectionPool) findExpiredLeaseConnection() PooledConnectionIfc {

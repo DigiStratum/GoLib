@@ -9,20 +9,18 @@ TODO: Add support for restoring the state of the connection in the event that we
 */
 
 import (
+	"io"
+	"fmt"
 	"time"
 	"sync"
 
 	"database/sql"
-	"github.com/DigiStratum/GoLib/DB"
 )
 
 type PooledConnectionIfc interface {
 
 	// Connections
 	IsConnected() bool
-	Connect() error
-	Disconnect()
-	Reconnect()
 
 	// Leasing
 	IsLeased() bool
@@ -52,7 +50,6 @@ type PooledConnectionIfc interface {
 
 type PooledConnection struct {
 	pool			ConnectionPoolIfc	// The pool that this pooled connection lives in
-	dbConnectionFactory	db.DBConnectionFactoryIfc
 	connection		ConnectionIfc		// Our underlying database connection
 	establishedAt		int64			// Time that this connection was established to the DB
 	lastActiveAt		int64			// Last time this connection saw activity from the consumer
@@ -62,13 +59,10 @@ type PooledConnection struct {
 	mutex			sync.Mutex
 }
 
-func NewPooledConnection(dbConnectionFactory db.DBConnectionFactoryIfc, dsn string, connPool ConnectionPoolIfc) (*PooledConnection, error) {
-	connection, err := NewConnection(dbConnectionFactory, dsn)
-	if nil != err { return nil, err }
+func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (*PooledConnection, error) {
 	now := time.Now().Unix()
 	pc := PooledConnection{
 		pool:			connPool,
-		dbConnectionFactory:	dbConnectionFactory,
 		connection:		connection,
 		establishedAt:		now,
 		lastActiveAt:		0,
@@ -80,14 +74,24 @@ func NewPooledConnection(dbConnectionFactory db.DBConnectionFactoryIfc, dsn stri
 }
 
 // -------------------------------------------------------------------------------------------------
+// io.Closer Public Interface
+// -------------------------------------------------------------------------------------------------
+
+// Drop this connection
+func (r *PooledConnection) Close() error {
+	if nil == r.connection { return fmt.Errorf("Underlying connection is nil") }
+	if closeableConnection, ok := r.connection.(io.Closer); ok {
+		return closeableConnection.Close()
+	}
+	return fmt.Errorf("PooledConnection is not Closeable")
+}
+
+// -------------------------------------------------------------------------------------------------
 // PooledConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Connections
 func (r *PooledConnection) IsConnected() bool { return r.connection.IsConnected() }
-func (r *PooledConnection) Connect() error { r.Touch(); return r.connection.Connect() }
-func (r *PooledConnection) Disconnect() { r.connection.Disconnect() }
-func (r *PooledConnection) Reconnect() { r.Touch(); r.connection.Reconnect() }
 
 // Leasing
 func (r *PooledConnection) IsLeased() bool { return r.isLeased }

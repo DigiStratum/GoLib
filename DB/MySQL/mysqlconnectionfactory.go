@@ -8,6 +8,6 @@ import(
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewMySQLConnectionFactory(driver string) *DBConnectionFactory {
-	return NewDBConnectionFactory("mysql")
+func NewMySQLConnectionFactory(driver string) *db.DBConnectionFactory {
+	return db.NewDBConnectionFactory("mysql")
 }

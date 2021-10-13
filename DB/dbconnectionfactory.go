@@ -5,7 +5,7 @@ Factory for producing DBConnections; we can use Dependency Injection to enable u
 */
 
 type DBConnectionFactoryIfc interface {
-	NewConnection() (*DBConnection, error)
+	NewConnection(dsn string) (*DBConnection, error)
 }
 
 type DBConnectionFactory struct {

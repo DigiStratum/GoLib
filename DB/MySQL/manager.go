@@ -5,6 +5,7 @@ DB Manager for MySQL - manages a set of named (keyed) mysql database connections
 */
 
 import (
+	"io"
 	"fmt"
 	"sync"
 )
@@ -51,7 +52,9 @@ func (r *Manager) CloseConnectionPool(dbKey DBKeyIfc) {
 	r.mutex.Lock();	defer r.mutex.Unlock()
 	connPool := r.getConnectionPool(dbKey)
 	if nil == connPool { return }
-	connPool.ClosePool()
+	if closeablePool, ok := connPool.(io.Closer); ok {
+		closeablePool.Close()
+	}
 }
 
 // -------------------------------------------------------------------------------------------------

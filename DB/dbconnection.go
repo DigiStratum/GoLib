@@ -6,39 +6,44 @@ explicit struct instead of interface which prevents creating mocks/stubs for tes
 */
 
 import(
+	"time"
+	"context"
 	"database/sql"
+        "database/sql/driver"
 )
 
 // Clone of the set of member functions called out in: https://pkg.go.dev/database/sql#DB
 type DBConnectionIfc interface {
-	Begin() (*Tx, error)
-	BeginTx(ctx context.Context, opts *TxOptions) (*Tx, error)
+	Begin() (*sql.Tx, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 	Close() error
-	Conn(ctx context.Context) (*Conn, error)
+	Conn(ctx context.Context) (*sql.Conn, error)
 	Driver() driver.Driver
-	Exec(query string, args ...interface{}) (Result, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (Result, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Ping() error
 	PingContext(ctx context.Context) error
-	Prepare(query string) (*Stmt, error)
-	PrepareContext(ctx context.Context, query string) (*Stmt, error)
-	Query(query string, args ...interface{}) (*Rows, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*Rows, error)
-	QueryRow(query string, args ...interface{}) *Row
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *Row
+	Prepare(query string) (*sql.Stmt, error)
+	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	SetConnMaxIdleTime(d time.Duration)
 	SetConnMaxLifetime(d time.Duration)
 	SetMaxIdleConns(n int)
 	SetMaxOpenConns(n int)
-	Stats() DBStats
+	Stats() sql.DBStats
 }
 
 type DBConnection struct {
 	sql.DB
 }
 
-func NewDBConnection(driverName, dataSourceName string) *DBConnection {
+func NewDBConnection(driverName, dataSourceName string) (*DBConnection, error) {
+	dbconn, err := sql.Open(driverName, dataSourceName)
+	if nil != err { return nil, err }
 	return &DBConnection{
-		sql.DB: 	sql.Open(driverName, dataSourceName),
-	}
+		DB: 	*dbconn,
+	}, nil
 }

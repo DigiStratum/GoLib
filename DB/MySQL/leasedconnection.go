@@ -8,7 +8,7 @@ connection, with each method being a pass-through based on keyed access to the u
 */
 
 import (
-	"errors"
+	"fmt"
 	db "database/sql"
 )
 
@@ -30,7 +30,7 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *
 	lc := LeasedConnection{
 		pooledConnection:	pooledConnection,
 		leaseKey:		leaseKey,
-		errNoLease:		errors.New("No Leased Connection!"),
+		errNoLease:		fmt.Errorf("No Leased Connection!"),
 	}
 	return &lc
 }
@@ -59,7 +59,7 @@ func (r LeasedConnection) IsConnected() bool {
 func (r *LeasedConnection) Disconnect() { }
 func (r *LeasedConnection) Reconnect() { }
 func (r *LeasedConnection) Connect() error {
-	return errors.New("Leased connection - no state changes allowed")
+	return fmt.Errorf("Leased connection - no state changes allowed")
 }
 
 func (r LeasedConnection) InTransaction() bool {
@@ -73,7 +73,7 @@ func (r *LeasedConnection) Begin() error {
 }
 
 func (r *LeasedConnection) NewQuery(qry string) (QueryIfc, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errors.New("No Leased Connection!") }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, fmt.Errorf("No Leased Connection!") }
 	// Feed NewQuery() our LeasedConnection so it doesn't have direct access to underlying pooledConnection
 	return NewQuery(r, qry)
 }

@@ -7,9 +7,9 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-func TestThat_NewConnection_ReturnsNil_WithError(t *testing.T) {
+func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Test
-	conn, err := NewConnection("fakedsn")
+	conn, err := NewConnection(nil)
 
 	// Verify
 	ExpectNil(conn, t)
