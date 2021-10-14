@@ -22,7 +22,7 @@ func NewMockDBConnection(driverName, dataSourceName string) (*MockDBConnection, 
 // -------------------------------------------------------------------------------------------------
 
 func (r *MockDBConnection) Begin() (*sql.Tx, error) {
-	return nil, nil
+	return r.NewMockTx(), nil
 }
 
 func (r *MockDBConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
@@ -95,4 +95,13 @@ func (r *MockDBConnection) SetMaxOpenConns(n int) {
 
 func (r *MockDBConnection) Stats() sql.DBStats {
 	return sql.DBStats{}
+}
+
+// -------------------------------------------------------------------------------------------------
+// MockDBConnection Public Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r *MockDBConnection) NewMockTx() *sql.Tx {
+	mockTx := sql.Tx{}
+	return &mockTx
 }
