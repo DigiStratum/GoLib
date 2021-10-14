@@ -40,7 +40,12 @@ type DBConnection struct {
 	sql.DB
 }
 
-func NewDBConnection(driverName, dataSourceName string) (*DBConnection, error) {
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+// Return interface instead of struct so that other implementations may satisfy
+func NewDBConnection(driverName, dataSourceName string) (DBConnectionIfc, error) {
 	dbconn, err := sql.Open(driverName, dataSourceName)
 	if nil != err { return nil, err }
 	return &DBConnection{

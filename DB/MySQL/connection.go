@@ -44,12 +44,12 @@ type ConnectionIfc interface {
 }
 
 type Connection struct {
-	conn			*db.DBConnection	// Read-Write Connection
+	conn			db.DBConnectionIfc	// Read-Write Connection
 	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
 }
 
 // Make a new one of these and connect!
-func NewConnection(conn *db.DBConnection) (*Connection, error) {
+func NewConnection(conn db.DBConnectionIfc) (*Connection, error) {
 	if nil == conn { return nil, fmt.Errorf("Cannot wrap nil connection") }
 	connection := Connection{
 		conn:			conn,

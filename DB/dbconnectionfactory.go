@@ -5,7 +5,8 @@ Factory for producing DBConnections; we can use Dependency Injection to enable u
 */
 
 type DBConnectionFactoryIfc interface {
-	NewConnection(dsn string) (*DBConnection, error)
+	// Return interface instead of struct so that other implementations may satisfy
+	NewConnection(dsn string) (DBConnectionIfc, error)
 }
 
 type DBConnectionFactory struct {
@@ -26,6 +27,6 @@ func NewDBConnectionFactory(driver string) *DBConnectionFactory {
 // DBConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *DBConnectionFactory) NewConnection(dsn string) (*DBConnection, error) {
+func (r *DBConnectionFactory) NewConnection(dsn string) (DBConnectionIfc, error) {
 	return NewDBConnection(r.driver, dsn)
 }
