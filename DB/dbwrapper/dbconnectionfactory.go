@@ -1,4 +1,4 @@
-package db
+package dbwrapper
 
 /*
 Factory for producing DBConnections; we can use Dependency Injection to enable unit testing of DB-integrations

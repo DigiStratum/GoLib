@@ -1,4 +1,4 @@
-package mocks
+package mockdb
 
 import(
 	"time"
@@ -102,6 +102,7 @@ func (r *MockDBConnection) Stats() sql.DBStats {
 // -------------------------------------------------------------------------------------------------
 
 func (r *MockDBConnection) NewMockTx() *sql.Tx {
+	// TODO: make a whole separate MockSQLTx class/package
 	mockTx := sql.Tx{}
 	return &mockTx
 }

@@ -18,8 +18,10 @@ func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 }
 
 func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T) {
-	// Test
+	// Setup
 	mockDBConnection, _ := NewMockDBConnection("mockdriver", "mockdsn")
+
+	// Test
 	sut, err := NewConnection(mockDBConnection)
 
 	// Verify
@@ -88,4 +90,18 @@ func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.
 
 	// Verify
 	ExpectTrue(res, t)
+}
+
+func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollback(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection("mockdriver", "mockdsn")
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	sut.Rollback()
+	res := sut.InTransaction()
+
+	// Verify
+	ExpectFalse(res, t)
 }

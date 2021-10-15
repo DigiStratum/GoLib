@@ -1,4 +1,4 @@
-package mocks
+package mockdb
 
 type MockDBConnectionFactory struct {
 }

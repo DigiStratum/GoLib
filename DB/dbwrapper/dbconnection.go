@@ -1,4 +1,4 @@
-package db
+package dbwrapper
 
 /*
 Interface for DB Connections; without this, then all usages of a raw DB connection expect this
@@ -14,8 +14,8 @@ import(
 
 // Clone of the set of member functions called out in: https://pkg.go.dev/database/sql#DB
 type DBConnectionIfc interface {
-	Begin() (*sql.Tx, error)
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+	Begin() (DBSQLTxIfc, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (DBSQLTxIfc, error)
 	Close() error
 	Conn(ctx context.Context) (*sql.Conn, error)
 	Driver() driver.Driver
@@ -23,12 +23,12 @@ type DBConnectionIfc interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Ping() error
 	PingContext(ctx context.Context) error
-	Prepare(query string) (*sql.Stmt, error)
-	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	Prepare(query string) (DBSQLStmtIfc, error)
+	PrepareContext(ctx context.Context, query string) (DBSQLStmtIfc, error)
+	Query(query string, args ...interface{}) (DBSQLRowsIfc, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (DBSQLRowsIfc, error)
+	QueryRow(query string, args ...interface{}) DBSQLRowIfc
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) DBSQLRowIfc
 	SetConnMaxIdleTime(d time.Duration)
 	SetConnMaxLifetime(d time.Duration)
 	SetMaxIdleConns(n int)
