@@ -12,8 +12,6 @@ ref: https://pkg.go.dev/database/sql#Tx.Stmt
 import (
 	"fmt"
 	"database/sql"
-
-	"github.com/DigiStratum/GoLib/DB/dbwrapper"
 )
 
 type ConnectionCommonIfc interface {
@@ -44,12 +42,12 @@ type ConnectionIfc interface {
 }
 
 type Connection struct {
-	conn			dbwrapper.DBConnectionIfc	// Read-Write Connection
-	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
+	conn			*sql.DB		// Read-Write Connection
+	transaction		*sql.Tx		// Our transaction, if we're in the middle of one
 }
 
 // Make a new one of these and connect!
-func NewConnection(conn dbwrapper.DBConnectionIfc) (*Connection, error) {
+func NewConnection(conn *sql.DB) (*Connection, error) {
 	if nil == conn { return nil, fmt.Errorf("Cannot wrap nil connection") }
 	connection := Connection{
 		conn:			conn,

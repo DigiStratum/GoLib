@@ -1,5 +1,9 @@
 package mockdb
 
+import(
+	"database/sql"
+)
+
 type MockDBConnectionFactory struct {
 }
 
@@ -15,6 +19,6 @@ func NewMockDBConnectionFactory() *MockDBConnectionFactory {
 // db.DBConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *MockDBConnectionFactory) NewConnection(dsn string) (*MockDBConnection, error) {
+func (r *MockDBConnectionFactory) NewConnection(dsn string) (*sql.DB, error) {
 	return NewMockDBConnection("mockdriver", dsn)
 }

@@ -1,12 +1,16 @@
-package dbwrapper
+package db
 
 /*
 Factory for producing DBConnections; we can use Dependency Injection to enable unit testing of DB-integrations
 */
 
+import(
+	"database/sql"
+)
+
 type DBConnectionFactoryIfc interface {
 	// Return interface instead of struct so that other implementations may satisfy
-	NewConnection(dsn string) (DBConnectionIfc, error)
+	NewConnection(dsn string) (*sql.DB, error)
 }
 
 type DBConnectionFactory struct {
@@ -27,6 +31,6 @@ func NewDBConnectionFactory(driver string) *DBConnectionFactory {
 // DBConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *DBConnectionFactory) NewConnection(dsn string) (DBConnectionIfc, error) {
+func (r *DBConnectionFactory) NewConnection(dsn string) (*sql.DB, error) {
 	return NewDBConnection(r.driver, dsn)
 }

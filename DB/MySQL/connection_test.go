@@ -1,8 +1,9 @@
 package mysql
 
 import(
-	//"fmt"
 	"testing"
+
+        //"github.com/DATA-DOG/go-sqlmock"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
@@ -81,14 +82,19 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenNotInTransaction(t *test
 
 func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection("mockdriver", "mockdsn")
+	driverName := "mockdriver"
+	dataSourceName := "mockdsn"
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
-	sut.Begin()
+	err := sut.Begin()
 	res := sut.InTransaction()
 
 	// Verify
+	ExpectNil(err, t)
 	ExpectTrue(res, t)
 }
 
