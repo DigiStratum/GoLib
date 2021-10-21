@@ -149,8 +149,8 @@ func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
 // Statements
 // ------------
 
-// TODO: Move these to a separate Statement class? It can have a copy of connection for reference and
-// InTransaction() check... but otherwise, these operations are separable a sub-scope of connection,
+// Note: Tempting to move these to separate Statement class, but gaining secure access to
+// conn.transaction and other related tangles and confusions makes this not worth the effort
 
 func (r Connection) StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error) {
 	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
