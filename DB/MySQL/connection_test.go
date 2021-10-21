@@ -289,7 +289,7 @@ func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t 
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack(t *testing.T) {
+func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack_OutsideTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
@@ -303,5 +303,42 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack(t *tes
 
 	// Verify
 	ExpectNil(err, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Prepare_ReturnsStatemetNoError_InsideTransaction(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	query := "bogus query"
+	(*mockInfo.Mock).ExpectPrepare(query)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	stmt, err := sut.Prepare(query)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectNonNil(stmt, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Prepare_ReturnsStatemetNoError(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	query := "bogus query"
+	(*mockInfo.Mock).ExpectPrepare(query)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	stmt, err := sut.Prepare(query)
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectNonNil(stmt, t)
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
