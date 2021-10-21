@@ -10,6 +10,9 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
 )
 
+var driverName string = "mockdriver"
+var dataSourceName string = "mockdsn"
+
 func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Test
 	sut, err := NewConnection(nil)
@@ -21,8 +24,6 @@ func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 
 func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 
 	// Test
@@ -35,8 +36,6 @@ func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T
 
 func TestThat_Connection_IsConnected_ReturnsTrue_WhenConnected(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -60,8 +59,6 @@ func TestThat_Connection_IsConnected_ReturnsFalse_WhenNotConnected(t *testing.T)
 
 func TestThat_Connection_IsConnected_ReturnsFalse_WhenConnectedThenClosed(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -77,8 +74,6 @@ func TestThat_Connection_IsConnected_ReturnsFalse_WhenConnectedThenClosed(t *tes
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenNotInTransaction(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -91,8 +86,6 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenNotInTransaction(t *test
 
 func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
@@ -109,8 +102,6 @@ func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollback(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
@@ -130,8 +121,6 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollbac
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenCommit(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
@@ -151,8 +140,6 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenCommit(
 
 func TestThat_Connection_Begin_ReturnsNoError_WhenCalledTwice(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
@@ -175,8 +162,6 @@ func TestThat_Connection_Begin_ReturnsNoError_WhenCalledTwice(t *testing.T) {
 // ExpectBegin(), or both or neither; We want the result of Begin() on a Closed connection
 func TestThat_Connection_Begin_ReturnsError_WhenConnectionClosed(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
@@ -194,8 +179,6 @@ func TestThat_Connection_Begin_ReturnsError_WhenConnectionClosed(t *testing.T) {
 
 func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	query := "bogus query"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
@@ -212,8 +195,6 @@ func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 
 func TestThat_Connection_NewQuery_ReturnsError(t *testing.T) {
 	// Setup
-	driverName := "mockdriver"
-	dataSourceName := "mockdsn"
 	query := "bogus query"
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
@@ -226,5 +207,101 @@ func TestThat_Connection_NewQuery_ReturnsError(t *testing.T) {
 	// Verify
 	ExpectNil(res, t)
 	ExpectNonNil(err, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	err := sut.Commit()
+
+	// Verify
+	ExpectNonNil(err, t)
+}
+
+func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	expectedMsg := "bogus failure"
+	(*mockInfo.Mock).ExpectCommit().WillReturnError(fmt.Errorf(expectedMsg))
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	err := sut.Commit()
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectString(expectedMsg, err.Error(), t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Commit_ReturnsNoError_WhenTransactionCommits(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	(*mockInfo.Mock).ExpectCommit()
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	err := sut.Commit()
+
+	// Verify
+	ExpectNil(err, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Rollback_ReturnsNoError_WhenNotInTransaction(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	err := sut.Rollback()
+
+	// Verify
+	ExpectNil(err, t)
+}
+
+func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	expectedMsg := "bogus failure"
+	(*mockInfo.Mock).ExpectRollback().WillReturnError(fmt.Errorf(expectedMsg))
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	err := sut.Rollback()
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectString(expectedMsg, err.Error(), t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	(*mockInfo.Mock).ExpectRollback()
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	err := sut.Rollback()
+
+	// Verify
+	ExpectNil(err, t)
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
