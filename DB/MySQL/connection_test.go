@@ -4,7 +4,7 @@ import(
 	"fmt"
 	"testing"
 
-        //"github.com/DATA-DOG/go-sqlmock"
+        "github.com/DATA-DOG/go-sqlmock"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
@@ -293,20 +293,19 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack_Outsid
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
-	(*mockInfo.Mock).ExpectBegin()
 	(*mockInfo.Mock).ExpectRollback()
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
-	sut.Begin()
 	err := sut.Rollback()
 
 	// Verify
 	ExpectNil(err, t)
-	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+	// Expect this expectation to fail: Rollback() should NOT be called when no transaction is active
+	ExpectNonNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_Connection_Prepare_ReturnsStatemetNoError_InsideTransaction(t *testing.T) {
+func TestThat_Connection_Prepare_ReturnsStatementNoError_InsideTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
@@ -325,7 +324,7 @@ func TestThat_Connection_Prepare_ReturnsStatemetNoError_InsideTransaction(t *tes
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_Connection_Prepare_ReturnsStatemetNoError(t *testing.T) {
+func TestThat_Connection_Prepare_ReturnsStatementNoError(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
@@ -334,7 +333,6 @@ func TestThat_Connection_Prepare_ReturnsStatemetNoError(t *testing.T) {
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
-	sut.Begin()
 	stmt, err := sut.Prepare(query)
 
 	// Verify
@@ -342,3 +340,45 @@ func TestThat_Connection_Prepare_ReturnsStatemetNoError(t *testing.T) {
 	ExpectNonNil(stmt, t)
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
+
+func TestThat_Connection_Prepare_ReturnsError(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	query := "bogus query"
+	expectedMsg := "bogus failure"
+	(*mockInfo.Mock).ExpectPrepare(query).WillReturnError(fmt.Errorf(expectedMsg))
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	stmt, err := sut.Prepare(query)
+
+	// Verify
+	ExpectNonNil(err, t)
+	ExpectString(expectedMsg, err.Error(), t)
+	ExpectNil(stmt, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_StmtExec_ReturnsResultNoError(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	query := "bogus query"
+	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
+	result := sqlmock.NewResult(1, 1)
+	mockPrepare.ExpectExec().WillReturnResult(result)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	stmt, err1 := sut.Prepare(query)
+	ExpectNoError(err1, t)
+	ExpectNonNil(stmt, t)
+	res, err2 := sut.StmtExec(stmt)
+
+	// Verify
+	ExpectNoError(err2, t)
+	ExpectNonNil(res, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
