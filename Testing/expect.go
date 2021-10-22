@@ -88,3 +88,13 @@ func ExpectNonNil(value interface{}, t *testing.T) {
 		t.Errorf("\n\n%s:\nExpect: non-nil, Actual: nil", getCaller())
 	}
 }
+
+func ExpectError(err error, t *testing.T) {
+	if nil != err {	return }
+	t.Errorf("\n\n%s:\nExpect: error, Actual: nil error", getCaller())
+}
+
+func ExpectNoError(err error, t *testing.T) {
+	if nil == err {	return }
+	t.Errorf("\n\n%s:\nExpect: nil error, Actual: error('%s')", getCaller(), err.Error())
+}

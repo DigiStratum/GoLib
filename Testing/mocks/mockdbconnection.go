@@ -28,16 +28,13 @@ func NewMockDBConnection(driverName, dataSourceName string) (*sql.DB, error) {
 	conn, mock, err := sqlmock.New()
 	if nil != err { return nil, err }
 	key := fmt.Sprintf("%s:%s", driverName, dataSourceName)
-	setDBConnectionMockInfo(key, conn, &mock)
-	return conn, nil
-}
-
-func setDBConnectionMockInfo(key string, conn *sql.DB, mock *sqlmock.Sqlmock) {
 	i := getInstance()
 	i.mocks[key] = mockInfo{
 		Conn:	conn,
-		Mock:	mock,
+		Mock:	&mock,
 	}
+
+	return conn, nil
 }
 
 func GetDBConnectionMockInfo(driverName, dataSourceName string) *mockInfo {
