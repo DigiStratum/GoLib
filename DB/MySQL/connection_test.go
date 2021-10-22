@@ -360,10 +360,41 @@ func TestThat_Connection_Prepare_ReturnsError(t *testing.T) {
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_Connection_StmtExec_ReturnsResultNoError(t *testing.T) {
+func TestThat_Connection_StmtExec_ReturnsResultNoError_OutsideTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	query := "bogus query"
+	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
+	var expectedInsertId int64 = 10
+	var expectedAffectedRows int64 = 20
+	result := sqlmock.NewResult(expectedInsertId, expectedAffectedRows)
+	mockPrepare.ExpectExec().WillReturnResult(result)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	stmt, err1 := sut.Prepare(query)
+	ExpectNoError(err1, t)
+	ExpectNonNil(stmt, t)
+	res, err2 := sut.StmtExec(stmt)
+	actualInsertId, err3 := res.LastInsertId()
+	ExpectNoError(err3, t)
+	actualRowsAffected, err4 := res.RowsAffected()
+	ExpectNoError(err4, t)
+
+	// Verify
+	ExpectNoError(err2, t)
+	ExpectNonNil(res, t)
+	ExpectInt64(expectedInsertId, actualInsertId, t)
+	ExpectInt64(expectedAffectedRows, actualRowsAffected, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+}
+
+func TestThat_Connection_StmtExec_ReturnsResultNoError_InsideTransaction(t *testing.T) {
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
 	query := "bogus query"
 	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
 	result := sqlmock.NewResult(1, 1)
@@ -371,6 +402,7 @@ func TestThat_Connection_StmtExec_ReturnsResultNoError(t *testing.T) {
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
+	sut.Begin()
 	stmt, err1 := sut.Prepare(query)
 	ExpectNoError(err1, t)
 	ExpectNonNil(stmt, t)
@@ -380,5 +412,30 @@ func TestThat_Connection_StmtExec_ReturnsResultNoError(t *testing.T) {
 	ExpectNoError(err2, t)
 	ExpectNonNil(res, t)
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
-}
 
+/*
+	// Setup
+	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	(*mockInfo.Mock).ExpectBegin()
+	query := "bogus query"
+	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
+	var expectedInsertId int64 = 10
+	var expectedAffectedRows int64 = 20
+	result := sqlmock.NewResult(expectedInsertId, expectedAffectedRows)
+	mockPrepare.ExpectExec().WillReturnResult(result)
+	sut, _ := NewConnection(mockDBConnection)
+
+	// Test
+	sut.Begin()
+	stmt, err1 := sut.Prepare(query)
+	ExpectNoError(err1, t)
+	ExpectNonNil(stmt, t)
+	res, err2 := sut.StmtExec(stmt)
+
+	// Verify
+	ExpectNoError(err2, t)
+	ExpectNonNil(res, t)
+	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
+*/
+}
