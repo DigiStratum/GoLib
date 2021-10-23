@@ -58,6 +58,7 @@ type Query struct {
 // Make a new one of these!
 // Returns nil+error if there is any problem setting up the query...!
 func NewQuery(connection ConnectionIfc, qry string) (*Query, error) {
+	// TODO: do some basic syntax/token/placeholder checks on qry
 	return &Query{
 		connection:	connection,
 		query:		qry,
