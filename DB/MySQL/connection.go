@@ -30,20 +30,16 @@ type ConnectionIfc interface {
 	ConnectionCommonIfc
 
 	// Operations
-	Prepare(query string) (*sql.Stmt, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-
-	// Statements
-	StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error)
-	StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error)
-	StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row
 }
 
 type Connection struct {
-	conn			*sql.DB		// Read-Write Connection
-	transaction		*sql.Tx		// Our transaction, if we're in the middle of one
+	conn			*sql.DB			// Read-Write Connection
+	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
+	transactionStatements	map[string]*sql.Stmt	// retains transaction-specific prepared statements
+	statements		map[string]*sql.Stmt	// retains non-transaction prepared statements
 }
 
 // Make a new one of these and connect!
@@ -51,6 +47,7 @@ func NewConnection(conn *sql.DB) (*Connection, error) {
 	if nil == conn { return nil, fmt.Errorf("Cannot wrap nil connection") }
 	connection := Connection{
 		conn:			conn,
+		statements:		make(map[string]*sql.Stmt),
 	}
 	return &connection, nil
 }
@@ -72,19 +69,11 @@ func (r *Connection) Close() error {
 // ConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// ------------
-// Connections
-// ------------
-
 // Check whether this connection is established
 func (r Connection) IsConnected() bool {
 	if nil == r.conn { return false }
 	return nil == r.conn.Ping()
 }
-
-// ------------
-// Transactions
-// ------------
 
 func (r Connection) InTransaction() bool {
 	return nil != r.transaction
@@ -99,6 +88,8 @@ func (r *Connection) Begin() error {
 	}
 	var err error
 	r.transaction, err = r.conn.Begin()
+	// Reset the prepared statements for a new transaction
+	if nil == err { r.transactionStatements = make(map[string]*sql.Stmt) }
 	return err
 }
 
@@ -121,51 +112,45 @@ func (r *Connection) Rollback() error {
 	return err
 }
 
-// ------------
-// Operations
-// ------------
-
-func (r Connection) Prepare(query string) (*sql.Stmt, error) {
-	if r.InTransaction() { return r.transaction.Prepare(query) }
-	return r.conn.Prepare(query)
-}
-
 func (r Connection) Exec(query string, args ...interface{}) (sql.Result, error) {
-	if r.InTransaction() { return r.transaction.Exec(query, args...) }
-	return r.conn.Exec(query, args...)
-}
-
-func (r Connection) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	if r.InTransaction() { return r.transaction.Query(query, args...) }
-	return r.conn.Query(query, args...)
-}
-
-func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
-	if r.InTransaction() { return r.transaction.QueryRow(query, args...) }
-	return r.conn.QueryRow(query, args...)
-}
-
-// ------------
-// Statements
-// ------------
-
-// Note: Tempting to move these to separate Statement class, but gaining secure access to
-// conn.transaction and other related tangles and confusions makes this not worth the effort
-
-func (r Connection) StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error) {
-	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if r.InTransaction() { return r.transaction.Stmt(stmt).Exec(args...) }
+	stmt, err := r.prepare(query)
+	if nil != err { return nil, err }
 	return stmt.Exec(args...)
 }
 
-func (r Connection) StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error) {
-	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if r.InTransaction() { return r.transaction.Stmt(stmt).Query(args...) }
+func (r Connection) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	stmt, err := r.prepare(query)
+	if nil != err { return nil, err }
 	return stmt.Query(args...)
 }
 
-func (r Connection) StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row {
-	// If we're in a transaction, attach the statement and invoke, otherwise invoke directly
-	if r.InTransaction() { return r.transaction.Stmt(stmt).QueryRow(args...) }
+func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
+	stmt, err := r.prepare(query)
+	if nil != err { return nil }
 	return stmt.QueryRow(args...)
 }
+
+// -------------------------------------------------------------------------------------------------
+// Connection Private Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r Connection) prepare(query string) (*sql.Stmt, error) {
+	if r.InTransaction() {
+		// If this query is already in the transaction's prepared statements...
+		if stmt, ok := r.transactionStatements[query]; ok {
+			return stmt, nil
+		}
+		stmt, err := r.transaction.Prepare(query)
+		if nil == err { r.transactionStatements[query] = stmt }
+		return stmt, err
+	}
+
+	// If this query is already in the non-transaction prepared statements...
+	if stmt, ok := r.statements[query]; ok {
+		return stmt, nil
+	}
+	stmt, err := r.conn.Prepare(query)
+	if nil == err { r.statements[query] = stmt }
+	return stmt, err
+}
+

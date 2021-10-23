@@ -88,11 +88,6 @@ func (r LeasedConnection) Rollback() error {
 	return r.pooledConnection.Rollback()
 }
 
-func (r LeasedConnection) Prepare(query string) (*db.Stmt, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
-	return r.pooledConnection.Prepare(query)
-}
-
 func (r LeasedConnection) Exec(query string, args ...interface{}) (db.Result, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
 	return r.pooledConnection.Exec(query, args...)
@@ -106,19 +101,4 @@ func (r LeasedConnection) Query(query string, args ...interface{}) (*db.Rows, er
 func (r LeasedConnection) QueryRow(query string, args ...interface{}) *db.Row {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil }
 	return r.pooledConnection.QueryRow(query, args...)
-}
-
-func (r LeasedConnection) StmtExec(stmt *db.Stmt, args ...interface{}) (db.Result, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
-	return r.pooledConnection.StmtExec(stmt, args...)
-}
-
-func (r LeasedConnection) StmtQuery(stmt *db.Stmt, args ...interface{}) (*db.Rows, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
-	return r.pooledConnection.StmtQuery(stmt, args...)
-}
-
-func (r *LeasedConnection) StmtQueryRow(stmt *db.Stmt, args ...interface{}) *db.Row {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil }
-	return r.pooledConnection.StmtQueryRow(stmt, args...)
 }

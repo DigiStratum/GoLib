@@ -17,6 +17,7 @@ import (
 	"database/sql"
 )
 
+// TODO: Can we not inherit this interface from ConnectionIfc?
 type PooledConnectionIfc interface {
 
 	// Connections
@@ -37,15 +38,9 @@ type PooledConnectionIfc interface {
 	Rollback() error
 
 	// Operations
-	Prepare(query string) (*sql.Stmt, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-
-	// Statements
-	StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error)
-	StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error)
-	StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row
 }
 
 type PooledConnection struct {
@@ -111,9 +106,7 @@ func (r *PooledConnection) Lease(leaseKey int64) {
 	r.lastLeasedAt = now
 	r.lastActiveAt = now
 	// Just in case we evicted a previous lease holder, see if there is any connection state reset needed
-	if r.InTransaction() {
-		r.Rollback()
-	}
+	if r.InTransaction() { r.Rollback() }
 }
 
 func (r *PooledConnection) Release() error {
@@ -143,12 +136,6 @@ func (r *PooledConnection) Begin() error { return r.connection.Begin() }
 func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
-func (r *PooledConnection) Prepare(query string) (*sql.Stmt, error) { return r.connection.Prepare(query) }
 func (r *PooledConnection) Exec(query string, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
 func (r *PooledConnection) Query(query string, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
 func (r *PooledConnection) QueryRow(query string, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
-
-// Statements
-func (r *PooledConnection) StmtExec(stmt *sql.Stmt, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.StmtExec(stmt, args...) }
-func (r *PooledConnection) StmtQuery(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error) {  r.Touch(); return r.connection.StmtQuery(stmt, args...) }
-func (r *PooledConnection) StmtQueryRow(stmt *sql.Stmt, args ...interface{}) *sql.Row {  r.Touch(); return r.connection.StmtQueryRow(stmt, args...) }

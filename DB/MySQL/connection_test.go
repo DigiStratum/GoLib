@@ -4,7 +4,7 @@ import(
 	"fmt"
 	"testing"
 
-        "github.com/DATA-DOG/go-sqlmock"
+        //"github.com/DATA-DOG/go-sqlmock"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
@@ -193,23 +193,6 @@ func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 	ExpectNil(err, t)
 }
 
-func TestThat_Connection_NewQuery_ReturnsError(t *testing.T) {
-	// Setup
-	query := "bogus query"
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
-	(*mockInfo.Mock).ExpectPrepare(query).WillReturnError(fmt.Errorf("bogus error"))
-	sut, _ := NewConnection(mockDBConnection)
-
-	// Test
-	res, err := sut.NewQuery("bogus query")
-
-	// Verify
-	ExpectNil(res, t)
-	ExpectNonNil(err, t)
-	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
-}
-
 func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
@@ -305,6 +288,7 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack_Outsid
 	ExpectNonNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
+/*
 func TestThat_Connection_Prepare_ReturnsStatementNoError_InsideTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
@@ -390,15 +374,22 @@ func TestThat_Connection_StmtExec_ReturnsResultNoError_OutsideTransaction(t *tes
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
+// Prepared statement exec in a transaction...
+// ref: https://github.com/DATA-DOG/go-sqlmock/blob/master/examples/orders/orders_test.go
 func TestThat_Connection_StmtExec_ReturnsResultNoError_InsideTransaction(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
 	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
 	(*mockInfo.Mock).ExpectBegin()
 	query := "bogus query"
-	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
 	result := sqlmock.NewResult(1, 1)
-	mockPrepare.ExpectExec().WillReturnResult(result)
+
+	// First Prepare() happens out
+	(*mockInfo.Mock).ExpectPrepare(query)
+	(*mockInfo.Mock).ExpectPrepare(query).ExpectExec().
+		WithArgs(0).
+		WillReturnResult(result)
+
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -406,36 +397,11 @@ func TestThat_Connection_StmtExec_ReturnsResultNoError_InsideTransaction(t *test
 	stmt, err1 := sut.Prepare(query)
 	ExpectNoError(err1, t)
 	ExpectNonNil(stmt, t)
-	res, err2 := sut.StmtExec(stmt)
+	res, err2 := sut.StmtExec(stmt, 0)
 
 	// Verify
 	ExpectNoError(err2, t)
 	ExpectNonNil(res, t)
 	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
-
-/*
-	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
-	(*mockInfo.Mock).ExpectBegin()
-	query := "bogus query"
-	mockPrepare := (*mockInfo.Mock).ExpectPrepare(query)
-	var expectedInsertId int64 = 10
-	var expectedAffectedRows int64 = 20
-	result := sqlmock.NewResult(expectedInsertId, expectedAffectedRows)
-	mockPrepare.ExpectExec().WillReturnResult(result)
-	sut, _ := NewConnection(mockDBConnection)
-
-	// Test
-	sut.Begin()
-	stmt, err1 := sut.Prepare(query)
-	ExpectNoError(err1, t)
-	ExpectNonNil(stmt, t)
-	res, err2 := sut.StmtExec(stmt)
-
-	// Verify
-	ExpectNoError(err2, t)
-	ExpectNonNil(res, t)
-	ExpectNil((*mockInfo.Mock).ExpectationsWereMet(), t)
-*/
 }
+*/
