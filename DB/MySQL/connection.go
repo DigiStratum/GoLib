@@ -7,6 +7,10 @@ DB Connection - All the low-level nitty-gritty interacting with the sql driver
 ref: https://github.com/go-sql-driver/mysql#interpolateparams
 ref: https://pkg.go.dev/database/sql#Tx.Stmt
 
+TODO:
+ * Should we force a single-statement transaction begin/commit for one-off queries run outside of
+   an explicit transaction?
+
 */
 
 import (
@@ -124,6 +128,7 @@ func (r Connection) Query(query string, args ...interface{}) (*sql.Rows, error) 
 	return stmt.Query(args...)
 }
 
+// Note: DB.(Stmt.)QueryRow always returns a non-nil value.
 func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil }
