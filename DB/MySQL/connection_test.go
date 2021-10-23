@@ -19,7 +19,7 @@ func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 
 	// Verify
 	ExpectNil(sut, t)
-	ExpectNonNil(err, t)
+	ExpectError(err, t)
 }
 
 func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T) {
@@ -30,7 +30,7 @@ func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T
 	sut, err := NewConnection(mockDBConnection)
 
 	// Verify
-	ExpectNil(err, t)
+	ExpectNoError(err, t)
 	ExpectNonNil(sut, t)
 }
 
@@ -96,7 +96,7 @@ func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.
 	res := sut.InTransaction()
 
 	// Verify
-	ExpectNil(err, t)
+	ExpectNoError(err, t)
 	ExpectTrue(res, t)
 }
 
@@ -114,8 +114,8 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollbac
 	res := sut.InTransaction()
 
 	// Verify
-	ExpectNil(err1, t)
-	ExpectNil(err2, t)
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
 	ExpectFalse(res, t)
 }
 
@@ -133,8 +133,8 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenCommit(
 	res := sut.InTransaction()
 
 	// Verify
-	ExpectNil(err1, t)
-	ExpectNil(err2, t)
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
 	ExpectFalse(res, t)
 }
 
@@ -153,8 +153,8 @@ func TestThat_Connection_Begin_ReturnsNoError_WhenCalledTwice(t *testing.T) {
 	res := sut.InTransaction()
 
 	// Verify
-	ExpectNil(err1, t)
-	ExpectNil(err2, t)
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
 	ExpectTrue(res, t)
 }
 
@@ -173,7 +173,7 @@ func TestThat_Connection_Begin_ReturnsError_WhenConnectionClosed(t *testing.T) {
 	res := sut.InTransaction()
 
 	// Verify
-	ExpectNonNil(err, t)
+	ExpectError(err, t)
 	ExpectFalse(res, t)
 }
 
@@ -190,7 +190,7 @@ func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 
 	// Verify
 	ExpectNonNil(res, t)
-	ExpectNil(err, t)
+	ExpectNoError(err, t)
 }
 
 func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) {
@@ -202,7 +202,7 @@ func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) 
 	err := sut.Commit()
 
 	// Verify
-	ExpectNonNil(err, t)
+	ExpectError(err, t)
 }
 
 func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *testing.T) {
@@ -219,7 +219,7 @@ func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *tes
 	err := sut.Commit()
 
 	// Verify
-	ExpectNonNil(err, t)
+	ExpectError(err, t)
 	ExpectString(expectedMsg, err.Error(), t)
 	ExpectNoError((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
@@ -237,7 +237,7 @@ func TestThat_Connection_Commit_ReturnsNoError_WhenTransactionCommits(t *testing
 	err := sut.Commit()
 
 	// Verify
-	ExpectNil(err, t)
+	ExpectNoError(err, t)
 	ExpectNoError((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
 
@@ -250,7 +250,7 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenNotInTransaction(t *testing
 	err := sut.Rollback()
 
 	// Verify
-	ExpectNil(err, t)
+	ExpectNoError(err, t)
 }
 
 func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t *testing.T) {
@@ -267,7 +267,7 @@ func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t 
 	err := sut.Rollback()
 
 	// Verify
-	ExpectNonNil(err, t)
+	ExpectError(err, t)
 	ExpectString(expectedMsg, err.Error(), t)
 	ExpectNoError((*mockInfo.Mock).ExpectationsWereMet(), t)
 }
