@@ -23,13 +23,25 @@ type ResultRowIfc interface {
 	ToJson() (*string, error)
 }
 
-type ResultRow struct {
+// Non-exported structure with exported properties that we can serialize
+type resultRowSerializableProperties struct {
 	values		map[string]nullables.Nullable
 }
 
+// Exported structure with non-exported properties to prevent consumer from accessing directly
+type ResultRow struct {
+	props		resultRowSerializableProperties
+}
+
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
 func NewResultRow() *ResultRow {
 	return &ResultRow{
-		values:		make(map[string]nullables.Nullable),
+		props:		resultRowSerializableProperties{
+			values:		make(map[string]nullables.Nullable),
+		},
 	}
 }
 
@@ -38,25 +50,33 @@ func NewResultRow() *ResultRow {
 // -------------------------------------------------------------------------------------------------
 
 func (r ResultRow) Get(field string) nullables.NullableIfc {
-	if value, ok := r.values[field]; ok { return &value }
+	if value, ok := r.props.values[field]; ok { return &value }
 	return nil
 }
 
 func (r *ResultRow) Set(field string, value nullables.Nullable) {
-	r.values[field] = value
+	r.props.values[field] = value
 }
 
 // Pluck the fields out of the result and just return them so that caller can iterate with Get()
 func (r ResultRow) Fields() []string {
-	fields := make([]string, len(r.values))
+	fields := make([]string, len(r.props.values))
 	i := 0
-	for field, _ := range r.values { fields[i] = field; i++ }
+	for field, _ := range r.props.values { fields[i] = field; i++ }
 	return fields
 }
 
 func (r ResultRow) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(r.values)
+	jsonBytes, err := r.MarshalJSON()
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r ResultRow) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.props.values)
 }

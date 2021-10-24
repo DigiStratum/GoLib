@@ -95,7 +95,10 @@ type Nullable struct {
 	nt		NullTime
 }
 
-// Make a new one of these!
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
 func NewNullable(value interface{}) *Nullable {
 	n := Nullable{
 		isNil:		true,
@@ -118,53 +121,57 @@ func (r Nullable) IsNil() bool { return r.isNil }
 
 // Convert value to appropriate Nullable; return true on success, else false
 func (r *Nullable) SetValue(value interface{}) bool {
-	if v, ok := value.(int64); ok {
-		r.setInt64(v)
-	} else if v, ok := value.(bool); ok {
-		r.setBool(v)
-	} else if v, ok := value.(float64); ok {
-		r.setFloat64(v)
-	} else if v, ok := value.(string); ok {
-		r.setString(v)
-	} else if v, ok := value.(time.Time); ok {
-		r.setTime(v)
-	} else { return false }
-	return true
+	if v, ok := value.(int); ok { return r.setInt64(int64(v)) }
+	if v, ok := value.(int8); ok { return r.setInt64(int64(v)) }
+	if v, ok := value.(int16); ok { return r.setInt64(int64(v)) }
+	if v, ok := value.(int32); ok { return r.setInt64(int64(v)) }
+	if v, ok := value.(int64); ok {	return r.setInt64(v) }
+	if v, ok := value.(bool); ok { return r.setBool(v) }
+	if v, ok := value.(float32); ok { return r.setFloat64(float64(v)) }
+	if v, ok := value.(float64); ok { return r.setFloat64(v) }
+	if v, ok := value.(string); ok { return r.setString(v) }
+	if v, ok := value.(time.Time); ok { return r.setTime(v) }
+	return false
 }
 
-func (r *Nullable) setInt64(value int64) {
+func (r *Nullable) setInt64(value int64) bool {
 	r.nullableType = NULLABLE_INT64
 	r.ni.Int64 = value
 	r.ni.Valid = true
 	r.isNil = false
+	return true
 }
 
-func (r *Nullable) setBool(value bool) {
+func (r *Nullable) setBool(value bool) bool {
 	r.nullableType = NULLABLE_BOOL
 	r.nb.Bool = value
 	r.nb.Valid = true
 	r.isNil = false
+	return true
 }
 
-func (r *Nullable) setFloat64(value float64) {
+func (r *Nullable) setFloat64(value float64) bool {
 	r.nullableType = NULLABLE_FLOAT64
 	r.nf.Float64 = value
 	r.nf.Valid = true
 	r.isNil = false
+	return true
 }
 
-func (r *Nullable) setString(value string) {
+func (r *Nullable) setString(value string) bool {
 	r.nullableType = NULLABLE_STRING
 	r.ns.String = value
 	r.ns.Valid = true
 	r.isNil = false
+	return true
 }
 
-func (r *Nullable) setTime(value time.Time) {
+func (r *Nullable) setTime(value time.Time) bool {
 	r.nullableType = NULLABLE_TIME
 	r.nt.Time = value
 	r.nt.Valid = true
 	r.isNil = false
+	return true
 }
 
 func (r *Nullable) GetType() NullableType { return r.nullableType }
@@ -343,7 +350,7 @@ func (r Nullable) MarshalJSON() ([]byte, error) {
 		case NULLABLE_FLOAT64: return r.nf.MarshalJSON()
 		case NULLABLE_STRING: return r.ns.MarshalJSON()
 		case NULLABLE_TIME: return r.nt.MarshalJSON()
-		default: return []byte("null"), nil
+		default: return []byte("[\"nullnullable\"]"), nil
 	}
 }
 
