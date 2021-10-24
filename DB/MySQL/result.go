@@ -20,8 +20,12 @@ type Result struct {
 	rowsAffected	*int64
 }
 
-// Make a new one of these!
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
 func NewResult(res db.Result) *Result {
+	if nil == res { return nil }
 	return &Result{
 		res:	res,
 	}
@@ -34,7 +38,7 @@ func NewResult(res db.Result) *Result {
 // Get the last insert id from our query result, if available
 func (r *Result) GetLastInsertId() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
-	if nil == r.res {
+	if nil == r.lastInsertId {
 		v, err := r.res.LastInsertId()
 		if nil != err { return nil, err }
 		r.lastInsertId = &v
@@ -45,7 +49,7 @@ func (r *Result) GetLastInsertId() (*int64, error) {
 // Get the affected row count from our query result, if available
 func (r *Result) GetRowsAffected() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
-	if nil == r.res {
+	if nil == r.rowsAffected {
 		v, err := r.res.RowsAffected()
 		if nil != err { return nil, err }
 		r.rowsAffected = &v
