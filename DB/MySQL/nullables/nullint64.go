@@ -25,7 +25,7 @@ func (ni *NullInt64) Scan(value interface{}) error {
 }
 
 func (ni *NullInt64) MarshalJSON() ([]byte, error) {
-	if ! ni.Valid { return []byte("nullint64"), nil }
+	if ! ni.Valid { return []byte("null"), nil }
 	return json.Marshal(ni.Int64)
 }
 
