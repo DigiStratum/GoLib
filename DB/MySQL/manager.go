@@ -11,7 +11,7 @@ import (
 )
 
 type ManagerIfc interface {
-	NewConnectionPool(dsn string) DBKeyIfc
+	NewConnectionPool(dsn string, config cfg.ConfigIfc) *DBKey
 	CloseConnectionPool(dbKey DBKeyIfc)
 	GetConnection(dbKey DBKeyIfc) *LeasedConnection
 }
@@ -32,14 +32,36 @@ func NewManager() *Manager {
 }
 
 // -------------------------------------------------------------------------------------------------
+// DependencyInjectableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
+	if nil == deps { return fmt.Errorf("Dependencies were nil") }
+
+	depName := "dbConnectionFactory"
+	if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
+	dep := deps.Get(depName)
+	if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
+	dbConnectionFactory, ok := dep.(db.DBConnectionFactoryIfc)
+	if ! ok { return fmt.Errorf("Dependency was nil: %s", depName) }
+	r.dbConnectionFactory = dbConnectionFactory
+	return nil
+}
+
+// -------------------------------------------------------------------------------------------------
 // ManagerIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *Manager) NewConnectionPool(dsn string) DBKeyIfc {
+func (r *Manager) NewConnectionPool(dsn string, config cfg.ConfigIfc) *DBKey {
 	dbKey := NewDBKeyFromDSN(dsn)
 	r.mutex.Lock();	defer r.mutex.Unlock()
-	r.connectionPools[dbKey.GetKey()] = NewConnectionPool(dsn)
-	return dbKey
+	connectionPool := NewConnectionPool(dsn)
+	if nil != config {
+		err := connectionPool.Configure(config)
+		if nil != err { return nil, err }
+	}
+	r.connectionPools[dbKey.GetKey()] = connectionPool
+	return dbKey, nil
 }
 
 func (r *Manager) GetConnection(dbKey DBKeyIfc) (*LeasedConnection, error) {

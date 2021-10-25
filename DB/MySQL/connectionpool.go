@@ -259,5 +259,5 @@ func (r *ConnectionPool) closePooledConnection(pooledConnection PooledConnection
 	if closeableConnection, ok := pooledConnection.(io.Closer); ok {
 		return closeableConnection.Close()
 	}
-	return fmt.Errorf("PooledConnection not closeable")
+	return fmt.Errorf("PooledConnection not closable")
 }
