@@ -2,7 +2,6 @@ package mysql
 
 import(
 	"testing"
-	//"encoding/json"
 
 	"github.com/DigiStratum/GoLib/DB/MySQL/nullables"
 	. "github.com/DigiStratum/GoLib/Testing"

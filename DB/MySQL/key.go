@@ -12,7 +12,9 @@ type DBKey struct {
 	key	string
 }
 
+// -------------------------------------------------------------------------------------------------
 // Factory Functions
+// -------------------------------------------------------------------------------------------------
 
 // Make a new one of these from an existing key
 func NewDBKey(key string) *DBKey {

@@ -77,6 +77,8 @@ func (r ResultRow) ToJson() (*string, error) {
 // encoding/json.Marshaler Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// ref: http://gregtrowbridge.com/golang-json-serialization-with-interfaces/
+
 func (r ResultRow) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.props.values)
 }

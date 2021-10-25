@@ -9,5 +9,5 @@ import(
 // -------------------------------------------------------------------------------------------------
 
 func NewMySQLConnectionFactory(driver string) *db.DBConnectionFactory {
-	return db.NewDBConnectionFactory("mysql")
+	return db.NewDBConnectionFactory(driver)
 }
