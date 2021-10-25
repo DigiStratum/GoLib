@@ -8,7 +8,7 @@ import(
 
 func TestThat_NewResultSet_ReturnsSomething(t *testing.T) {
 	// Test
-	sut := NewMySQLConnectionFactory("bogusdriver")
+	sut := NewMySQLConnectionFactory()
 
 	// Verify
 	ExpectNonNil(sut, t)
