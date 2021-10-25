@@ -16,13 +16,15 @@ type ManagerIfc interface {
 	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
 }
 
-// Set of connections, keyed on DSN
 type Manager struct {
-	connectionPools		map[string]ConnectionPoolIfc
+	connectionPools		map[string]ConnectionPoolIfc // Set of connections, keyed on DSN
 	mutex			sync.Mutex
 }
 
-// Make a new one of these!
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
 func NewManager() *Manager {
 	return &Manager{
 		connectionPools: make(map[string]ConnectionPoolIfc),
