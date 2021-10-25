@@ -13,3 +13,17 @@ func TestThat_NewManager_ReturnsSomething(t *testing.T) {
 	// Verify
 	ExpectNonNil(sut, t)
 }
+
+
+func TestThat_Manager_GetConnection_ReturnsSomething(t *testing.T) {
+	// Setup
+	sut := NewManager()
+	dbKey := NewDBKeyFromDSN("bogusdsn")
+
+	// Test
+	leasedConnection, err := sut.GetConnection(dbKey)
+
+	// Verify
+	ExpectError(err, t)
+	ExpectNil(leasedConnection, t)
+}

@@ -13,11 +13,11 @@ import (
 type ManagerIfc interface {
 	NewConnectionPool(dsn string) DBKeyIfc
 	CloseConnectionPool(dbKey DBKeyIfc)
-	GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc
+	GetConnection(dbKey DBKeyIfc) *LeasedConnection
 }
 
 type Manager struct {
-	connectionPools		map[string]ConnectionPoolIfc // Set of connections, keyed on DSN
+	connectionPools		map[string]*ConnectionPool // Set of connections, keyed on DSN
 	mutex			sync.Mutex
 }
 
@@ -27,7 +27,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		connectionPools: make(map[string]ConnectionPoolIfc),
+		connectionPools: make(map[string]*ConnectionPool),
 	}
 }
 
@@ -42,12 +42,10 @@ func (r *Manager) NewConnectionPool(dsn string) DBKeyIfc {
 	return dbKey
 }
 
-func (r *Manager) GetConnection(dbKey DBKeyIfc) LeasedConnectionIfc {
+func (r *Manager) GetConnection(dbKey DBKeyIfc) (*LeasedConnection, error) {
 	connPool := r.getConnectionPool(dbKey)
-	if nil == connPool { return nil }
-	conn, err := connPool.GetConnection()
-	if nil != err { fmt.Printf("error: %s\n", err.Error()) }
-	return conn
+	if nil == connPool { return nil, fmt.Errorf("No connection pool for this dbKey") }
+	return connPool.GetConnection()
 }
 
 func (r *Manager) CloseConnectionPool(dbKey DBKeyIfc) {

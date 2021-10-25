@@ -6,7 +6,7 @@ import (
 
 type LeasedConnectionsIfc interface {
 	// Public interface
-	GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc
+	GetLeaseForConnection(connection PooledConnectionIfc) *LeasedConnection
 	Release(leaseKey int64) bool
 
 	// Private interface
@@ -14,14 +14,14 @@ type LeasedConnectionsIfc interface {
 }
 
 type LeasedConnections struct {
-	leases		map[int64]LeasedConnectionIfc
+	leases		map[int64]*LeasedConnection
 	nextLeaseKey	int64
 	mutex		sync.Mutex
 }
 
 func NewLeasedConnections() *LeasedConnections {
 	lc := LeasedConnections{
-		leases:		make(map[int64]LeasedConnectionIfc),
+		leases:		make(map[int64]*LeasedConnection),
 		nextLeaseKey:	0,
 	}
 	return &lc
@@ -31,7 +31,7 @@ func NewLeasedConnections() *LeasedConnections {
 // LeasedConnectionsIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) LeasedConnectionIfc {
+func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) *LeasedConnection {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	// Get a new lease key...
 	if ptrLeaseKey := r.getNewLeaseKey(); nil != ptrLeaseKey {
