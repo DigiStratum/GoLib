@@ -33,6 +33,7 @@ type HashMapIfc interface {
 	Set(key, value string)
 	Get(key string) *string
 	GetInt64(key string) *int64
+	GetBool(key string) bool
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
@@ -130,12 +131,24 @@ func (r HashMap) Get(key string) *string {
 	return nil
 }
 
+// Get a single data element by key name as an int64
 func (r HashMap) GetInt64(key string) *int64 {
 	value := r.Get(key)
 	if nil != value {
 		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err { return &vc }
 	}
 	return nil
+}
+
+// Get a single data element by key name as a boolean
+func (r HashMap) GetBool(key string) bool {
+	s := r.Get(key)
+	if nil == s { return false }
+	if ("true" == *s) || ("TRUE" == *s) || ("t" == *s) || ("T" == *s) || ("1" == *s) { return true }
+	if ("on" == *s) || ("ON" == *s) || ("yes" == *s) || ("YES" == *s) { return true }
+	n := r.GetInt64(key)
+	if nil == n { return false }
+	return *n != 0
 }
 
 // Check whether we have a data element by key name
