@@ -24,6 +24,7 @@ type KeyValuePair struct {
 
 // HashMap public interface
 type HashMapIfc interface {
+	Copy() *HashMap
 	LoadFromJsonString(jsonStr *string) error
 	LoadFromJsonFile(jsonFile string) error
 	IsEmpty() bool
@@ -35,6 +36,9 @@ type HashMapIfc interface {
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
+	GetSubset(keys *[]string) *HashMap
+	Drop(key string) *HashMap
+	DropSet(keys *[]string) *HashMap
 	GetIterator() func () interface{}
 	ToJson() (*string, error)
 }
@@ -54,16 +58,6 @@ func NewHashMap() *HashMap {
 	}
 }
 
-// Get a full (deep) copy of this HashMap
-// This is so that we can give away a copy to someone else without allowing them to tamper with us
-// ref: https://developer20.com/be-aware-of-coping-in-go/
-func CopyHashMap(source *HashMap) *HashMap {
-	if nil == source { return nil }
-	r := NewHashMap()
-	for k, v := range (*source).hash { r.hash[k] = v }
-	return r
-}
-
 func NewHashMapFromJsonString(json *string) (*HashMap, error) {
 	r := NewHashMap()
 	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
@@ -79,6 +73,15 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 // -------------------------------------------------------------------------------------------------
 // HashMapIfc Public Interface
 // -------------------------------------------------------------------------------------------------
+
+// Get a full (deep) copy of this HashMap
+// This is so that we can give away a copy to someone else without allowing them to tamper with us
+// ref: https://developer20.com/be-aware-of-coping-in-go/
+func (r HashMap) Copy() *HashMap {
+	n := NewHashMap()
+	for k, v := range r.hash { n.hash[k] = v }
+	return n
+}
 
 // Load our hash map with JSON data from a string (or return an error)
 func (r *HashMap) LoadFromJsonString(jsonStr *string) error {
@@ -146,11 +149,37 @@ func (r HashMap) HasAll(keys *[]string) bool {
 	return true
 }
 
+// Make a new hashmap from a subset of the key-values from this one
+func (r HashMap) GetSubset(keys *[]string) *HashMap {
+	n := NewHashMap()
+	if nil != keys {
+		for _, k := range *keys {
+			if v, ok := r.hash[k]; ok { n.hash[k] = v }
+		}
+	}
+	return n
+}
+
+// Get the set of keys currently loaded into this hashmap
 func (r HashMap) GetKeys() []string {
 	keys := make([]string, len(r.hash))
 	i := 0
 	for key, _ := range r.hash { keys[i] = key; i++ }
 	return keys
+}
+
+// Drop a single key from the hashmap, if it's set
+func (r *HashMap) Drop(key string) *HashMap {
+	if ! r.Has(key) { return r }
+	delete(r.hash, key)
+	return r
+}
+
+// Drop an set of keys from the hashmap, if any are set
+func (r *HashMap) DropSet(keys *[]string) *HashMap {
+	if nil == keys { return r }
+	for _, k := range *keys { r.Drop(k) }
+	return r
 }
 
 // -------------------------------------------------------------------------------------------------

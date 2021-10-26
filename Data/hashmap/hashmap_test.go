@@ -28,27 +28,18 @@ func TestThat_HashMap_NewHashMap_ReturnsEmptyHashMap(t *testing.T) {
 	ExpectInt(0, sut.Size(), t)
 }
 
-func TestThat_HashMap_CopyHashMap_ReturnsNil_WhenNil(t *testing.T) {
-	// Setup
-	var sut *HashMap	// nil
-
-	// Verify
-	actual := CopyHashMap(sut)
-	ExpectNil(actual, t)
-}
-
-func TestThat_HashMap_CopyHashMap_ReturnsEmpty_WhenEmpty(t *testing.T) {
+func TestThat_HashMap_Copy_ReturnsEmpty_WhenEmpty(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 
 	// Test
-	actual := CopyHashMap(sut)
+	actual := sut.Copy()
 
 	// Verify
 	ExpectInt(0, actual.Size(), t)
 }
 
-func TestThat_HashMap_CopyHashMap_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
+func TestThat_HashMap_Copy_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
 	// Setup
 	sut := NewHashMap()
 	num := 25
@@ -59,7 +50,7 @@ func TestThat_HashMap_CopyHashMap_ReturnsNonEmpty_WhenNonEmpty(t *testing.T) {
 	}
 
 	// Test
-	actual := CopyHashMap(sut)
+	actual := sut.Copy()
 
 	// Verify
 	ExpectInt(num, actual.Size(), t)
