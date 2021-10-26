@@ -45,7 +45,7 @@ func TestThat_Config_MergeConfig_AddsSome_WhenProvidedPopulatedConfig(t *testing
 	ExpectInt(numKeys + 1, sut.Size(), t)
 }
 
-func TestThat_Config_GetSubset_ReturnsPopulatedConfig_WhenProvidedGoodPrefix(t *testing.T) {
+func TestThat_Config_GetSubsetConfig_ReturnsPopulatedConfig_WhenProvidedGoodPrefix(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	sut.Set("boguskey", "bogusvalue")
@@ -55,13 +55,13 @@ func TestThat_Config_GetSubset_ReturnsPopulatedConfig_WhenProvidedGoodPrefix(t *
 	}
 
 	// Test
-	subCfg := sut.GetSubset("k")
+	subCfg := sut.GetSubsetConfig("k")
 
 	// Verify
 	ExpectInt(numKeys, subCfg.Size(), t)
 }
 
-func TestThat_Config_GetSubset_ReturnsEmptyConfig_WhenProvidedBadPrefix(t *testing.T) {
+func TestThat_Config_GetSubsetConfig_ReturnsEmptyConfig_WhenProvidedBadPrefix(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	sut.Set("boguskey", "bogusvalue")
@@ -71,13 +71,13 @@ func TestThat_Config_GetSubset_ReturnsEmptyConfig_WhenProvidedBadPrefix(t *testi
 	}
 
 	// Test
-	subCfg := sut.GetSubset("invalidprefix")
+	subCfg := sut.GetSubsetConfig("invalidprefix")
 
 	// Verify
 	ExpectInt(0, subCfg.Size(), t)
 }
 
-func TestThat_Config_GetInverseSubset_ReturnsPopulatedConfig_WhenProvidedGoodPrefix(t *testing.T) {
+func TestThat_Config_GetInverseSubsetConfig_ReturnsPopulatedConfig_WhenProvidedGoodPrefix(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	sut.Set("boguskey", "bogusvalue")
@@ -87,13 +87,13 @@ func TestThat_Config_GetInverseSubset_ReturnsPopulatedConfig_WhenProvidedGoodPre
 	}
 
 	// Test
-	subCfg := sut.GetInverseSubset("k")
+	subCfg := sut.GetInverseSubsetConfig("k")
 
 	// Verify
 	ExpectInt(1, subCfg.Size(), t)
 }
 
-func TestThat_Config_GetInverseSubset_ReturnsEmptyConfig_WhenProvidedBadPrefix(t *testing.T) {
+func TestThat_Config_GetInverseSubsetConfig_ReturnsEmptyConfig_WhenProvidedBadPrefix(t *testing.T) {
 	// Setup
 	sut := NewConfig()
 	sut.Set("boguskey", "bogusvalue")
@@ -103,7 +103,7 @@ func TestThat_Config_GetInverseSubset_ReturnsEmptyConfig_WhenProvidedBadPrefix(t
 	}
 
 	// Test
-	subCfg := sut.GetInverseSubset("invalidprefix")
+	subCfg := sut.GetInverseSubsetConfig("invalidprefix")
 
 	// Verify
 	ExpectInt(numKeys+1, subCfg.Size(), t)
