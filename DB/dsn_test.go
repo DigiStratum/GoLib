@@ -7,28 +7,47 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-func TestThat_MakeDSN_ReturnsGoodDSNString(t *testing.T) {
+func TestThat_NewDSN_ReturnsError(t *testing.T) {
+	// Test
+	sut, err := NewDSN("bogusdsn")
+
+	// Verify
+	ExpectNil(sut, t)
+	ExpectError(err, t)
+}
+
+func TestThat_NewDSN_ReturnsDSNObject(t *testing.T) {
 	// Setup
 	user := "user"
 	pass := "pass"
 	host := "host"
 	port := "port"
 	name := "name"
-	expected := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
 
 	// Test
-	actual := MakeDSN(user, pass, host, port, name)
+	sut, err := NewDSN(dsn)
 
 	// Verify
-	ExpectString(expected, actual, t)
+	ExpectNonNil(sut, t)
+	ExpectNoError(err, t)
 }
 
 func TestThat_GetDSNHash_ReturnsHashCode(t *testing.T) {
+	// Setup
+	user := "user"
+	pass := "pass"
+	host := "host"
+	port := "port"
+	name := "name"
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
+
 	// Test
-	actual := GetDSNHash("fakedsn")
+	sut, _ := NewDSN(dsn)
+	hash := sut.ToHash()
 
 	// Verify
-	ExpectInt(32, len(actual), t)
-	ExpectString("2e2e111cfb0447f58c1be469d89ea984", actual, t)
+	ExpectInt(32, len(hash), t)
+	ExpectString("a802d6a3bd91e0d67d39bbb5ce03c153", hash, t)
 }
 
