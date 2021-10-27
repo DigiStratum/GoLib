@@ -8,8 +8,8 @@ import(
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDBConnection(driverName, dataSourceName string) (*sql.DB, error) {
-	dbconn, err := sql.Open(driverName, dataSourceName)
+func NewDBConnection(driverName, dsn string) (*sql.DB, error) {
+	dbconn, err := sql.Open(driverName, dsn)
 	if nil != err { return nil, err }
 	return dbconn, nil
 }

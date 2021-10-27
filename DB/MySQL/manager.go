@@ -8,15 +8,17 @@ import (
 	"io"
 	"fmt"
 	"sync"
+
+	"github.com/DigiStratum/GoLib/Dependencies"
 )
 
 type ManagerIfc interface {
-	NewConnectionPool(dsn string, config cfg.ConfigIfc) *DBKey
 	CloseConnectionPool(dbKey DBKeyIfc)
 	GetConnection(dbKey DBKeyIfc) *LeasedConnection
 }
 
 type Manager struct {
+	connectionPoolFactory	ConnectionPoolFactoryIfc
 	connectionPools		map[string]*ConnectionPool // Set of connections, keyed on DSN
 	mutex			sync.Mutex
 }
@@ -35,34 +37,22 @@ func NewManager() *Manager {
 // DependencyInjectableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
+func (r *Manager) InjectDependencies(deps dependencies.DependenciesIfc) error {
 	if nil == deps { return fmt.Errorf("Dependencies were nil") }
 
-	depName := "dbConnectionFactory"
+	depName := "connectionPoolFactory"
 	if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
 	dep := deps.Get(depName)
 	if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
-	dbConnectionFactory, ok := dep.(db.DBConnectionFactoryIfc)
+	connectionPoolFactory, ok := dep.(ConnectionPoolFactoryIfc)
 	if ! ok { return fmt.Errorf("Dependency was nil: %s", depName) }
-	r.dbConnectionFactory = dbConnectionFactory
+	r.connectionPoolFactory = connectionPoolFactory
 	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
 // ManagerIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-
-func (r *Manager) NewConnectionPool(dsn string, config cfg.ConfigIfc) *DBKey {
-	dbKey := NewDBKeyFromDSN(dsn)
-	r.mutex.Lock();	defer r.mutex.Unlock()
-	connectionPool := NewConnectionPool(dsn)
-	if nil != config {
-		err := connectionPool.Configure(config)
-		if nil != err { return nil, err }
-	}
-	r.connectionPools[dbKey.GetKey()] = connectionPool
-	return dbKey, nil
-}
 
 func (r *Manager) GetConnection(dbKey DBKeyIfc) (*LeasedConnection, error) {
 	connPool := r.getConnectionPool(dbKey)
@@ -85,8 +75,12 @@ func (r *Manager) CloseConnectionPool(dbKey DBKeyIfc) {
 
 // Get the connection pool for the specified key
 func (r *Manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
-	if connPool, ok := r.connectionPools[dbKey.GetKey()]; ok {
-		return connPool
-	}
-	return nil
+	key := dbKey.GetKey()
+	// If we already have a ConnectionPool for this DBKey...
+	if connPool, ok := r.connectionPools[key]; ok { return connPool }
+
+	r.mutex.Lock();	defer r.mutex.Unlock()
+	connectionPool := r.connectionPoolFactory.NewConnectionPool(key)
+	r.connectionPools[dbKey.GetKey()] = connectionPool
+	return connectionPool
 }

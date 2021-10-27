@@ -32,10 +32,10 @@ func TestThat_Manager_NewConnectionPool_ReturnsDBKey(t *testing.T) {
 	sut := NewManager()
 
 	// Test
-	dbKey := NewConnectionPool("bogusdsn")
+	dbKey := sut.NewConnectionPool("bogusdsn")
 
 	// Verify
-	ExpectTrue(len(dbKey) > 0, t)
+	ExpectTrue(len(*dbKey) > 0, t)
 }
 
 func TestThat_Manager_GetConnection_ReturnsSomething_WhenConnectionPoolSetup(t *testing.T) {

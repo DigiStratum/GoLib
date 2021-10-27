@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"errors"
 	"sync"
+
 	cfg "github.com/DigiStratum/GoLib/Config"
 	"github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
@@ -79,7 +80,6 @@ func NewConnectionPool(dsn string) *ConnectionPool {
 
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 	if nil == deps { return fmt.Errorf("Dependencies were nil") }
-
 	depName := "dbConnectionFactory"
 	if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
 	dep := deps.Get(depName)
