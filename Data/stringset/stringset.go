@@ -16,6 +16,7 @@ type StringSetIfc interface {
 	Size() int
 	Has(s string) bool
 	HasAll(ss *[]string) bool
+	HasAny(ss *[]string) bool
 
 	ToArray() *[]string
 
@@ -81,6 +82,13 @@ func (r *StringSet) HasAll(ss *[]string) bool {
 		if ! r.Has(s) { return false }
 	}
 	return true
+}
+
+func (r *StringSet) HasAny(ss *[]string) bool {
+	for _, s := range *ss {
+		if r.Has(s) { return true }
+	}
+	return false
 }
 
 func (r *StringSet) ToArray() *[]string {
