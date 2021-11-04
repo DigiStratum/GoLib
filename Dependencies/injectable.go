@@ -1,5 +1,9 @@
 package dependencies
 
+import (
+	"github.com/DigiStratum/GoLib/Data/stringset"
+)
+
 // Whatever implements this interface is able to receive dependencies
 type DependencyInjectableIfc interface {
         InjectDependencies(deps DependenciesIfc) error
@@ -66,26 +70,12 @@ func (r *DependencyInjectable) GetMissingRequiredDependencyNames() *[]string {
 
 // If some named dependencies are optional, then all present must be valid (either required or optional)
 func (r *DependencyInjectable) GetInvalidDependencyNames() *[]string {
-	if nil == r { return nil }
-	invalidDeps := make([]string, 0)
-	if len(r.optional) > 0 {
-		// Collect up the valid names
-		validNames := r.optional
-		if len(r.required) > 0 {
-			for _, name := range r.required {
-				validNames = append(validNames, name)
-			}
-		}
-
-		// Make sure all the supplied dependency names are in the set of valid names
-		depNames := r.deps.GetNames()
-		for _, name := range *depNames {
-			for _, validName := range validNames {
-				if name == validName { continue nextDepName }
-			}
-			invalidDeps = append(invalidDeps, name)
-			nextDepName:
-		}
-	}
-	return &invalidDeps
+	if (nil == r) || (len(r.optional) == 0) { return nil }
+	givenNames := stringset.NewStringSet()
+	givenNames.SetAll(r.deps.GetNames())
+	givenNames.DropAll(&r.optional)
+	if len(r.required) > 0 { givenNames.DropAll(&r.required) }
+	invalidDeps := givenNames.ToArray()
+	if len(invalidDeps) == 0 { return nil }
+	return invalidDeps
 }

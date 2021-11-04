@@ -98,6 +98,16 @@ func (r *StringSet) ToArray() *[]string {
 // -------------------------------------------------------------------------------------------------
 
 func (r *StringSet) GetIterator() func () interface{} {
-	// TODO: Implement me
+	idx := 0
+	var data_len = r.Size()
+	ss := r.ToArray()
+	return func () interface{} {
+		// If we're done iterating, return do nothing
+		if idx >= data_len { return nil }
+		prev_idx := idx
+		idx++
+		return &((*ss)[prev_idx])
+	}
+
 	return nil
 }
