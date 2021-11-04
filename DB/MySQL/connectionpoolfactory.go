@@ -5,10 +5,11 @@ import (
 
 	cfg "github.com/DigiStratum/GoLib/Config"
 	"github.com/DigiStratum/GoLib/Dependencies"
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 type ConnectionPoolFactoryIfc interface {
-	NewConnectionPool(dsn string) *ConnectionPool
+	NewConnectionPool(dsn db.DSN) *ConnectionPool
 }
 
 type ConnectionPoolFactory struct {
@@ -29,7 +30,7 @@ func NewConnectionPoolFactory() *ConnectionPoolFactory {
 // ConnectionPoolFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r ConnectionPoolFactory) NewConnectionPool(dsn string) (*ConnectionPool, error) {
+func (r ConnectionPoolFactory) NewConnectionPool(dsn db.DSN) (*ConnectionPool, error) {
 	// TODO: Match up supplied DSN with configured pattern validator matching this connpool
 	connectionPool := NewConnectionPool(dsn)
 

@@ -54,6 +54,11 @@ func (r *Manager) InjectDependencies(deps dependencies.DependenciesIfc) error {
 // ManagerIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *Manager) OpenConnectionPool(dsn db.DSN) error {
+	if nil == r.connectionPoolFactory { return fmt.Errorf("Missing Dependency: connectionPoolFactory") }
+	return nil
+}
+
 func (r *Manager) GetConnection(dbKey DBKeyIfc) (*LeasedConnection, error) {
 	connPool := r.getConnectionPool(dbKey)
 	if nil == connPool { return nil, fmt.Errorf("No connection pool for this dbKey") }

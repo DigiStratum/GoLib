@@ -5,13 +5,14 @@ package dependencies
 Dependencies - Implement a container to hold named dependencies and an interface for injection
 */
 type Dependencies struct {
-	deps	map[string]interface{}
+	deps		map[string]interface{}
 }
 
 type DependenciesIfc interface {
 	Set(name string, dep interface{})
 	Get(name string) interface{}
 	Has(name string) bool
+	GetNames() *[]string
 	HasAll(names *[]string) bool
 }
 
@@ -53,4 +54,11 @@ func (r Dependencies) HasAll(names *[]string) bool {
 		if ! r.Has(name) { return false }
 	}
 	return true
+}
+
+// Get the list of names for the currently set dependencies
+func (r Dependencies) GetNames() *[]string {
+	names := make([]string, len(r.deps))
+	for i, name := range r.deps { names[i] = name }
+	return &names
 }

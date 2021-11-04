@@ -8,11 +8,6 @@ import(
 	"database/sql"
 )
 
-type DBConnectionFactoryIfc interface {
-	// Return interface instead of struct so that other implementations may satisfy
-	NewConnection(dsn string) (*sql.DB, error)
-}
-
 type DBConnectionFactory struct {
 	driver		string
 }
@@ -28,9 +23,9 @@ func NewDBConnectionFactory(driver string) *DBConnectionFactory {
 }
 
 // -------------------------------------------------------------------------------------------------
-// DBConnectionFactoryIfc Public Interface
+// ConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *DBConnectionFactory) NewConnection(dsn string) (*sql.DB, error) {
+func (r *DBConnectionFactory) NewConnection(dsn DSN) (*sql.DB, error) {
 	return NewDBConnection(r.driver, dsn)
 }

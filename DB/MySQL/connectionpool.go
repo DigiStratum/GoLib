@@ -43,8 +43,8 @@ type ConnectionPoolIfc interface {
 
 type ConnectionPool struct {
 	configured		bool
-	dbConnectionFactory	db.DBConnectionFactoryIfc
-	dsn			string
+	connectionFactory	db.ConnectionFactoryIfc
+	dsn			db.DSN
 	minConnections		int
 	maxConnections		int
 	maxIdle			int
@@ -58,7 +58,7 @@ const DEFAULT_MAX_CONNECTIONS = 1
 const DEFAULT_MAX_IDLE = 60
 
 // Make a new one of these
-func NewConnectionPool(dsn string) *ConnectionPool {
+func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 	cp := ConnectionPool{
 		configured:		false,
 		dsn:			dsn,
@@ -80,13 +80,13 @@ func NewConnectionPool(dsn string) *ConnectionPool {
 
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 	if nil == deps { return fmt.Errorf("Dependencies were nil") }
-	depName := "dbConnectionFactory"
+	depName := "connectionFactory"
 	if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
 	dep := deps.Get(depName)
 	if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
-	dbConnectionFactory, ok := dep.(db.DBConnectionFactoryIfc)
+	connectionFactory, ok := dep.(db.ConnectionFactoryIfc)
 	if ! ok { return fmt.Errorf("Dependency was nil: %s", depName) }
-	r.dbConnectionFactory = dbConnectionFactory
+	r.connectionFactory = connectionFactory
 	return nil
 }
 
@@ -198,8 +198,8 @@ func (r *ConnectionPool) Close() error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
-	r.dsn = ""
-	r.dbConnectionFactory = nil
+	r.dsn = db.DSN{}
+	r.connectionFactory = nil
 
 	// Drop all open leases
 	r.leasedConnections = NewLeasedConnections()
@@ -230,7 +230,7 @@ func (r *ConnectionPool) createNewConnection() *PooledConnection {
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
-	conn, err := r.dbConnectionFactory.NewConnection(r.dsn)
+	conn, err := r.connectionFactory.NewConnection(r.dsn)
 	if nil != err { return nil }
 	// Wrap the raw connection into a Connection
 	newConnection, err := NewConnection(conn)

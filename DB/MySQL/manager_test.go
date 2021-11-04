@@ -3,6 +3,7 @@ package mysql
 import(
 	"testing"
 
+	"github.com/DigiStratum/GoLib/DB"
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 

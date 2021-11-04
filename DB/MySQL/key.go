@@ -22,8 +22,8 @@ func NewDBKey(key string) *DBKey {
 }
 
 // Make a new one of these from DSN
-func NewDBKeyFromDSN(dsn string) *DBKey {
-	return NewDBKey(db.GetDSNHash(dsn))
+func NewDBKeyFromDSN(dsn db.DSN) *DBKey {
+	return NewDBKey(dsn.ToHash())
 }
 
 // -------------------------------------------------------------------------------------------------

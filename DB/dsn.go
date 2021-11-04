@@ -19,6 +19,7 @@ import (
 
 type DSNIfc interface {
 	ToHash() string
+	ToString() string
 }
 
 type DSN struct {
@@ -48,4 +49,8 @@ func (r DSN) ToHash() string {
 	// ref: https://golang.org/pkg/crypto/md5/
 	data := []byte(r.dsnString)
 	return fmt.Sprintf("%x", md5.Sum(data))
+}
+
+func (r DSN) ToString() string {
+	return r.dsnString
 }
