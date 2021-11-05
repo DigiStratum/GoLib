@@ -60,6 +60,65 @@ func TestThat_StringSet_SetAll_SetsMultipleStrings(t *testing.T) {
 	ExpectFalse(sut.HasAny(&ss2), t)
 }
 
+func TestThat_StringSet_SetAll_DoesNothing_WhenGivenNil(t *testing.T) {
+	// Setup
+	sut := NewStringSet()
+	ss1 := []string{"silly", "string", "spectacular"}
+	expected := len(ss1)
+
+	// Test
+	sut.SetAll(&ss1)
+	sut.SetAll(nil)
+	actual := sut.Size()
+
+	// Verify
+	ExpectInt(expected, actual, t)
+	ExpectTrue(sut.HasAll(&ss1), t)
+}
+
+func TestThat_StringSet_HasAll_ReturnsTrue_WhenGivenNil(t *testing.T) {
+	// Setup
+	ss1 := []string{"silly", "string"}
+	sut := NewStringSet()
+	sut.SetAll(&ss1)
+
+	// Test
+	actual := sut.HasAll(nil)
+
+	// Verify
+	ExpectTrue(actual, t)
+}
+
+func TestThat_StringSet_HasAny_ReturnsTrue_WhenGivenNil(t *testing.T) {
+	// Setup
+	ss1 := []string{"silly", "string"}
+	sut := NewStringSet()
+	sut.SetAll(&ss1)
+
+	// Test
+	actual := sut.HasAny(nil)
+
+	// Verify
+	ExpectTrue(actual, t)
+}
+
+func TestThat_StringSet_Merge_DoesNothing_WhenGivenNil(t *testing.T) {
+	// Setup
+	ss1 := []string{"silly", "string"}
+	sut := NewStringSet()
+	sut.SetAll(&ss1)
+
+	expected := len(ss1)
+
+	// Test
+	sut.Merge(nil)
+	actual := sut.Size()
+
+	// Verify
+	ExpectInt(expected, actual, t)
+	ExpectTrue(sut.HasAll(&ss1), t)
+}
+
 func TestThat_StringSet_Merge_MergesMultipleStrings(t *testing.T) {
 	// Setup
 	ss1 := []string{"silly", "string"}
@@ -115,6 +174,22 @@ func TestThat_StringSet_DropAll_DropsAllStrings(t *testing.T) {
 	ExpectTrue(sut.HasAll(&ss1), t)
 	ExpectFalse(sut.HasAll(&ss2), t)
 	ExpectFalse(sut.HasAny(&ss2), t)
+}
+
+func TestThat_StringSet_DropAll_DoesNothing_WhenGivenNil(t *testing.T) {
+	// Setup
+	ss1 := []string{"silly", "string"}
+	sut := NewStringSet()
+	sut.SetAll(&ss1)
+	expected := len(ss1)
+
+	// Test
+	sut.DropAll(nil)
+	actual := sut.Size()
+
+	// Verify
+	ExpectInt(expected, actual, t)
+	ExpectTrue(sut.HasAll(&ss1), t)
 }
 
 func TestThat_StringSet_ToArray_ReturnsPopulatedArray_WhenNonEmpty(t *testing.T) {

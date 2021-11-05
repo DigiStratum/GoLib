@@ -78,6 +78,7 @@ func (r *StringSet) Has(s string) bool {
 }
 
 func (r *StringSet) HasAll(ss *[]string) bool {
+	if nil == ss { return true }
 	for _, s := range *ss {
 		if ! r.Has(s) { return false }
 	}
@@ -85,6 +86,7 @@ func (r *StringSet) HasAll(ss *[]string) bool {
 }
 
 func (r *StringSet) HasAny(ss *[]string) bool {
+	if nil == ss { return true }
 	for _, s := range *ss {
 		if r.Has(s) { return true }
 	}
@@ -116,6 +118,4 @@ func (r *StringSet) GetIterator() func () interface{} {
 		idx++
 		return &((*ss)[prev_idx])
 	}
-
-	return nil
 }
