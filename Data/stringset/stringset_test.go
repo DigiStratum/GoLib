@@ -116,3 +116,51 @@ func TestThat_StringSet_DropAll_DropsAllStrings(t *testing.T) {
 	ExpectFalse(sut.HasAll(&ss2), t)
 	ExpectFalse(sut.HasAny(&ss2), t)
 }
+
+func TestThat_StringSet_ToArray_ReturnsPopulatedArray_WhenNonEmpty(t *testing.T) {
+	// Setup
+	sut := NewStringSet()
+	expected := []string{"silly", "string", "spectacular"}
+	sut.SetAll(&expected)
+
+	// Test
+	actual := sut.ToArray()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectTrue(sut.HasAll(actual), t)
+	ExpectInt(len(expected), len(*actual), t)
+}
+
+func TestThat_StringSet_ToArray_ReturnsEmptyArray_WhenEmpty(t *testing.T) {
+	// Setup
+	sut := NewStringSet()
+
+	// Test
+	actual := sut.ToArray()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectInt(0, len(*actual), t)
+}
+
+func TestThat_StringSet_GetIterator_ReturnsIteratorFunction_ThatWorksYay(t *testing.T) {
+	// Setup
+	sut := NewStringSet()
+	expected := []string{"silly", "string", "spectacular"}
+	sut.SetAll(&expected)
+
+	// Test
+	it := sut.GetIterator()
+	actual := make([]string, 0)
+	for namei := it(); namei != nil; namei = it() {
+		namep := namei.(*string)
+		if nil != namep {
+			actual = append(actual, *namep)
+		}
+	}
+
+	// Verify
+	ExpectInt(len(expected), len(actual), t)
+	ExpectTrue(sut.HasAll(&actual), t)
+}
