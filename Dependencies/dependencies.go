@@ -58,7 +58,9 @@ func (r Dependencies) HasAll(names *[]string) bool {
 
 // Get the list of names for the currently set dependencies
 func (r Dependencies) GetNames() *[]string {
-	names := make([]string, len(r.deps))
-	for i, name := range r.deps { names[i] = name }
+	names := make([]string, 0)
+	for name, _ := range r.deps {
+		names = append(names, name)
+	}
 	return &names
 }

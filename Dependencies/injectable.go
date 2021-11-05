@@ -37,15 +37,11 @@ func (r *DependencyInjectable) SetOptional(optional []string) *DependencyInjecta
 
 func (r *DependencyInjectable) IsValid() bool {
 	if nil == r { return false }
-	// If required dependencies are specified...
-	if len(r.required) > 0 {
-		// All required dependency names must have been provided and non-nil
-		for i, name := range (*r).required {
-			if ! r.deps.Has(name) { return false }
-		}
-		if ! r.deps.HasAll(&(r.required)) { return false }
-	}
-	depNames := r.deps.GetNames()
+	missingDeps := r.GetMissingRequiredDependencyNames()
+	if (nil != missingDeps) && (len(*missingDeps) > 0) { return false }
+	invalidDeps := r.GetInvalidDependencyNames()
+	if (nil != invalidDeps) && (len(*invalidDeps) > 0) { return false }
+	return true
 }
 
 // If some named dependencies are required, then they must all be present
@@ -76,6 +72,6 @@ func (r *DependencyInjectable) GetInvalidDependencyNames() *[]string {
 	givenNames.DropAll(&r.optional)
 	if len(r.required) > 0 { givenNames.DropAll(&r.required) }
 	invalidDeps := givenNames.ToArray()
-	if len(invalidDeps) == 0 { return nil }
+	if len(*invalidDeps) == 0 { return nil }
 	return invalidDeps
 }
