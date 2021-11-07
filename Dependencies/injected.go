@@ -11,6 +11,19 @@ import (
 	"github.com/DigiStratum/GoLib/Data/stringset"
 )
 
+// This interface may not be used, but helps for readability here nonetheless
+type DependencyInjectedIfc interface {
+	SetRequired(required *[]string) *DependencyInjected
+	GetRequired() *[]string
+	NumRequired() int
+	SetOptional(optional *[]string) *DependencyInjected
+	GetOptional() *[]string
+	NumOptional() int
+	IsValid() bool
+	GetMissingRequiredDependencyNames() *[]string
+	GetInvalidDependencyNames() *[]string
+}
+
 type DependencyInjected struct {
 	isInstantiated	bool
 	deps		DependenciesIfc
@@ -37,7 +50,7 @@ func NewDependencyInjected(deps DependenciesIfc) *DependencyInjected {
 // DependencyInjected Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// TODO: make this additive
+// TODO: make this additive?
 func (r *DependencyInjected) SetRequired(required *[]string) *DependencyInjected {
 	if r.isInstantiated { r.required = *required }
 	return r
@@ -53,7 +66,7 @@ func (r DependencyInjected) NumRequired() int {
 	return len(r.required)
 }
 
-// TODO: make this additive
+// TODO: make this additive?
 func (r *DependencyInjected) SetOptional(optional *[]string) *DependencyInjected {
 	if r.isInstantiated { r.optional = *optional }
 	return r

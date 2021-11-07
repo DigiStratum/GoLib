@@ -50,6 +50,32 @@ func TestThat_DependencyInjected_SetRequired_SetsRequired_And_ReturnsInstance(t 
 	ExpectInt(expected, actual, t)
 }
 
+func TestThat_DependencyInjected_SetRequired_ChangesNothing_WhenNotInstantiated(t *testing.T) {
+	// Setup
+	var sut DependencyInjected
+	requiredNames := []string{"one", "two"}
+
+	// Test
+	sut.SetRequired(&requiredNames)
+	actual := sut.GetRequired()
+
+	// Verify
+	ExpectInt(0, len(*actual), t)
+}
+
+func TestThat_DependencyInjected_SetOptional_ChangesNothing_WhenNotInstantiated(t *testing.T) {
+	// Setup
+	var sut DependencyInjected
+	optionalNames := []string{"one", "two"}
+
+	// Test
+	sut.SetOptional(&optionalNames)
+	actual := sut.GetOptional()
+
+	// Verify
+	ExpectInt(0, len(*actual), t)
+}
+
 func TestThat_DependencyInjected_SetOptional_SetsOptional_And_ReturnsInstance(t *testing.T) {
 	// Setup
 	deps := NewDependencies()
@@ -106,6 +132,16 @@ func TestThat_DependencyInjected_GetMissingRequiredDependencyNames_ReturnsMissin
 	ExpectInt(expected, actual, t)
 }
 
+func TestThat_DependencyInjected_GetInvalidDependencyNames_ReturnsNil_WhenNotInstantiated(t *testing.T) {
+	// Setup
+	sut := DependencyInjected{}
+
+	// Test
+	res := sut.GetInvalidDependencyNames()
+
+	// Verify
+	ExpectNil(res, t)
+}
 
 func TestThat_DependencyInjected_GetInvalidDependencyNames_ReturnsInvalidNames(t *testing.T) {
 	// Setup
@@ -130,6 +166,11 @@ func TestThat_DependencyInjected_IsValid_ReturnsFalse(t *testing.T) {
 	var optionalNames, requiredNames []string
 	var deps *Dependencies
 	var sut *DependencyInjected
+
+	// Non-instantiated is always false
+	sut = &DependencyInjected{}
+	res0 := sut.IsValid()
+	ExpectFalse(res0, t)
 
 	// Setup / Test : One required, nothing optional/injected
 	deps = NewDependencies()
