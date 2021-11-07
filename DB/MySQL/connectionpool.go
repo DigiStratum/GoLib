@@ -42,7 +42,7 @@ type ConnectionPoolIfc interface {
 }
 
 type ConnectionPool struct {
-	di 			dependencies.DependencyInjected
+	di 			*dependencies.DependencyInjected
 	configured		bool
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN
@@ -81,13 +81,10 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 
-	requiredDeps := []string{ "connectionFactory" }
+	// Basic Dependency validation
 	r.di = dependencies.NewDependencyInjected(deps)
-		.SetRequired(&requiredDeps)
-
-	if ! r.di.IsValid() {
-		return fmt.Errorf("Injected Dependencies are invalid")
-	}
+	requiredDeps := []string{ "connectionFactory" }
+	if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
 
 	//if nil == deps { return fmt.Errorf("Dependencies were nil") }
 	depName := "connectionFactory"
