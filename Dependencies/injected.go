@@ -10,12 +10,11 @@ TODO:
  * Capture mutation vs. validity state so that IsValid() uses cached validity if not mutated,
    and mutation flag updates with changes to Set functions
 
- * Add a GetValidationError() error method which leverages IsValid() and the Missing/Invalid
-   Required/Optional name checkers to produce an error message that is comprehensive (audience
-   is the developer for logging purposes)
 */
 
 import (
+	"fmt"
+
 	"github.com/DigiStratum/GoLib/Data/stringset"
 )
 
@@ -28,6 +27,7 @@ type DependencyInjectedIfc interface {
 	GetOptional() *[]string
 	NumOptional() int
 	IsValid() bool
+	GetValidationError() error
 	GetMissingRequiredDependencyNames() *[]string
 	GetInvalidDependencyNames() *[]string
 }
@@ -90,13 +90,19 @@ func (r DependencyInjected) NumOptional() int {
 	return len(r.optional)
 }
 
-func (r *DependencyInjected) IsValid() bool {
+func (r DependencyInjected) IsValid() bool {
 	if ! r.isInstantiated { return false }
 	missingDeps := r.GetMissingRequiredDependencyNames()
 	if (nil != missingDeps) && (len(*missingDeps) > 0) { return false }
 	invalidDeps := r.GetInvalidDependencyNames()
 	if (nil != invalidDeps) && (len(*invalidDeps) > 0) { return false }
 	return true
+}
+
+func (r DependencyInjected) GetValidationError() error {
+	if r.IsValid() { return nil }
+	// TODO: Detail which required dependencies are missing, and/or which provided dependencies are invalid
+	return fmt.Errorf("Injected Dependencies are invalid")
 }
 
 // If some named dependencies are required, then they must all be present
