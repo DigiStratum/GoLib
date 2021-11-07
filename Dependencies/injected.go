@@ -1,10 +1,18 @@
 package dependencies
 
 /*
-Whatever struct embeds this struct inherit all of the behaviors attached to the struct. The
+Boilerplate code for DependencyInjected "classes" to inspect the injected dependencies for
+completeness/validity. Bearer must declare which dependency names are Optional and/or Required,
+and point us at the injected Dependencies. Validity checking will be performed against these
+data points.
 
-Note: if the embedding struct uses a lowercase (non-exported) alias, then this embedded struct will be private
-ref: https://knight.sc/software/2018/09/20/type-embedding-in-go.html
+TODO:
+ * Capture mutation vs. validity state so that IsValid() uses cached validity if not mutated,
+   and mutation flag updates with changes to Set functions
+
+ * Add a GetValidationError() error method which leverages IsValid() and the Missing/Invalid
+   Required/Optional name checkers to produce an error message that is comprehensive (audience
+   is the developer for logging purposes)
 */
 
 import (
