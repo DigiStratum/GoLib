@@ -12,6 +12,7 @@ import (
 )
 
 type DependencyInjected struct {
+	isInstantiated	bool
 	deps		DependenciesIfc
 	required	[]string
 	optional	[]string
@@ -25,6 +26,7 @@ type DependencyInjected struct {
 func NewDependencyInjected(deps DependenciesIfc) *DependencyInjected {
 	if nil == deps { return nil }
 	return &DependencyInjected{
+		isInstantiated:	true,
 		deps:		deps,
 		required:	make([]string, 0),
 		optional:	make([]string, 0),
@@ -35,8 +37,9 @@ func NewDependencyInjected(deps DependenciesIfc) *DependencyInjected {
 // DependencyInjected Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *DependencyInjected) SetRequired(required []string) *DependencyInjected {
-	if nil != r { r.required = required }
+// TODO: make this additive
+func (r *DependencyInjected) SetRequired(required *[]string) *DependencyInjected {
+	if r.isInstantiated { r.required = *required }
 	return r
 }
 
@@ -50,8 +53,9 @@ func (r DependencyInjected) NumRequired() int {
 	return len(r.required)
 }
 
-func (r *DependencyInjected) SetOptional(optional []string) *DependencyInjected {
-	if nil != r { r.optional = optional }
+// TODO: make this additive
+func (r *DependencyInjected) SetOptional(optional *[]string) *DependencyInjected {
+	if r.isInstantiated { r.optional = *optional }
 	return r
 }
 
@@ -66,7 +70,7 @@ func (r DependencyInjected) NumOptional() int {
 }
 
 func (r *DependencyInjected) IsValid() bool {
-	if nil == r { return false }
+	if ! r.isInstantiated { return false }
 	missingDeps := r.GetMissingRequiredDependencyNames()
 	if (nil != missingDeps) && (len(*missingDeps) > 0) { return false }
 	invalidDeps := r.GetInvalidDependencyNames()
@@ -76,9 +80,9 @@ func (r *DependencyInjected) IsValid() bool {
 
 // If some named dependencies are required, then they must all be present
 func (r *DependencyInjected) GetMissingRequiredDependencyNames() *[]string {
-	if nil == r { return nil }
+	if ! r.isInstantiated { return nil }
 	missingDeps := make([]string, 0)
-	if len(r.required) > 0 {
+	if r.NumRequired() > 0 {
 		// For each of the required dependency names...
 		for _, name := range (*r).required {
 			// ... is this named dependency present...?
@@ -96,7 +100,7 @@ func (r *DependencyInjected) GetMissingRequiredDependencyNames() *[]string {
 
 // If some named dependencies are optional, then all present must be valid (either required or optional)
 func (r *DependencyInjected) GetInvalidDependencyNames() *[]string {
-	if (nil == r) || (len(r.optional) == 0) { return nil }
+	if (! r.isInstantiated) || (len(r.optional) == 0) { return nil }
 	givenNames := stringset.NewStringSet()
 	givenNames.SetAll(r.deps.GetNames())
 	givenNames.DropAll(&r.optional)
