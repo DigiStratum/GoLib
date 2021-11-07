@@ -34,7 +34,8 @@ func TestThat_DependencyInjected_SetRequired_SetsRequired_And_ReturnsInstance(t 
 
 	// Test
 	res := sut.SetRequired(&requiredNames)
-	actual := sut.NumRequired()
+	ExpectNonNil(res, t)
+	actual := res.NumRequired()
 	actualNames := sut.GetRequired()
 	actualNameMap := make(map[string]bool)
 	for _, actualName := range *actualNames {
@@ -46,7 +47,6 @@ func TestThat_DependencyInjected_SetRequired_SetsRequired_And_ReturnsInstance(t 
 	}
 
 	// Verify
-	ExpectNonNil(res, t)
 	ExpectInt(expected, actual, t)
 }
 
@@ -59,7 +59,8 @@ func TestThat_DependencyInjected_SetOptional_SetsOptional_And_ReturnsInstance(t 
 
 	// Test
 	res := sut.SetOptional(&optionalNames)
-	actual := sut.NumOptional()
+	ExpectNonNil(res, t)
+	actual := res.NumOptional()
 	actualNames := sut.GetOptional()
 	actualNameMap := make(map[string]bool)
 	for _, actualName := range *actualNames {
@@ -71,7 +72,6 @@ func TestThat_DependencyInjected_SetOptional_SetsOptional_And_ReturnsInstance(t 
 	}
 
 	// Verify
-	ExpectNonNil(res, t)
 	ExpectInt(expected, actual, t)
 }
 
@@ -89,16 +89,39 @@ func TestThat_DependencyInjected_GetMissingRequiredDependencyNames_ReturnsNil_Wh
 func TestThat_DependencyInjected_GetMissingRequiredDependencyNames_ReturnsMissingNames(t *testing.T) {
 	// Setup
 	deps := NewDependencies()
+	deps.Set("one", "sillystring!")
 	sut := NewDependencyInjected(deps)
 	requiredNames := []string{"one", "two"}
 	sut.SetRequired(&requiredNames)
 	expected := len(requiredNames)
+	depNames := deps.GetNames()
+	if nil != depNames { expected -= len(*depNames) }
 
 	// Test
 	missingNames := sut.GetMissingRequiredDependencyNames()
+	ExpectNonNil(missingNames, t)
 	actual := len(*missingNames)
 
 	// Verify
-	ExpectNonNil(missingNames, t)
+	ExpectInt(expected, actual, t)
+}
+
+
+func TestThat_DependencyInjected_GetInvalidDependencyNames_ReturnsInvalidNames(t *testing.T) {
+	// Setup
+	deps := NewDependencies()
+	deps.Set("three", "sillystring!")
+	sut := NewDependencyInjected(deps)
+	optionalNames := []string{"one", "two"}
+	sut.SetOptional(&optionalNames)
+	depNames := deps.GetNames()
+	expected := len(*depNames)
+
+	// Test
+	invalidNames := sut.GetInvalidDependencyNames()
+	ExpectNonNil(invalidNames, t)
+	actual := len(*invalidNames)
+
+	// Verify
 	ExpectInt(expected, actual, t)
 }
