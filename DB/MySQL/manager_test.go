@@ -18,7 +18,8 @@ func TestThat_NewManager_ReturnsSomething(t *testing.T) {
 func TestThat_Manager_GetConnection_ReturnsNothing_WhenNoConnectionPoolSetup(t *testing.T) {
 	// Setup
 	sut := NewManager()
-	dbKey := NewDBKeyFromDSN("bogusdsn")
+	dsn, _ := db.NewDSN("bogusdsn")
+	dbKey := NewDBKeyFromDSN(*dsn)
 
 	// Test
 	leasedConnection, err := sut.GetConnection(dbKey)

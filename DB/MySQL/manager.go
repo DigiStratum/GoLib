@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/DigiStratum/GoLib/Dependencies"
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 type ManagerIfc interface {
@@ -83,9 +84,5 @@ func (r *Manager) getConnectionPool(dbKey DBKeyIfc) ConnectionPoolIfc {
 	key := dbKey.GetKey()
 	// If we already have a ConnectionPool for this DBKey...
 	if connPool, ok := r.connectionPools[key]; ok { return connPool }
-
-	r.mutex.Lock();	defer r.mutex.Unlock()
-	connectionPool := r.connectionPoolFactory.NewConnectionPool(key)
-	r.connectionPools[dbKey.GetKey()] = connectionPool
-	return connectionPool
+	return nil
 }

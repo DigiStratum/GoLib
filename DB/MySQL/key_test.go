@@ -21,7 +21,7 @@ func TestThat_NewDBKeyFromDSN_ReturnsSomething(t *testing.T) {
 	dsn, _ := db.NewDSN("bogusdsn")
 
 	// Test
-	sut := NewDBKeyFromDSN(dsn)
+	sut := NewDBKeyFromDSN(*dsn)
 
 	// Verify
 	ExpectNonNil(sut, t)
