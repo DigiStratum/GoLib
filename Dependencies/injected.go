@@ -136,3 +136,20 @@ func (r *DependencyInjected) GetInvalidDependencyNames() *[]string {
 	if len(*invalidDeps) == 0 { return nil }
 	return invalidDeps
 }
+
+/*
+func (r *DependencyInjected) MapDependencies(dependencyMap *map[string]interface) error {
+	if ! r.IsValid() { return fmt.Errorf("Dependencies invalid, cannot map") }
+	for name, mappedDependencyIfc := range *dependencyMap {
+		if ! r.deps.Has(name) { continue }
+		dep := r.deps.Get(name)
+		mappedType := mappedDependencyIfc.(type)
+		depType := dep.(type)
+		if mappedType == depType {
+			// Can't change the pointer (maybe a pointer-to-pointer?) as it will only modify local copy
+		}
+	}
+	return nil
+}
+
+*/

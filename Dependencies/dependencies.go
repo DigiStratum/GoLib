@@ -14,6 +14,7 @@ type DependenciesIfc interface {
 	Has(name string) bool
 	GetNames() *[]string
 	HasAll(names *[]string) bool
+	GetIterator() func () *Dependency
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -63,4 +64,23 @@ func (r Dependencies) GetNames() *[]string {
 		names = append(names, name)
 	}
 	return &names
+}
+
+// -------------------------------------------------------------------------------------------------
+// IterableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Dependencies) GetIterator() func () *Dependency {
+	idx := 0
+	names := r.GetNames()
+	// Return a Dependency(name/dep) or nil when done iterating
+	return func () *Dependency {
+		// If we're done iterating, return do nothing
+		if idx >= len(*names) { return nil }
+		name := (*names)[idx]
+		dep, ok := r.deps[name]
+		if ! ok { return nil } // This can only happen if someone tampers with deps while iterating
+		idx++
+		return NewDependency(name, dep)
+	}
 }

@@ -81,25 +81,33 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 
-	// Basic Dependency validation
+	// Validate Dependencies
 	r.di = dependencies.NewDependencyInjected(deps)
 	requiredDeps := []string{ "connectionFactory" }
 	if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
 
+	// Iterate over dependencies and assign each to a local property
+	it := deps.GetIterator()
+	for dd := it(); nil != dd; dd = it() {
+		name, dep := dd.GetDep()
+		var ok bool
+		switch name {
+			case "connectionFactory":
+				if r.connectionFactory, ok = dep.(db.ConnectionFactoryIfc); ok { continue }
+			default:
+				return fmt.Errorf("Unhandled dependency: %s", name )
+		}
+		return fmt.Errorf("Dependency was wrong type: %s", name )
+	}
+
 	//if nil == deps { return fmt.Errorf("Dependencies were nil") }
-	depName := "connectionFactory"
+	//depName := "connectionFactory"
 	//if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
-	dep := deps.Get(depName)
-
-	// TODO: figure out if we can make some sort of dependency map[name]{type:X}? Does this help
-	// us assign the found dependency to the needed instance variable? maybe? what results in
-	// the least repetitive boilerplate code in our various InjectDependencies?
-	//dtype := dep.(type)
-
+	//dep := deps.Get(depName)
 	//if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
-	connectionFactory, ok := dep.(db.ConnectionFactoryIfc)
-	if ! ok { return fmt.Errorf("Dependency was wrong type: %s", depName) }
-	r.connectionFactory = connectionFactory
+	//connectionFactory, ok := dep.(db.ConnectionFactoryIfc)
+	//if ! ok { return fmt.Errorf("Dependency was wrong type: %s", depName) }
+	//r.connectionFactory = connectionFactory
 	return nil
 }
 
@@ -135,7 +143,6 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 				if r.maxConnections < 1 { r.maxConnections = 1 }
 				// If Max dropped below Min, then push Min down
 				if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
-
 
 			case "max_idle":
 				value := config.GetInt64("max_idle")
