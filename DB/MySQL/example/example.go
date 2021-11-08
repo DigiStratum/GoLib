@@ -23,23 +23,32 @@ go run example.go
 import (
 	"fmt"
 	"os"
+	"database/sql"
 
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
 	db "github.com/DigiStratum/GoLib/DB"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 )
 
 func main() {
 	// Load configuration
-	cfg := lib.NewConfig()
+	cfg := cfg.NewConfig()
 	err := cfg.LoadFromJsonFile("example.config.json")
 	if nil != err {
 		die("Error loading config from JSON file")
 	}
-	requiredConfigKeys := []string{ "user", "pass", "host", "port", "name" }
+	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
 	if ! cfg.HasAll(&requiredConfigKeys) {
 		die("Missing one or more required configuration keys")
 	}
+	dsnBuilder := db.BuildDSN()
+	dsnBuilder.Configure(cfg)
+	dsn, err := dsnBuilder.Build()
+	if nil != err {
+		die(fmt.Sprintf("DSN Build error: %s", err.Error()))
+	}
+
+/*
 	dsn := db.MakeDSN(
 		*(cfg.Get("user")),
 		*(cfg.Get("pass")),
@@ -47,12 +56,15 @@ func main() {
 		*(cfg.Get("port")),
 		*(cfg.Get("name")),
 	)
-	fmt.Printf("MySQL DSN is: %s\n\n", dsn)
+ */
+	fmt.Printf("MySQL DSN is: %s\n\n", dsn.ToString())
 
-	connection_example(dsn)
-	manager_example(dsn)
+	//connectionFactory_example(*dsn)
+	connection_example(*dsn)
+//	manager_example(dsn)
 }
 
+/*
 // Get the connection through a connection Manager if you want to manage multiple connections/pools to different DB's
 func manager_example(dsn string) {
 
@@ -75,20 +87,27 @@ func manager_example(dsn string) {
 
 	manager.CloseConnectionPool(dbKey)
 }
+ */
+
+func connectionFactory_example(dsn db.DSN) {
+}
 
 // Get the connection directly
-func connection_example(dsn string) {
+func connection_example(dsn db.DSN) {
 	fmt.Println("Direct Example")
 
-	conn, err := mysql.NewConnection(dsn)
-	if nil != err { die(fmt.Sprintf("Error getting connection: %s\n", err.Error())) }
+	dbconn, err := sql.Open("mysql", dsn.ToString())
+	if nil != err { die(fmt.Sprintf("Error getting underlying connection: %s\n", err.Error())) }
+
+	conn, err := mysql.NewConnection(dbconn)
+	if nil != err { die(fmt.Sprintf("Error getting connection wrapper: %s\n", err.Error())) }
 
 	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
 	if (nil != err ) || (nil == query) { die(fmt.Sprintf("Query Setup Error: %s\n", err)) }
 	
 	runQueryDumpAll(query)
 
-	conn.Disconnect()
+	conn.Close()
 }
 
 func runQueryDumpAll(query mysql.QueryIfc) {
