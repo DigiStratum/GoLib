@@ -32,79 +32,75 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := cfg.NewConfig()
-	err := cfg.LoadFromJsonFile("example.config.json")
-	if nil != err {
-		die("Error loading config from JSON file")
-	}
-	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
-	if ! cfg.HasAll(&requiredConfigKeys) {
-		die("Missing one or more required configuration keys")
-	}
-	dsnBuilder := db.BuildDSN()
-	dsnBuilder.Configure(cfg)
-	dsn, err := dsnBuilder.Build()
+	config := cfg.NewConfig()
+	err := config.LoadFromJsonFile("example.config.json")
+	if nil != err { die(fmt.Sprintf("Error loading config JSON: %s", err.Error())) }
+	dsn, err := getDSNFromConfig(config.GetSubsetConfig("db.dsn."))
 	if nil != err {
 		die(fmt.Sprintf("DSN Build error: %s", err.Error()))
 	}
 
-/*
-	dsn := db.MakeDSN(
-		*(cfg.Get("user")),
-		*(cfg.Get("pass")),
-		*(cfg.Get("host")),
-		*(cfg.Get("port")),
-		*(cfg.Get("name")),
-	)
- */
-	fmt.Printf("MySQL DSN is: %s\n\n", dsn.ToString())
-
-	//connectionFactory_example(*dsn)
 	connection_example(*dsn)
-//	manager_example(dsn)
+	connectionFactory_example(*dsn)
+	//connectionPool_example(dsn)
 }
 
-/*
-// Get the connection through a connection Manager if you want to manage multiple connections/pools to different DB's
-func manager_example(dsn string) {
-
-	fmt.Println("Manager Example")
-	manager := mysql.NewManager()
-	dbKey := manager.NewConnectionPool(dsn)
-
-	// Get leased connection from pool
-	conn := manager.GetConnection(dbKey)
-	if nil == conn { die("Error connecting\n") }
-
-	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
-
-	if nil != err { die(fmt.Sprintf("Error Creating Query: %s\n", err.Error())) }
-
-	runQueryDumpAll(query)
-
-	err = conn.Release()
-	if nil != err { die(fmt.Sprintf("Error Releasing Connection: %s\n", err.Error())) }
-
-	manager.CloseConnectionPool(dbKey)
+func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
+	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
+	keys := config.GetKeys()
+	if ! config.HasAll(&requiredConfigKeys) {
+		for _, key := range keys { fmt.Printf("config key: %s\n", key) }
+		return nil, fmt.Errorf("Missing one or more required configuration keys")
+	}
+	dsnBuilder := db.BuildDSN()
+	dsnBuilder.Configure(config)
+	dsn, err := dsnBuilder.Build()
+	if nil != err {
+		return nil, fmt.Errorf("DSN Build error: %s", err.Error())
+	}
+	fmt.Printf("MySQL DSN is: %s\n\n", dsn.ToString())
+	return dsn, nil
 }
- */
+
+func connectionPool_example(dsn db.DSN) {
+	// TODO: Make a db.NewConnectionPool(), give it a connectionFactory, then Get and Release a leased connection!
+}
 
 func connectionFactory_example(dsn db.DSN) {
+	fmt.Println("ConnectionFactory Example")
+
+	// Get the connection from a MySQL connection factory
+	connFactory := mysql.NewMySQLConnectionFactory()
+	dbconn, err := connFactory.NewConnection(dsn)
+	if nil != err { die(fmt.Sprintf("Error getting underlying connection: %s\n", err.Error())) }
+
+	// Wrap the raw connection
+	conn, err := mysql.NewConnection(dbconn)
+	if nil != err { die(fmt.Sprintf("Error getting connection wrapper: %s\n", err.Error())) }
+
+	// Run a query through
+	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
+	if (nil != err ) || (nil == query) { die(fmt.Sprintf("Query Setup Error: %s\n", err)) }
+	runQueryDumpAll(query)
+
+	conn.Close()
 }
 
 // Get the connection directly
 func connection_example(dsn db.DSN) {
-	fmt.Println("Direct Example")
+	fmt.Println("Connection Example")
 
+	// Get the connection directly from SQL driver
 	dbconn, err := sql.Open("mysql", dsn.ToString())
-	if nil != err { die(fmt.Sprintf("Error getting underlying connection: %s\n", err.Error())) }
+	if nil != err { die(fmt.Sprintf("Error getting underlying connection: %s\n", err)) }
 
+	// Wrap the raw connection
 	conn, err := mysql.NewConnection(dbconn)
-	if nil != err { die(fmt.Sprintf("Error getting connection wrapper: %s\n", err.Error())) }
+	if nil != err { die(fmt.Sprintf("Error getting connection wrapper: %s\n", err)) }
 
+	// Run a query through
 	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
 	if (nil != err ) || (nil == query) { die(fmt.Sprintf("Query Setup Error: %s\n", err)) }
-	
 	runQueryDumpAll(query)
 
 	conn.Close()

@@ -8,6 +8,7 @@ import(
 )
 
 // ref: https://medium.com/easyread/unit-test-sql-in-golang-5af19075e68e
+// ref: https://dev.to/techschoolguru/mock-db-for-testing-http-api-in-go-and-achieve-100-coverage-4pa9
 
 type mockInfo struct {
 	Conn		*sql.DB

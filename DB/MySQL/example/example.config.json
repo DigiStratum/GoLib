@@ -1,6 +1,6 @@
 {
-  "User": "username",
-  "Passwd": "password",
-  "Net": "tcp(localhost:3306)",
-  "DBName": "todolist"
+  "db.dsn.User": "username",
+  "db.dsn.Passwd": "password",
+  "db.dsn.Net": "tcp(localhost:3306)",
+  "db.dsn.DBName": "todolist"
 }
