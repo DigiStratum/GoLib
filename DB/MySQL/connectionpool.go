@@ -70,8 +70,6 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
 	}
-	// Set up the first resource
-	cp.establishMinConnections()
 
 	return &cp
 }
@@ -101,14 +99,9 @@ func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 		return fmt.Errorf("Dependency was wrong type: %s", name )
 	}
 
-	//if nil == deps { return fmt.Errorf("Dependencies were nil") }
-	//depName := "connectionFactory"
-	//if ! deps.Has(depName) { return fmt.Errorf("Missing Dependency: %s", depName) }
-	//dep := deps.Get(depName)
-	//if nil == dep { return fmt.Errorf("Dependency was nil: %s", depName) }
-	//connectionFactory, ok := dep.(db.ConnectionFactoryIfc)
-	//if ! ok { return fmt.Errorf("Dependency was wrong type: %s", depName) }
-	//r.connectionFactory = connectionFactory
+	// Set up the first resource
+	r.establishMinConnections()
+
 	return nil
 }
 
