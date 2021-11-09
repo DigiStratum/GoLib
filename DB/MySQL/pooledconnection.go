@@ -31,6 +31,9 @@ type PooledConnectionIfc interface {
 	Touch()
 	IsExpired() bool
 
+	ConnectionCommonIfc
+
+/*
 	// Transactions
 	InTransaction() bool
 	Begin() error
@@ -41,6 +44,7 @@ type PooledConnectionIfc interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
+*/
 }
 
 type PooledConnection struct {
@@ -136,6 +140,7 @@ func (r *PooledConnection) Begin() error { return r.connection.Begin() }
 func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
+func (r *PooledConnection) NewQuery(query string) (QueryIfc, error) { r.Touch(); return r.connection.NewQuery(query) }
 func (r *PooledConnection) Exec(query string, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
 func (r *PooledConnection) Query(query string, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
 func (r *PooledConnection) QueryRow(query string, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }

@@ -39,6 +39,7 @@ type ConnectionPoolIfc interface {
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
+	Close() error
 }
 
 type ConnectionPool struct {

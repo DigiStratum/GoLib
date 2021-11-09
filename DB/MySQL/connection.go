@@ -24,19 +24,14 @@ type ConnectionCommonIfc interface {
 	NewQuery(query string) (QueryIfc, error)
 	Commit() error
 	Rollback() error
-}
-
-type ConnectionIfc interface {
-	// Connections
-	IsConnected() bool
-
-	// Transactions
-	ConnectionCommonIfc
-
-	// Operations
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
+type ConnectionIfc interface {
+	IsConnected() bool
+	ConnectionCommonIfc
 }
 
 type Connection struct {

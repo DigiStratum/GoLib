@@ -13,7 +13,6 @@ import (
 )
 
 type LeasedConnectionIfc interface {
-	// Embed Transaction support to this interface
 	ConnectionCommonIfc
 
 	Release() error
