@@ -111,6 +111,8 @@ func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 
 // Optionally accept overrides for defaults in configuration
 func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
+	if (nil == r) || (! r.di.IsValid()) { return fmt.Errorf("Not ready") }
+
 	// If we have already been configured, do not accept a second configuration
 	if r.configured { return nil }
 
@@ -121,32 +123,22 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 		if ! ok { continue }
 		switch kvp.Key {
 			case "min_connections":
-				value := config.GetInt64("min_connections")
-				if nil == value { break }
-				// Set the new Min (cannot be < 1)
-				r.minConnections = int(*value)
-				if r.minConnections < 1 { r.minConnections = 1 }
-				// If Min pushed above Max, then push Max up
-				if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
+				if value := config.GetInt64(kvp.Key); nil != value {
+					r.configureMinConnections(int(*value))
+				}
 
 			case "max_connections":
-				value := config.GetInt64("max_connections")
-				if nil == value { break }
-				// Set the new Max (cannot be < 1)
-				r.maxConnections = int(*value)
-				if r.maxConnections < 1 { r.maxConnections = 1 }
-				// If Max dropped below Min, then push Min down
-				if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
+				if value := config.GetInt64(kvp.Key); nil != value {
+					r.configureMaxConnections(int(*value))
+				}
 
 			case "max_idle":
-				value := config.GetInt64("max_idle")
-				if nil == value { break }
-				r.maxIdle = int(*value)
-				// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
-				if r.maxIdle < 1 { r.maxIdle = 1 }
+				if value := config.GetInt64(kvp.Key); nil != value {
+					r.configureMaxIdle(int(*value))
+				}
 
 			default:
-				return errors.New(fmt.Sprintf("Unknown configuration key: '%s'", kvp.Key))
+				return fmt.Errorf("Unknown configuration key: '%s'", kvp.Key)
 		}
 	}
 	r.configured = true
@@ -164,6 +156,26 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 	r.establishMinConnections()
 
 	return nil
+}
+
+func (r *ConnectionPool) configureMinConnections(value int) {
+	r.minConnections = value
+	if r.minConnections < 1 { r.minConnections = 1 }
+	// If Min pushed above Max, then push Max up
+	if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
+}
+
+func (r *ConnectionPool) configureMaxConnections(value int) {
+	r.maxConnections = value
+	if r.maxConnections < 1 { r.maxConnections = 1 }
+	// If Max dropped below Min, then push Min down
+	if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
+}
+
+func (r *ConnectionPool) configureMaxIdle(value int) {
+	r.maxIdle = value
+	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
+	if r.maxIdle < 1 { r.maxIdle = 1 }
 }
 
 // -------------------------------------------------------------------------------------------------
