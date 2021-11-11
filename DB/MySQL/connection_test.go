@@ -6,12 +6,12 @@ import(
 
         "github.com/DATA-DOG/go-sqlmock"
 
+	"github.com/DigiStratum/GoLib/DB"
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
 )
 
 var driverName string = "mockdriver"
-var dataSourceName string = "mockdsn"
 
 func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Test
@@ -24,7 +24,8 @@ func TestThat_NewConnection_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 
 func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 
 	// Test
 	sut, err := NewConnection(mockDBConnection)
@@ -36,7 +37,8 @@ func TestThat_NewConnection_ReturnsConnection_WhenGivenDBConnection(t *testing.T
 
 func TestThat_Connection_IsConnected_ReturnsTrue_WhenConnected(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -59,7 +61,8 @@ func TestThat_Connection_IsConnected_ReturnsFalse_WhenNotConnected(t *testing.T)
 
 func TestThat_Connection_IsConnected_ReturnsFalse_WhenConnectedThenClosed(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -74,7 +77,8 @@ func TestThat_Connection_IsConnected_ReturnsFalse_WhenConnectedThenClosed(t *tes
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenNotInTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -86,8 +90,9 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenNotInTransaction(t *test
 
 func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -102,8 +107,9 @@ func TestThat_Connection_InTransaction_ReturnsTrue_WhenInTransaction(t *testing.
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollback(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	(*mockInfo.Mock).ExpectRollback()
 	sut, _ := NewConnection(mockDBConnection)
@@ -121,8 +127,9 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenRollbac
 
 func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenCommit(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	(*mockInfo.Mock).ExpectCommit()
 	sut, _ := NewConnection(mockDBConnection)
@@ -140,8 +147,9 @@ func TestThat_Connection_InTransaction_ReturnsFalse_WhenInTransactionThenCommit(
 
 func TestThat_Connection_Begin_ReturnsNoError_WhenCalledTwice(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	(*mockInfo.Mock).ExpectRollback()
 	sut, _ := NewConnection(mockDBConnection)
@@ -162,8 +170,9 @@ func TestThat_Connection_Begin_ReturnsNoError_WhenCalledTwice(t *testing.T) {
 // ExpectBegin(), or both or neither; We want the result of Begin() on a Closed connection
 func TestThat_Connection_Begin_ReturnsError_WhenConnectionClosed(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	mockDBConnection.Close()
 	sut, _ := NewConnection(mockDBConnection)
@@ -180,8 +189,9 @@ func TestThat_Connection_Begin_ReturnsError_WhenConnectionClosed(t *testing.T) {
 func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 	// Setup
 	query := "bogus query"
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectPrepare(query)
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -195,7 +205,8 @@ func TestThat_Connection_NewQuery_ReturnsQueryNoError(t *testing.T) {
 
 func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -207,8 +218,9 @@ func TestThat_Connection_Commit_ReturnsError_WhenNotInTransaction(t *testing.T) 
 
 func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedMsg := "bogus failure"
 	(*mockInfo.Mock).ExpectCommit().WillReturnError(fmt.Errorf(expectedMsg))
@@ -226,8 +238,9 @@ func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *tes
 
 func TestThat_Connection_Commit_ReturnsNoError_WhenTransactionCommits(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	(*mockInfo.Mock).ExpectCommit()
 	sut, _ := NewConnection(mockDBConnection)
@@ -243,7 +256,8 @@ func TestThat_Connection_Commit_ReturnsNoError_WhenTransactionCommits(t *testing
 
 func TestThat_Connection_Rollback_ReturnsNoError_WhenNotInTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -255,8 +269,9 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenNotInTransaction(t *testing
 
 func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedMsg := "bogus failure"
 	(*mockInfo.Mock).ExpectRollback().WillReturnError(fmt.Errorf(expectedMsg))
@@ -274,8 +289,9 @@ func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t 
 
 func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectRollback()
 	sut, _ := NewConnection(mockDBConnection)
 
@@ -290,8 +306,9 @@ func TestThat_Connection_Rollback_ReturnsNoError_WhenTransactionRollsBack_Outsid
 
 func TestThat_Connection_Exec_ReturnsResultNoError_WithoutArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
 	expectedResult := sqlmock.NewResult(expectedInsertId, expectedAffectedRows)
@@ -316,8 +333,9 @@ func TestThat_Connection_Exec_ReturnsResultNoError_WithoutArgs_OutsideTransactio
 
 func TestThat_Connection_Exec_ReturnsError_WithoutArgs_OutsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedQuery := "bogus query"
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectExec().
 		WithArgs().
@@ -335,8 +353,9 @@ func TestThat_Connection_Exec_ReturnsError_WithoutArgs_OutsideTransaction_WhenPr
 
 func TestThat_Connection_Exec_ReturnsResultNoError_WithoutArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
@@ -363,8 +382,9 @@ func TestThat_Connection_Exec_ReturnsResultNoError_WithoutArgs_InsideTransaction
 
 func TestThat_Connection_Exec_ReturnsError_WithoutArgs_InsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedQuery := "bogus query"
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectExec().
@@ -384,8 +404,9 @@ func TestThat_Connection_Exec_ReturnsError_WithoutArgs_InsideTransaction_WhenPre
 
 func TestThat_Connection_Exec_ReturnsResultNoError_WithArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
 	expectedResult := sqlmock.NewResult(expectedInsertId, expectedAffectedRows)
@@ -411,8 +432,9 @@ func TestThat_Connection_Exec_ReturnsResultNoError_WithArgs_OutsideTransaction(t
 
 func TestThat_Connection_Exec_ReturnsError_WithArgs_OutsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedQuery := "bogus query"
 	expectedArgs := 333
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectExec().
@@ -431,8 +453,9 @@ func TestThat_Connection_Exec_ReturnsError_WithArgs_OutsideTransaction_WhenPrepa
 
 func TestThat_Connection_Exec_ReturnsResultNoError_WithArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
@@ -460,8 +483,9 @@ func TestThat_Connection_Exec_ReturnsResultNoError_WithArgs_InsideTransaction(t 
 
 func TestThat_Connection_Exec_ReturnsError_WithArgs_InsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedQuery := "bogus query"
 	expectedArgs := 333
@@ -482,8 +506,9 @@ func TestThat_Connection_Exec_ReturnsError_WithArgs_InsideTransaction_WhenPrepar
 
 func TestThat_Connection_Query_ReturnsRowsNoError_WithoutArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
 	expectedQuery := "bogus query"
@@ -504,8 +529,9 @@ func TestThat_Connection_Query_ReturnsRowsNoError_WithoutArgs_OutsideTransaction
 
 func TestThat_Connection_Query_ReturnsError_WithoutArgs_OutsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedQuery := "bogus query"
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
 		WithArgs().
@@ -523,8 +549,9 @@ func TestThat_Connection_Query_ReturnsError_WithoutArgs_OutsideTransaction_WhenP
 
 func TestThat_Connection_Query_ReturnsRowsNoError_WithoutArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
@@ -547,8 +574,9 @@ func TestThat_Connection_Query_ReturnsRowsNoError_WithoutArgs_InsideTransaction(
 
 func TestThat_Connection_Query_ReturnsError_WithoutArgs_InsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedQuery := "bogus query"
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
@@ -568,8 +596,9 @@ func TestThat_Connection_Query_ReturnsError_WithoutArgs_InsideTransaction_WhenPr
 
 func TestThat_Connection_Query_ReturnsRowsNoError_WithArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
 	expectedQuery := "bogus query"
@@ -591,8 +620,9 @@ func TestThat_Connection_Query_ReturnsRowsNoError_WithArgs_OutsideTransaction(t 
 
 func TestThat_Connection_Query_ReturnsError_WithArgs_OutsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedQuery := "bogus query"
 	expectedArgs := 333
 	(*mockInfo.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
@@ -611,8 +641,9 @@ func TestThat_Connection_Query_ReturnsError_WithArgs_OutsideTransaction_WhenPrep
 
 func TestThat_Connection_Query_ReturnsRowsNoError_WithArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
@@ -636,8 +667,9 @@ func TestThat_Connection_Query_ReturnsRowsNoError_WithArgs_InsideTransaction(t *
 
 func TestThat_Connection_Query_ReturnsError_WithArgs_InsideTransaction_WhenPrepareFails(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedQuery := "bogus query"
 	expectedArgs := 333
@@ -658,8 +690,9 @@ func TestThat_Connection_Query_ReturnsError_WithArgs_InsideTransaction_WhenPrepa
 
 func TestThat_Connection_QueryRow_ReturnsRow_WithoutArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
 	expectedQuery := "bogus query"
@@ -680,8 +713,9 @@ func TestThat_Connection_QueryRow_ReturnsRow_WithoutArgs_OutsideTransaction(t *t
 
 func TestThat_Connection_QueryRow_ReturnsRow_WithoutArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
@@ -704,8 +738,9 @@ func TestThat_Connection_QueryRow_ReturnsRow_WithoutArgs_InsideTransaction(t *te
 
 func TestThat_Connection_QueryRow_ReturnsRow_WithArgs_OutsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")
 	expectedQuery := "bogus query"
@@ -727,8 +762,9 @@ func TestThat_Connection_QueryRow_ReturnsRow_WithArgs_OutsideTransaction(t *test
 
 func TestThat_Connection_QueryRow_ReturnsRow_WithArgs_InsideTransaction(t *testing.T) {
 	// Setup
-	mockDBConnection, _ := NewMockDBConnection(driverName, dataSourceName)
-	mockInfo := GetDBConnectionMockInfo(driverName, dataSourceName)
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	mockInfo := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockInfo.Mock).ExpectBegin()
 	expectedCols := []string{ "boguscol" }
 	expectedRows := sqlmock.NewRows(expectedCols).AddRow("bogusval")

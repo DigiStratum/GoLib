@@ -2,6 +2,8 @@ package mockdb
 
 import(
 	"database/sql"
+
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 type MockDBConnectionFactory struct {
@@ -19,6 +21,6 @@ func NewMockDBConnectionFactory() *MockDBConnectionFactory {
 // db.DBConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *MockDBConnectionFactory) NewConnection(dsn string) (*sql.DB, error) {
+func (r *MockDBConnectionFactory) NewConnection(dsn db.DSNIfc) (*sql.DB, error) {
 	return NewMockDBConnection("mockdriver", dsn)
 }

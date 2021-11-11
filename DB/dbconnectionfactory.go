@@ -26,6 +26,6 @@ func NewDBConnectionFactory(driver string) *DBConnectionFactory {
 // ConnectionFactoryIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *DBConnectionFactory) NewConnection(dsn DSN) (*sql.DB, error) {
+func (r *DBConnectionFactory) NewConnection(dsn DSNIfc) (*sql.DB, error) {
 	return NewDBConnection(r.driver, dsn)
 }

@@ -10,5 +10,5 @@ import(
 
 type ConnectionFactoryIfc interface {
 	// Return interface instead of struct so that other implementations may satisfy
-	NewConnection(dsn DSN) (*sql.DB, error)
+	NewConnection(dsn DSNIfc) (*sql.DB, error)
 }

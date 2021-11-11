@@ -81,6 +81,7 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 
 	// Validate Dependencies
+	if nil == deps { return fmt.Errorf("No dependencies provided!") }
 	r.di = dependencies.NewDependencyInjected(deps)
 	requiredDeps := []string{ "connectionFactory" }
 	if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
@@ -94,7 +95,7 @@ func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 			case "connectionFactory":
 				if r.connectionFactory, ok = dep.(db.ConnectionFactoryIfc); ok { continue }
 			default:
-				return fmt.Errorf("Unhandled dependency: %s", name )
+				// Ignore extra dependencies - not a fatal error
 		}
 		return fmt.Errorf("Dependency was wrong type: %s", name )
 	}

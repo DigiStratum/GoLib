@@ -5,6 +5,8 @@ import(
 	"database/sql"
 
         "github.com/DATA-DOG/go-sqlmock"
+
+	"github.com/DigiStratum/GoLib/DB"
 )
 
 // ref: https://medium.com/easyread/unit-test-sql-in-golang-5af19075e68e
@@ -25,10 +27,10 @@ var instance *mockDBConnection
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewMockDBConnection(driverName, dataSourceName string) (*sql.DB, error) {
+func NewMockDBConnection(driverName string, dsn db.DSNIfc) (*sql.DB, error) {
 	conn, mock, err := sqlmock.New()
 	if nil != err { return nil, err }
-	key := fmt.Sprintf("%s:%s", driverName, dataSourceName)
+	key := fmt.Sprintf("%s:%s", driverName, dsn.ToHash())
 	i := getInstance()
 	i.mocks[key] = mockInfo{
 		Conn:	conn,
@@ -38,8 +40,8 @@ func NewMockDBConnection(driverName, dataSourceName string) (*sql.DB, error) {
 	return conn, nil
 }
 
-func GetDBConnectionMockInfo(driverName, dataSourceName string) *mockInfo {
-	key := fmt.Sprintf("%s:%s", driverName, dataSourceName)
+func GetDBConnectionMockInfo(driverName string, dsn db.DSNIfc) *mockInfo {
+	key := fmt.Sprintf("%s:%s", driverName, dsn.ToHash())
 	i := getInstance()
 	mocks := i.mocks
 	if mi, ok := mocks[key]; ok {
