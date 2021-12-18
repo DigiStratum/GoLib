@@ -120,7 +120,7 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 	// Capture optional configs
 	it := config.GetIterator()
 	for kvpi := it(); nil != kvpi; kvpi = it() {
-		kvp, ok := kvpi.(hashmap.KeyValuePair)
+		kvp, ok := kvpi.(*hashmap.KeyValuePair)
 		if ! ok { continue }
 		switch kvp.Key {
 			case "min_connections":

@@ -7,6 +7,7 @@ import(
 	"github.com/DigiStratum/GoLib/Dependencies"
 	. "github.com/DigiStratum/GoLib/Testing"
 	"github.com/DigiStratum/GoLib/Testing/mocks"
+	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 func TestThat_NewConnectionPool_ReturnsSomething(t *testing.T) {
@@ -57,10 +58,67 @@ func TestThat_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T
 	deps := dependencies.NewDependencies()
 	connecitonFactory := mockdb.NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
-	//deps.Set("bogusdep", "bogusstring")
 
 	// Test
 	err := sut.InjectDependencies(deps)
+
+	// Verify
+	ExpectNoError(err, t)
+}
+
+func TestThat_Configure_ReturnsNoError_ForEmptyConfig(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+
+	// Test
+	err := sut.Configure(config)
+
+	// Verify
+	ExpectNoError(err, t)
+}
+
+func TestThat_Configure_ReturnsError_ForUnknownConfigKeys(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	config.Set("boguskey", "bogusvalue")
+
+	// Test
+	err := sut.Configure(config)
+
+	// Verify
+	ExpectError(err, t)
+}
+
+func TestThat_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	config.Set("min_connections", "1")
+	config.Set("max_connections", "1")
+	config.Set("max_idle", "1")
+
+	// Test
+	err := sut.Configure(config)
 
 	// Verify
 	ExpectNoError(err, t)
