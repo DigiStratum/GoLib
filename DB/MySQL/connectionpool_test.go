@@ -1,6 +1,7 @@
 package mysql
 
 import(
+	"fmt"
 	"testing"
 
 	"github.com/DigiStratum/GoLib/DB"
@@ -119,6 +120,117 @@ func TestThat_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
 
 	// Test
 	err := sut.Configure(config)
+
+	// Verify
+	ExpectNoError(err, t)
+}
+
+func TestThat_GetConnection_ReturnsLeasedConnection_WhenOneAvailable(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	config.Set("min_connections", "1")
+	config.Set("max_connections", "1")
+	config.Set("max_idle", "1")
+	sut.Configure(config)
+
+	// Test
+	conn, err := sut.GetConnection()
+
+	// Verify
+	ExpectNoError(err, t)
+	ExpectNonNil(conn, t)
+}
+
+func TestThat_GetConnection_ReturnsError_WhenNoConnectionsAvailable(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	config.Set("min_connections", "1")
+	config.Set("max_connections", "1")
+	config.Set("max_idle", "1")
+	sut.Configure(config)
+
+	// Test
+	conn1, _ := sut.GetConnection()
+	conn2, err := sut.GetConnection()
+
+	// Verify
+	ExpectError(err, t)
+	ExpectNonNil(conn1, t)
+	ExpectNil(conn2, t)
+}
+
+func TestThat_GetConnection_ReturnsLeasedConnection_WhenPreviouslyReleased(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	config.Set("min_connections", "1")
+	config.Set("max_connections", "1")
+	config.Set("max_idle", "1")
+	sut.Configure(config)
+
+	// Test
+	conn1, _ := sut.GetConnection()
+	err1 := conn1.Release()
+	ExpectNoError(err1, t)
+	conn2, err2 := sut.GetConnection()
+
+	// Verify
+	ExpectNoError(err2, t)
+	ExpectNonNil(conn2, t)
+}
+
+func TestThat_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	config := cfg.NewConfig()
+	expected := 33
+	config.Set("max_idle", fmt.Sprintf("%d", expected))
+	sut.Configure(config)
+
+	// Test
+	actual := sut.GetMaxIdle()
+
+	// Verify
+	ExpectInt(expected, actual, t)
+}
+
+func TestThat_Close_ClosesConnectionPool_WithoutError(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	sut := NewConnectionPool(*dsn)
+	deps := dependencies.NewDependencies()
+	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	deps.Set("connectionFactory", connecitonFactory)
+	sut.InjectDependencies(deps)
+
+	// Test
+	err := sut.Close()
 
 	// Verify
 	ExpectNoError(err, t)

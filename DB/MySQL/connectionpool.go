@@ -180,7 +180,7 @@ func (r *ConnectionPool) configureMaxIdle(value int) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConfigurableIfc Public Interface
+// ConnectionPoolIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
@@ -213,6 +213,7 @@ func (r *ConnectionPool) Release(leaseKey int64) error {
 }
 
 // Max Idle has a default, but may be overridden by configuration; this gets access to the current setting value
+// TODO: Denote who need to know this & why...
 func (r ConnectionPool) GetMaxIdle() int {
 	return r.maxIdle
 }
