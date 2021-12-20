@@ -32,19 +32,6 @@ type PooledConnectionIfc interface {
 	IsExpired() bool
 
 	ConnectionCommonIfc
-
-/*
-	// Transactions
-	InTransaction() bool
-	Begin() error
-	Commit() error
-	Rollback() error
-
-	// Operations
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-*/
 }
 
 type PooledConnection struct {

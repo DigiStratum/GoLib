@@ -21,7 +21,7 @@ type LeasedConnectionIfc interface {
 type LeasedConnection struct {
 	pooledConnection	PooledConnectionIfc
 	leaseKey		int64
-	errNoLease		error
+	errNoLease		error	// convenience to hold a pre-formatted error ready to return
 }
 
 func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *LeasedConnection {
