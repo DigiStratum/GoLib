@@ -77,7 +77,10 @@ func (r *PooledConnection) Close() error {
 // -------------------------------------------------------------------------------------------------
 
 // Connections
-func (r *PooledConnection) IsConnected() bool { return r.connection.IsConnected() }
+func (r *PooledConnection) IsConnected() bool {
+	if nil == r.connection { return false }
+	return r.connection.IsConnected()
+}
 
 // Leasing
 func (r *PooledConnection) IsLeased() bool { return r.isLeased }
