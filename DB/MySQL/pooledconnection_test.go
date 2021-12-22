@@ -31,20 +31,7 @@ func getGoodNewPooledConnection() (*PooledConnection, error) {
 }
 
 func getNilNewPooledConnection() (*PooledConnection, error) {
-	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
-	connectionPool := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connectionFactory := mockdb.NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connectionFactory)
-	connectionPool.InjectDependencies(deps)
-
-	config := cfg.NewConfig()
-	config.Set("min_connections", "1")
-	config.Set("max_connections", "1")
-	config.Set("max_idle", "1")
-	connectionPool.Configure(config)
-
-	return NewPooledConnection(nil, connectionPool)
+	return &PooledConnection{}, nil
 }
 
 

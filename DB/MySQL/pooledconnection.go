@@ -46,6 +46,8 @@ type PooledConnection struct {
 }
 
 func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (*PooledConnection, error) {
+	if nil == connection { return nil, fmt.Errorf("Supplied connection was nil!") }
+	if nil == connPool { return nil, fmt.Errorf("Supplied connection pool was nil!") }
 	now := time.Now().Unix()
 	pc := PooledConnection{
 		pool:			connPool,
