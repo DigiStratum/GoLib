@@ -6,7 +6,7 @@ import(
 	"github.com/DigiStratum/GoLib/DB"
 	"github.com/DigiStratum/GoLib/Dependencies"
 	. "github.com/DigiStratum/GoLib/Testing"
-	"github.com/DigiStratum/GoLib/Testing/mocks"
+	. "github.com/DigiStratum/GoLib/Testing/mocks"
 	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
@@ -14,7 +14,7 @@ func getGoodNewPooledConnection() (*PooledConnection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connectionFactory := mockdb.NewMockDBConnectionFactory()
+	connectionFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connectionFactory)
 	connectionPool.InjectDependencies(deps)
 

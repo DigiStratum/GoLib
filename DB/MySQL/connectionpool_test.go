@@ -7,7 +7,7 @@ import(
 	"github.com/DigiStratum/GoLib/DB"
 	"github.com/DigiStratum/GoLib/Dependencies"
 	. "github.com/DigiStratum/GoLib/Testing"
-	"github.com/DigiStratum/GoLib/Testing/mocks"
+	. "github.com/DigiStratum/GoLib/Testing/mocks"
 	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
@@ -57,7 +57,7 @@ func TestThat_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 
 	// Test
@@ -72,7 +72,7 @@ func TestThat_Configure_ReturnsNoError_ForEmptyConfig(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -90,7 +90,7 @@ func TestThat_Configure_ReturnsError_ForUnknownConfigKeys(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -109,7 +109,7 @@ func TestThat_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -130,7 +130,7 @@ func TestThat_GetConnection_ReturnsLeasedConnection_WhenOneAvailable(t *testing.
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -153,7 +153,7 @@ func TestThat_GetConnection_ReturnsError_WhenNoConnectionsAvailable(t *testing.T
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -178,7 +178,7 @@ func TestThat_GetConnection_ReturnsLeasedConnection_WhenPreviouslyReleased(t *te
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -204,7 +204,7 @@ func TestThat_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
@@ -225,7 +225,7 @@ func TestThat_Close_ClosesConnectionPool_WithoutError(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connecitonFactory := mockdb.NewMockDBConnectionFactory()
+	connecitonFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connecitonFactory)
 	sut.InjectDependencies(deps)
 
