@@ -38,16 +38,12 @@ func TestThat_NewLeasedConnection_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(actual, t)
 }
 
-/*
-FIXME: Release indicates no leased connection in the pool with our key; this is unexpected.
-Switching to PooledConnection test to address this before returning here
-
 func TestThat_Release_Returns_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
-	connectionFactory := mockdb.NewMockDBConnectionFactory()
+	connectionFactory := NewMockDBConnectionFactory()
 	deps.Set("connectionFactory", connectionFactory)
 	connectionPool.InjectDependencies(deps)
 
@@ -57,17 +53,12 @@ func TestThat_Release_Returns_WithoutError(t *testing.T) {
 	config.Set("max_idle", "1")
 	connectionPool.Configure(config)
 
-	conn, _ := connectionFactory.NewConnection(dsn)
-	newConnection, _ := NewConnection(conn)
-	newPooledConnection, _ := NewPooledConnection(newConnection, connectionPool)
-
-	leaseKey := int64(333)
-	sut := NewLeasedConnection(newPooledConnection, leaseKey)
+	sut, err1 := connectionPool.GetConnection()
 
 	// Test
-	err := sut.Release()
+	err2 := sut.Release()
 
 	// Verify
-	ExpectNoError(err, t)
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
 }
-*/

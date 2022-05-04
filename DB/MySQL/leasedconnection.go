@@ -21,15 +21,14 @@ type LeasedConnectionIfc interface {
 type LeasedConnection struct {
 	pooledConnection	PooledConnectionIfc
 	leaseKey		int64
-	errNoLease		error	// convenience to hold a pre-formatted error ready to return
 }
+
 
 func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *LeasedConnection {
 	pooledConnection.Lease(leaseKey)
 	lc := LeasedConnection{
 		pooledConnection:	pooledConnection,
 		leaseKey:		leaseKey,
-		errNoLease:		fmt.Errorf("No Leased Connection!"),
 	}
 	return &lc
 }
@@ -39,7 +38,7 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *
 // -------------------------------------------------------------------------------------------------
 
 func (r *LeasedConnection) Release() error {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	if err := r.pooledConnection.Release(); nil != err { return err }
 	r.leaseKey = 0
 	return nil
@@ -67,7 +66,7 @@ func (r LeasedConnection) InTransaction() bool {
 }
 
 func (r *LeasedConnection) Begin() error {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Begin()
 }
 
@@ -78,22 +77,22 @@ func (r *LeasedConnection) NewQuery(qry string) (QueryIfc, error) {
 }
 
 func (r LeasedConnection) Commit() error {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Commit()
 }
 
 func (r LeasedConnection) Rollback() error {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Rollback()
 }
 
 func (r LeasedConnection) Exec(query string, args ...interface{}) (db.Result, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Exec(query, args...)
 }
 
 func (r LeasedConnection) Query(query string, args ...interface{}) (*db.Rows, error) {
-	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, r.errNoLease }
+	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Query(query, args...)
 }
 
@@ -101,3 +100,12 @@ func (r LeasedConnection) QueryRow(query string, args ...interface{}) *db.Row {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil }
 	return r.pooledConnection.QueryRow(query, args...)
 }
+
+// -------------------------------------------------------------------------------------------------
+// LeasedConnection Private Implementation
+// -------------------------------------------------------------------------------------------------
+
+func errNoLease() error {
+	return fmt.Errorf("No Leased Connection!")
+}
+
