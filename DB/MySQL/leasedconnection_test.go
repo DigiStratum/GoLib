@@ -40,6 +40,199 @@ func TestThat_NewLeasedConnection_ReturnsSomething(t *testing.T) {
 
 func TestThat_Release_Returns_WithoutError(t *testing.T) {
 	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+}
+
+func TestThat_Release_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+	err2 := sut.Release()
+
+	// Test
+	err3 := sut.Release()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_IsConnected_ReturnsTrue_ForGoodLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	res := sut.IsConnected()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectTrue(res, t)
+}
+
+func TestThat_ConnectionIfc_IsConnected_ReturnsFalse_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res := sut.IsConnected()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectFalse(res, t)
+}
+
+func TestThat_ConnectionIfc_Disconnect_LeavesLeasedConnectionIntact(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	sut.Disconnect()
+	res := sut.IsConnected()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectTrue(res, t)
+}
+
+func TestThat_ConnectionIfc_Connect_ReturnsError(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Connect()
+	res := sut.IsConnected()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectError(err2, t)
+	ExpectTrue(res, t)
+}
+
+func TestThat_ConnectionIfc_InTransaction_ReturnsFalse_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res := sut.InTransaction()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectFalse(res, t)
+}
+
+func TestThat_ConnectionIfc_Begin_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	err3 := sut.Begin()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_NewQuery_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res, err3 := sut.NewQuery("bogus sql")
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectNil(res, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_Commit_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	err3 := sut.Commit()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_Rollback_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	err3 := sut.Rollback()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_Exec_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res, err3 := sut.Exec("bogus sql")
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectNil(res, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_Query_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res, err3 := sut.Query("bogus sql")
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectNil(res, t)
+	ExpectError(err3, t)
+}
+
+func TestThat_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLease(t *testing.T) {
+	// Setup
+	sut, err1 := getGoodLeasedConnection()
+
+	// Test
+	err2 := sut.Release()
+	res := sut.QueryRow("bogus sql")
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectNil(res, t)
+}
+
+func getGoodLeasedConnection() (*LeasedConnection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
 	deps := dependencies.NewDependencies()
@@ -53,12 +246,6 @@ func TestThat_Release_Returns_WithoutError(t *testing.T) {
 	config.Set("max_idle", "1")
 	connectionPool.Configure(config)
 
-	sut, err1 := connectionPool.GetConnection()
-
-	// Test
-	err2 := sut.Release()
-
-	// Verify
-	ExpectNoError(err1, t)
-	ExpectNoError(err2, t)
+	return connectionPool.GetConnection()
 }
+
