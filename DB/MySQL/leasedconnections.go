@@ -32,6 +32,7 @@ func NewLeasedConnections() *LeasedConnections {
 // -------------------------------------------------------------------------------------------------
 
 func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) *LeasedConnection {
+	if nil == connection { return nil }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	// Get a new lease key...
 	if ptrLeaseKey := r.getNewLeaseKey(); nil != ptrLeaseKey {
