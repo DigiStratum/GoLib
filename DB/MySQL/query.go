@@ -34,6 +34,8 @@ TODO:
 */
 
 import (
+	"fmt"
+
 	db "database/sql"
 
 	nullables "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
@@ -57,11 +59,16 @@ type Query struct {
 
 // Make a new one of these!
 // Returns nil+error if there is any problem setting up the query...!
-func NewQuery(connection ConnectionIfc, qry string) (*Query, error) {
+//func NewQuery(connection ConnectionIfc, qry string) (*Query, error) {
+func NewQuery(connection ConnectionIfc, qry SQLQueryIfc) (*Query, error) {
 	// TODO: do some basic syntax/token/placeholder checks on qry
+	if nil == connection { return nil, fmt.Errorf("Supplied connection was nil") }
+	if nil == qry { return nil, fmt.Errorf("Supplied query was nil") }
+	queryString, err := qry.GetQuery()
+	if nil != err { return nil, err }
 	return &Query{
 		connection:	connection,
-		query:		qry,
+		query:		queryString,
 	}, nil
 }
 

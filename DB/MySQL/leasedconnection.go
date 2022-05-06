@@ -73,7 +73,7 @@ func (r *LeasedConnection) Begin() error {
 func (r *LeasedConnection) NewQuery(qry string) (QueryIfc, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, fmt.Errorf("No Leased Connection!") }
 	// Feed NewQuery() our LeasedConnection so it doesn't have direct access to underlying pooledConnection
-	return NewQuery(r, qry)
+	return NewQuery(r, NewSQLQuery(qry))
 }
 
 func (r LeasedConnection) Commit() error {

@@ -93,7 +93,7 @@ func (r *Connection) Begin() error {
 }
 
 func (r *Connection) NewQuery(query string) (QueryIfc, error) {
-	return NewQuery(r, query)
+	return NewQuery(r, NewSQLQuery(query))
 }
 
 func (r *Connection) Commit() error {
