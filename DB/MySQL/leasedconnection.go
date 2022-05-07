@@ -70,10 +70,10 @@ func (r *LeasedConnection) Begin() error {
 	return r.pooledConnection.Begin()
 }
 
-func (r *LeasedConnection) NewQuery(qry string) (QueryIfc, error) {
+func (r *LeasedConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, fmt.Errorf("No Leased Connection!") }
 	// Feed NewQuery() our LeasedConnection so it doesn't have direct access to underlying pooledConnection
-	return NewQuery(r, NewSQLQuery(qry))
+	return NewQuery(r, query)
 }
 
 func (r LeasedConnection) Commit() error {
@@ -86,17 +86,17 @@ func (r LeasedConnection) Rollback() error {
 	return r.pooledConnection.Rollback()
 }
 
-func (r LeasedConnection) Exec(query string, args ...interface{}) (db.Result, error) {
+func (r LeasedConnection) Exec(query SQLQueryIfc, args ...interface{}) (db.Result, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Exec(query, args...)
 }
 
-func (r LeasedConnection) Query(query string, args ...interface{}) (*db.Rows, error) {
+func (r LeasedConnection) Query(query SQLQueryIfc, args ...interface{}) (*db.Rows, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Query(query, args...)
 }
 
-func (r LeasedConnection) QueryRow(query string, args ...interface{}) *db.Row {
+func (r LeasedConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *db.Row {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil }
 	return r.pooledConnection.QueryRow(query, args...)
 }

@@ -21,16 +21,6 @@ link to the same one... Refactored the factory function to separate attachment o
 given ConnectionIfc so that the consumer can reattach a query as needed... but it still needs to
 receive some indicator that this is needed.
 
-TODO:
- * Add support for literal substitutions here that could get us things like variable table names and
-   other unescaped values for query variance
- * query '???' placeholders; because args is interface{}, we can pass whatever we want for this.
-   let's declare that any arg which is an array will be treated as a set to expand. we will expect
-   that there be the same number of sets as there are '???' placeholders. We will replace the  Nth
-   '???' placeholder in the order that they appear with the count of '?,?,...' placeholders that
-   matches the Len() of the Nth array. If the count of arrays supplied does not match the count of
-   '???' placeholders, then error
-
 */
 
 import (
@@ -53,22 +43,17 @@ type QueryIfc interface {
 
 type Query struct {
 	connection	ConnectionIfc
-	query		string
-	//statement	*db.Stmt
+	query		SQLQueryIfc
 }
 
 // Make a new one of these!
 // Returns nil+error if there is any problem setting up the query...!
-//func NewQuery(connection ConnectionIfc, qry string) (*Query, error) {
-func NewQuery(connection ConnectionIfc, qry SQLQueryIfc) (*Query, error) {
-	// TODO: do some basic syntax/token/placeholder checks on qry
+func NewQuery(connection ConnectionIfc, query SQLQueryIfc) (*Query, error) {
 	if nil == connection { return nil, fmt.Errorf("Supplied connection was nil") }
-	if nil == qry { return nil, fmt.Errorf("Supplied query was nil") }
-	queryString, err := qry.GetQuery()
-	if nil != err { return nil, err }
+	if nil == query { return nil, fmt.Errorf("Supplied query was nil") }
 	return &Query{
 		connection:	connection,
-		query:		queryString,
+		query:		query,
 	}, nil
 }
 
@@ -78,13 +63,7 @@ func NewQuery(connection ConnectionIfc, qry SQLQueryIfc) (*Query, error) {
 
 // Run this query against the supplied database Connection with the provided query arguments
 func (r Query) Run(args ...interface{}) (*Result, error) {
-	var result db.Result
-	var err error
-
-	// Resolve a non-prepared statement query with any of our own substitutions
-	qry, err := r.resolveQuery(args...)
-	if nil != err { return nil, err }
-	result, err = r.connection.Exec(*qry, args...)
+	result, err := r.connection.Exec(r.query, args...)
 	return NewResult(result), err
 }
 
@@ -92,19 +71,12 @@ func (r Query) Run(args ...interface{}) (*Result, error) {
 // This variant returns only a single value (any type pointed at by receiver) as the only column
 // of the only row of the result
 func (r Query) RunReturnValue(receiver interface{}, args ...interface{}) error {
-	var row *db.Row
-	var err error
-
-	// Resolve a non-prepared statement query with any of our own substitutions
-	qry, err := r.resolveQuery(args...)
-	if nil != err { return err }
-	row = r.connection.QueryRow(*qry, args...)
-
-	if nil == row { return nil }
-
-	err = row.Scan(receiver)
-	if db.ErrNoRows == err { return nil }
-	return err
+	if row := r.connection.QueryRow(r.query, args...); nil != row {
+		err := row.Scan(receiver)
+		if db.ErrNoRows == err { return nil }
+		return err
+	}
+	return nil
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
@@ -144,13 +116,7 @@ func (r Query) RunReturnAll(args ...interface{}) (*ResultSet, error) {
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
-	var rows *db.Rows
-	var err error
-
-	// Resolve a non-prepared statement query with any of our own substitutions
-	qry, err := r.resolveQuery(args...)
-	if nil != err { return nil, err }
-	rows, err = r.connection.Query(*qry, args...)
+	rows, err := r.connection.Query(r.query, args...)
 
 	// Return a slice of values and pointers to those values for Scan() to map result into
 	makeScanReceiver := func(size int) (*[]string, *[]interface{}) {
@@ -188,15 +154,4 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
 		results.Add(result)
 	}
 	return results, nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// QueryIfc Private Interface
-// -------------------------------------------------------------------------------------------------
-
-// Placeholder to support resolving magic expander tags, etc within our query
-func (r Query) resolveQuery(args ... interface{}) (*string, error) {
-	protoQuery := r.query
-	finalQuery := protoQuery
-	return &finalQuery, nil
 }

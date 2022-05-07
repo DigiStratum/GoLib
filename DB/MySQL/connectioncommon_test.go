@@ -79,7 +79,7 @@ func testThat_ConnectionCommon_Connection_Begin_ReturnsError_WhenConnectionClose
 
 func testThat_ConnectionCommon_Connection_NewQuery_ReturnsQueryNoError(sut ConnectionCommonIfc, t *testing.T) {
 	// Test
-	res, err := sut.NewQuery("bogus query")
+	res, err := sut.NewQuery(NewSQLQuery("bogus query"))
 
 	// Verify
 	ExpectNonNil(res, t)
@@ -160,7 +160,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithoutArgs_
 	// Setup
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -178,7 +178,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithoutArgs_
 
 func testThat_ConnectionCommon_Connection_Exec_ReturnsError_WithoutArgs_OutsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -194,7 +194,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithoutArgs_
 	// Setup
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -213,7 +213,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithoutArgs_
 
 func testThat_ConnectionCommon_Connection_Exec_ReturnsError_WithoutArgs_InsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -231,7 +231,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithArgs_Out
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
 	expectedArgs := 333
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -250,7 +250,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithArgs_Out
 func testThat_ConnectionCommon_Connection_Exec_ReturnsError_WithArgs_OutsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
 	expectedArgs := 333
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -266,7 +266,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithArgs_Ins
 	// Setup
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -286,7 +286,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsResultNoError_WithArgs_Ins
 
 func testThat_ConnectionCommon_Connection_Exec_ReturnsError_WithArgs_InsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -302,7 +302,7 @@ func testThat_ConnectionCommon_Connection_Exec_ReturnsError_WithArgs_InsideTrans
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithoutArgs_OutsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -317,7 +317,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithoutArgs_O
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithoutArgs_OutsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -331,7 +331,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithoutArgs_Outside
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithoutArgs_InsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -347,7 +347,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithoutArgs_I
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithoutArgs_InsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -362,7 +362,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithoutArgs_InsideT
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithArgs_OutsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -378,7 +378,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithArgs_Outs
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithArgs_OutsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -393,7 +393,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithArgs_OutsideTra
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithArgs_InsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -410,7 +410,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsRowsNoError_WithArgs_Insi
 
 func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithArgs_InsideTransaction_WhenPrepareFails(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -426,7 +426,7 @@ func testThat_ConnectionCommon_Connection_Query_ReturnsError_WithArgs_InsideTran
 
 func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithoutArgs_OutsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -441,7 +441,7 @@ func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithoutArgs_Outsid
 
 func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithoutArgs_InsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	mock := mockDB.GetMock()
 
 	// Test
@@ -457,7 +457,7 @@ func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithoutArgs_Inside
 
 func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithArgs_OutsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 
@@ -473,7 +473,7 @@ func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithArgs_OutsideTr
 
 func testThat_ConnectionCommon_Connection_QueryRow_ReturnsRow_WithArgs_InsideTransaction(sut ConnectionCommonIfc, mockDB MockDBConnectionIfc, t *testing.T) {
 	// Setup
-	expectedQuery := "bogus query"
+	expectedQuery := NewSQLQuery("bogus query")
 	expectedArgs := 333
 	mock := mockDB.GetMock()
 

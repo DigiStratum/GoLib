@@ -151,7 +151,7 @@ func TestThat_ConnectionIfc_NewQuery_ReturnsError_ForInvalidLease(t *testing.T) 
 
 	// Test
 	err2 := sut.Release()
-	res, err3 := sut.NewQuery("bogus sql")
+	res, err3 := sut.NewQuery(NewSQLQuery("bogus sql"))
 
 	// Verify
 	ExpectNoError(err1, t)
@@ -194,7 +194,7 @@ func TestThat_ConnectionIfc_Exec_ReturnsError_ForInvalidLease(t *testing.T) {
 
 	// Test
 	err2 := sut.Release()
-	res, err3 := sut.Exec("bogus sql")
+	res, err3 := sut.Exec(NewSQLQuery("bogus sql"))
 
 	// Verify
 	ExpectNoError(err1, t)
@@ -209,7 +209,7 @@ func TestThat_ConnectionIfc_Query_ReturnsError_ForInvalidLease(t *testing.T) {
 
 	// Test
 	err2 := sut.Release()
-	res, err3 := sut.Query("bogus sql")
+	res, err3 := sut.Query(NewSQLQuery("bogus sql"))
 
 	// Verify
 	ExpectNoError(err1, t)
@@ -224,7 +224,7 @@ func TestThat_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLease(t *testing.T) 
 
 	// Test
 	err2 := sut.Release()
-	res := sut.QueryRow("bogus sql")
+	res := sut.QueryRow(NewSQLQuery("bogus sql"))
 
 	// Verify
 	ExpectNoError(err1, t)

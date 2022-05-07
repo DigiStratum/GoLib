@@ -21,12 +21,12 @@ import (
 type ConnectionCommonIfc interface {
 	InTransaction() bool
 	Begin() error
-	NewQuery(query string) (QueryIfc, error)
+	NewQuery(query SQLQueryIfc) (QueryIfc, error)
 	Commit() error
 	Rollback() error
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error)
+	Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row
 }
 
 type ConnectionIfc interface {
@@ -37,6 +37,7 @@ type ConnectionIfc interface {
 type Connection struct {
 	conn			*sql.DB			// Read-Write Connection
 	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
+	// Local Cache structures, keyed on resolved SQL query text
 	transactionStatements	map[string]*sql.Stmt	// retains transaction-specific prepared statements
 	statements		map[string]*sql.Stmt	// retains non-transaction prepared statements
 }
@@ -92,8 +93,8 @@ func (r *Connection) Begin() error {
 	return err
 }
 
-func (r *Connection) NewQuery(query string) (QueryIfc, error) {
-	return NewQuery(r, NewSQLQuery(query))
+func (r *Connection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
+	return NewQuery(r, query)
 }
 
 func (r *Connection) Commit() error {
@@ -111,20 +112,20 @@ func (r *Connection) Rollback() error {
 	return err
 }
 
-func (r Connection) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (r Connection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil, err }
 	return stmt.Exec(args...)
 }
 
-func (r Connection) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (r Connection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil, err }
 	return stmt.Query(args...)
 }
 
 // Note: DB.(Stmt.)QueryRow always returns a non-nil value.
-func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
+func (r Connection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil }
 	return stmt.QueryRow(args...)
@@ -134,23 +135,27 @@ func (r Connection) QueryRow(query string, args ...interface{}) *sql.Row {
 // Connection Private Implementation
 // -------------------------------------------------------------------------------------------------
 
-func (r Connection) prepare(query string) (*sql.Stmt, error) {
+func (r Connection) prepare(query SQLQueryIfc) (*sql.Stmt, error) {
+	// Resolve the query
+	sql, err := query.Resolve()
+	if nil != err { return nil, err }
+
 	if r.InTransaction() {
 		// If this query is already in the transaction's prepared statements...
-		if stmt, ok := r.transactionStatements[query]; ok {
+		if stmt, ok := r.transactionStatements[sql]; ok {
 			return stmt, nil
 		}
-		stmt, err := r.transaction.Prepare(query)
-		if nil == err { r.transactionStatements[query] = stmt }
+		stmt, err := r.transaction.Prepare(sql)
+		if nil == err { r.transactionStatements[sql] = stmt }
 		return stmt, err
 	}
 
 	// If this query is already in the non-transaction prepared statements...
-	if stmt, ok := r.statements[query]; ok {
+	if stmt, ok := r.statements[sql]; ok {
 		return stmt, nil
 	}
-	stmt, err := r.conn.Prepare(query)
-	if nil == err { r.statements[query] = stmt }
+	stmt, err := r.conn.Prepare(sql)
+	if nil == err { r.statements[sql] = stmt }
 	return stmt, err
 }
 

@@ -132,7 +132,7 @@ func (r *PooledConnection) Begin() error { return r.connection.Begin() }
 func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
-func (r *PooledConnection) NewQuery(query string) (QueryIfc, error) { r.Touch(); return r.connection.NewQuery(query) }
-func (r *PooledConnection) Exec(query string, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
-func (r *PooledConnection) Query(query string, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
-func (r *PooledConnection) QueryRow(query string, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
+func (r *PooledConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) { r.Touch(); return r.connection.NewQuery(query) }
+func (r *PooledConnection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
+func (r *PooledConnection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
+func (r *PooledConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
