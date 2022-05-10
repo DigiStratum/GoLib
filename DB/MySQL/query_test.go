@@ -55,7 +55,6 @@ func TestThat_Run_ReturnsResult_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
-	//mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	mockDB := GetDBConnectionMockInfo(driverName, dsn)
 	var expectedInsertId int64 = 22
 	var expectedAffectedRows int64 = 33
@@ -80,7 +79,6 @@ func TestThat_Run_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
-	//mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	mockDB := GetDBConnectionMockInfo(driverName, dsn)
 	expectedQuery := "bogus query"
 	(*mockDB.Mock).ExpectPrepare(expectedQuery).ExpectExec().
@@ -98,3 +96,54 @@ func TestThat_Run_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	ExpectError(err2, t)
 }
 
+// RunReturnInt(args ...interface{}) (*int, error)
+func TestThat_RunReturnInt_ReturnsInt_WithoutError(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := getGoodNewConnection()
+	mockDB := GetDBConnectionMockInfo(driverName, dsn)
+	mock := mockDB.GetMock()
+
+        expectedValue := 111
+	expectedRows := sqlmock.NewRows([]string{"ResultID"}).AddRow(expectedValue)
+	expectedQuery := "bogus query"
+	(*mockDB.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
+		WithArgs().
+		WillReturnRows(expectedRows)
+	sut, err1 := NewQuery(mockDBConnection, NewSQLQuery(expectedQuery))
+
+	// Test
+	ExpectNoError(err1, t)
+	ExpectNonNil(sut, t)
+	actual, err2 := sut.RunReturnInt()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err2, t)
+	ExpectNoError((*mock).ExpectationsWereMet(), t)
+	ExpectInt(expectedValue, *actual, t)
+}
+
+func TestThat_RunReturnInt_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := getGoodNewConnection()
+	mockDB := GetDBConnectionMockInfo(driverName, dsn)
+	mock := mockDB.GetMock()
+
+	expectedQuery := "bogus query"
+	(*mockDB.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
+		WithArgs().
+		WillReturnError(fmt.Errorf("bogus error"))
+	sut, err1 := NewQuery(mockDBConnection, NewSQLQuery(expectedQuery))
+
+	// Test
+	ExpectNoError(err1, t)
+	ExpectNonNil(sut, t)
+	actual, err2 := sut.RunReturnInt()
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(err2, t)
+	ExpectNoError((*mock).ExpectationsWereMet(), t)
+}
