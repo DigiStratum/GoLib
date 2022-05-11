@@ -198,7 +198,6 @@ func TestThat_RunReturnString_ReturnsError_WhenQueryExecutionFailsWithError(t *t
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-// RunReturnOne(args ...interface{}) (*ResultRow, error)
 func TestThat_RunReturnOne_ReturnsResultRow_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
@@ -262,3 +261,77 @@ func TestThat_RunReturnOne_ReturnsError_WhenQueryExecutionFailsWithError(t *test
 	ExpectError(err2, t)
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
+
+func TestThat_RunReturnAll_ReturnsResultRows_WithoutError(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := getGoodNewConnection()
+	mockDB := GetDBConnectionMockInfo(driverName, dsn)
+	mock := mockDB.GetMock()
+
+        expectedValueStr1 := "success1!"
+        expectedValueStr2 := "success2!"
+        var expectedValueInt1 int64 = 111
+        var expectedValueInt2 int64 = 222
+	expectedRows := sqlmock.NewRows([]string{"ResultInt", "ResultStr"}).
+		AddRow(expectedValueInt1, expectedValueStr1).
+		AddRow(expectedValueInt2, expectedValueStr2)
+	expectedQuery := "bogus query"
+	(*mockDB.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
+		WithArgs().
+		WillReturnRows(expectedRows)
+	sut, err1 := NewQuery(mockDBConnection, NewSQLQuery(expectedQuery))
+
+	// Test
+	ExpectNoError(err1, t)
+	ExpectNonNil(sut, t)
+	actual, err2 := sut.RunReturnAll()
+
+	// Verify
+	ExpectNoError(err2, t)
+	ExpectNonNil(actual, t)
+	ExpectNoError((*mock).ExpectationsWereMet(), t)
+
+	ExpectInt(2, actual.Len(), t)
+	for r := 0; r < actual.Len(); r++ {
+		row := actual.Get(r)
+
+		actualValueStrNullable := row.Get("ResultStr")
+		ExpectNonNil(actualValueStrNullable, t)
+		actualValueStr := actualValueStrNullable.GetString()
+		ExpectNonNil(actualValueStr, t)
+		ExpectString(fmt.Sprintf("success%d!", r+1), *actualValueStr, t)
+
+		actualValueIntNullable := row.Get("ResultInt")
+		ExpectNonNil(actualValueIntNullable, t)
+		actualValueInt := actualValueIntNullable.GetInt64()
+		ExpectNonNil(actualValueInt, t)
+		expectedValueInt  := int64(111 * (r+1))
+		ExpectInt64(expectedValueInt, *actualValueInt, t)
+	}
+}
+
+func TestThat_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+	// Setup
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := getGoodNewConnection()
+	mockDB := GetDBConnectionMockInfo(driverName, dsn)
+	mock := mockDB.GetMock()
+
+	expectedQuery := "bogus query"
+	(*mockDB.Mock).ExpectPrepare(expectedQuery).ExpectQuery().
+		WithArgs().
+		WillReturnError(fmt.Errorf("bogus error"))
+	sut, err1 := NewQuery(mockDBConnection, NewSQLQuery(expectedQuery))
+
+	// Test
+	ExpectNoError(err1, t)
+	ExpectNonNil(sut, t)
+	actual, err2 := sut.RunReturnAll()
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(err2, t)
+	ExpectNoError((*mock).ExpectationsWereMet(), t)
+}
+
