@@ -116,7 +116,12 @@ func (r Query) RunReturnAll(args ...interface{}) (*ResultSet, error) {
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
+	// Even if max == 1 we use Query() instead of QueryRow() to leverage the same Scan converter(s)
 	rows, err := r.connection.Query(r.query, args...)
+	// If the query returned no results, handle it specifically...
+	if db.ErrNoRows == err { return nil, nil }
+	if nil != err { return nil, err }
+	if nil != rows { defer rows.Close() }
 
 	// Return a slice of values and pointers to those values for Scan() to map result into
 	makeScanReceiver := func(size int) (*[]string, *[]interface{}) {
@@ -138,20 +143,17 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
 		return result
 	}
 
-	// If the query returned no results, handle it specifically...
-	if db.ErrNoRows == err { return nil, nil }
-	if nil != err { return nil, err }
-	if nil != rows { defer rows.Close() }
-
+	// Process all the rows of the query result
 	results := NewResultSet()
 	cols, _ := rows.Columns()
 	num := 0
-	for ((max == 0) || (max < num)) && rows.Next() {
+	for rows.Next() {
 		num++
 		columnValues, columnPointers := makeScanReceiver(len(cols))
 		if err := rows.Scan(*columnPointers...); err != nil { return nil, err }
 		result := convertScanReceiverToResultRow(&cols, columnValues)
 		results.Add(result)
+		if (max > 0) && (num >= max) { break }
 	}
 	return results, nil
 }

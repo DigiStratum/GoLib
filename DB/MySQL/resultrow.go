@@ -19,6 +19,7 @@ import (
 type ResultRowIfc interface {
 	Get(field string) nullables.NullableIfc
 	Set(field string, value nullables.Nullable)
+	Has(field string) bool
 	Fields() []string
 	ToJson() (*string, error)
 }
@@ -56,6 +57,11 @@ func (r ResultRow) Get(field string) nullables.NullableIfc {
 
 func (r *ResultRow) Set(field string, value nullables.Nullable) {
 	r.props.values[field] = value
+}
+
+func (r ResultRow) Has(field string) bool {
+	_, ok := r.props.values[field]
+	return ok
 }
 
 // Pluck the fields out of the result and just return them so that caller can iterate with Get()
