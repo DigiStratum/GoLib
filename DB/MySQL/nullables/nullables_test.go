@@ -192,3 +192,86 @@ func TestThat_NewNullable_Returns_NullableTime_ForTime(t *testing.T) {
 	ExpectTrue(sut.GetType() == NULLABLE_TIME, t)
 }
 
+// Getters
+
+// GetInt64() *int64
+func TestThat_GetInt64_Returns_Nil_ForNilValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(nil)
+
+	// Test
+	actual := sut.GetInt64()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetInt64_Returns_ValuePointer_ForInt64Value(t *testing.T) {
+	// Setup
+	sut := NewNullable(333)
+
+	// Test
+	actual := sut.GetInt64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectInt64(*actual, 333, t)
+}
+
+func TestThat_GetInt64_Returns_ValuePointer_ForBoolValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(false)
+	sut1 := NewNullable(true)
+
+	// Test
+	actual0 := sut0.GetInt64()
+	actual1 := sut1.GetInt64()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectInt64(*actual0, 0, t)
+	ExpectNonNil(actual1, t)
+	ExpectInt64(*actual1, 1, t)
+}
+
+func TestThat_GetInt64_Returns_ValuePointer_ForFloatValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(0.0)
+	sut1 := NewNullable(1.1)
+
+	// Test
+	actual0 := sut0.GetInt64()
+	actual1 := sut1.GetInt64()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectInt64(*actual0, 0, t)
+	ExpectNonNil(actual1, t)
+	ExpectInt64(*actual1, 1, t)
+}
+
+func TestThat_GetInt64_Returns_ValuePointer_ForStringValue(t *testing.T) {
+	// Setup
+	sut := NewNullable("333")
+
+	// Test
+	actual := sut.GetInt64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectInt64(*actual, 333, t)
+}
+
+func TestThat_GetInt64_Returns_ValuePointer_ForTimeValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-12 19:50:0 (which was when this test was added)
+	sut := NewNullable(time.Date(2022, 5, 12, 19, 50, 0, 0, time.UTC))
+
+	// Test
+	actual := sut.GetInt64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectInt64(*actual, 1652385000, t)
+}
+

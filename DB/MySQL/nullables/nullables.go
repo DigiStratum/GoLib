@@ -31,7 +31,7 @@ What these allow for is a query to return null for one of the values and store i
 a straight string or int, Go does not allow this to be nil, so things get difficult.
 
 TODO:
- * Add mapping for unsigned ints in addition to the signed ones - MySQL supports these natively!
+ * Add mapping for unsigned ints in addition to the signed ones - MySQL supports these natively, but database/sql does not!
 
 */
 
@@ -125,7 +125,6 @@ func (r *Nullable) SetValue(value interface{}) bool {
 
 func (r *Nullable) setNil() bool {
 	r.nullableType = NULLABLE_NIL
-	r.ni.Valid = true
 	r.isNil = true
 	return true
 }
@@ -180,30 +179,29 @@ func (r *Nullable) IsTime() bool { return r.nullableType == NULLABLE_TIME }
 
 // Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
 func (r Nullable) GetInt64() *int64 {
-	if r.IsNil() { return nil }
-
-	// NullInt64 passes through unmodified
-	if r.ni.Valid { return &r.ni.Int64 }
-
-	// NullBool converts to a int64
-	if r.nb.Valid {
-		var v int64 = 0
-		if r.nb.Bool { v = 1 }
-		return &v
+	switch r.nullableType {
+		case NULLABLE_INT64:	// NullInt64 passes through unmodified
+			if r.ni.Valid {
+				return &r.ni.Int64
+			}
+		case NULLABLE_BOOL:	// NullBool converts to a int64
+			if r.nb.Valid {
+				var v int64 = 0
+				if r.nb.Bool { v = 1 }
+				return &v
+			}
+		case NULLABLE_FLOAT64:	// NullFloat64 converts to an int64
+			if r.nf.Valid {
+				v := int64(r.nf.Float64)
+				return &v
+			}
+		case NULLABLE_STRING:	// NullString converts to an int64
+			if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil == err {
+				return &vc
+			}
+		case NULLABLE_TIME:	// NullTime converts to an int64 (timestamp)
+			if r.nt.Valid { vc := r.nt.Time.Unix(); return &vc }
 	}
-
-	// NullFloat64 converts to an int64
-	if r.nf.Valid { v := int64(r.nf.Float64); return &v }
-
-	// NullString converts to an int64
-	if r.ns.Valid {
-		if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil == err { return &vc }
-		return nil
-	}
-
-	// NullTime converts to an int64 (timestamp)
-	if r.nt.Valid { vc := r.nt.Time.Unix(); return &vc }
-
 	return nil
 }
 
