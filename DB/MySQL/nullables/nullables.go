@@ -30,6 +30,9 @@ We define the following nullable data types as extensions of the same-named type
 What these allow for is a query to return null for one of the values and store it into the nullable. If a value were, say,
 a straight string or int, Go does not allow this to be nil, so things get difficult.
 
+TODO:
+ * Add mapping for unsigned ints in addition to the signed ones - MySQL supports these natively!
+
 */
 
 import (
