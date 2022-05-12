@@ -40,10 +40,6 @@ import (
 	"errors"
 )
 
-// -------------------------------------------------------------------------------------------------
-// Nullable supporting types, constants, and functions
-// -------------------------------------------------------------------------------------------------
-
 type NullableType int8
 
 const (
@@ -54,18 +50,6 @@ const (
 	NULLABLE_STRING
 	NULLABLE_TIME
 )
-
-func  GetNullableTypeString(nullableType NullableType) string {
-	switch nullableType {
-		case NULLABLE_NIL:		return "nil"
-		case NULLABLE_INT64:		return "int64"
-		case NULLABLE_BOOL:		return "bool"
-		case NULLABLE_FLOAT64:		return "float64"
-		case NULLABLE_STRING:		return "string"
-		case NULLABLE_TIME:		return "time"
-	}
-	return "unknown"
-}
 
 type NullableIfc interface {
 	IsNil() bool
@@ -109,8 +93,9 @@ func NewNullable(value interface{}) *Nullable {
 		ns:		NullString{ Valid: false },
 		nt:		NullTime{ Valid: false },
 	}
-	n.SetValue(value)
-	return &n
+	res := n.SetValue(value)
+	if res { return &n }
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -121,6 +106,7 @@ func (r Nullable) IsNil() bool { return r.isNil }
 
 // Convert value to appropriate Nullable; return true on success, else false
 func (r *Nullable) SetValue(value interface{}) bool {
+	if nil == value { return r.setNil() }
 	if v, ok := value.(int); ok { return r.setInt64(int64(v)) }
 	if v, ok := value.(int8); ok { return r.setInt64(int64(v)) }
 	if v, ok := value.(int16); ok { return r.setInt64(int64(v)) }
@@ -132,6 +118,13 @@ func (r *Nullable) SetValue(value interface{}) bool {
 	if v, ok := value.(string); ok { return r.setString(v) }
 	if v, ok := value.(time.Time); ok { return r.setTime(v) }
 	return false
+}
+
+func (r *Nullable) setNil() bool {
+	r.nullableType = NULLABLE_NIL
+	r.ni.Valid = true
+	r.isNil = true
+	return true
 }
 
 func (r *Nullable) setInt64(value int64) bool {
@@ -176,7 +169,7 @@ func (r *Nullable) setTime(value time.Time) bool {
 
 func (r *Nullable) GetType() NullableType { return r.nullableType }
 
-func (r *Nullable) IsInt64() bool { return r.nullableType == NULLABLE_NIL }
+func (r *Nullable) IsInt64() bool { return r.nullableType == NULLABLE_INT64 }
 func (r *Nullable) IsBool() bool { return r.nullableType == NULLABLE_BOOL }
 func (r *Nullable) IsFloat64() bool { return r.nullableType == NULLABLE_FLOAT64 }
 func (r *Nullable) IsString() bool { return r.nullableType == NULLABLE_STRING }
@@ -377,3 +370,20 @@ func (r *Nullable) Scan(value interface{}) error {
 		default: return errors.New("Unsupported Nullable Type (oversight in implementation!)")
 	}
 }
+
+// -------------------------------------------------------------------------------------------------
+// Nullable supporting functions
+// -------------------------------------------------------------------------------------------------
+
+func  GetNullableTypeString(nullableType NullableType) string {
+	switch nullableType {
+		case NULLABLE_NIL:		return "nil"
+		case NULLABLE_INT64:		return "int64"
+		case NULLABLE_BOOL:		return "bool"
+		case NULLABLE_FLOAT64:		return "float64"
+		case NULLABLE_STRING:		return "string"
+		case NULLABLE_TIME:		return "time"
+	}
+	return "unknown"
+}
+
