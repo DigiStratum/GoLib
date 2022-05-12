@@ -17,7 +17,6 @@ func getGoodNewConnection() (*Connection, error) {
 	return NewConnection(mockDBConnection)
 }
 
-// NewQuery(connection ConnectionIfc, qry string) (*Query, error)
 func TestThat_NewQuery_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Test
 	sut, err := NewQuery(nil, nil)
