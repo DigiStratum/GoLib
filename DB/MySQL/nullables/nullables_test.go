@@ -1,6 +1,7 @@
 package nullables
 
 import(
+	"fmt"
 	"time"
 	"testing"
 
@@ -376,5 +377,85 @@ func TestThat_GetBool_Returns_ValuePointer_ForTimeValue(t *testing.T) {
 	ExpectNonNil(actual, t)
 	ExpectTrue(*actual, t)
 	ExpectTrue(sut.IsTime(), t)
+}
+
+func TestThat_GetFloat64_Returns_Nil_ForNilValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(nil)
+
+	// Test
+	actual := sut.GetFloat64()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetFloat64_Returns_ValuePointer_ForIntValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(1)
+
+	// Test
+	actual := sut.GetFloat64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	var expected float64 = 1.0
+	ExpectFloat64(expected, *actual, t)
+}
+
+func TestThat_GetFloat64_Returns_ValuePointer_ForBoolValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(false)
+	sut1 := NewNullable(true)
+
+	// Test
+	actual0 := sut0.GetFloat64()
+	actual1 := sut1.GetFloat64()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	var expected0 float64 = 0.0
+	ExpectFloat64(expected0, *actual0, t)
+	ExpectNonNil(actual1, t)
+	var expected1 float64 = 2.0
+	ExpectFloat64(expected1, *actual1, t)
+}
+
+func TestThat_GetFloat64_Returns_ValuePointer_ForFloatValue(t *testing.T) {
+	// Setup
+	var expected float64 = 1.1
+	sut := NewNullable(expected)
+
+	// Test
+	actual := sut.GetFloat64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectFloat64(expected, *actual, t)
+}
+
+func TestThat_GetFloat64_Returns_ValuePointer_ForStringValue(t *testing.T) {
+	// Setup
+	var expected float64 = 1.1
+	sut := NewNullable(fmt.Sprintf("%f", expected))
+
+	// Test
+	actual := sut.GetFloat64()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectFloat64(expected, *actual, t)
+}
+
+func TestThat_GetFloat64_Returns_Nil_ForTimeValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 06:00:0 (which was when this test was added)
+	sut := NewNullable(time.Date(2022, 5, 13, 06, 00, 0, 0, time.UTC))
+
+	// Test
+	actual := sut.GetFloat64()
+
+	// Verify
+	ExpectNil(actual, t)
 }
 

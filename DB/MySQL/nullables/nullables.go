@@ -275,7 +275,7 @@ func (r Nullable) GetFloat64() *float64 {
 
 	// NullString converts to a Float64
 	if r.ns.Valid {
-		if vc, err := strconv.ParseFloat(r.ns.String, 64); nil != err { return &vc }
+		if vc, err := strconv.ParseFloat(r.ns.String, 64); nil == err { return &vc }
 		return nil
 	}
 
