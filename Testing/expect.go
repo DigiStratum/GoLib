@@ -28,6 +28,7 @@ func TestThat_Class_Method_DoesWhatever_WhenCondition(t *testing.T) {
 
 import(
 	"fmt"
+	"math"
 	"testing"
 	"runtime"
 	"reflect"
@@ -52,6 +53,11 @@ func ExpectInt(expect, actual int, t *testing.T) {
 func ExpectInt64(expect, actual int64, t *testing.T) {
 	if expect == actual { return }
 	t.Errorf("\n\n%s\nExpect: '%d', Actual: '%d'", getCaller(), expect, actual)
+}
+
+func ExpectFloat64(expect, actual float64, t *testing.T) {
+	if math.Abs(expect - actual) < 0.0001 { return }
+	t.Errorf("\n\n%s\nExpect: '%f', Actual: '%f'", getCaller(), expect, actual)
 }
 
 func ExpectBool(expect, actual bool, t *testing.T) {
