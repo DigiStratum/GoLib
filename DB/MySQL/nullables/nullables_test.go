@@ -459,3 +459,159 @@ func TestThat_GetFloat64_Returns_Nil_ForTimeValue(t *testing.T) {
 	ExpectNil(actual, t)
 }
 
+func TestThat_GetString_Returns_Nil_ForNilValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(nil)
+
+	// Test
+	actual := sut.GetString()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetString_Returns_ValuePointer_ForIntValue(t *testing.T) {
+	// Setup
+	expected := 333
+	sut := NewNullable(expected)
+
+	// Test
+	actual := sut.GetString()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectString(fmt.Sprintf("%d", expected), *actual, t)
+}
+
+func TestThat_GetString_Returns_ValuePointer_ForBoolValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(false)
+	sut1 := NewNullable(true)
+
+	// Test
+	actual0 := sut0.GetString()
+	actual1 := sut1.GetString()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectString("false", *actual0, t)
+	ExpectNonNil(actual1, t)
+	ExpectString("true", *actual1, t)
+}
+
+func TestThat_GetString_Returns_ValuePointer_ForFloatValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(1.1)
+
+	// Test
+	actual := sut.GetString()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectString("1.1E+00", *actual, t)
+}
+
+func TestThat_GetString_Returns_ValuePointer_ForStringValue(t *testing.T) {
+	// Setup
+	expected := "super stringy!"
+	sut := NewNullable(expected)
+
+	// Test
+	actual := sut.GetString()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectString(expected, *actual, t)
+}
+
+func TestThat_GetString_Returns_Nil_ForTimeValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 06:48:0 (which was when this test was added)
+	sut := NewNullable(time.Date(2022, 5, 13, 06, 48, 0, 0, time.UTC))
+
+	// Test
+	actual := sut.GetString()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectString("2022-05-13T06:48:00Z", *actual, t)
+}
+
+func TestThat_GetTime_Returns_Nil_ForNilValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(nil)
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetTime_Returns_ValuePointer_ForIntValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 07:12:0 (which was when this test was added)
+	sut := NewNullable(1652451120)
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	actualStr := (*actual).Format("2006-01-02T15:04:05Z")
+	ExpectString("2022-05-13T07:12:00Z", actualStr, t)
+}
+
+func TestThat_GetTime_Returns_Nil_ForBoolValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(true)
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetTime_Returns_ValuePointer_ForFloatValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 07:12:0 (which was when this test was added)
+	sut := NewNullable(1652451120.0)
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	actualStr := (*actual).Format("2006-01-02T15:04:05Z")
+	ExpectString("2022-05-13T07:12:00Z", actualStr, t)
+}
+
+func TestThat_GetTime_Returns_ValuePointer_ForStringValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 07:29:0 (which was when this test was added)
+	sut := NewNullable("2022-05-13T07:29:00Z")
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	actualStr := (*actual).Format("2006-01-02T15:04:05Z")
+	ExpectString("2022-05-13T07:29:00Z", actualStr, t)
+}
+
+func TestThat_GetTime_Returns_ValuePointer_ForTimeValue(t *testing.T) {
+	// Setup
+	expected := time.Now()
+	sut := NewNullable(expected)
+
+	// Test
+	actual := sut.GetTime()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	expectedStr := (expected).Format("2006-01-02T15:04:05Z")
+	actualStr := (*actual).Format("2006-01-02T15:04:05Z")
+	ExpectString(expectedStr, actualStr, t)
+}
