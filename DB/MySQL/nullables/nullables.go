@@ -207,33 +207,52 @@ func (r Nullable) GetInt64() *int64 {
 
 // Return the value as a bool, complete with data conversions, or nil if nil or conversion problem
 func (r Nullable) GetBool() *bool {
-	if r.IsNil() { return nil }
-
-	// NullInt64 converts to a bool
-	if r.ni.Valid { v := (r.ni.Int64 == 0); return &v }
-
-	// NullBool passes through unmodified
-	if r.nb.Valid { return &r.nb.Bool }
-
-	// NullFloat64 converts to a bool (true if we drop the decimal and the remaining int != 0)
-	if r.nf.Valid { v := (int64(r.nf.Float64) != 0); return &v }
-
-	// NullString converts to a bool (true if "true" or stringified int and != 0 )
-	if r.ns.Valid {
-		lcv := strings.ToLower(r.ns.String)
-		if lcv == "true" { v := true; return &v }
-		if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil != err {
-			v := (vc != 0);
-			return &v
-		}
-		return nil
+	switch r.nullableType {
+		case NULLABLE_INT64:	// NullInt64 converts to a bool
+			if r.ni.Valid {
+				v := (r.ni.Int64 == 1)
+				return &v
+			}
+		case NULLABLE_BOOL:	// NullBool passes through unmodified
+			if r.nb.Valid {
+				return &r.nb.Bool
+			}
+		case NULLABLE_FLOAT64:	// NullFloat64 converts to a bool (true if we drop the decimal and the remaining int != 0)
+			if r.nf.Valid {
+				v := (int64(r.nf.Float64) != 0)
+				return &v
+			}
+		case NULLABLE_STRING: // NullString converts to a bool (true if "true" or stringified int and != 0 )
+			if r.ns.Valid {
+				lcv := strings.ToLower(r.ns.String)
+				if lcv == "true" {
+					v := true
+					return &v
+				}
+				if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil != err {
+					v := (vc != 0)
+					return &v
+				}
+			}
+		case NULLABLE_TIME:	// Any non-nil NullTime converts to a bool=true
+			if r.nt.Valid {
+				v := true
+				return &v
+			}
 	}
-
-	// NullTime converts to a bool (true if non-null)
-	if r.nt.Valid { v := true; return &v }
-
 	return nil
 }
+
+/*
+	switch r.nullableType {
+		case NULLABLE_INT64:
+		case NULLABLE_BOOL:
+		case NULLABLE_FLOAT64:
+		case NULLABLE_STRING:
+		case NULLABLE_TIME:
+	}
+
+*/
 
 // Return the value as a Float64, complete with data conversions, or nil if nil or conversion problem
 func (r Nullable) GetFloat64() *float64 {

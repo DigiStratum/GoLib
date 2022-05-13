@@ -194,7 +194,6 @@ func TestThat_NewNullable_Returns_NullableTime_ForTime(t *testing.T) {
 
 // Getters
 
-// GetInt64() *int64
 func TestThat_GetInt64_Returns_Nil_ForNilValue(t *testing.T) {
 	// Setup
 	sut := NewNullable(nil)
@@ -216,6 +215,7 @@ func TestThat_GetInt64_Returns_ValuePointer_ForInt64Value(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 333, t)
+	ExpectTrue(sut.IsInt64(), t)
 }
 
 func TestThat_GetInt64_Returns_ValuePointer_ForBoolValue(t *testing.T) {
@@ -230,8 +230,10 @@ func TestThat_GetInt64_Returns_ValuePointer_ForBoolValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectInt64(*actual0, 0, t)
+	ExpectTrue(sut0.IsBool(), t)
 	ExpectNonNil(actual1, t)
 	ExpectInt64(*actual1, 1, t)
+	ExpectTrue(sut1.IsBool(), t)
 }
 
 func TestThat_GetInt64_Returns_ValuePointer_ForFloatValue(t *testing.T) {
@@ -246,8 +248,10 @@ func TestThat_GetInt64_Returns_ValuePointer_ForFloatValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectInt64(*actual0, 0, t)
+	ExpectTrue(sut0.IsFloat64(), t)
 	ExpectNonNil(actual1, t)
 	ExpectInt64(*actual1, 1, t)
+	ExpectTrue(sut1.IsFloat64(), t)
 }
 
 func TestThat_GetInt64_Returns_ValuePointer_ForStringValue(t *testing.T) {
@@ -260,6 +264,7 @@ func TestThat_GetInt64_Returns_ValuePointer_ForStringValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 333, t)
+	ExpectTrue(sut.IsString(), t)
 }
 
 func TestThat_GetInt64_Returns_ValuePointer_ForTimeValue(t *testing.T) {
@@ -273,5 +278,103 @@ func TestThat_GetInt64_Returns_ValuePointer_ForTimeValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 1652385000, t)
+	ExpectTrue(sut.IsTime(), t)
+}
+
+func TestThat_GetBool_Returns_Nil_ForNilValue(t *testing.T) {
+	// Setup
+	sut := NewNullable(nil)
+
+	// Test
+	actual := sut.GetBool()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_GetBool_Returns_ValuePointer_ForBoolValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(false)
+	sut1 := NewNullable(true)
+
+	// Test
+	actual0 := sut0.GetBool()
+	actual1 := sut1.GetBool()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectFalse(*actual0, t)
+	ExpectTrue(sut0.IsBool(), t)
+	ExpectNonNil(actual1, t)
+	ExpectTrue(*actual1, t)
+	ExpectTrue(sut1.IsBool(), t)
+}
+
+func TestThat_GetBool_Returns_ValuePointer_ForInt64Value(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(0)
+	sut1 := NewNullable(1)
+
+	// Test
+	actual0 := sut0.GetBool()
+	actual1 := sut1.GetBool()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectFalse(*actual0, t)
+	ExpectTrue(sut0.IsInt64(), t)
+	ExpectNonNil(actual1, t)
+	ExpectTrue(*actual1, t)
+	ExpectTrue(sut1.IsInt64(), t)
+}
+
+func TestThat_GetBool_Returns_ValuePointer_ForFloat64Value(t *testing.T) {
+	// Setup
+	sut0 := NewNullable(0.0)
+	sut1 := NewNullable(1.1)
+
+	// Test
+	actual0 := sut0.GetBool()
+	actual1 := sut1.GetBool()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectFalse(*actual0, t)
+	ExpectTrue(sut0.IsFloat64(), t)
+	ExpectNonNil(actual1, t)
+	ExpectTrue(*actual1, t)
+	ExpectTrue(sut1.IsFloat64(), t)
+}
+
+func TestThat_GetBool_Returns_ValuePointer_ForStringValue(t *testing.T) {
+	// Setup
+	sut0 := NewNullable("not true")
+	sut1 := NewNullable("true")
+
+	// Test
+	actual0 := sut0.GetBool()
+	actual1 := sut1.GetBool()
+
+	// Verify
+	ExpectNonNil(actual0, t)
+	ExpectFalse(*actual0, t)
+	ExpectTrue(sut0.IsString(), t)
+	ExpectNonNil(actual1, t)
+	ExpectTrue(*actual1, t)
+	ExpectTrue(sut1.IsString(), t)
+}
+
+func TestThat_GetBool_Returns_ValuePointer_ForTimeValue(t *testing.T) {
+	// Setup
+	// UTC Timestamp for 2022-05-13 01:47:0 (which was when this test was added)
+	sut := NewNullable(time.Date(2022, 5, 13, 01, 47, 0, 0, time.UTC))
+
+	// Test
+	actual := sut.GetBool()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectTrue(*actual, t)
+	ExpectTrue(sut.IsTime(), t)
 }
 
