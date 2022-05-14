@@ -87,7 +87,7 @@ func connectionPool_example(dsn db.DSN) {
 	defer conn.Release()
 
 	// Run a query through
-	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
+	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
 	runQueryDumpAll(query)
 }
@@ -109,7 +109,7 @@ func connectionFactory_example(dsn db.DSN) {
 	defer conn.Close()
 
 	// Run a query through
-	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
+	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
 	runQueryDumpAll(query)
 }
@@ -131,7 +131,7 @@ func connection_example(dsn db.DSN) {
 	defer conn.Close()
 
 	// Run a query through
-	query, err := conn.NewQuery("SELECT id, task, due FROM todo;")
+	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
 	runQueryDumpAll(query)
 }
