@@ -86,19 +86,8 @@ type Nullable struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewNullable(value interface{}) *Nullable {
-	n := Nullable{
-		isNil:		true,
-		nullableType:	NULLABLE_NIL,
-/*
-		ni:		NullInt64{ Valid: false },
-		nb:		NullBool{ Valid: false },
-		nf:		NullFloat64{ Valid: false },
-		ns:		NullString{ Valid: false },
-		nt:		NullTime{ Valid: false },
-*/
-	}
-	res := n.SetValue(value)
-	if res { return &n }
+	n := Nullable{}
+	if res := n.SetValue(value); res { return &n }
 	return nil
 }
 
@@ -280,6 +269,10 @@ func (r Nullable) GetTime() *time.Time {
 	return nil
 }
 
+// -------------------------------------------------------------------------------------------------
+// JSON Un|Marshal Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // MarshalJSON for Nullable - we just sub it out to the underlying Nullable type
 func (r Nullable) MarshalJSON() ([]byte, error) {
 	switch r.nullableType {
@@ -288,6 +281,7 @@ func (r Nullable) MarshalJSON() ([]byte, error) {
 		case NULLABLE_FLOAT64: return r.nf.MarshalJSON()
 		case NULLABLE_STRING: return r.ns.MarshalJSON()
 		case NULLABLE_TIME: return r.nt.MarshalJSON()
+		case NULLABLE_NIL: return []byte("null"), nil
 	}
 	return make([]byte, 0), fmt.Errorf("Nullable.MarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
 }
@@ -295,6 +289,7 @@ func (r Nullable) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON for Nullable - we just sub it out to the underlying Nullable type
 func (r *Nullable) UnmarshalJSON(b []byte) error {
 	switch r.nullableType {
+		case NULLABLE_NIL: return nil
 		case NULLABLE_INT64: return r.ni.UnmarshalJSON(b)
 		case NULLABLE_BOOL: return r.nb.UnmarshalJSON(b)
 		case NULLABLE_FLOAT64: return r.nf.UnmarshalJSON(b)
@@ -304,9 +299,14 @@ func (r *Nullable) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("Nullable.UnmarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
 }
 
+// -------------------------------------------------------------------------------------------------
+// Scanner Public Interface
+// -------------------------------------------------------------------------------------------------
+
 // Scan for Nullable - we just sub it out to the underlying Nullable type
 func (r *Nullable) Scan(value interface{}) error {
 	switch r.nullableType {
+		case NULLABLE_NIL: return nil
 		case NULLABLE_INT64: return r.ni.Scan(value)
 		case NULLABLE_BOOL: return r.nb.Scan(value)
 		case NULLABLE_FLOAT64: return r.nf.Scan(value)
@@ -317,20 +317,8 @@ func (r *Nullable) Scan(value interface{}) error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Nullable supporting functions
+// Nullable private supporting functions
 // -------------------------------------------------------------------------------------------------
-
-func  GetNullableTypeString(nullableType NullableType) string {
-	switch nullableType {
-		case NULLABLE_NIL:		return "nil"
-		case NULLABLE_INT64:		return "int64"
-		case NULLABLE_BOOL:		return "bool"
-		case NULLABLE_FLOAT64:		return "float64"
-		case NULLABLE_STRING:		return "string"
-		case NULLABLE_TIME:		return "time"
-	}
-	return "unknown"
-}
 
 func (r *Nullable) setNil() bool {
 	r.nullableType = NULLABLE_NIL

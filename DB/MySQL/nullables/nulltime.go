@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"reflect"
+	"encoding/json"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -35,7 +36,10 @@ func (nt *NullTime) MarshalJSON() ([]byte, error) {
 }
 
 func (nt *NullTime) UnmarshalJSON(b []byte) error {
-	s := string(b)
+	// Unmarshal the JSON to a string first...
+	var s string
+	if err := json.Unmarshal(b, &s); nil != err { return err }
+	// Then parse the string as a datetime per RFC3339 formatting
 	x, err := time.Parse(time.RFC3339, s)
 	if err != nil {
 		nt.Valid = false

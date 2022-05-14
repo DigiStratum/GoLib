@@ -773,3 +773,150 @@ func TestThat_GetTime_Returns_ValuePointer_ForTimeValue(t *testing.T) {
 	actualStr := (*actual).Format("2006-01-02T15:04:05Z")
 	ExpectString(expectedStr, actualStr, t)
 }
+
+func TestThat_MarshalJSON_Returns_JSONByteSliceWithoutError_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Date(2022, 5, 14, 17, 21, 0, 0, time.UTC))
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn, err1 := sutn.MarshalJSON()
+	actuali, err2 := suti.MarshalJSON()
+	actualb, err3 := sutb.MarshalJSON()
+	actualf, err4 := sutf.MarshalJSON()
+	actualt, err5 := sutt.MarshalJSON()
+	actuals, err6 := suts.MarshalJSON()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectString("null", string(actualn), t)
+	ExpectNoError(err2, t)
+	ExpectString("333", string(actuali), t)
+	ExpectNoError(err3, t)
+	ExpectString("true", string(actualb), t)
+	ExpectNoError(err4, t)
+	ExpectString("3.3", string(actualf), t)
+	ExpectNoError(err5, t)
+	ExpectString("\"2022-05-14T17:21:00Z\"", string(actualt), t)
+	ExpectNoError(err6, t)
+	ExpectString("\"super stringy!\"", string(actuals), t)
+}
+
+func TestThat_UmmarshalJSON_Returns_JSONByteSliceWithoutError_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Date(2022, 5, 14, 17, 44, 0, 0, time.UTC))
+	suts := NewNullable("super stringy!")
+
+	// Test
+	err1 := sutn.UnmarshalJSON([]byte("null"))
+	err2 := suti.UnmarshalJSON([]byte("444"))
+	actuali := suti.GetInt64()
+	err3 := sutb.UnmarshalJSON([]byte("false"))
+	actualb := sutb.GetBool()
+	err4 := sutf.UnmarshalJSON([]byte("4.4"))
+	actualf := sutf.GetFloat64()
+	err5 := sutt.UnmarshalJSON([]byte("\"2000-01-02T12:34:56Z\""))
+	actualt := sutt.GetTime()
+	err6 := suts.UnmarshalJSON([]byte("\"silly string!\""))
+	actuals := suts.GetString()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectTrue(sutn.IsNil(), t)
+
+	ExpectNoError(err2, t)
+	ExpectNonNil(actuali, t)
+	ExpectTrue(suti.IsInt64(), t)
+	ExpectInt64(444, *actuali, t)
+
+	ExpectNoError(err3, t)
+	ExpectNonNil(actualb, t)
+	ExpectTrue(sutb.IsBool(), t)
+	ExpectFalse(*actualb, t)
+
+	ExpectNoError(err4, t)
+	ExpectNonNil(actualf, t)
+	ExpectTrue(sutf.IsFloat64(), t)
+	ExpectFloat64(4.4, *actualf, t)
+
+	ExpectNoError(err5, t)
+	ExpectNonNil(actualt, t)
+	ExpectTrue(sutt.IsTime(), t)
+	actualStr := (*actualt).Format("2006-01-02T15:04:05Z")
+	ExpectString("2000-01-02T12:34:56Z", actualStr, t)
+
+	ExpectNoError(err6, t)
+	ExpectNonNil(actuals, t)
+	ExpectTrue(suts.IsString(), t)
+	ExpectString("silly string!", *actuals, t)
+}
+
+// Scan(value interface{}) error
+
+func TestThat_Scan_Returns_WithoutError_ForEachNullableType(t *testing.T) {
+	// Setup
+	var expectedn *string = nil
+	sutn := NewNullable(nil)
+	var expectedi int64 = 444
+	suti := NewNullable(333)
+	expectedb := false
+	sutb := NewNullable(true)
+	var expectedf float64 = 4.4
+	sutf := NewNullable(3.3)
+	expectedt := time.Date(2000, 1, 2, 12, 34, 56, 0, time.UTC)
+	sutt := NewNullable(time.Date(2022, 5, 14, 17, 44, 0, 0, time.UTC))
+	expecteds := "silly string!"
+	suts := NewNullable("super stringy!")
+
+	// Test
+	err1 := sutn.Scan(expectedn)
+	err2 := suti.Scan(expectedi)
+	actuali := suti.GetInt64()
+	err3 := sutb.Scan(expectedb)
+	actualb := sutb.GetBool()
+	err4 := sutf.Scan(expectedf)
+	actualf := sutf.GetFloat64()
+	err5 := sutt.Scan(expectedt)
+	actualt := sutt.GetTime()
+	err6 := suts.Scan(expecteds)
+	actuals := suts.GetString()
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectTrue(sutn.IsNil(), t)
+
+	ExpectNoError(err2, t)
+	ExpectNonNil(actuali, t)
+	ExpectTrue(suti.IsInt64(), t)
+	ExpectInt64(expectedi, *actuali, t)
+
+	ExpectNoError(err3, t)
+	ExpectNonNil(actualb, t)
+	ExpectTrue(sutb.IsBool(), t)
+	ExpectBool(expectedb, *actualb, t)
+
+	ExpectNoError(err4, t)
+	ExpectNonNil(actualf, t)
+	ExpectTrue(sutf.IsFloat64(), t)
+	ExpectFloat64(expectedf, *actualf, t)
+
+	ExpectNoError(err5, t)
+	ExpectNonNil(actualt, t)
+	ExpectTrue(sutt.IsTime(), t)
+	actualStr := (*actualt).Format("2006-01-02T15:04:05Z")
+	expectedStr := (expectedt).Format("2006-01-02T15:04:05Z")
+	ExpectString(expectedStr, actualStr, t)
+
+	ExpectNoError(err6, t)
+	ExpectNonNil(actuals, t)
+	ExpectTrue(suts.IsString(), t)
+	ExpectString(expecteds, *actuals, t)
+}
