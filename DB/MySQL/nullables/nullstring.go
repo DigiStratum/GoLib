@@ -1,39 +1,49 @@
 package nullables
 
-/*
-NullString is an alias for sql.NullString data type extended for JSON Un|Marshaling support
-ref: https://golang.org/src/database/sql/sql.go?s=4943:5036#L177
-*/
-
 import (
-	"reflect"
+	"fmt"
 	"encoding/json"
 	"database/sql"
 )
 
+// NullString is an alias for sql.NullString data type which we extend
 type NullString sql.NullString
 
-func (ns *NullString) Scan(value interface{}) error {
+// -------------------------------------------------------------------------------------------------
+// database/sql.Scanner Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullString) Scan(value interface{}) error {
+	// Nil reciever? Bogus request!
+	if nil == r { return fmt.Errorf("NullString.Scan() - cannot scan into nil receiver") }
 	var s sql.NullString
-	if err := s.Scan(value); err != nil { return err }
-
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*ns = NullString{s.String, false}
-	} else {
-		*ns = NullString{s.String, true}
-	}
-
-	return nil
+	err := s.Scan(value)
+	r.String = s.String
+	r.Valid = s.Valid
+	if r.Valid { return nil }
+	if nil != err { return err }
+	return fmt.Errorf("NullString.Scan() - Invalid result without error")
 }
 
-func (ns *NullString) MarshalJSON() ([]byte, error) {
-	if ! ns.Valid { return []byte("null"), nil }
-	return json.Marshal(ns.String)
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullString) MarshalJSON() ([]byte, error) {
+	// Nil reciever? Bogus request!
+	if nil == r { return make([]byte, 0), fmt.Errorf("NullString.MarshalJSON() - cannot make nothing into JSON") }
+	if ! r.Valid { return []byte("null"), nil }
+	return json.Marshal(r.String)
 }
 
-func (ns *NullString) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &ns.String)
-	ns.Valid = (err == nil)
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Unmarshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullString) UnmarshalJSON(b []byte) error {
+	// Nil reciever? Bogus request!
+	if nil == r { return fmt.Errorf("NullString.UnmarshalJSON() - cannot decode JSON into nil receiver") }
+	err := json.Unmarshal(b, &r.String)
+	r.Valid = (nil == err)
 	return err
 }

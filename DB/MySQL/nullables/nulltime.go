@@ -1,52 +1,58 @@
 package nullables
 
-/*
-NullTime is an alias for sql.NullTime data type extended for JSON Un|Marshaling support
-*/
-
 import (
 	"fmt"
 	"time"
-	"reflect"
 	"encoding/json"
 
 	"github.com/go-sql-driver/mysql"
 )
 
+// NullTime is an alias for sql.NullTime data type which we extend
 type NullTime mysql.NullTime
 
-func (nt *NullTime) Scan(value interface{}) error {
+// -------------------------------------------------------------------------------------------------
+// database/sql.Scanner Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullTime) Scan(value interface{}) error {
+        // Nil reciever? Bogus request!
+        if nil == r { return fmt.Errorf("NullTime.Scan() - cannot scan into nil receiver") }
 	var t mysql.NullTime
-	if err := t.Scan(value); err != nil { return err }
+	err := t.Scan(value)
+        r.Time = t.Time
+        r.Valid = t.Valid
+        if r.Valid { return nil }
+        if nil != err { return err }
+        return fmt.Errorf("NullTime.Scan() - Invalid result without error")
 
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*nt = NullTime{t.Time, false}
-	} else {
-		*nt = NullTime{t.Time, true}
-	}
-
-	return nil
 }
 
-func (nt *NullTime) MarshalJSON() ([]byte, error) {
-	if ! nt.Valid { return []byte("null"), nil }
-	val := fmt.Sprintf("\"%s\"", nt.Time.Format(time.RFC3339))
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullTime) MarshalJSON() ([]byte, error) {
+        // Nil reciever? Bogus request!
+        if nil == r { return make([]byte, 0), fmt.Errorf("NullTime.MarshalJSON() - cannot make nothing into JSON") }
+	if ! r.Valid { return []byte("null"), nil }
+	val := fmt.Sprintf("\"%s\"", r.Time.Format(time.RFC3339))
 	return []byte(val), nil
 }
 
-func (nt *NullTime) UnmarshalJSON(b []byte) error {
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Unmarshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullTime) UnmarshalJSON(b []byte) error {
+        // Nil reciever? Bogus request!
+        if nil == r { return fmt.Errorf("NullTime.UnmarshalJSON() - cannot decode JSON into nil receiver") }
 	// Unmarshal the JSON to a string first...
 	var s string
 	if err := json.Unmarshal(b, &s); nil != err { return err }
 	// Then parse the string as a datetime per RFC3339 formatting
 	x, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		nt.Valid = false
-		return err
-	}
-
-	nt.Time = x
-	nt.Valid = true
-	return nil
+	r.Time = x
+        r.Valid = (nil == err)
+	return err
 }

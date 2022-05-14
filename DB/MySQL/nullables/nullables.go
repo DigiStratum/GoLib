@@ -270,37 +270,7 @@ func (r Nullable) GetTime() *time.Time {
 }
 
 // -------------------------------------------------------------------------------------------------
-// JSON Un|Marshal Public Interface
-// -------------------------------------------------------------------------------------------------
-
-// MarshalJSON for Nullable - we just sub it out to the underlying Nullable type
-func (r Nullable) MarshalJSON() ([]byte, error) {
-	switch r.nullableType {
-		case NULLABLE_INT64: return r.ni.MarshalJSON()
-		case NULLABLE_BOOL: return r.nb.MarshalJSON()
-		case NULLABLE_FLOAT64: return r.nf.MarshalJSON()
-		case NULLABLE_STRING: return r.ns.MarshalJSON()
-		case NULLABLE_TIME: return r.nt.MarshalJSON()
-		case NULLABLE_NIL: return []byte("null"), nil
-	}
-	return make([]byte, 0), fmt.Errorf("Nullable.MarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
-}
-
-// UnmarshalJSON for Nullable - we just sub it out to the underlying Nullable type
-func (r *Nullable) UnmarshalJSON(b []byte) error {
-	switch r.nullableType {
-		case NULLABLE_NIL: return nil
-		case NULLABLE_INT64: return r.ni.UnmarshalJSON(b)
-		case NULLABLE_BOOL: return r.nb.UnmarshalJSON(b)
-		case NULLABLE_FLOAT64: return r.nf.UnmarshalJSON(b)
-		case NULLABLE_STRING: return r.ns.UnmarshalJSON(b)
-		case NULLABLE_TIME: return r.nt.UnmarshalJSON(b)
-	}
-	return fmt.Errorf("Nullable.UnmarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
-}
-
-// -------------------------------------------------------------------------------------------------
-// Scanner Public Interface
+// database/sql.Scanner Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Scan for Nullable - we just sub it out to the underlying Nullable type
@@ -314,6 +284,40 @@ func (r *Nullable) Scan(value interface{}) error {
 		case NULLABLE_TIME: return r.nt.Scan(value)
 	}
 	return fmt.Errorf("Nullable.Scan - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
+}
+
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r Nullable) MarshalJSON() ([]byte, error) {
+	// Sub it out to the underlying Nullable type
+	switch r.nullableType {
+		case NULLABLE_INT64: return r.ni.MarshalJSON()
+		case NULLABLE_BOOL: return r.nb.MarshalJSON()
+		case NULLABLE_FLOAT64: return r.nf.MarshalJSON()
+		case NULLABLE_STRING: return r.ns.MarshalJSON()
+		case NULLABLE_TIME: return r.nt.MarshalJSON()
+		case NULLABLE_NIL: return []byte("null"), nil
+	}
+	return make([]byte, 0), fmt.Errorf("Nullable.MarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
+}
+
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Unmarshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Nullable) UnmarshalJSON(b []byte) error {
+	// Sub it out to the underlying Nullable type
+	switch r.nullableType {
+		case NULLABLE_NIL: return nil
+		case NULLABLE_INT64: return r.ni.UnmarshalJSON(b)
+		case NULLABLE_BOOL: return r.nb.UnmarshalJSON(b)
+		case NULLABLE_FLOAT64: return r.nf.UnmarshalJSON(b)
+		case NULLABLE_STRING: return r.ns.UnmarshalJSON(b)
+		case NULLABLE_TIME: return r.nt.UnmarshalJSON(b)
+	}
+	return fmt.Errorf("Nullable.UnmarshalJSON - Unsupported Nullable Type (oversight in implementation for type=%d!)", r.nullableType)
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -1,38 +1,50 @@
 package nullables
 
-/*
-NullBool is an alias for sql.NullBool data type extended for JSON Un|Marshaling support
-*/
-
 import (
-	"reflect"
+	"fmt"
 	"encoding/json"
 	"database/sql"
 )
 
+// NullBool is an alias for sql.NullBool data type which we extend
 type NullBool sql.NullBool
 
-func (nb *NullBool) Scan(value interface{}) error {
+// -------------------------------------------------------------------------------------------------
+// database/sql.Scanner Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullBool) Scan(value interface{}) error {
+        // Nil reciever? Bogus request!
+        if nil == r { return fmt.Errorf("NullBool.Scan() - cannot scan into nil receiver") }
 	var b sql.NullBool
-	if err := b.Scan(value); err != nil { return err }
+	err := b.Scan(value)
+        r.Bool = b.Bool
+        r.Valid = b.Valid
+        if r.Valid { return nil }
+        if nil != err { return err }
+        return fmt.Errorf("NullBool.Scan() - Invalid result without error")
 
-	// if nil then make Valid false
-	if reflect.TypeOf(value) == nil {
-		*nb = NullBool{b.Bool, false}
-	} else {
-		*nb = NullBool{b.Bool, true}
-	}
-
-	return nil
 }
 
-func (nb *NullBool) MarshalJSON() ([]byte, error) {
-	if ! nb.Valid { return []byte("null"), nil }
-	return json.Marshal(nb.Bool)
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullBool) MarshalJSON() ([]byte, error) {
+	// Nil reciever? Bogus request!
+	if nil == r { return make([]byte, 0), fmt.Errorf("NullBool.MarshalJSON() - cannot make nothing into JSON") }
+	if ! r.Valid { return []byte("null"), nil }
+	return json.Marshal(r.Bool)
 }
 
-func (nb *NullBool) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &nb.Bool)
-	nb.Valid = (err == nil)
-	return err
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Unmarshaler Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullBool) UnmarshalJSON(b []byte) error {
+        // Nil reciever? Bogus request!
+        if nil == r { return fmt.Errorf("NullBool.UnmarshalJSON() - cannot decode JSON into nil receiver") }
+        err := json.Unmarshal(b, &r.Bool)
+        r.Valid = (nil == err)
+        return err
 }

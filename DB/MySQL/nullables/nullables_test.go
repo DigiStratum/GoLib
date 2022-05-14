@@ -859,8 +859,6 @@ func TestThat_UmmarshalJSON_Returns_JSONByteSliceWithoutError_ForEachNullableTyp
 	ExpectString("silly string!", *actuals, t)
 }
 
-// Scan(value interface{}) error
-
 func TestThat_Scan_Returns_WithoutError_ForEachNullableType(t *testing.T) {
 	// Setup
 	var expectedn *string = nil
@@ -919,4 +917,47 @@ func TestThat_Scan_Returns_WithoutError_ForEachNullableType(t *testing.T) {
 	ExpectNonNil(actuals, t)
 	ExpectTrue(suts.IsString(), t)
 	ExpectString(expecteds, *actuals, t)
+}
+
+func TestThat_Scan_Returns_Error_ForEachNullableType(t *testing.T) {
+	// Setup
+	// Note: NULLABLE_NIL always works without error
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Date(2022, 5, 14, 17, 44, 0, 0, time.UTC))
+	suts := NewNullable("super stringy!")
+
+	// Test
+	err1 := suti.Scan(nil) // <- not an int!
+	actuali := suti.GetInt64()
+	err2 := sutb.Scan(nil) // <- not a bool!
+	actualb := sutb.GetBool()
+	err3 := sutf.Scan(nil) // <- not a float!
+	actualf := sutf.GetFloat64()
+	err4 := sutt.Scan("not a time")
+	actualt := sutt.GetTime()
+	err5 := suts.Scan(nil) // <- not a string!
+	actuals := suts.GetString()
+
+	// Verify
+	ExpectError(err1, t)
+	ExpectNil(actuali, t)
+	ExpectTrue(suti.IsInt64(), t)
+
+	ExpectError(err2, t)
+	ExpectNil(actualb, t)
+	ExpectTrue(sutb.IsBool(), t)
+
+	ExpectError(err3, t)
+	ExpectNil(actualf, t)
+	ExpectTrue(sutf.IsFloat64(), t)
+
+	ExpectError(err4, t)
+	ExpectNil(actualt, t)
+	ExpectTrue(sutt.IsTime(), t)
+
+	ExpectError(err5, t)
+	ExpectNil(actuals, t)
+	ExpectTrue(suts.IsString(), t)
 }
