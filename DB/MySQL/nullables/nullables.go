@@ -90,11 +90,13 @@ func NewNullable(value interface{}) *Nullable {
 	n := Nullable{
 		isNil:		true,
 		nullableType:	NULLABLE_NIL,
+/*
 		ni:		NullInt64{ Valid: false },
 		nb:		NullBool{ Valid: false },
 		nf:		NullFloat64{ Valid: false },
 		ns:		NullString{ Valid: false },
 		nt:		NullTime{ Valid: false },
+*/
 	}
 	res := n.SetValue(value)
 	if res { return &n }
@@ -109,6 +111,12 @@ func (r Nullable) IsNil() bool { return r.isNil }
 
 // Convert value to appropriate Nullable; return true on success, else false
 func (r *Nullable) SetValue(value interface{}) bool {
+	// Set Valid=false property for each nullable; this indicates to base object that it is nil
+	r.ni = NullInt64{ Valid: false }
+	r.nb = NullBool{ Valid: false }
+	r.nf = NullFloat64{ Valid: false }
+	r.ns = NullString{ Valid: false }
+	r.nt = NullTime{ Valid: false }
 	if nil == value { return r.setNil() }
 	if v, ok := value.(int); ok { return r.setInt64(int64(v)) }
 	if v, ok := value.(int8); ok { return r.setInt64(int64(v)) }
@@ -121,52 +129,6 @@ func (r *Nullable) SetValue(value interface{}) bool {
 	if v, ok := value.(string); ok { return r.setString(v) }
 	if v, ok := value.(time.Time); ok { return r.setTime(v) }
 	return false
-}
-
-func (r *Nullable) setNil() bool {
-	r.nullableType = NULLABLE_NIL
-	r.isNil = true
-	return true
-}
-
-func (r *Nullable) setInt64(value int64) bool {
-	r.nullableType = NULLABLE_INT64
-	r.ni.Int64 = value
-	r.ni.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setBool(value bool) bool {
-	r.nullableType = NULLABLE_BOOL
-	r.nb.Bool = value
-	r.nb.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setFloat64(value float64) bool {
-	r.nullableType = NULLABLE_FLOAT64
-	r.nf.Float64 = value
-	r.nf.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setString(value string) bool {
-	r.nullableType = NULLABLE_STRING
-	r.ns.String = value
-	r.ns.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setTime(value time.Time) bool {
-	r.nullableType = NULLABLE_TIME
-	r.nt.Time = value
-	r.nt.Valid = true
-	r.isNil = false
-	return true
 }
 
 func (r *Nullable) GetType() NullableType { return r.nullableType }
@@ -194,7 +156,8 @@ func (r Nullable) GetInt64() *int64 {
 				return &vc
 			}
 		case NULLABLE_TIME:	// NullTime converts to an int64 (timestamp)
-			if r.nt.Valid { vc := r.nt.Time.Unix(); return &vc }
+			vc := r.nt.Time.Unix()
+			return &vc
 	}
 	return nil
 }
@@ -345,5 +308,51 @@ func  GetNullableTypeString(nullableType NullableType) string {
 		case NULLABLE_TIME:		return "time"
 	}
 	return "unknown"
+}
+
+func (r *Nullable) setNil() bool {
+	r.nullableType = NULLABLE_NIL
+	r.isNil = true
+	return true
+}
+
+func (r *Nullable) setInt64(value int64) bool {
+	r.nullableType = NULLABLE_INT64
+	r.ni.Int64 = value
+	r.ni.Valid = true
+	r.isNil = false
+	return true
+}
+
+func (r *Nullable) setBool(value bool) bool {
+	r.nullableType = NULLABLE_BOOL
+	r.nb.Bool = value
+	r.nb.Valid = true
+	r.isNil = false
+	return true
+}
+
+func (r *Nullable) setFloat64(value float64) bool {
+	r.nullableType = NULLABLE_FLOAT64
+	r.nf.Float64 = value
+	r.nf.Valid = true
+	r.isNil = false
+	return true
+}
+
+func (r *Nullable) setString(value string) bool {
+	r.nullableType = NULLABLE_STRING
+	r.ns.String = value
+	r.ns.Valid = true
+	r.isNil = false
+	return true
+}
+
+func (r *Nullable) setTime(value time.Time) bool {
+	r.nullableType = NULLABLE_TIME
+	r.nt.Time = value
+	r.nt.Valid = true
+	r.isNil = false
+	return true
 }
 

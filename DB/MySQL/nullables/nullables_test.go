@@ -193,6 +193,164 @@ func TestThat_NewNullable_Returns_NullableTime_ForTime(t *testing.T) {
 	ExpectTrue(sut.GetType() == NULLABLE_TIME, t)
 }
 
+// Checkers
+
+func TestThat_IsNil_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsNil()
+	actuali := suti.IsNil()
+	actualb := sutb.IsNil()
+	actualf := sutf.IsNil()
+	actualt := sutt.IsNil()
+	actuals := suts.IsNil()
+
+	// Verify
+	ExpectTrue(actualn, t)
+	ExpectFalse(actuali, t)
+	ExpectFalse(actualb, t)
+	ExpectFalse(actualf, t)
+	ExpectFalse(actualt, t)
+	ExpectFalse(actuals, t)
+}
+
+func TestThat_IsInt64_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsInt64()
+	actuali := suti.IsInt64()
+	actualb := sutb.IsInt64()
+	actualf := sutf.IsInt64()
+	actualt := sutt.IsInt64()
+	actuals := suts.IsInt64()
+
+	// Verify
+	ExpectFalse(actualn, t)
+	ExpectTrue(actuali, t)
+	ExpectFalse(actualb, t)
+	ExpectFalse(actualf, t)
+	ExpectFalse(actualt, t)
+	ExpectFalse(actuals, t)
+}
+
+func TestThat_IsBool_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsBool()
+	actuali := suti.IsBool()
+	actualb := sutb.IsBool()
+	actualf := sutf.IsBool()
+	actualt := sutt.IsBool()
+	actuals := suts.IsBool()
+
+	// Verify
+	ExpectFalse(actualn, t)
+	ExpectFalse(actuali, t)
+	ExpectTrue(actualb, t)
+	ExpectFalse(actualf, t)
+	ExpectFalse(actualt, t)
+	ExpectFalse(actuals, t)
+}
+
+func TestThat_IsFloat64_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsFloat64()
+	actuali := suti.IsFloat64()
+	actualb := sutb.IsFloat64()
+	actualf := sutf.IsFloat64()
+	actualt := sutt.IsFloat64()
+	actuals := suts.IsFloat64()
+
+	// Verify
+	ExpectFalse(actualn, t)
+	ExpectFalse(actuali, t)
+	ExpectFalse(actualb, t)
+	ExpectTrue(actualf, t)
+	ExpectFalse(actualt, t)
+	ExpectFalse(actuals, t)
+}
+
+func TestThat_IsTime_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsTime()
+	actuali := suti.IsTime()
+	actualb := sutb.IsTime()
+	actualf := sutf.IsTime()
+	actualt := sutt.IsTime()
+	actuals := suts.IsTime()
+
+	// Verify
+	ExpectFalse(actualn, t)
+	ExpectFalse(actuali, t)
+	ExpectFalse(actualb, t)
+	ExpectFalse(actualf, t)
+	ExpectTrue(actualt, t)
+	ExpectFalse(actuals, t)
+}
+
+func TestThat_IsString_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
+	// Setup
+	sutn := NewNullable(nil)
+	suti := NewNullable(333)
+	sutb := NewNullable(true)
+	sutf := NewNullable(3.3)
+	sutt := NewNullable(time.Now())
+	suts := NewNullable("super stringy!")
+
+	// Test
+	actualn := sutn.IsString()
+	actuali := suti.IsString()
+	actualb := sutb.IsString()
+	actualf := sutf.IsString()
+	actualt := sutt.IsString()
+	actuals := suts.IsString()
+
+	// Verify
+	ExpectFalse(actualn, t)
+	ExpectFalse(actuali, t)
+	ExpectFalse(actualb, t)
+	ExpectFalse(actualf, t)
+	ExpectFalse(actualt, t)
+	ExpectTrue(actuals, t)
+}
+
 // Getters
 
 func TestThat_GetInt64_Returns_Nil_ForNilValue(t *testing.T) {
