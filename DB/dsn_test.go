@@ -1,7 +1,6 @@
 package db
 
 import(
-	"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -18,12 +17,7 @@ func TestThat_NewDSN_ReturnsError(t *testing.T) {
 
 func TestThat_NewDSN_ReturnsDSNObject(t *testing.T) {
 	// Setup
-	user := "user"
-	pass := "pass"
-	host := "host"
-	port := "port"
-	name := "name"
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
+	dsn := "user:pass@tcp(host:port)/name"
 
 	// Test
 	sut, err := NewDSN(dsn)
@@ -35,12 +29,7 @@ func TestThat_NewDSN_ReturnsDSNObject(t *testing.T) {
 
 func TestThat_GetDSNHash_ReturnsHashCode(t *testing.T) {
 	// Setup
-	user := "user"
-	pass := "pass"
-	host := "host"
-	port := "port"
-	name := "name"
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, name)
+	dsn := "user:pass@tcp(host:port)/name"
 
 	// Test
 	sut, _ := NewDSN(dsn)
