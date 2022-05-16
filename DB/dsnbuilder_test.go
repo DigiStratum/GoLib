@@ -192,12 +192,12 @@ func TestThat_SetServerPubKey_AddsPubKeyToDSN(t *testing.T) {
 	ExpectString("/?serverPubKey=boguspubkey", actual.ToString(), t)
 }
 
-//SetTLSConfig(tlsConfig string) *DSNBuilder
 type myStruct struct{}
 func (myStruct) Read(b []byte) (n int, err error) {
 	for i := range b { b[i] = 0 }
 	return len(b), nil
 }
+
 func TestThat_SetTLSConfig_AddsTLSConfigToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
@@ -215,19 +215,229 @@ func TestThat_SetTLSConfig_AddsTLSConfigToDSN(t *testing.T) {
 	ExpectString("/?tls=bogustlsconfig", actual.ToString(), t)
 }
 
-//SetTimeout(timeout time.Duration) *DSNBuilder
-//SetReadTimeout(readTimeout time.Duration) *DSNBuilder
-//SetWriteTimeout(writeTimeout time.Duration) *DSNBuilder
-//SetAllowAllFiles(allowAllFiles bool) *DSNBuilder
-//SetAllowCleartextPasswords(allowCleartextPasswords bool) *DSNBuilder
-//SetAllowNativePasswords(allowNativePasswords bool) *DSNBuilder
-//SetAllowOldPasswords(allowOldPasswords bool) *DSNBuilder
-//SetCheckConnLiveness(checkConnLiveness bool) *DSNBuilder
-//SetClientFoundRows(clientFoundRows bool) *DSNBuilder
-//SetColumnsWithAlias(columnsWithAlias bool) *DSNBuilder
-//SetInterpolateParams(interpolateParams bool) *DSNBuilder
-//SetMultiStatements(multiStatements bool) *DSNBuilder
-//SetParseTime(parseTime bool) *DSNBuilder
-//SetRejectReadOnly(rejectReadOnly bool) *DSNBuilder
+func TestThat_SetTimeout_AddsTimeoutToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+	timeout := time.Duration(333)
+
+	// Test
+	actual, err = sut.SetTimeout(timeout).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?timeout=333ns", actual.ToString(), t)
+}
+
+func TestThat_SetReadTimeout_AddsReadTimeoutToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+	timeout := time.Duration(333)
+
+	// Test
+	actual, err = sut.SetReadTimeout(timeout).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?readTimeout=333ns", actual.ToString(), t)
+}
+
+func TestThat_SetWriteTimeout_AddsWriteTimeoutToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+	timeout := time.Duration(333)
+
+	// Test
+	actual, err = sut.SetWriteTimeout(timeout).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?writeTimeout=333ns", actual.ToString(), t)
+}
+
+func TestThat_SetAllowAllFiles_AddsAllowAllFilesToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetAllowAllFiles(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?allowAllFiles=true", actual.ToString(), t)
+}
+
+func TestThat_SetAllowCleartextPasswords_AddsAllowCleartextPasswordsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetAllowCleartextPasswords(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?allowCleartextPasswords=true", actual.ToString(), t)
+}
+
+func TestThat_SetAllowNativePasswords_AddsAllowNativePasswordsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is true, so override with false to make it show up
+	actual, err = sut.SetAllowNativePasswords(false).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?allowNativePasswords=false", actual.ToString(), t)
+}
+
+func TestThat_SetAllowOldPasswords_AddsAllowOldPasswordsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetAllowOldPasswords(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?allowOldPasswords=true", actual.ToString(), t)
+}
+
+func TestThat_SetCheckConnLiveness_AddsCheckConnLivenessToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is true, so override with false to make it show up
+	actual, err = sut.SetCheckConnLiveness(false).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?checkConnLiveness=false", actual.ToString(), t)
+}
+
+func TestThat_SetClientFoundRows_AddsClientFoundRowsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetClientFoundRows(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?clientFoundRows=true", actual.ToString(), t)
+}
+
+func TestThat_SetColumnsWithAlias_AddsColumnsWithAliasToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetColumnsWithAlias(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?columnsWithAlias=true", actual.ToString(), t)
+}
+
+func TestThat_SetInterpolateParams_AddsInterpolateParamsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetInterpolateParams(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?interpolateParams=true", actual.ToString(), t)
+}
+
+func TestThat_SetMultiStatements_AddsMultiStatementsToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetMultiStatements(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?multiStatements=true", actual.ToString(), t)
+}
+
+func TestThat_SetParseTime_AddsParseTimeToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetParseTime(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?parseTime=true", actual.ToString(), t)
+}
+
+func TestThat_SetRejectReadOnly_AddsRejectReadOnlyToDSN(t *testing.T) {
+	// Setup
+	var sut *DSNBuilder = BuildDSN()
+	var actual *DSN
+	var err error
+
+	// Test
+	// Default is false, so override with true to make it show up
+	actual, err = sut.SetRejectReadOnly(true).Build()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+	ExpectString("/?rejectReadOnly=true", actual.ToString(), t)
+}
+
 
 
