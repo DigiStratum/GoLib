@@ -17,8 +17,6 @@ func TestThat_NewDependencies_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-// Set(name string, dep interface{})
-// Get(name string) interface{}
 func TestThat_Dependencies_Set_AddsNamedDependency(t *testing.T) {
 	// Setup
 	var sut *Dependencies = NewDependencies()
@@ -33,5 +31,31 @@ func TestThat_Dependencies_Set_AddsNamedDependency(t *testing.T) {
 	ExpectNonNil(actual, t)
 	actualValue := actual.(string)
 	ExpectString(expectedValue, actualValue, t)
+	names := sut.GetNames()
+	ExpectTrue(sut.HasAll(names), t)
+	ExpectFalse(sut.Has("unexpectedname"), t)
+}
+
+// GetIterator() func () *Dependency
+
+func TestThat_Dependencies_GetIterator_ReturnsGoodIterator(t *testing.T) {
+	// Setup
+	var sut *Dependencies = NewDependencies()
+	sut.Set("name0", "value0")
+	sut.Set("name1", "value1")
+	sut.Set("name2", "value2")
+
+	// Test
+	var it func () *Dependency = sut.GetIterator()
+
+	// Verify
+	ExpectNonNil(it, t)
+	num := 0
+	for dep := it(); nil != dep; dep = it() {
+		num++
+		if 3 < num { break }
+	}
+	ExpectInt(3, num, t)
+
 }
 
