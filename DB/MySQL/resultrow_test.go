@@ -10,7 +10,7 @@ import(
 
 func TestThat_NewResultRow_ReturnsEmptyResultRow(t *testing.T) {
 	// Test
-	sut := NewResultRow()
+	var sut *ResultRow = NewResultRow()
 
 	// Verify
 	ExpectNonNil(sut, t)

@@ -11,7 +11,7 @@ import(
 
 func TestThat_NewResult_ReturnsNothing_WhenGivenNothing(t *testing.T) {
 	// Test
-	sut := NewResult(nil)
+	var sut *Result = NewResult(nil)
 
 	// Verify
 	ExpectNil(sut, t)

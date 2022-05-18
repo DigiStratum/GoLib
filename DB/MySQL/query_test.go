@@ -11,22 +11,19 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
 )
 
-func getGoodNewConnection() (*Connection, error) {
-	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
-	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
-	return NewConnection(mockDBConnection)
-}
-
 func TestThat_NewQuery_ReturnsError_WhenGivenNilConnection(t *testing.T) {
+	// Setup
+	var sut *Query
+	var err error
 	// Test
-	sut, err := NewQuery(nil, nil)
+	sut, err = NewQuery(nil, nil)
 
 	// Verify
 	ExpectNil(sut, t)
 	ExpectError(err, t)
 }
 
-func TestThat_NewQuery_ReturnsError_WhenGivenNilSQLQuery(t *testing.T) {
+func TestThat_Query_NewQuery_ReturnsError_WhenGivenNilSQLQuery(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := getGoodNewConnection()
 
@@ -38,7 +35,7 @@ func TestThat_NewQuery_ReturnsError_WhenGivenNilSQLQuery(t *testing.T) {
 	ExpectError(err, t)
 }
 
-func TestThat_NewQuery_ReturnsSomething_WhenGivenGoodParams(t *testing.T) {
+func TestThat_Query_NewQuery_ReturnsSomething_WhenGivenGoodParams(t *testing.T) {
 	// Setup
 	mockDBConnection, _ := getGoodNewConnection()
 
@@ -50,7 +47,7 @@ func TestThat_NewQuery_ReturnsSomething_WhenGivenGoodParams(t *testing.T) {
 	ExpectNoError(err, t)
 }
 
-func TestThat_Run_ReturnsResult_WithoutError(t *testing.T) {
+func TestThat_Query_Run_ReturnsResult_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -74,7 +71,7 @@ func TestThat_Run_ReturnsResult_WithoutError(t *testing.T) {
 	ExpectNoError(err2, t)
 }
 
-func TestThat_Run_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+func TestThat_Query_Run_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -95,7 +92,7 @@ func TestThat_Run_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	ExpectError(err2, t)
 }
 
-func TestThat_RunReturnInt_ReturnsInt_WithoutError(t *testing.T) {
+func TestThat_Query_RunReturnInt_ReturnsInt_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -122,7 +119,7 @@ func TestThat_RunReturnInt_ReturnsInt_WithoutError(t *testing.T) {
 	ExpectInt(expectedValue, *actual, t)
 }
 
-func TestThat_RunReturnInt_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+func TestThat_Query_RunReturnInt_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -146,7 +143,7 @@ func TestThat_RunReturnInt_ReturnsError_WhenQueryExecutionFailsWithError(t *test
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_RunReturnString_ReturnsString_WithoutError(t *testing.T) {
+func TestThat_Query_RunReturnString_ReturnsString_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -173,7 +170,7 @@ func TestThat_RunReturnString_ReturnsString_WithoutError(t *testing.T) {
 	ExpectString(expectedValue, *actual, t)
 }
 
-func TestThat_RunReturnString_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+func TestThat_Query_RunReturnString_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -197,7 +194,7 @@ func TestThat_RunReturnString_ReturnsError_WhenQueryExecutionFailsWithError(t *t
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_RunReturnOne_ReturnsResultRow_WithoutError(t *testing.T) {
+func TestThat_Query_RunReturnOne_ReturnsResultRow_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -237,7 +234,7 @@ func TestThat_RunReturnOne_ReturnsResultRow_WithoutError(t *testing.T) {
 
 }
 
-func TestThat_RunReturnOne_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+func TestThat_Query_RunReturnOne_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -261,7 +258,7 @@ func TestThat_RunReturnOne_ReturnsError_WhenQueryExecutionFailsWithError(t *test
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-func TestThat_RunReturnAll_ReturnsResultRows_WithoutError(t *testing.T) {
+func TestThat_Query_RunReturnAll_ReturnsResultRows_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -310,7 +307,7 @@ func TestThat_RunReturnAll_ReturnsResultRows_WithoutError(t *testing.T) {
 	}
 }
 
-func TestThat_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
+func TestThat_Query_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := getGoodNewConnection()
@@ -332,5 +329,11 @@ func TestThat_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t *test
 	ExpectNil(actual, t)
 	ExpectError(err2, t)
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
+}
+
+func getGoodNewConnection() (*Connection, error) {
+	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
+	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
+	return NewConnection(mockDBConnection)
 }
 

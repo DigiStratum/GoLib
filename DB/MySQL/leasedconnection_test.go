@@ -32,13 +32,13 @@ func TestThat_NewLeasedConnection_ReturnsSomething(t *testing.T) {
 	leaseKey := int64(333)
 
 	// Test
-	actual := NewLeasedConnection(newPooledConnection, leaseKey)
+	var actual *LeasedConnection = NewLeasedConnection(newPooledConnection, leaseKey)
 
 	// Verify
 	ExpectNonNil(actual, t)
 }
 
-func TestThat_Release_Returns_WithoutError(t *testing.T) {
+func TestThat_LeasedConnection_Release_Returns_WithoutError(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -50,7 +50,7 @@ func TestThat_Release_Returns_WithoutError(t *testing.T) {
 	ExpectNoError(err2, t)
 }
 
-func TestThat_Release_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_Release_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 	err2 := sut.Release()
@@ -64,7 +64,7 @@ func TestThat_Release_ReturnsError_ForInvalidLease(t *testing.T) {
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_IsConnected_ReturnsTrue_ForGoodLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_IsConnected_ReturnsTrue_ForGoodLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -76,7 +76,7 @@ func TestThat_ConnectionIfc_IsConnected_ReturnsTrue_ForGoodLease(t *testing.T) {
 	ExpectTrue(res, t)
 }
 
-func TestThat_ConnectionIfc_IsConnected_ReturnsFalse_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_IsConnected_ReturnsFalse_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -90,7 +90,7 @@ func TestThat_ConnectionIfc_IsConnected_ReturnsFalse_ForInvalidLease(t *testing.
 	ExpectFalse(res, t)
 }
 
-func TestThat_ConnectionIfc_Disconnect_LeavesLeasedConnectionIntact(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Disconnect_LeavesLeasedConnectionIntact(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -103,7 +103,7 @@ func TestThat_ConnectionIfc_Disconnect_LeavesLeasedConnectionIntact(t *testing.T
 	ExpectTrue(res, t)
 }
 
-func TestThat_ConnectionIfc_Connect_ReturnsError(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Connect_ReturnsError(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -117,7 +117,7 @@ func TestThat_ConnectionIfc_Connect_ReturnsError(t *testing.T) {
 	ExpectTrue(res, t)
 }
 
-func TestThat_ConnectionIfc_InTransaction_ReturnsFalse_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_InTransaction_ReturnsFalse_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -131,7 +131,7 @@ func TestThat_ConnectionIfc_InTransaction_ReturnsFalse_ForInvalidLease(t *testin
 	ExpectFalse(res, t)
 }
 
-func TestThat_ConnectionIfc_Begin_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Begin_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -145,7 +145,7 @@ func TestThat_ConnectionIfc_Begin_ReturnsError_ForInvalidLease(t *testing.T) {
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_NewQuery_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_NewQuery_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -160,7 +160,7 @@ func TestThat_ConnectionIfc_NewQuery_ReturnsError_ForInvalidLease(t *testing.T) 
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_Commit_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Commit_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -174,7 +174,7 @@ func TestThat_ConnectionIfc_Commit_ReturnsError_ForInvalidLease(t *testing.T) {
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_Rollback_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Rollback_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -188,7 +188,7 @@ func TestThat_ConnectionIfc_Rollback_ReturnsError_ForInvalidLease(t *testing.T) 
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_Exec_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Exec_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -203,7 +203,7 @@ func TestThat_ConnectionIfc_Exec_ReturnsError_ForInvalidLease(t *testing.T) {
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_Query_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_Query_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 
@@ -218,7 +218,7 @@ func TestThat_ConnectionIfc_Query_ReturnsError_ForInvalidLease(t *testing.T) {
 	ExpectError(err3, t)
 }
 
-func TestThat_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLease(t *testing.T) {
+func TestThat_LeasedConnection_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLease(t *testing.T) {
 	// Setup
 	sut, err1 := getGoodLeasedConnection()
 

@@ -18,7 +18,7 @@ func TestThat_NewDBConnectionFactory_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_NewConnectionFactory_Returns_Connection_ForGoodFactoryDriver(t *testing.T) {
+func TestThat_DBConnectionFactory_NewConnection_ReturnsConnection_ForGoodFactoryDriver(t *testing.T) {
 	// Setup
 	sut := NewDBConnectionFactory("mysql")
 	var actual *sql.DB
@@ -33,7 +33,7 @@ func TestThat_NewConnectionFactory_Returns_Connection_ForGoodFactoryDriver(t *te
 	ExpectNonNil(actual, t)
 }
 
-func TestThat_NewConnectionFactory_Returns_Error_ForBadFactoryDriver(t *testing.T) {
+func TestThat_DBConnectionFactory_NewConnection_ReturnsError_ForBadFactoryDriver(t *testing.T) {
 	// Setup
 	sut := NewDBConnectionFactory("baddriver")
 	var actual *sql.DB

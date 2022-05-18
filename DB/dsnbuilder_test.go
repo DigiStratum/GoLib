@@ -22,7 +22,7 @@ func TestThat_BuildDSN_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_SetUser_AddsUserToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetUser_AddsUserToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -37,7 +37,7 @@ func TestThat_SetUser_AddsUserToDSN(t *testing.T) {
 	ExpectString("testuser@/", actual.ToString(), t)
 }
 
-func TestThat_SetPasswd_AddsPasswdToDSNWhenUserSpecified(t *testing.T) {
+func TestThat_DSNBuilder_SetPasswd_AddsPasswdToDSNWhenUserSpecified(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -52,7 +52,7 @@ func TestThat_SetPasswd_AddsPasswdToDSNWhenUserSpecified(t *testing.T) {
 	ExpectString("testuser:testpass@/", actual.ToString(), t)
 }
 
-func TestThat_SetPasswd_OmitsPasswdFromDSNWithoutUserSpecified(t *testing.T) {
+func TestThat_DSNBuilder_SetPasswd_OmitsPasswdFromDSNWithoutUserSpecified(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -67,7 +67,7 @@ func TestThat_SetPasswd_OmitsPasswdFromDSNWithoutUserSpecified(t *testing.T) {
 	ExpectString("/", actual.ToString(), t)
 }
 
-func TestThat_SetNet_AddsNetToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetNet_AddsNetToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -82,7 +82,7 @@ func TestThat_SetNet_AddsNetToDSN(t *testing.T) {
 	ExpectString("tcp/", actual.ToString(), t)
 }
 
-func TestThat_SetAddr_AddsAddrToDSN_WhenNetSupplied(t *testing.T) {
+func TestThat_DSNBuilder_SetAddr_AddsAddrToDSN_WhenNetSupplied(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -97,7 +97,7 @@ func TestThat_SetAddr_AddsAddrToDSN_WhenNetSupplied(t *testing.T) {
 	ExpectString("tcp(1.2.3.4:3306)/", actual.ToString(), t)
 }
 
-func TestThat_SetDBName_AddsDBNameToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetDBName_AddsDBNameToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -112,7 +112,7 @@ func TestThat_SetDBName_AddsDBNameToDSN(t *testing.T) {
 	ExpectString("/bogusname", actual.ToString(), t)
 }
 
-func TestThat_SetParams_AddsParamsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetParams_AddsParamsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -129,7 +129,7 @@ func TestThat_SetParams_AddsParamsToDSN(t *testing.T) {
 	ExpectString("/?paramname=paramvalue", actual.ToString(), t)
 }
 
-func TestThat_SetCollation_AddsCollationToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetCollation_AddsCollationToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -144,7 +144,7 @@ func TestThat_SetCollation_AddsCollationToDSN(t *testing.T) {
 	ExpectString("/?collation=utf8_general_ci", actual.ToString(), t)
 }
 
-func TestThat_SetLoc_AddsLocToDSN_When_NonUTCLocation(t *testing.T) {
+func TestThat_DSNBuilder_SetLoc_AddsLocToDSN_When_NonUTCLocation(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -159,7 +159,7 @@ func TestThat_SetLoc_AddsLocToDSN_When_NonUTCLocation(t *testing.T) {
 	ExpectString("/?loc=Local", actual.ToString(), t)
 }
 
-func TestThat_SetMaxAllowedPacket_AddsMaxAllowedPacketToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetMaxAllowedPacket_AddsMaxAllowedPacketToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -174,7 +174,7 @@ func TestThat_SetMaxAllowedPacket_AddsMaxAllowedPacketToDSN(t *testing.T) {
 	ExpectString("/?maxAllowedPacket=333", actual.ToString(), t)
 }
 
-func TestThat_SetServerPubKey_AddsPubKeyToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetServerPubKey_AddsPubKeyToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -198,7 +198,7 @@ func (myStruct) Read(b []byte) (n int, err error) {
 	return len(b), nil
 }
 
-func TestThat_SetTLSConfig_AddsTLSConfigToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetTLSConfig_AddsTLSConfigToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -215,7 +215,7 @@ func TestThat_SetTLSConfig_AddsTLSConfigToDSN(t *testing.T) {
 	ExpectString("/?tls=bogustlsconfig", actual.ToString(), t)
 }
 
-func TestThat_SetTimeout_AddsTimeoutToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetTimeout_AddsTimeoutToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -231,7 +231,7 @@ func TestThat_SetTimeout_AddsTimeoutToDSN(t *testing.T) {
 	ExpectString("/?timeout=333ns", actual.ToString(), t)
 }
 
-func TestThat_SetReadTimeout_AddsReadTimeoutToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetReadTimeout_AddsReadTimeoutToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -247,7 +247,7 @@ func TestThat_SetReadTimeout_AddsReadTimeoutToDSN(t *testing.T) {
 	ExpectString("/?readTimeout=333ns", actual.ToString(), t)
 }
 
-func TestThat_SetWriteTimeout_AddsWriteTimeoutToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetWriteTimeout_AddsWriteTimeoutToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -263,7 +263,7 @@ func TestThat_SetWriteTimeout_AddsWriteTimeoutToDSN(t *testing.T) {
 	ExpectString("/?writeTimeout=333ns", actual.ToString(), t)
 }
 
-func TestThat_SetAllowAllFiles_AddsAllowAllFilesToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetAllowAllFiles_AddsAllowAllFilesToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -279,7 +279,7 @@ func TestThat_SetAllowAllFiles_AddsAllowAllFilesToDSN(t *testing.T) {
 	ExpectString("/?allowAllFiles=true", actual.ToString(), t)
 }
 
-func TestThat_SetAllowCleartextPasswords_AddsAllowCleartextPasswordsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetAllowCleartextPasswords_AddsAllowCleartextPasswordsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -295,7 +295,7 @@ func TestThat_SetAllowCleartextPasswords_AddsAllowCleartextPasswordsToDSN(t *tes
 	ExpectString("/?allowCleartextPasswords=true", actual.ToString(), t)
 }
 
-func TestThat_SetAllowNativePasswords_AddsAllowNativePasswordsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetAllowNativePasswords_AddsAllowNativePasswordsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -311,7 +311,7 @@ func TestThat_SetAllowNativePasswords_AddsAllowNativePasswordsToDSN(t *testing.T
 	ExpectString("/?allowNativePasswords=false", actual.ToString(), t)
 }
 
-func TestThat_SetAllowOldPasswords_AddsAllowOldPasswordsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetAllowOldPasswords_AddsAllowOldPasswordsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -327,7 +327,7 @@ func TestThat_SetAllowOldPasswords_AddsAllowOldPasswordsToDSN(t *testing.T) {
 	ExpectString("/?allowOldPasswords=true", actual.ToString(), t)
 }
 
-func TestThat_SetCheckConnLiveness_AddsCheckConnLivenessToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetCheckConnLiveness_AddsCheckConnLivenessToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -343,7 +343,7 @@ func TestThat_SetCheckConnLiveness_AddsCheckConnLivenessToDSN(t *testing.T) {
 	ExpectString("/?checkConnLiveness=false", actual.ToString(), t)
 }
 
-func TestThat_SetClientFoundRows_AddsClientFoundRowsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetClientFoundRows_AddsClientFoundRowsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -359,7 +359,7 @@ func TestThat_SetClientFoundRows_AddsClientFoundRowsToDSN(t *testing.T) {
 	ExpectString("/?clientFoundRows=true", actual.ToString(), t)
 }
 
-func TestThat_SetColumnsWithAlias_AddsColumnsWithAliasToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetColumnsWithAlias_AddsColumnsWithAliasToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -375,7 +375,7 @@ func TestThat_SetColumnsWithAlias_AddsColumnsWithAliasToDSN(t *testing.T) {
 	ExpectString("/?columnsWithAlias=true", actual.ToString(), t)
 }
 
-func TestThat_SetInterpolateParams_AddsInterpolateParamsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetInterpolateParams_AddsInterpolateParamsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -391,7 +391,7 @@ func TestThat_SetInterpolateParams_AddsInterpolateParamsToDSN(t *testing.T) {
 	ExpectString("/?interpolateParams=true", actual.ToString(), t)
 }
 
-func TestThat_SetMultiStatements_AddsMultiStatementsToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetMultiStatements_AddsMultiStatementsToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -407,7 +407,7 @@ func TestThat_SetMultiStatements_AddsMultiStatementsToDSN(t *testing.T) {
 	ExpectString("/?multiStatements=true", actual.ToString(), t)
 }
 
-func TestThat_SetParseTime_AddsParseTimeToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetParseTime_AddsParseTimeToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN
@@ -423,7 +423,7 @@ func TestThat_SetParseTime_AddsParseTimeToDSN(t *testing.T) {
 	ExpectString("/?parseTime=true", actual.ToString(), t)
 }
 
-func TestThat_SetRejectReadOnly_AddsRejectReadOnlyToDSN(t *testing.T) {
+func TestThat_DSNBuilder_SetRejectReadOnly_AddsRejectReadOnlyToDSN(t *testing.T) {
 	// Setup
 	var sut *DSNBuilder = BuildDSN()
 	var actual *DSN

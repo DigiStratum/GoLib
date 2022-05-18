@@ -10,6 +10,63 @@ import(
 	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
+func TestThat_NewPooledConnection_ReturnsSomething_WithoutError(t *testing.T) {
+	// Setup
+	var actual *PooledConnection
+	var err error
+
+	// Test
+	actual, err = getGoodNewPooledConnection()
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
+}
+
+func TestThat_PooledConnection_Close_Returns_WithoutError(t *testing.T) {
+	// Setup
+	sut, _ := getGoodNewPooledConnection()
+
+	// Test
+	err := sut.Close()
+
+	// Verify
+	ExpectNoError(err, t)
+}
+
+func TestThat_PooledConnection_Close_Returns_Error_ForBadUnderlyingConnection(t *testing.T) {
+	// Setup
+	sut, _ := getNilNewPooledConnection()
+
+	// Test
+	err := sut.Close()
+
+	// Verify
+	ExpectError(err, t)
+}
+
+func TestThat_PooledConnection_IsConnected_ReturnsTrue_ForGoodConnection(t *testing.T) {
+	// Setup
+	sut, _ := getGoodNewPooledConnection()
+
+	// Test
+	actual := sut.IsConnected()
+
+	// Verify
+	ExpectTrue(actual, t)
+}
+
+func TestThat_PooledConnection_IsConnected_ReturnsFalse_ForBadConnection(t *testing.T) {
+	// Setup
+	sut, _ := getNilNewPooledConnection()
+
+	// Test
+	actual := sut.IsConnected()
+
+	// Verify
+	ExpectFalse(actual, t)
+}
+
 func getGoodNewPooledConnection() (*PooledConnection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
@@ -34,56 +91,3 @@ func getNilNewPooledConnection() (*PooledConnection, error) {
 	return &PooledConnection{}, nil
 }
 
-
-func TestThat_NewPooledConnection_ReturnsSomething_WithoutError(t *testing.T) {
-	// Setup / Test
-	actual, err := getGoodNewPooledConnection()
-
-	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(err, t)
-}
-
-func TestThat_Close_Returns_WithoutError(t *testing.T) {
-	// Setup
-	sut, _ := getGoodNewPooledConnection()
-
-	// Test
-	err := sut.Close()
-
-	// Verify
-	ExpectNoError(err, t)
-}
-
-func TestThat_Close_Returns_Error_ForBadUnderlyingConnection(t *testing.T) {
-	// Setup
-	sut, _ := getNilNewPooledConnection()
-
-	// Test
-	err := sut.Close()
-
-	// Verify
-	ExpectError(err, t)
-}
-
-func TestThat_IsConnected_ReturnsTrue_ForGoodConnection(t *testing.T) {
-	// Setup
-	sut, _ := getGoodNewPooledConnection()
-
-	// Test
-	actual := sut.IsConnected()
-
-	// Verify
-	ExpectTrue(actual, t)
-}
-
-func TestThat_IsConnected_ReturnsFalse_ForBadConnection(t *testing.T) {
-	// Setup
-	sut, _ := getNilNewPooledConnection()
-
-	// Test
-	actual := sut.IsConnected()
-
-	// Verify
-	ExpectFalse(actual, t)
-}

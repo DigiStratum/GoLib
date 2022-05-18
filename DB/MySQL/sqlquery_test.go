@@ -8,13 +8,13 @@ import(
 
 func TestThat_NewSQLQuery_ReturnsSomething(t *testing.T) {
 	// Test
-	sut := NewSQLQuery("bogus query")
+	var sut *SQLQuery = NewSQLQuery("bogus query")
 
 	// Verify
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_Resolve_ReturnsError_WhenNil(t *testing.T) {
+func TestThat_SQLQuery_Resolve_ReturnsError_WhenNil(t *testing.T) {
 	// Setup
 	var sut SQLQuery
 
@@ -25,7 +25,7 @@ func TestThat_Resolve_ReturnsError_WhenNil(t *testing.T) {
 	ExpectError(err, t)
 }
 
-func TestThat_Resolve_ReturnsQuery_NoError(t *testing.T) {
+func TestThat_SQLQuery_Resolve_ReturnsQuery_NoError(t *testing.T) {
 	// Setup
 	expectedQuery := "bogus query"
 	sut := NewSQLQuery(expectedQuery)

@@ -43,7 +43,7 @@ type ConnectionPoolIfc interface {
 }
 
 type ConnectionPool struct {
-	di 			*dependencies.DependencyInjected
+	di			*dependencies.DependencyInjected
 	configured		bool
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN

@@ -14,13 +14,13 @@ func TestThat_NewLeasedConnections_ReturnsSomething(t *testing.T) {
 	// Setup
 
 	// Test
-	actual := NewLeasedConnections()
+	var actual *LeasedConnections = NewLeasedConnections()
 
 	// Verify
 	ExpectNonNil(actual, t)
 }
 
-func TestThat_GetLeaseForConnection_ReturnsSomething(t *testing.T) {
+func TestThat_LeasedConnections_GetLeaseForConnection_ReturnsSomething(t *testing.T) {
 	// Setup
 	pooledConnection := getPooledConnection()
 	sut := NewLeasedConnections()
@@ -32,7 +32,7 @@ func TestThat_GetLeaseForConnection_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(actual, t)
 }
 
-func TestThat_GetLeaseForConnection_ReturnsNil_ForNilConnection(t *testing.T) {
+func TestThat_LeasedConnections_GetLeaseForConnection_ReturnsNil_ForNilConnection(t *testing.T) {
 	// Setup
 	sut := NewLeasedConnections()
 
@@ -43,7 +43,7 @@ func TestThat_GetLeaseForConnection_ReturnsNil_ForNilConnection(t *testing.T) {
 	ExpectNil(actual, t)
 }
 
-func TestThat_Release_ReturnsTrue_ForGoodLeaseKey(t *testing.T) {
+func TestThat_LeasedConnections_Release_ReturnsTrue_ForGoodLeaseKey(t *testing.T) {
 	// Setup
 	pooledConnection := getPooledConnection()
 	sut := NewLeasedConnections()
@@ -56,7 +56,7 @@ func TestThat_Release_ReturnsTrue_ForGoodLeaseKey(t *testing.T) {
 	ExpectTrue(result, t)
 }
 
-func TestThat_Release_ReturnsFalse_ForBadLeaseKey(t *testing.T) {
+func TestThat_LeasedConnections_Release_ReturnsFalse_ForBadLeaseKey(t *testing.T) {
 	// Setup
 	pooledConnection := getPooledConnection()
 	sut := NewLeasedConnections()

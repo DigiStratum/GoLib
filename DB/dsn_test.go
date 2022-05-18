@@ -27,7 +27,7 @@ func TestThat_NewDSN_ReturnsDSNObject(t *testing.T) {
 	ExpectNoError(err, t)
 }
 
-func TestThat_GetDSNHash_ReturnsHashCode(t *testing.T) {
+func TestThat_DSN_GetDSNHash_ReturnsHashCode(t *testing.T) {
 	// Setup
 	dsn := "user:pass@tcp(host:port)/name"
 

@@ -9,7 +9,7 @@ import(
 
 func TestThat_NewResultSet_ReturnsEmptyResultSet(t *testing.T) {
 	// Test
-	sut := NewResultSet()
+	var sut *ResultSet = NewResultSet()
 
 	// Verify
 	ExpectNonNil(sut, t)

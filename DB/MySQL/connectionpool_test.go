@@ -16,13 +16,13 @@ func TestThat_NewConnectionPool_ReturnsSomething(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 
 	// Test
-	sut := NewConnectionPool(*dsn)
+	var sut *ConnectionPool = NewConnectionPool(*dsn)
 
 	// Verify
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_InjectDependencies_ReturnsError_ForNilDependencies(t *testing.T) {
+func TestThat_ConnectionPool_InjectDependencies_ReturnsError_ForNilDependencies(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -34,7 +34,7 @@ func TestThat_InjectDependencies_ReturnsError_ForNilDependencies(t *testing.T) {
 	ExpectError(err, t)
 }
 
-func TestThat_InjectDependencies_ReturnsError_ForWrongDependencies(t *testing.T) {
+func TestThat_ConnectionPool_InjectDependencies_ReturnsError_ForWrongDependencies(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -52,7 +52,7 @@ func TestThat_InjectDependencies_ReturnsError_ForWrongDependencies(t *testing.T)
 	ExpectError(err2, t)
 }
 
-func TestThat_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T) {
+func TestThat_ConnectionPool_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -67,7 +67,7 @@ func TestThat_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T
 	ExpectNoError(err, t)
 }
 
-func TestThat_Configure_ReturnsNoError_ForEmptyConfig(t *testing.T) {
+func TestThat_ConnectionPool_Configure_ReturnsNoError_ForEmptyConfig(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -85,7 +85,7 @@ func TestThat_Configure_ReturnsNoError_ForEmptyConfig(t *testing.T) {
 	ExpectNoError(err, t)
 }
 
-func TestThat_Configure_ReturnsError_ForUnknownConfigKeys(t *testing.T) {
+func TestThat_ConnectionPool_Configure_ReturnsError_ForUnknownConfigKeys(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -104,7 +104,7 @@ func TestThat_Configure_ReturnsError_ForUnknownConfigKeys(t *testing.T) {
 	ExpectError(err, t)
 }
 
-func TestThat_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
+func TestThat_ConnectionPool_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -125,7 +125,7 @@ func TestThat_Configure_ReturnsNoError_ForKnownConfigKeys(t *testing.T) {
 	ExpectNoError(err, t)
 }
 
-func TestThat_GetConnection_ReturnsLeasedConnection_WhenOneAvailable(t *testing.T) {
+func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenOneAvailable(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -148,7 +148,7 @@ func TestThat_GetConnection_ReturnsLeasedConnection_WhenOneAvailable(t *testing.
 	ExpectNonNil(conn, t)
 }
 
-func TestThat_GetConnection_ReturnsError_WhenNoConnectionsAvailable(t *testing.T) {
+func TestThat_ConnectionPool_GetConnection_ReturnsError_WhenNoConnectionsAvailable(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -173,7 +173,7 @@ func TestThat_GetConnection_ReturnsError_WhenNoConnectionsAvailable(t *testing.T
 	ExpectNil(conn2, t)
 }
 
-func TestThat_GetConnection_ReturnsLeasedConnection_WhenPreviouslyReleased(t *testing.T) {
+func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenPreviouslyReleased(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -199,7 +199,7 @@ func TestThat_GetConnection_ReturnsLeasedConnection_WhenPreviouslyReleased(t *te
 	ExpectNonNil(conn2, t)
 }
 
-func TestThat_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
+func TestThat_ConnectionPool_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
@@ -220,7 +220,7 @@ func TestThat_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
 	ExpectInt(expected, actual, t)
 }
 
-func TestThat_Close_ClosesConnectionPool_WithoutError(t *testing.T) {
+func TestThat_ConnectionPool_Close_ClosesConnectionPool_WithoutError(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
