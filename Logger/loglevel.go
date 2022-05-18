@@ -1,5 +1,10 @@
 package logger
 
+import (
+	"fmt"
+	"strings"
+)
+
 type LogLevelIfc interface {
 	ToString() string
 }
@@ -26,7 +31,7 @@ var logLevels map[LogLevel]string
 var logLabels map[string]LogLevel
 
 func init() {
-	logLevels := make(map[LogLevel]string)
+	logLevels = make(map[LogLevel]string)
 	logLevels[CRAZY] = "CRAZY"
 	logLevels[TRACE] = "TRACE"
 	logLevels[DEBUG] = "DEBUG"
@@ -35,7 +40,7 @@ func init() {
 	logLevels[ERROR] = "ERROR"
 	logLevels[FATAL] = "FATAL"
 
-	logLabels := make(map[string]LogLevel])
+	logLabels = make(map[string]LogLevel)
 	logLabels["CRAZY"] = CRAZY
 	logLabels["TRACE"] = TRACE
 	logLabels["DEBUG"] = DEBUG
@@ -43,7 +48,6 @@ func init() {
 	logLabels["WARN"] = WARN
 	logLabels["ERROR"] = ERROR
 	logLabels["FATAL"] = FATAL
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -51,7 +55,7 @@ func init() {
 // -------------------------------------------------------------------------------------------------
 
 func StringToLogLevel(logLevelStr string) (*LogLevel, error) {
-	if logLevel, ok := logLabels[logLevelStr]; ok { return &logLevel, nil }
+	if logLevel, ok := logLabels[strings.ToUpper(logLevelStr)]; ok { return &logLevel, nil }
 	return nil, fmt.Errorf("Specifier is not a valid LogLevel [%s]", logLevelStr)
 }
 
@@ -63,3 +67,4 @@ func (r LogLevel) ToString() string {
 	if r >= logLevelEnd { return "" }
 	return logLevels[r]
 }
+

@@ -20,15 +20,14 @@ TODO:
 
 import (
 	"fmt"
-	"log"
 	"time"
-	"strings"
 	"errors"
+	lw "github.com/DigiStratum/GoLib/Logger/logwriter"
 )
 
 type LoggerIfc interface {
 	SetMinLogLevel(minLogLevel LogLevel)
-	SetLogWriter(logWriter LogWriterIfc)
+	SetLogWriter(logWriter lw.LogWriterIfc)
 	LogTimestamp(logTimestamp bool)
 	Crazy(format string, a ...interface{}) error
 	Trace(format string, a ...interface{}) error
@@ -42,7 +41,7 @@ type LoggerIfc interface {
 type Logger struct {
 	streamId	string			// Quasi-distinct streamId to filter log output by thread
 	minLogLevel	LogLevel		// The minimum logging level
-	logWriter	LogWriterIfc		// The LogWriter we are going to use (TODO: Add support for multiple)
+	logWriter	lw.LogWriterIfc		// The LogWriter we are going to use (TODO: Add support for multiple)
 	logTimestamp	bool			// Conditionally disable timestamps on the log output (consumer may do this for us)
 }
 
@@ -57,7 +56,6 @@ func init() {
 	// Default log streamId is our instantiation timestamp
 	streamId := fmt.Sprintf("%d", time.Now().UTC().UnixNano())
 	loggerInstance = *NewLogger(streamId)
-	LogTimestamp(logTimestamp bool)
 }
 
 // Get our singleton instance
@@ -74,7 +72,7 @@ func NewLogger(streamId string) *Logger {
 	newLogger := Logger{
 		streamId:	streamId,
 		minLogLevel:	INFO,
-		logWriter:	NewStdOutLogWriter(),
+		logWriter:	lw.NewStdOutLogWriter(),
 		logTimestamp:	true,
 	}
 	return &newLogger
@@ -91,7 +89,7 @@ func (r *Logger) SetMinLogLevel(minLogLevel LogLevel) {
 
 // Replace the current LogWriter with something more to our liking
 // TODO: Add support for multiple LogWriter's so that we can send logs to more than one place
-func (r *Logger) SetLogWriter(logWriter LogWriterIfc) {
+func (r *Logger) SetLogWriter(logWriter lw.LogWriterIfc) {
 	r.logWriter = logWriter
 }
 

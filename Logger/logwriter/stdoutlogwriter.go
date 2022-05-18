@@ -1,5 +1,9 @@
 package logwriter
 
+import (
+	"fmt"
+)
+
 // StdOut LogWriter
 type StdOutLogWriter struct {}
 
