@@ -12,8 +12,8 @@ type StdOutLogWriter struct {}
 // -------------------------------------------------------------------------------------------------
 
 // Make a new LogWriter for StdOut
-func NewStdOutLogWriter() StdOutLogWriter {
-	return StdOutLogWriter{}
+func NewStdOutLogWriter() *StdOutLogWriter {
+	return &StdOutLogWriter{}
 }
 
 // -------------------------------------------------------------------------------------------------
