@@ -1,6 +1,7 @@
 package logger
 
 import(
+//	"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -29,8 +30,7 @@ func TestThat_NewLogger_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-// SetLogWriter(logWriter lw.LogWriterIfc)
-func TestThat_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
+func TestThat_Logger_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 	// Setup
 	var sut *Logger = GetLogger()
 	mockWriter := mockLogWriter{}
@@ -44,5 +44,75 @@ func TestThat_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 	ExpectNonNil(LastMessage, t)
 	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
 	ExpectMatch("^.*ERROR test message$", *LastMessage, t)
+}
+
+
+func TestThat_Logger_DefaultMinLogLevel_SuppressesLogLevelsBelowDefault(t *testing.T) {
+	// Setup
+	var sut *Logger = getMockedLogger()
+	expectedMessage := "test message"
+
+	// Test
+	sut.Debug(expectedMessage)
+	actualMessageBelow := LastMessage
+	sut.Info(expectedMessage)
+	actualMessageAt := LastMessage
+	sut.Error(expectedMessage)
+	actualMessageAbove := LastMessage
+
+	// Verify
+	ExpectNil(actualMessageBelow, t)
+	ExpectNonNil(actualMessageAt, t)
+	ExpectNonNil(actualMessageAbove, t)
+	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR|INFO test message
+	ExpectMatch("^.*INFO test message$", *actualMessageAt, t)
+	ExpectMatch("^.*ERROR test message$", *actualMessageAbove, t)
+}
+
+func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *testing.T) {
+	// Setup
+	var sut *Logger = getMockedLogger()
+	expectedMessage := "test message"
+
+	// Test / Verify
+	sut.SetMinLogLevel(CRAZY)
+	sut.Error(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	sut.Info(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	sut.Debug(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	sut.Trace(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	sut.Crazy(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	// TODO: Any way to actually test Fatal() without killing the application?
+}
+
+func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
+	// Setup
+	var sut *Logger = getMockedLogger()
+	expectedMessage := "test message"
+
+	// Test / Verify
+	sut.SetMinLogLevel(FATAL)
+	sut.Error(expectedMessage)
+	ExpectNil(LastMessage, t)
+	sut.Info(expectedMessage)
+	ExpectNil(LastMessage, t)
+	sut.Debug(expectedMessage)
+	ExpectNil(LastMessage, t)
+	sut.Trace(expectedMessage)
+	ExpectNil(LastMessage, t)
+	sut.Crazy(expectedMessage)
+	ExpectNil(LastMessage, t)
+	// TODO: Any way to actually test Fatal() without killing the application?
+}
+
+func getMockedLogger() *Logger {
+	var sut *Logger = GetLogger()
+	sut.SetLogWriter(mockLogWriter{})
+	LastMessage = nil
+	return sut
 }
 
