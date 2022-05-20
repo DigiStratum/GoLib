@@ -32,6 +32,7 @@ import(
 	"testing"
 	"runtime"
 	"reflect"
+	"regexp"
 )
 
 func getCaller() string {
@@ -103,4 +104,10 @@ func ExpectError(err error, t *testing.T) {
 func ExpectNoError(err error, t *testing.T) {
 	if nil == err {	return }
 	t.Errorf("\n\n%s:\nExpect: nil error, Actual: error('%s')", getCaller(), err.Error())
+}
+
+func ExpectMatch(expect, actual string, t *testing.T) {
+	matched, err := regexp.MatchString(expect, actual)
+	if nil == err && matched { return }
+	t.Errorf("\n\n%s:\nExpect: pattern [%s] match actual [%s], Actual: no match", getCaller(), expect, actual)
 }
