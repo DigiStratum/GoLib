@@ -1,7 +1,6 @@
 package logger
 
 import(
-	//"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -43,7 +42,7 @@ func TestThat_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 
 	// Verify
 	ExpectNonNil(LastMessage, t)
-	// FIXME: regex/partial match expectedMessage against: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
-	//	ExpectString(fmt.Sprintf("%s\n", expectedMessage), *LastMessage, t)
+	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
+	ExpectMatch("^.*ERROR test message$", *LastMessage, t)
 }
 
