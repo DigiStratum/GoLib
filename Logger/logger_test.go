@@ -43,7 +43,24 @@ func TestThat_Logger_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 	// Verify
 	ExpectNonNil(LastMessage, t)
 	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
-	ExpectMatch("^.*ERROR test message$", *LastMessage, t)
+	ExpectMatch("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}-\\d{2}:\\d{2}\\s*thread:\\d+\\s+ERROR test message$", *LastMessage, t)
+}
+
+func TestThat_Logger_LogTimestamp_EliminatesTimestampFromMessages(t *testing.T) {
+	// Setup
+	var sut *Logger = GetLogger()
+	mockWriter := mockLogWriter{}
+	expectedMessage := "test message"
+	sut.SetLogWriter(mockWriter)
+	sut.LogTimestamp(false)
+
+	// Test
+	sut.Error(expectedMessage)
+
+	// Verify
+	ExpectNonNil(LastMessage, t)
+	// Actual: thread:1652972604971037495 ERROR test message
+	ExpectMatch("^thread:\\d+\\s+ERROR test message$", *LastMessage, t)
 }
 
 
@@ -76,7 +93,11 @@ func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *t
 
 	// Test / Verify
 	sut.SetMinLogLevel(CRAZY)
+	sut.Fatal(expectedMessage)
+	ExpectNonNil(LastMessage, t)
 	sut.Error(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+	sut.Warn(expectedMessage)
 	ExpectNonNil(LastMessage, t)
 	sut.Info(expectedMessage)
 	ExpectNonNil(LastMessage, t)
@@ -86,7 +107,6 @@ func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *t
 	ExpectNonNil(LastMessage, t)
 	sut.Crazy(expectedMessage)
 	ExpectNonNil(LastMessage, t)
-	// TODO: Any way to actually test Fatal() without killing the application?
 }
 
 func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
@@ -98,6 +118,8 @@ func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
 	sut.SetMinLogLevel(FATAL)
 	sut.Error(expectedMessage)
 	ExpectNil(LastMessage, t)
+	sut.Warn(expectedMessage)
+	ExpectNil(LastMessage, t)
 	sut.Info(expectedMessage)
 	ExpectNil(LastMessage, t)
 	sut.Debug(expectedMessage)
@@ -106,7 +128,31 @@ func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
 	ExpectNil(LastMessage, t)
 	sut.Crazy(expectedMessage)
 	ExpectNil(LastMessage, t)
-	// TODO: Any way to actually test Fatal() without killing the application?
+	sut.Fatal(expectedMessage)
+	ExpectNonNil(LastMessage, t)
+}
+
+func TestThat_Logger_ErrorsReturnedOverWarnLevel(t *testing.T) {
+	// Setup
+	var sut *Logger = getMockedLogger()
+	expectedMessage := "test message"
+	var err error
+
+	// Test / Verify
+	err = sut.Fatal(expectedMessage)
+	ExpectError(err, t)
+	err = sut.Error(expectedMessage)
+	ExpectError(err, t)
+	err = sut.Warn(expectedMessage)
+	ExpectError(err, t)
+	err = sut.Info(expectedMessage)
+	ExpectNoError(err, t)
+	err = sut.Debug(expectedMessage)
+	ExpectNoError(err, t)
+	err = sut.Trace(expectedMessage)
+	ExpectNoError(err, t)
+	err = sut.Crazy(expectedMessage)
+	ExpectNoError(err, t)
 }
 
 func getMockedLogger() *Logger {
