@@ -46,8 +46,17 @@ func NewObjectFieldType() *ObjectFieldType {
 
 func NewObjectFieldTypeFromString(strType string) *ObjectFieldType {
 	oft := NewObjectFieldType()
-	oft.ofType := oft.getOFType(strType)
-	return &ObjectFieldType{}
+	oft.SetType(oft.getOFType(strType))
+	return oft
+}
+
+func NewObjectFieldTypeFromOFType(ofType OFType) *ObjectFieldType {
+	oft := ObjectFieldType{
+		ofType: ofType,
+	}
+	//oft := NewObjectFieldType()
+	//oft.SetType(oft.getOFType(strType))
+	return &oft
 }
 
 // -------------------------------------------------------------------------------------------------

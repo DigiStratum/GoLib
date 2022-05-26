@@ -10,7 +10,7 @@ representations in an API, even codified chunks of data within our own executabl
 Object optionally support fields; if the fields map is empty, then they are not being used.
 
 TODO:
- * Refactor Object.fields to use a new ObjectFieldMap which extends lib.HashMap with support for ObjectFieldTypes
+ * Refactor Object.fields to use a new of.ObjectFieldMap which extends lib.HashMap with support for of.ObjectFieldTypes
 
 */
 
@@ -18,32 +18,33 @@ import (
 	"fmt"
 	"encoding/json"
 
-	xcode "github.com/DigiStratum/GoLib/transcoder"
+	of "github.com/DigiStratum/GoLib/Object/field"
+	xcode "github.com/DigiStratum/GoLib/Data/transcoder"
 )
 
 type ObjectIfc interface {
 	// Import
-	FromString(content *string, encodingScheme EncodingScheme) error
-	FromBytes(bytes *[]byte, encodingScheme EncodingScheme) error
-	FromFile(path string, encodingScheme EncodingScheme) error
+	FromString(content *string, encodingScheme xcode.EncodingScheme) error
+	FromBytes(bytes *[]byte, encodingScheme xcode.EncodingScheme) error
+	FromFile(path string, encodingScheme xcode.EncodingScheme) error
 
 	// Export
-	ToString(encodingScheme EncodingScheme) (*string, error)
-	ToBytes(encodingScheme EncodingScheme) (*[]byte, error)
-	ToFile(path string, encodingScheme EncodingScheme) error
+	ToString(encodingScheme xcode.EncodingScheme) (*string, error)
+	ToBytes(encodingScheme xcode.EncodingScheme) (*[]byte, error)
+	ToFile(path string, encodingScheme xcode.EncodingScheme) error
 	ToJson() (*string, error)
 
 	// Fields
-	AddField(fieldName string, value *string, ofType OFType) error
+	AddField(fieldName string, value *string, ofType of.OFType) error
 	SetFieldValue(fieldName string, value *string) error
-	HasField(fieldName string)
-	GetFieldType(fieldName string) *ObjectFieldType
+	HasField(fieldName string) bool
+	GetFieldType(fieldName string) *of.ObjectFieldType
 }
 
 // A static Object that we're going to codify
 type Object struct {
-	contentTranscoder	xcode.Transcoder
-	fields			map[string]ObjectField		// Field name to value map
+	contentTranscoder	*xcode.Transcoder
+	fields			map[string]*of.ObjectField		// Field name to value map
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -54,7 +55,7 @@ type Object struct {
 func NewObject() *Object {
 	return &Object{
 		contentTranscoder:	xcode.NewTranscoder(),
-		fields:			make(map[string]ObjectField),
+		fields:			make(map[string]*of.ObjectField),
 	}
 }
 
@@ -62,28 +63,28 @@ func NewObject() *Object {
 // ObjectIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *Object) FromString(content *string, encodingScheme EncodingScheme) error {
+func (r *Object) FromString(content *string, encodingScheme xcode.EncodingScheme) error {
 	return r.contentTranscoder.FromString(content, encodingScheme)
 }
 
-func (r *Object) FromBytes(bytes *[]byte, encodingScheme EncodingScheme) error {
+func (r *Object) FromBytes(bytes *[]byte, encodingScheme xcode.EncodingScheme) error {
 	return r.contentTranscoder.FromBytes(bytes, encodingScheme)
 }
 
-func (r *Object) FromFile(path string, encodingScheme EncodingScheme) error {
+func (r *Object) FromFile(path string, encodingScheme xcode.EncodingScheme) error {
 	return r.contentTranscoder.FromFile(path, encodingScheme)
 }
 
-func (r Object) ToString(encodingScheme EncodingScheme) (*string, error) {
+func (r Object) ToString(encodingScheme xcode.EncodingScheme) (*string, error) {
 	return r.contentTranscoder.ToString(encodingScheme)
 }
 
-func (r Object) ToBytes(encodingScheme EncodingScheme) (*[]byte, error) {
+func (r Object) ToBytes(encodingScheme xcode.EncodingScheme) (*[]byte, error) {
 	return r.contentTranscoder.ToBytes(encodingScheme)
 }
 
-func (r Object) ToFile(path string, encodingScheme EncodingScheme) error {
-	return r.contentTranscoder.ToFile(encodingScheme)
+func (r Object) ToFile(path string, encodingScheme xcode.EncodingScheme) error {
+	return r.contentTranscoder.ToFile(path, encodingScheme)
 }
 
 // If fields are in use, we can pop out JSON
@@ -95,13 +96,14 @@ func (r Object) ToJson() (*string, error) {
 	return &jsonString, nil
 }
 
-func (r *Object) AddField(fieldName string, value *string, ofType OFType) error {
+func (r *Object) AddField(fieldName string, value *string, ofType of.OFType) error {
 
-	// ObjectField Map needs a field with this name in place; create it if it's missing
+	// of.ObjectField Map needs a field with this name in place; create it if it's missing
 	if ! r.HasField(fieldName) {
-		objectField := NewObjectField()
-		objectField.Type = NewObjectFieldType()
-		objectField.Type.SetType(ofType)
+		objectField := of.NewObjectField()
+		//objectField.Type = of.ObjectFieldType()
+		//objectField.Type.SetType(ofType)
+		objectField.Type = of.NewObjectFieldTypeFromOFType(ofType)
 		r.fields[fieldName] = objectField
 	}
 
@@ -111,14 +113,14 @@ func (r *Object) AddField(fieldName string, value *string, ofType OFType) error 
 // Set the named field to the specified value (including nil!)
 func (r *Object) SetFieldValue(fieldName string, value *string) error {
 
-	// ObjectField Map needs a field with this name in place
+	// of.ObjectField Map needs a field with this name in place
 	if objectField, ok := r.fields[fieldName]; ok {
 
 		// Validate the new value against the field's type
 		if ! objectField.Type.IsValid(value) {
 			return fmt.Errorf(
 				"Object Field [name: '%s', type: '%s'] does not match supplied value",
-				name, objectField.Type.ToString(),
+				fieldName, objectField.Type.ToString(),
 			)
 		}
 
@@ -126,18 +128,18 @@ func (r *Object) SetFieldValue(fieldName string, value *string) error {
 		objectField.Value = value
 		r.fields[fieldName] = objectField
 	} else {
-		return fmt.Errorf("Object has no field named '%s'", name)
+		return fmt.Errorf("Object has no field named '%s'", fieldName)
 	}
 	return nil
 }
 
-func (r Object) HasField(fieldName string) {
+func (r Object) HasField(fieldName string) bool {
 	_, ok := r.fields[fieldName]
 	return ok
 }
 
 // Return the type of the named field
-func (r Object) GetFieldType(fieldName string) *ObjectFieldType {
+func (r Object) GetFieldType(fieldName string) *of.ObjectFieldType {
 	if ! r.HasField(fieldName) { return nil }
 	return r.fields[fieldName].Type
 }
