@@ -8,6 +8,11 @@ import (
 	"github.com/DigiStratum/GoLib/FileIO"
 )
 
+/*
+
+Support for a single piece of content to be ingested from a source encoding and emitted as a target encoding
+
+*/
 
 type TranscoderIfc interface {
 	FromString(content *string, encodingScheme EncodingScheme) error
