@@ -38,8 +38,8 @@ func (r *EncodingSchemeBase64) SetEncodedValue(source *string) error {
 }
 
 func (r *EncodingSchemeBase64) GetEncodedValue() (*string, error) {
-	if nil == r.contentRaw { return nil, fmt.Errorf("Cannot encode: raw content is nil") }
 	if nil == r.contentEncoded {
+		if nil == r.contentRaw { return nil, fmt.Errorf("Cannot encode: raw content is nil") }
 		encoded := base64.StdEncoding.EncodeToString([]byte(*r.contentRaw))
 		r.contentEncoded = &encoded
 	}
@@ -54,8 +54,8 @@ func (r *EncodingSchemeBase64) SetDecodedValue(source *string) error {
 }
 
 func (r *EncodingSchemeBase64) GetDecodedValue() (*string, error) {
-	if nil == r.contentEncoded { return nil, fmt.Errorf("Cannot decode: encoded content is nil") }
 	if nil == r.contentRaw {
+		if nil == r.contentEncoded { return nil, fmt.Errorf("Cannot decode: encoded content is nil") }
 		decodedBytes, err := base64.StdEncoding.DecodeString(*r.contentEncoded)
 		if nil != err { return nil, err }
 		decodedStr := string(decodedBytes)
