@@ -13,9 +13,9 @@ func TestThat_Transcoder_NewTranscoder_ReturnsNewTranscoder_WithUnknownEncodingS
 
 	// Verify
 	ExpectNonNil(sut, t)
-	ExpectInt(0, len(sut.content), t)
 }
 
+/*
 func TestThat_Transcoder_FromString_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
@@ -142,3 +142,4 @@ func TestThat_Transcoder_ToString_ReturnsString_WithoutErrorResult(t *testing.T)
 	ExpectNonNil(res, t)
 	ExpectString(expected, *res, t)
 }
+*/
