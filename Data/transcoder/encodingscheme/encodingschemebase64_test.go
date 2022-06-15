@@ -6,15 +6,6 @@ import(
         . "github.com/DigiStratum/GoLib/Testing"
 )
 
-/*
-type EncodingSchemeIfc interface {
-        SetEncodedValue(source *string) error
-        GetEncodedValue() (*string, error)
-        SetDecodedValue(source *string) error
-        GetDecodedValue() (*string, error)
-}
-*/
-
 func TestThat_EncodingSchemeBase64_NewEncodingSchemeBase64_ReturnsEncodingScheme(t *testing.T) {
         // Test
         sut := NewEncodingSchemeBase64()
@@ -32,6 +23,17 @@ func TestThat_EncodingSchemeBase64_SetEncodedValue_ReturnsError_WhenSourceIsNil(
 
 	// Test
 	err := sut.SetEncodedValue(nil)
+
+        // Verify
+        ExpectError(err, t)
+}
+
+func TestThat_EncodingSchemeBase64_SetDecodedValue_ReturnsError_WhenSourceIsNil(t *testing.T) {
+	// Setup
+        sut := NewEncodingSchemeBase64()
+
+	// Test
+	err := sut.SetDecodedValue(nil)
 
         // Verify
         ExpectError(err, t)
@@ -68,6 +70,20 @@ func TestThat_EncodingSchemeBase64_GetEncodedValue_ReturnsOriginalValue_WhenSour
 func TestThat_EncodingSchemeBase64_GetDecodedValue_ReturnsError_WhenSourceIsNil(t *testing.T) {
 	// Setup
         sut := NewEncodingSchemeBase64()
+
+	// Test
+	actual, err := sut.GetDecodedValue()
+
+        // Verify
+        ExpectError(err, t)
+	ExpectNil(actual, t)
+}
+
+func TestThat_EncodingSchemeBase64_GetDecodedValue_ReturnsError_WhenSourceIsInvalidBase64(t *testing.T) {
+	// Setup
+        sut := NewEncodingSchemeBase64()
+	expected := "!!!!!!!!!!!"
+	sut.SetEncodedValue(&expected)
 
 	// Test
 	actual, err := sut.GetDecodedValue()
