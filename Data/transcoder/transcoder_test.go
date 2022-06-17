@@ -1,7 +1,7 @@
 package transcoder
 
 import(
-	//"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -15,131 +15,145 @@ func TestThat_Transcoder_NewTranscoder_ReturnsNewTranscoder_WithUnknownEncodingS
 	ExpectNonNil(sut, t)
 }
 
-/*
-func TestThat_Transcoder_FromString_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Encode_ReturnsError_WithNoEncoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
+	expected := "bogus"
 
-	// Testing
-	res := sut.FromString(&expected, ES_NONE)
+	// Test
+	actual, err := sut.Encode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_NONE]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectError(err, t)
+	ExpectNil(actual, t)
 }
 
-func TestThat_Transcoder_FromString_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Encode_ReturnsEncodedString_WithEncoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
+	sut.SetEncoderScheme(&MockEncodingScheme{GoUpper: true})
+	expected := "bogus"
 
-	// Testing
-	sut.FromString(&expected, ES_NONE)
-	res := sut.FromString(&expected, ES_UNKNOWN)
+	// Test
+	actual, err := sut.Encode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_UNKNOWN]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectNoError(err, t)
+	ExpectNonNil(actual, t)
+	ExpectString("BOGUS", *actual, t)
 }
 
-func TestThat_Transcoder_FromBytes_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Decode_ReturnsError_WithNoDecoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
-	expectedBytes := []byte(expected)
+	expected := "BOGUS"
 
-	// Testing
-	res := sut.FromBytes(&expectedBytes, ES_NONE)
+	// Test
+	actual, err := sut.Decode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_NONE]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectError(err, t)
+	ExpectNil(actual, t)
 }
 
-func TestThat_Transcoder_FromBytes_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Decode_ReturnsDecodedString_WithDecoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
-	expectedBytes := []byte(expected)
+	sut.SetDecoderScheme(&MockEncodingScheme{GoUpper: true})
+	expected := "BOGUS"
 
-	// Testing
-	sut.FromBytes(&expectedBytes, ES_NONE)
-	res := sut.FromBytes(&expectedBytes, ES_UNKNOWN)
+	// Test
+	actual, err := sut.Decode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_UNKNOWN]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectNoError(err, t)
+	ExpectNonNil(actual, t)
+	ExpectString("bogus", *actual, t)
 }
 
-func TestThat_Transcoder_FromFile_SetterRetainsProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Transcode_ReturnsError_WithNoDecoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
+	sut.SetEncoderScheme(&MockEncodingScheme{GoUpper: true})
+	expected := "BOGUS"
 
-	// Testing
-	res := sut.FromFile("transcoder_test.vegetable_soup.txt", ES_NONE)
+	// Test
+	actual, err := sut.Transcode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_NONE]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectError(err, t)
+	ExpectNil(actual, t)
 }
 
-func TestThat_Transcoder_FromFile_SetterReplacesProperties_WithoutErrorResult(t *testing.T) {
+func TestThat_Transcoder_Transcode_ReturnsError_WithNoEncoderSet(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
+	sut.SetDecoderScheme(&MockEncodingScheme{GoUpper: true})
+	expected := "BOGUS"
 
-	// Testing
-	sut.FromFile("transcoder_test.vegetable_soup.txt", ES_NONE)
-	res := sut.FromFile("transcoder_test.vegetable_soup.txt", ES_UNKNOWN)
+	// Test
+	actual, err := sut.Transcode(&expected)
 
 	// Verify
-	ExpectNil(res, t)
-	ExpectInt(1, len(sut.content), t)
-	actual, ok := sut.content[ES_UNKNOWN]
-	ExpectTrue(ok, t)
-	ExpectString(expected, string(*actual), t)
+	ExpectError(err, t)
+	ExpectNil(actual, t)
 }
 
-func TestThat_Transcoder_FromFile_SetterChangesNothing_WithErrorForMissingFile(t *testing.T) {
+func TestThat_Transcoder_Transcode_ReturnsTranscodedString_WithGoodEncodingSchemes(t *testing.T) {
 	// Setup
 	sut := NewTranscoder()
+	// A little counter intuitice, but the decoder goes from A -> a and encoder goes from a -> A
+	// therefore a full transcode goes from A -> a -> A
+	sut.SetDecoderScheme(&MockEncodingScheme{GoUpper: true})
+	sut.SetEncoderScheme(&MockEncodingScheme{GoUpper: true})
+	expected := "BOGUS"
 
-	// Testing
-	res := sut.FromFile("bogus_filename.txt", ES_NONE)
-
-	// Verify
-	ExpectNonNil(res, t)
-}
-
-func TestThat_Transcoder_ToString_ReturnsString_WithoutErrorResult(t *testing.T) {
-	// Setup
-	sut := NewTranscoder()
-	expected := "Vegetable Soup!"
-	sut.FromString(&expected, ES_NONE)
-
-	// Testing
-	res, err := sut.ToString(ES_NONE)
+	// Test
+	actual, err := sut.Transcode(&expected)
 
 	// Verify
-	ExpectNil(err, t)
-	ExpectNonNil(res, t)
-	ExpectString(expected, *res, t)
+	ExpectNoError(err, t)
+	ExpectString(expected, *actual, t)
 }
-*/
+
+type MockEncodingScheme struct {
+	GoUpper			bool
+	encoded, decoded	*string
+}
+
+func (r *MockEncodingScheme) SetEncodedValue(source *string) error {
+	r.encoded = source
+	return nil
+}
+
+func (r *MockEncodingScheme) GetEncodedValue() (*string, error) {
+	if nil == r.encoded {
+		var encoded string
+		if r.GoUpper {
+			encoded = strings.ToUpper(*r.decoded)
+		} else {
+			encoded = strings.ToLower(*r.decoded)
+		}
+		r.encoded = &encoded
+	}
+	return r.encoded, nil
+}
+
+func (r *MockEncodingScheme) SetDecodedValue(source *string) error {
+	r.decoded = source
+	return nil
+}
+
+func (r *MockEncodingScheme) GetDecodedValue() (*string, error) {
+	if nil == r.decoded {
+		var decoded string
+		if r.GoUpper {
+			decoded = strings.ToLower(*r.encoded)
+		} else {
+			decoded = strings.ToUpper(*r.encoded)
+		}
+		r.decoded = &decoded
+	}
+	return r.decoded, nil
+}
+

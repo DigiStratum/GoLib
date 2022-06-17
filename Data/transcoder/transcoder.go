@@ -10,6 +10,8 @@ import (
 type TranscoderIfc interface {
 	SetEncoderScheme(encoder enc.EncodingSchemeIfc)
 	SetDecoderScheme(decoder enc.EncodingSchemeIfc)
+	Encode(source * string) (*string, error)
+	Decode(source * string) (*string, error)
 	Transcode(source *string) (*string, error)
 }
 
@@ -35,6 +37,20 @@ func (r *Transcoder) SetEncoderScheme(encoder enc.EncodingSchemeIfc) {
 
 func (r *Transcoder) SetDecoderScheme(decoder enc.EncodingSchemeIfc) {
 	r.decoder = decoder
+}
+
+func (r *Transcoder) Encode(source * string) (*string, error) {
+	if nil == r.encoder { return nil, fmt.Errorf("Encoder not set") }
+	err := r.encoder.SetDecodedValue(source)
+	if nil != err { return nil, err }
+	return r.encoder.GetEncodedValue()
+}
+
+func (r *Transcoder) Decode(source * string) (*string, error) {
+	if nil == r.decoder { return nil, fmt.Errorf("Decoder not set") }
+	err := r.decoder.SetEncodedValue(source)
+	if nil != err { return nil, err }
+	return r.decoder.GetDecodedValue()
 }
 
 func (r *Transcoder) Transcode(source *string) (*string, error) {
