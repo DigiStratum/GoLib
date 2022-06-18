@@ -18,21 +18,22 @@ import (
 	"fmt"
 	"encoding/json"
 
+	"github.com/DigiStratum/GoLib/FileIO"
 	of "github.com/DigiStratum/GoLib/Object/field"
-	xcode "github.com/DigiStratum/GoLib/Data/transcoder"
+	xc "github.com/DigiStratum/GoLib/Data/transcoder"
+	enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
 )
 
 type ObjectIfc interface {
 	// Import
-	FromString(content *string, encodingScheme xcode.EncodingScheme) error
-	FromBytes(bytes *[]byte, encodingScheme xcode.EncodingScheme) error
-	FromFile(path string, encodingScheme xcode.EncodingScheme) error
+	FromString(serialized *string) error
+	FromBytes(serializedBytes *[]byte) error
+	FromFile(path string) error
 
 	// Export
-	ToString(encodingScheme xcode.EncodingScheme) (*string, error)
-	ToBytes(encodingScheme xcode.EncodingScheme) (*[]byte, error)
-	ToFile(path string, encodingScheme xcode.EncodingScheme) error
-	ToJson() (*string, error)
+	ToString() (*string, error)
+	ToBytes() (*[]byte, error)
+	ToFile(path string) error
 
 	// Fields
 	AddField(fieldName string, value *string, ofType of.OFType) error
@@ -41,9 +42,9 @@ type ObjectIfc interface {
 	GetFieldType(fieldName string) *of.ObjectFieldType
 }
 
-// A static Object that we're going to codify
+// An Object that we're going to codify
 type Object struct {
-	contentTranscoder	*xcode.Transcoder
+	transcoder		*xc.TranscoderIfc
 	fields			map[string]*of.ObjectField		// Field name to value map
 }
 
@@ -52,9 +53,9 @@ type Object struct {
 // -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
-func NewObject() *Object {
+func NewObject(transcoder xc.TranscoderIfc) *Object {
 	return &Object{
-		contentTranscoder:	xcode.NewTranscoder(),
+		transcoder:		transcoder,
 		fields:			make(map[string]*of.ObjectField),
 	}
 }
@@ -63,27 +64,69 @@ func NewObject() *Object {
 // ObjectIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *Object) FromString(content *string, encodingScheme xcode.EncodingScheme) error {
-	return r.contentTranscoder.FromString(content, encodingScheme)
+func (r *Object) FromString(serialized *string) error {
+	if nil == content { return fmt.Errorf("Cannot deserialize nil string value") }
+
+	// Overall format: "ser[{Method}:{Type}:{Data}]"
+	re := regexp.MustCompile(`^ser\[(?P<method>\w+):(?P<etype>\w+):(?P<edata>\w+\]$`)
+	if matched := re.MatchString(*serialized); !matched {
+		return fmt.Errorf("String does not match serialization requirements")
+	}
+
+	matches := re.FindStringSubmatch(*serialized)
+	if (nil == matches) || (len(matches) < 3) {
+		return fmt.Errorf("Unexpected mismatch on parameters for serialized value")
+	}
+
+	method := matches[re.SubexpIndex("method")]
+	etype := matches[re.SubexpIndex("etype")]
+	edata := matches[re.SubexpIndex("edata")]
+
+	switch method {
+		case "j64":
+			// Encoding base64, JSON data
+			decoderSchemeName := r.transcoder.GetDecoderSchemeName()
+			if "base64" != decoderSchemeName {
+				return fmt.Errorf("Encoding scheme mismatch; expecting '%s', but got 'base64'", decoderSchemeName)
+			}
+			utype, err := r.transcoder.Decode(&etype)
+			if (nil != err) || (nil == utype) || ("Object" != *utype) {
+				return fmt.Errorf("Error decoding serialized data type")
+			}
+			udata, err := r.transcoder.Decode(&edata)
+			if (nil != err) || (nil == udata) {
+				return fmt.Errorf("Error decoding serialized data")
+			}
+			err := r.FromJson(udata)
+			if (nil != err)  {
+				return fmt.Errorf("Error unmarshaling JSON data")
+			}
+			return nil
+	}
+
+	return fmt.Error("Unsupported encoding method '%s'", method)
 }
 
-func (r *Object) FromBytes(bytes *[]byte, encodingScheme xcode.EncodingScheme) error {
-	return r.contentTranscoder.FromBytes(bytes, encodingScheme)
+func (r *Object) FromBytes(serializedBytes *[]byte) error {
+	str := string(*serializedBytes)
+	return r.FromString(&str)
 }
 
-func (r *Object) FromFile(path string, encodingScheme xcode.EncodingScheme) error {
-	return r.contentTranscoder.FromFile(path, encodingScheme)
+func (r *Object) FromFile(path string) error {
+	serialized, err := fileio.ReadFileString(path)
+	if nil != err { return err }
+	return r.FromString(serialized)
 }
 
-func (r Object) ToString(encodingScheme xcode.EncodingScheme) (*string, error) {
+func (r Object) ToString() (*string, error) {
 	return r.contentTranscoder.ToString(encodingScheme)
 }
 
-func (r Object) ToBytes(encodingScheme xcode.EncodingScheme) (*[]byte, error) {
+func (r Object) ToBytes() (*[]byte, error) {
 	return r.contentTranscoder.ToBytes(encodingScheme)
 }
 
-func (r Object) ToFile(path string, encodingScheme xcode.EncodingScheme) error {
+func (r Object) ToFile(path string) error {
 	return r.contentTranscoder.ToFile(path, encodingScheme)
 }
 
@@ -101,8 +144,6 @@ func (r *Object) AddField(fieldName string, value *string, ofType of.OFType) err
 	// of.ObjectField Map needs a field with this name in place; create it if it's missing
 	if ! r.HasField(fieldName) {
 		objectField := of.NewObjectField()
-		//objectField.Type = of.ObjectFieldType()
-		//objectField.Type.SetType(ofType)
 		objectField.Type = of.NewObjectFieldTypeFromOFType(ofType)
 		r.fields[fieldName] = objectField
 	}
@@ -143,3 +184,24 @@ func (r Object) GetFieldType(fieldName string) *of.ObjectFieldType {
 	if ! r.HasField(fieldName) { return nil }
 	return r.fields[fieldName].Type
 }
+
+// -------------------------------------------------------------------------------------------------
+// JsonSerializableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Object) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(r.fields)
+	if nil != err { return nil, err }
+	jsonString := string(jsonBytes)
+	return &jsonString, nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// JsonDeserializableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Object) FromJson(jsonString *string) error {
+	r.fields = make(map[string]*of.ObjectField)
+	return json.Unmarshal([]byte(*jsonString), &r.fields)
+}
+

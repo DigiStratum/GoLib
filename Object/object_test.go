@@ -27,6 +27,7 @@ import(
 	"testing"
 
 	of "github.com/DigiStratum/GoLib/Object/field"
+	xc "github.com/DigiStratum/GoLib/Data/transcoder"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 )
@@ -43,7 +44,7 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing
 	// Setup
 	sut := NewObject()
 	expectedFieldName := "bogus-object-field"
-	expectedValue := "bogus field valud"
+	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_NUMERIC
 
 	// Test
@@ -57,7 +58,7 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 	// Setup
 	sut := NewObject()
 	expectedFieldName := "bogus-object-field"
-	expectedValue := "bogus field valud"
+	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_UNKNOWN
 
 	// Test
@@ -65,5 +66,27 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 
 	// Verify
 	ExpectError(err, t)
+}
+
+//SetFieldValue(fieldName string, value *string) error
+//ToString(encodingScheme xcode.EncodingScheme) (*string, error)
+func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *testing.T) {
+	// Setup
+	sut := NewObject()
+	expectedFieldName := "bogus-object-field"
+	originalValue := "222"
+	expectedValue := "333"
+	expectedFieldType := of.OFT_NUMERIC
+
+	// Test
+	err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	err2 := sut.SetFieldValue(expectedFieldName, &expectedValue)
+	actualValue, err3 := sut.ToString(xc.ES_NONE)
+
+	// Verify
+	ExpectNoError(err1, t)
+	ExpectNoError(err2, t)
+	ExpectNoError(err3, t)
+	ExpectString(expectedValue, *actualValue, t)
 }
 
