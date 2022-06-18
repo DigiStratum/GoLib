@@ -30,6 +30,10 @@ func NewEncodingSchemeBase64() *EncodingSchemeBase64 {
 // EncodingSchemeIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *EncodingSchemeBase64) GetName() string {
+	return "base64"
+}
+
 func (r *EncodingSchemeBase64) SetEncodedValue(source *string) error {
 	if nil == source { return fmt.Errorf("Cannot set: source is nil") }
 	r.contentEncoded = source

@@ -30,6 +30,10 @@ func NewEncodingSchemeHTMLEscape() *EncodingSchemeHTMLEscape {
 // EncodingSchemeIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *EncodingSchemeHTMLEscape) GetName() string {
+	return "htmlescape"
+}
+
 func (r *EncodingSchemeHTMLEscape) SetEncodedValue(source *string) error {
 	if nil == source { return fmt.Errorf("Cannot set: source is nil") }
 	r.contentEncoded = source
