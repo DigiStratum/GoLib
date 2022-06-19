@@ -11,17 +11,19 @@ Object optionally support fields; if the fields map is empty, then they are not 
 
 TODO:
  * Refactor Object.fields to use a new of.ObjectFieldMap which extends lib.HashMap with support for of.ObjectFieldTypes
-
+ * Cache the ToString() result so that successive calls return the same value until it is cleared by
+   some change made by another method
 */
 
 import (
 	"fmt"
+	"regexp"
 	"encoding/json"
 
 	"github.com/DigiStratum/GoLib/FileIO"
 	of "github.com/DigiStratum/GoLib/Object/field"
 	xc "github.com/DigiStratum/GoLib/Data/transcoder"
-	enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
+	//enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
 )
 
 type ObjectIfc interface {
@@ -44,7 +46,7 @@ type ObjectIfc interface {
 
 // An Object that we're going to codify
 type Object struct {
-	transcoder		*xc.TranscoderIfc
+	transcoder		xc.TranscoderIfc
 	fields			map[string]*of.ObjectField		// Field name to value map
 }
 
@@ -65,7 +67,7 @@ func NewObject(transcoder xc.TranscoderIfc) *Object {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Object) FromString(serialized *string) error {
-	if nil == content { return fmt.Errorf("Cannot deserialize nil string value") }
+	if nil == serialized { return fmt.Errorf("Cannot deserialize nil string value") }
 
 	// Overall format: "ser[{Method}:{Type}:{Data}]"
 	re := regexp.MustCompile(`^ser\[(?P<method>\w+):(?P<etype>\w+):(?P<edata>\w+\]$`)
@@ -82,29 +84,26 @@ func (r *Object) FromString(serialized *string) error {
 	etype := matches[re.SubexpIndex("etype")]
 	edata := matches[re.SubexpIndex("edata")]
 
+	// We support multiple methods of object deserialization
 	switch method {
 		case "j64":
 			// Encoding base64, JSON data
-			decoderSchemeName := r.transcoder.GetDecoderSchemeName()
-			if "base64" != decoderSchemeName {
-				return fmt.Errorf("Encoding scheme mismatch; expecting '%s', but got 'base64'", decoderSchemeName)
+			if (nil == r.transcoder) || ("base64" != r.transcoder.GetDecoderSchemeName()) {
+				return fmt.Errorf("Deserialization requires Transcoder with EncodingSchemeBase64")
 			}
+
 			utype, err := r.transcoder.Decode(&etype)
 			if (nil != err) || (nil == utype) || ("Object" != *utype) {
 				return fmt.Errorf("Error decoding serialized data type")
 			}
+
 			udata, err := r.transcoder.Decode(&edata)
-			if (nil != err) || (nil == udata) {
-				return fmt.Errorf("Error decoding serialized data")
-			}
-			err := r.FromJson(udata)
-			if (nil != err)  {
-				return fmt.Errorf("Error unmarshaling JSON data")
-			}
-			return nil
+			if (nil != err) || (nil == udata) { return fmt.Errorf("Error decoding serialized data") }
+
+			return r.FromJson(udata)
 	}
 
-	return fmt.Error("Unsupported encoding method '%s'", method)
+	return fmt.Errorf("Unsupported serialization method '%s'", method)
 }
 
 func (r *Object) FromBytes(serializedBytes *[]byte) error {
@@ -119,24 +118,42 @@ func (r *Object) FromFile(path string) error {
 }
 
 func (r Object) ToString() (*string, error) {
-	return r.contentTranscoder.ToString(encodingScheme)
+	// Encoding base64, JSON data
+	if (nil == r.transcoder) || ("base64" != r.transcoder.GetDecoderSchemeName()) {
+		return nil, fmt.Errorf("Serialization requires Transcoder with EncodingSchemeBase64")
+	}
+
+	// Overall format: "ser[{Method}:{Type}:{Data}]"
+	method := "j64"
+	udata, err := r.ToJson()
+	if nil != err { return  nil, err }
+
+	edata, err := r.transcoder.Encode(udata)
+	if (nil != err) || (nil == edata) {
+		return nil, fmt.Errorf("Error encoding serialized data type")
+	}
+
+	utype := "Object"
+	etype, err := r.transcoder.Encode(&utype)
+	if (nil != err) || (nil == etype) {
+		return nil, fmt.Errorf("Error encoding serialized data type")
+	}
+
+	serialized := fmt.Sprintf("ser[%s:%s:%s]", method, etype, edata)
+	return &serialized, nil
 }
 
 func (r Object) ToBytes() (*[]byte, error) {
-	return r.contentTranscoder.ToBytes(encodingScheme)
+	serialized, err := r.ToString()
+	if nil != err { return nil, err }
+	serializedBytes := []byte(*serialized)
+	return &serializedBytes, nil
 }
 
 func (r Object) ToFile(path string) error {
-	return r.contentTranscoder.ToFile(path, encodingScheme)
-}
-
-// If fields are in use, we can pop out JSON
-// TODO: Should this be part of the Transcoder? It has no sense of fielded properties...
-func (r Object) ToJson() (*string, error) {
-	jsonBytes, err := json.Marshal(r.fields)
-	if nil != err { return nil, err }
-	jsonString := string(jsonBytes[:])
-	return &jsonString, nil
+	serializedBytes, err := r.ToBytes()
+	if nil != err { return err }
+	return fileio.WriteFileBytes(path, serializedBytes)
 }
 
 func (r *Object) AddField(fieldName string, value *string, ofType of.OFType) error {
@@ -195,6 +212,19 @@ func (r *Object) ToJson() (*string, error) {
 	jsonString := string(jsonBytes)
 	return &jsonString, nil
 }
+
+/*
+// FIXME: If fields are in use, the json should be of the field map, otherwise, it should be of a non-fielded content string
+// We can probably just do a simple, hacky inspection of the JSON string to figure out if we are using fields by checking for '{'
+// as the first character which indicates that an object (JSON) follows rather than a plain string which would start with '"'
+
+func (r Object) ToJson() (*string, error) {
+	jsonBytes, err := json.Marshal(r.fields)
+	if nil != err { return nil, err }
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
+}
+*/
 
 // -------------------------------------------------------------------------------------------------
 // JsonDeserializableIfc Public Interface
