@@ -15,6 +15,11 @@ func WriteFileString(path string, content *string) error {
 	return ioutil.WriteFile(path, c, 0644)
 }
 
+// Write the contents of a []byte to a file
+func WriteFileBytes(path string, content *[]byte) error {
+	return ioutil.WriteFile(path, *content, 0644)
+}
+
 // Read the file located at the specified path and return the contents as a *string
 func ReadFileString(path string) (*string, error) {
 	tbuf, err := ReadFileBytes(path)
