@@ -235,3 +235,17 @@ func (r *Object) FromJson(jsonString *string) error {
 	return json.Unmarshal([]byte(*jsonString), &r.fields)
 }
 
+// -------------------------------------------------------------------------------------------------
+// Serializable Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Object) Serialize() (*string, error) {
+}
+
+// -------------------------------------------------------------------------------------------------
+// Deserializable Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *Object) Deserialize(data *string) error {
+}
+
