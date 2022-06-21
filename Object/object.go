@@ -17,26 +17,14 @@ TODO:
 
 import (
 	"fmt"
-	"regexp"
 	"encoding/json"
 
-	"github.com/DigiStratum/GoLib/FileIO"
+	"github.com/DigiStratum/GoLib/Data/serializable"
 	of "github.com/DigiStratum/GoLib/Object/field"
 	xc "github.com/DigiStratum/GoLib/Data/transcoder"
-	//enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
 )
 
 type ObjectIfc interface {
-	// Import
-	FromString(serialized *string) error
-	FromBytes(serializedBytes *[]byte) error
-	FromFile(path string) error
-
-	// Export
-	ToString() (*string, error)
-	ToBytes() (*[]byte, error)
-	ToFile(path string) error
-
 	// Fields
 	AddField(fieldName string, value *string, ofType of.OFType) error
 	SetFieldValue(fieldName string, value *string) error
@@ -65,96 +53,6 @@ func NewObject(transcoder xc.TranscoderIfc) *Object {
 // -------------------------------------------------------------------------------------------------
 // ObjectIfc Public Interface
 // -------------------------------------------------------------------------------------------------
-
-func (r *Object) FromString(serialized *string) error {
-	if nil == serialized { return fmt.Errorf("Cannot deserialize nil string value") }
-
-	// Overall format: "ser[{Method}:{Type}:{Data}]"
-	re := regexp.MustCompile(`^ser\[(?P<method>\w+):(?P<etype>\w+):(?P<edata>\w+\]$`)
-	if matched := re.MatchString(*serialized); !matched {
-		return fmt.Errorf("String does not match serialization requirements")
-	}
-
-	matches := re.FindStringSubmatch(*serialized)
-	if (nil == matches) || (len(matches) < 3) {
-		return fmt.Errorf("Unexpected mismatch on parameters for serialized value")
-	}
-
-	method := matches[re.SubexpIndex("method")]
-	etype := matches[re.SubexpIndex("etype")]
-	edata := matches[re.SubexpIndex("edata")]
-
-	// We support multiple methods of object deserialization
-	switch method {
-		case "j64":
-			// Encoding base64, JSON data
-			if (nil == r.transcoder) || ("base64" != r.transcoder.GetDecoderSchemeName()) {
-				return fmt.Errorf("Deserialization requires Transcoder with EncodingSchemeBase64")
-			}
-
-			utype, err := r.transcoder.Decode(&etype)
-			if (nil != err) || (nil == utype) || ("Object" != *utype) {
-				return fmt.Errorf("Error decoding serialized data type")
-			}
-
-			udata, err := r.transcoder.Decode(&edata)
-			if (nil != err) || (nil == udata) { return fmt.Errorf("Error decoding serialized data") }
-
-			return r.FromJson(udata)
-	}
-
-	return fmt.Errorf("Unsupported serialization method '%s'", method)
-}
-
-func (r *Object) FromBytes(serializedBytes *[]byte) error {
-	str := string(*serializedBytes)
-	return r.FromString(&str)
-}
-
-func (r *Object) FromFile(path string) error {
-	serialized, err := fileio.ReadFileString(path)
-	if nil != err { return err }
-	return r.FromString(serialized)
-}
-
-func (r Object) ToString() (*string, error) {
-	// Encoding base64, JSON data
-	if (nil == r.transcoder) || ("base64" != r.transcoder.GetDecoderSchemeName()) {
-		return nil, fmt.Errorf("Serialization requires Transcoder with EncodingSchemeBase64")
-	}
-
-	// Overall format: "ser[{Method}:{Type}:{Data}]"
-	method := "j64"
-	udata, err := r.ToJson()
-	if nil != err { return  nil, err }
-
-	edata, err := r.transcoder.Encode(udata)
-	if (nil != err) || (nil == edata) {
-		return nil, fmt.Errorf("Error encoding serialized data type")
-	}
-
-	utype := "Object"
-	etype, err := r.transcoder.Encode(&utype)
-	if (nil != err) || (nil == etype) {
-		return nil, fmt.Errorf("Error encoding serialized data type")
-	}
-
-	serialized := fmt.Sprintf("ser[%s:%s:%s]", method, etype, edata)
-	return &serialized, nil
-}
-
-func (r Object) ToBytes() (*[]byte, error) {
-	serialized, err := r.ToString()
-	if nil != err { return nil, err }
-	serializedBytes := []byte(*serialized)
-	return &serializedBytes, nil
-}
-
-func (r Object) ToFile(path string) error {
-	serializedBytes, err := r.ToBytes()
-	if nil != err { return err }
-	return fileio.WriteFileBytes(path, serializedBytes)
-}
 
 func (r *Object) AddField(fieldName string, value *string, ofType of.OFType) error {
 
@@ -236,16 +134,24 @@ func (r *Object) FromJson(jsonString *string) error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Serializable Public Interface
+// SerializableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *Object) Serialize() (*string, error) {
+	data, err := r.ToJson()
+	if nil != err { return nil, err }
+	serializer := serializable.NewSerializer(r.transcoder)
+	return serializer.Serialize(data, "Object")
 }
 
 // -------------------------------------------------------------------------------------------------
-// Deserializable Public Interface
+// DeserializableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *Object) Deserialize(data *string) error {
+	serializer := serializable.NewSerializer(r.transcoder)
+	udata, err := serializer.Deserialize(data)
+	if nil != err { return err }
+	return r.FromJson(udata)
 }
 

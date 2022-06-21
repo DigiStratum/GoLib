@@ -2,17 +2,6 @@ package objects
 
 /*
 type ObjectIfc interface {
-        // Import
-        FromString(content *string, encodingScheme EncodingScheme) error
-        FromBytes(bytes *[]byte, encodingScheme EncodingScheme) error
-        FromFile(path string, encodingScheme EncodingScheme) error
-
-        // Export
-        ToString(encodingScheme EncodingScheme) (*string, error)
-        ToBytes(encodingScheme EncodingScheme) (*[]byte, error)
-        ToFile(path string, encodingScheme EncodingScheme) error
-        ToJson() (*string, error)
-
         // Fields
         AddField(fieldName string, value *string, ofType OFType) error
         SetFieldValue(fieldName string, value *string) error
@@ -28,13 +17,14 @@ import(
 
 	of "github.com/DigiStratum/GoLib/Object/field"
 	xc "github.com/DigiStratum/GoLib/Data/transcoder"
+	enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 func TestThat_Object_NewObject_ReturnsSomething(t *testing.T) {
 	// Test
-	sut := NewObject()
+	sut := NewObject(nil)
 
 	// Verify
 	ExpectNonNil(sut, t)
@@ -42,7 +32,7 @@ func TestThat_Object_NewObject_ReturnsSomething(t *testing.T) {
 
 func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing.T) {
 	// Setup
-	sut := NewObject()
+	sut := NewObject(nil)
 	expectedFieldName := "bogus-object-field"
 	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_NUMERIC
@@ -56,7 +46,7 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing
 
 func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *testing.T) {
 	// Setup
-	sut := NewObject()
+	sut := NewObject(nil)
 	expectedFieldName := "bogus-object-field"
 	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_UNKNOWN
@@ -69,24 +59,25 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 }
 
 //SetFieldValue(fieldName string, value *string) error
-//ToString(encodingScheme xcode.EncodingScheme) (*string, error)
 func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *testing.T) {
 	// Setup
-	sut := NewObject()
+	transcoder := xc.NewTranscoder()
+	transcoder.SetEncoderScheme(enc.NewEncodingSchemeBase64())
+	sut := NewObject(transcoder)
 	expectedFieldName := "bogus-object-field"
 	originalValue := "222"
-	expectedValue := "333"
+	newValue := "333"
+	expected := "ser[j64:T2JqZWN0:eyJib2d1cy1vYmplY3QtZmllbGQiOnsiVHlwZSI6e30sIlZhbHVlIjoiMzMzIn19]"
 	expectedFieldType := of.OFT_NUMERIC
 
 	// Test
 	err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
-	err2 := sut.SetFieldValue(expectedFieldName, &expectedValue)
-	actualValue, err3 := sut.ToString(xc.ES_NONE)
+	err2 := sut.SetFieldValue(expectedFieldName, &newValue)
+	actual, err3 := sut.Serialize()
 
 	// Verify
 	ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNoError(err3, t)
-	ExpectString(expectedValue, *actualValue, t)
+	ExpectString(expected, *actual, t)
 }
-
