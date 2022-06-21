@@ -2,13 +2,10 @@ package objects
 
 /*
 type ObjectIfc interface {
-        // Fields
-        AddField(fieldName string, value *string, ofType OFType) error
-        SetFieldValue(fieldName string, value *string) error
-        HasField(fieldName string)
-        GetFieldType(fieldName string) *ObjectFieldType
+	GetFieldType(fieldName string) *of.ObjectFieldType
+	SetFieldValue(fieldName string, value *string) error
+	GetField(fieldName string) (*of.ObjectField, error)
 }
-
 */
 
 import(
@@ -24,15 +21,39 @@ import(
 
 func TestThat_Object_NewObject_ReturnsSomething(t *testing.T) {
 	// Test
-	sut := NewObject(nil)
+	sut := NewObject()
 
 	// Verify
 	ExpectNonNil(sut, t)
 }
 
+func TestThat_Object_SetContent_SetsTheContent(t *testing.T) {
+	// Setup
+	sut := NewObject()
+	expected := "testcontent"
+
+	// Test
+	sut.SetContent(&expected)
+	actual := sut.GetContent()
+
+	// Verify
+	ExpectString(expected, *actual, t)
+}
+
+func TestThat_Object_GetContent_ReturnsNil_WhenContentIsUnset(t *testing.T) {
+	// Setup
+	sut := NewObject()
+
+	// Test
+	actual := sut.GetContent()
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
 func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing.T) {
 	// Setup
-	sut := NewObject(nil)
+	sut := NewObject()
 	expectedFieldName := "bogus-object-field"
 	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_NUMERIC
@@ -46,7 +67,7 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing
 
 func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *testing.T) {
 	// Setup
-	sut := NewObject(nil)
+	sut := NewObject()
 	expectedFieldName := "bogus-object-field"
 	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_UNKNOWN
@@ -58,12 +79,26 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 	ExpectError(err, t)
 }
 
+//HasField(fieldName string) bool
+func TestThat_Object_HasField_ReturnsFalse(t *testing.T) {
+	// Setup
+	sut := NewObject()
+
+	// Test
+	actual := sut.HasField("bogusfield")
+
+	// Verify
+	ExpectFalse(actual, t)
+}
+
+
 //SetFieldValue(fieldName string, value *string) error
 func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *testing.T) {
 	// Setup
+	sut := NewObject()
 	transcoder := xc.NewTranscoder()
 	transcoder.SetEncoderScheme(enc.NewEncodingSchemeBase64())
-	sut := NewObject(transcoder)
+	sut.SetTranscoder(transcoder)
 	expectedFieldName := "bogus-object-field"
 	originalValue := "222"
 	newValue := "333"
@@ -74,10 +109,12 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
 	err2 := sut.SetFieldValue(expectedFieldName, &newValue)
 	actual, err3 := sut.Serialize()
+	hasIt := sut.HasField(expectedFieldName)
 
 	// Verify
 	ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNoError(err3, t)
+	ExpectTrue(hasIt, t)
 	ExpectString(expected, *actual, t)
 }

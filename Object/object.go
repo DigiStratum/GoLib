@@ -40,7 +40,9 @@ import (
 )
 
 type ObjectIfc interface {
-	// Fields
+	SetTranscoder(transcoder xc.TranscoderIfc)
+	SetContent(content *string)
+	GetContent() *string
 	AddField(fieldName string, value *string, ofType of.OFType) error
 	HasField(fieldName string) bool
 	GetFieldType(fieldName string) *of.ObjectFieldType
@@ -50,9 +52,9 @@ type ObjectIfc interface {
 
 // An Object that we're going to codify
 type Object struct {
-	transcoder		xc.TranscoderIfc
-	fields			map[string]*of.ObjectField		// Field name to value map
-	content			*string
+	transcoder		xc.TranscoderIfc		// Transcoder for De|Serialization
+	fields			map[string]*of.ObjectField	// Field name to value map
+	content			*string				// Non-Field-Mapped Object Content
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -60,9 +62,8 @@ type Object struct {
 // -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
-func NewObject(transcoder xc.TranscoderIfc) *Object {
+func NewObject() *Object {
 	return &Object{
-		transcoder:		transcoder,
 		fields:			make(map[string]*of.ObjectField),
 	}
 }
@@ -70,6 +71,10 @@ func NewObject(transcoder xc.TranscoderIfc) *Object {
 // -------------------------------------------------------------------------------------------------
 // ObjectIfc Public Interface
 // -------------------------------------------------------------------------------------------------
+
+func (r *Object) SetTranscoder(transcoder xc.TranscoderIfc) {
+	r.transcoder = transcoder
+}
 
 func (r *Object) SetContent(content *string) {
 	// Purge field map on setting content
