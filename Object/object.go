@@ -26,8 +26,10 @@ TODO:
    of.ObjectFieldTypes
  * Cache Serialize() result so that successive calls return the same value until it is cleared by
    some change made by another method
- * Add support for arbitrary field types, not just string (see SetFieldValue(); see also go 1.18
+ * Add support for arbitrary field values, not just string (see SetFieldValue(); see also go 1.18
    which supports generics)
+ * Add support for Clone() method (does some new "clonable" interface make sense? Can we use 1.18
+   generics for this?) 
 */
 
 import (
