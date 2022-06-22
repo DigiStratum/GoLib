@@ -55,12 +55,16 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing
 	expectedFieldName := "valid-object-field"
 	expectedValue := "bogus field value"
 	expectedFieldType := of.OFT_NUMERIC
+	oldcontent := "testcontent"
+	sut.SetContent(&oldcontent)
 
 	// Test
 	err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
+	actualContent := sut.GetContent()
 
 	// Verify
 	ExpectNoError(err, t)
+	ExpectNil(actualContent, t)
 }
 
 func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *testing.T) {
@@ -113,7 +117,6 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	ExpectTrue(hasIt, t)
 	ExpectString(expected, *actual, t)
 }
-
 
 func TestThat_Object_SetFieldValue_ReturnsError_ForBadField(t *testing.T) {
 	// Setup
