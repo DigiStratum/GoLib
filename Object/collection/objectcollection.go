@@ -14,8 +14,9 @@ TODO:
 */
 
 import (
+	"fmt"
 	"sync"
-	lib "github.com/DigiStratum/GoLib"
+
 	obj "github.com/DigiStratum/GoLib/Object"
 )
 
@@ -27,7 +28,7 @@ type ObjectCollectionIfc interface {
 }
 
 type ObjectCollection struct {
-	collection	*map[string]*obj.Object
+	collection	map[string]*obj.Object
 }
 
 type PathObjectPair struct {
@@ -68,9 +69,8 @@ type ObjectFieldRule struct {
 
 // Make a new one of these
 func NewObjectCollection() *ObjectCollection {
-	om := make(map[string]*obj.Object)
 	objectCollection := ObjectCollection {
-		collection:	&om,
+		collection:	make(map[string]*obj.Object),
 	}
 	return &objectCollection
 }
@@ -94,7 +94,7 @@ func (r ObjectCollection) HasObject(path string) bool {
 // Put a Object into the Collection by path
 func (r *ObjectCollection) PutObject(path string, object *obj.Object) error {
 	if nil == object {
-		return lib.GetLogger().Warn("ObjectCollection.PutObject() - object can't be nil")
+		return fmt.Errorf("ObjectCollection.PutObject() - object can't be nil")
 	}
 	r.collection[path] = object
 	return nil

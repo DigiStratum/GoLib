@@ -1,13 +1,6 @@
 package objects
 
-/*
-type ObjectIfc interface {
-	GetFieldType(fieldName string) *of.ObjectFieldType
-}
-*/
-
 import(
-	//"fmt"
 	"testing"
 
 	of "github.com/DigiStratum/GoLib/Object/field"
