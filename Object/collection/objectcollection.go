@@ -6,16 +6,12 @@ Collection of Objects organized by path; useful for memory-mapped ObjectStores a
 structures.
 
 FIXME:
- * Add some thread concurrency safety around this things accessor functions
-
-TODO:
- * Obsolete the Channel based iterator in favor of a closure function that returns pairs on iteration
+ * Add some thread concurrency safety around this thing's accessor functions
 
 */
 
 import (
 	"fmt"
-	"sync"
 
 	obj "github.com/DigiStratum/GoLib/Object"
 )
@@ -24,17 +20,16 @@ type ObjectCollectionIfc interface {
 	GetObject(path string) *obj.Object
 	HasObject(path string) bool
 	PutObject(path string, object *obj.Object) error
-	IterateChannel() <-chan PathObjectPair
 }
 
 type ObjectCollection struct {
 	collection	map[string]*obj.Object
 }
 
-type PathObjectPair struct {
-	Path	string
-	Obj	*obj.Object
-}
+/*
+// TODO: Move this to a feature branch related to field validity checking
+// TODO: Add support to pass in a validation function which will receive the Object and return true/false for validity
+// TODO: Add support for wrapping these rules/validators into some reusable/templatized form to avoid repetitive redefinition
 
 type ObjectFieldCondition int
 
@@ -62,6 +57,8 @@ type ObjectFieldRule struct {
 	Condition	ObjectFieldCondition	// Must be one of the OFC_* constants
 	ControlValue	string			// Significance varies with Field and Condition
 }
+
+*/
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
@@ -100,20 +97,31 @@ func (r *ObjectCollection) PutObject(path string, object *obj.Object) error {
 	return nil
 }
 
-// Iterate over the objects for this collectino and send all the Path-Object Pairs to a channel
-func (r ObjectCollection) IterateChannel() <-chan PathObjectPair {
-	ch := make(chan PathObjectPair, len(r.collection))
-	defer close(ch)
-	var wg sync.WaitGroup
-	wg.Add(1)
+// -------------------------------------------------------------------------------------------------
+// IterableIfc Public Interface
+// -------------------------------------------------------------------------------------------------
 
-	// Fire off a go routine to fill up the channel
-	go func() {
-		for p, o := range r.collection {
-			ch <- PathObjectPair{ Path: p, Obj: o }
-		}
-		wg.Done()
-	}()
-	wg.Wait()
-	return ch
+type PathObjectPair struct {
+	Path	string
+	Obj	*obj.Object
 }
+
+// Iterate over all of our items, returning each as a *KeyValuePair in the form of an interface{}
+func (r ObjectCollection) GetIterator() func () interface{} {
+	data_len := len(r.collection)
+	keys := make([]string, data_len)
+	var idx int = 0
+	for k, _ := range r.collection {
+		keys[idx] = k
+		idx++
+	}
+	idx = 0
+	return func () interface{} {
+		// If we're done iterating, return do nothing
+		if idx >= data_len { return nil }
+		prev_idx := idx
+		idx++
+		return PathObjectPair{ Path: keys[prev_idx], Obj: r.GetObject(keys[prev_idx]) }
+	}
+}
+
