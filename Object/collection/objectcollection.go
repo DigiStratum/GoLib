@@ -8,6 +8,9 @@ structures.
 FIXME:
  * Add some thread concurrency safety around this thing's accessor functions
 
+TODO:
+ * Add support to get the list of Object pats (keys)
+
 */
 
 import (
@@ -101,6 +104,7 @@ func (r *ObjectCollection) PutObject(path string, object *obj.Object) error {
 // IterableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// Reciever can cast/assert this struct type against the iterator function's return value
 type PathObjectPair struct {
 	Path	string
 	Obj	*obj.Object
