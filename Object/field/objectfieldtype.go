@@ -36,6 +36,33 @@ const (
 	OFT_MBCHAR	// any multibyte single character
 )
 
+var string_ofts map[string]OFType
+var oft_strings map[OFType]string
+
+func init() {
+	oft_strings = make(map[OFType]string)
+	oft_strings[OFT_UNKNOWN] = "unnkown"
+	oft_strings[OFT_NUMERIC] = "numeric"
+	oft_strings[OFT_TEXTUAL] = "textual"
+	oft_strings[OFT_DATETIME] = "datetime"
+	oft_strings[OFT_BOOLEAN] = "boolean"
+	oft_strings[OFT_BYTE] = "byte"
+	oft_strings[OFT_SHORT] = "short"
+	oft_strings[OFT_INT] = "int"
+	oft_strings[OFT_LONG] = "long"
+	oft_strings[OFT_FLOAT] = "float"
+	oft_strings[OFT_DOUBLE] = "double"
+	oft_strings[OFT_FIXED] = "fixed"
+	oft_strings[OFT_STRING] = "string"
+	oft_strings[OFT_CHAR] = "char"
+	oft_strings[OFT_MBSTRING] = "mbstring"
+	oft_strings[OFT_MBCHAR] = "mbchar"
+	string_ofts = make(map[string]OFType)
+	for k, v := range oft_strings {
+		string_ofts[v] = k
+	}
+}
+
 // -------------------------------------------------------------------------------------------------
 // Factory functions
 // -------------------------------------------------------------------------------------------------
@@ -51,12 +78,9 @@ func NewObjectFieldTypeFromString(strType string) *ObjectFieldType {
 }
 
 func NewObjectFieldTypeFromOFType(ofType OFType) *ObjectFieldType {
-	oft := ObjectFieldType{
-		ofType: ofType,
-	}
-	//oft := NewObjectFieldType()
-	//oft.SetType(oft.getOFType(strType))
-	return &oft
+	oft := NewObjectFieldType()
+	oft.SetType(ofType)
+	return oft
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -73,25 +97,8 @@ func (r ObjectFieldType) GetType() OFType {
 
 // Return a readable string for each possible type
 func (r ObjectFieldType) ToString() string {
-	switch (r.ofType) {
-		case OFT_UNKNOWN: return "uninitialized"
-		case OFT_NUMERIC: return "numeric"
-		case OFT_TEXTUAL: return "textual"
-		case OFT_DATETIME: return "datetime"
-		case OFT_BOOLEAN: return "boolean"
-		case OFT_BYTE: return "byte"
-		case OFT_SHORT: return "short"
-		case OFT_INT: return "int"
-		case OFT_LONG: return "long"
-		case OFT_FLOAT: return "float"
-		case OFT_DOUBLE: return "double"
-		case OFT_FIXED: return "fixed"
-		case OFT_STRING: return "string"
-		case OFT_CHAR: return "char"
-		case OFT_MBSTRING: return "mbstring"
-		case OFT_MBCHAR: return "mbchar"
-		default: return "unknown type"
-	}
+	if s, ok := oft_strings[r.ofType]; ok { return s }
+	return "unknown type"
 }
 
 // Validate the supplied value against our type
@@ -108,23 +115,7 @@ func (r ObjectFieldType) IsValid(value *string) bool {
 // -------------------------------------------------------------------------------------------------
 
 func (r *ObjectFieldType) getOFType(strType string) OFType {
-	switch (strType) {
-		case "uninitialized": return OFT_UNKNOWN
-		case "numeric": return OFT_NUMERIC
-		case "textual": return OFT_TEXTUAL
-		case "datetime": return OFT_DATETIME
-		case "boolean": return OFT_BOOLEAN
-		case "byte": return OFT_BYTE
-		case "short": return OFT_SHORT
-		case "int": return OFT_INT
-		case "long": return OFT_LONG
-		case "float": return OFT_FLOAT
-		case "double": return OFT_DOUBLE
-		case "fixed": return OFT_FIXED
-		case "string": return OFT_STRING
-		case "char": return OFT_CHAR
-		case "mbstring": return OFT_MBSTRING
-		case "mbchar": return OFT_MBCHAR
-		default: return OFT_UNKNOWN
-	}
+	if oft, ok := string_ofts[strType]; ok { return oft }
+	return OFT_UNKNOWN
 }
+

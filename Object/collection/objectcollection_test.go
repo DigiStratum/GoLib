@@ -9,14 +9,6 @@ import(
         . "github.com/DigiStratum/GoLib/Testing"
 )
 
-/*
-type ObjectCollectionIfc interface {
-        GetObject(path string) *obj.Object
-        HasObject(path string) bool
-        PutObject(path string, object *obj.Object) error
-}
-*/
-
 func TestThat_ObjectCollection_NewObjectCollection_ReturnsSomething(t *testing.T) {
 	// Test
 	sut := NewObjectCollection()
