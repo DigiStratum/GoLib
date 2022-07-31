@@ -1,4 +1,4 @@
-#Objects
+#Object
 
 Objects are blocks of data that we manage whether from disk, a database, or some remote service.
 We provide a standard interface to working with Objects as well as supporting libraries because,
