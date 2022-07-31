@@ -6,7 +6,7 @@ import(
 	"strings"
 	"mime"
 
-	obj "github.com/DigiStratum/GoLib/Objects"
+	obj "github.com/DigiStratum/GoLib/Object"
 )
 
 type HttpStatus int
