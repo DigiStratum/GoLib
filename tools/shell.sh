@@ -17,6 +17,7 @@ fi
 #-------------------------------------------------------------------------------
 # General reusable functions
 #-------------------------------------------------------------------------------
+
 # ref: https://stackoverflow.com/questions/9893667/is-there-a-way-to-write-a-bash-function-which-aborts-the-whole-execution-no-mat
 trap "exit 1" TERM
 export TOP_PID=$$
@@ -69,5 +70,40 @@ expect() {
 	if [ "$actual" != "$expect" ]; then
 		die "$msg"
 	fi
+}
+
+
+#-------------------------------------------------------------------------------
+# Test Runners
+#-------------------------------------------------------------------------------
+
+# Run tests, no coverage report
+runtests() {
+	local TESTRUNNER_DIR="$1"
+	local RUN_TEST=""
+
+	if [ "$#" -eq 2 ]; then
+		RUN_TEST="-run $2"
+	fi
+
+	say "BEGIN: $TESTRUNNER_DIR"
+	cd $TESTRUNNER_DIR
+
+	# Every go source file must have a package name matching that of the directory
+	local EXPECTPKGNAME=`basename $TESTRUNNER_DIR`
+	say "\nPACKAGE: $EXPECTPKGNAME"
+	for f in `find . -type f -name "*.go"`; do
+		local PKGMATCH=`grep "^package $EXPECTPKGNAME$" $f | wc -l`
+		if [ "$PKGMATCH" -eq 0 ]; then
+			say "\t\tWARN: Expected package name missing from source file ('$f')"
+		fi
+	done
+
+	# Run tests
+	#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt $RUN_TEST *.go
+	go test -v -count=1 -covermode=atomic $RUN_TEST *.go
+	die_on_error $? "ERROR!"
+
+	say "\nDONE: $TESTRUNNER_DIR"
 }
 
