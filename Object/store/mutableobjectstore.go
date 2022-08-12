@@ -12,7 +12,7 @@ TODO:
 
 */
 import (
-	obj "github.com/DigiStratum/GoLib/objects"
+	obj "github.com/DigiStratum/GoLib/Object"
 )
 
 type MutableObjectStoreIfc interface {
