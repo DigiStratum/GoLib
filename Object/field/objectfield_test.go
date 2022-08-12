@@ -1,4 +1,4 @@
-package objectfield
+package field
 
 import(
 	"testing"

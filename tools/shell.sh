@@ -92,8 +92,8 @@ runtests() {
 	# Every go source file must have a package name matching that of the directory
 	local EXPECTPKGNAME=`basename $TESTRUNNER_DIR`
 	say "\nPACKAGE: $EXPECTPKGNAME"
-	for f in `find . -type f -name "*.go"`; do
-		local PKGMATCH=`grep "^package $EXPECTPKGNAME$" $f | wc -l`
+	for f in `ls -1 $TESTRUNNER_DIR/*.go`; do
+		local PKGMATCH=`grep -i "^package $EXPECTPKGNAME$" $f | wc -l`
 		if [ "$PKGMATCH" -eq 0 ]; then
 			say "\t\tWARN: Expected package name missing from source file ('$f')"
 		fi

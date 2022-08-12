@@ -121,6 +121,10 @@ type MockEncodingScheme struct {
 	encoded, decoded	*string
 }
 
+func (r *MockEncodingScheme) GetName() string {
+	return "mockencodingscheme"
+}
+
 func (r *MockEncodingScheme) SetEncodedValue(source *string) error {
 	r.encoded = source
 	return nil

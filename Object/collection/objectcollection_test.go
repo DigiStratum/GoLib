@@ -1,4 +1,4 @@
-package objectcollection
+package collection
 
 import(
 	"fmt"

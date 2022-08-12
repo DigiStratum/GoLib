@@ -1,4 +1,4 @@
-package dsaws
+package aws
 
 /*
 Cloud helper library for AWS services.
@@ -7,7 +7,7 @@ AWS, of course, has a vast, sprawling API with more endpoints, capabilities, and
 might care to count. There are, however, a number of helpful boilerplate type operations that are
 broadly applicable which we will capture here.
 
-ref: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
+ref: https://docs.awssdk.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
 ref: https://github.com/aws/aws-sdk-go/tree/main/aws
 
 */
@@ -15,19 +15,19 @@ ref: https://github.com/aws/aws-sdk-go/tree/main/aws
 import (
         "fmt"
 
-        "github.com/aws/aws-sdk-go/aws"
-        "github.com/aws/aws-sdk-go/aws/session"
-        "github.com/aws/aws-sdk-go/aws/credentials"
+        awssdk "github.com/aws/aws-sdk-go/aws"
+        awssdksession "github.com/aws/aws-sdk-go/aws/session"
+        awssdkcredentials "github.com/aws/aws-sdk-go/aws/credentials"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 type AWSHelperIfc interface {
-	GetSession() (*session.Session, error)
+	GetSession() (*awssdksession.Session, error)
 }
 
 type AWSHelper struct {
-	awsSession		*session.Session
+	awsSession		*awssdksession.Session
 	awsRegion		string
 	awsAccessKeyId		string
 	awsSecretAccessKeyId	string
@@ -74,22 +74,22 @@ func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
 // -------------------------------------------------------------------------------------------------
 
 // Get our AWS session
-func (r *AWSHelper) GetSession() (*session.Session, error) {
+func (r *AWSHelper) GetSession() (*awssdksession.Session, error) {
 	if nil == r.awsSession {
-		config := aws.Config{}
+		config := awssdk.Config{}
 		if len(r.awsRegion) > 0 {
-                	config.Region = aws.String(r.awsRegion)
+			config.Region = awssdk.String(r.awsRegion)
 		}
 		if ((len(r.awsAccessKeyId) > 0) ||
 			(len(r.awsSecretAccessKeyId) > 0) ||
 			(len(r.awsSessionToken) > 0)) {
-			config.Credentials = credentials.NewStaticCredentials(
+			config.Credentials = awssdkcredentials.NewStaticCredentials(
 				r.awsAccessKeyId,
 				r.awsSecretAccessKeyId,
 				r.awsSessionToken,
 			)
 		}
-		sess, err := session.NewSession(&config)
+		sess, err := awssdksession.NewSession(&config)
 		if nil != err {
 			return nil, fmt.Errorf(
 				"Failed to establish an AWS session in region '%s': '%s'",

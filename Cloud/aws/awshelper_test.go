@@ -1,4 +1,4 @@
-package dsaws
+package aws
 
 import(
 	"testing"

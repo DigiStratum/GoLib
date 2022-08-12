@@ -1,4 +1,4 @@
-package objectfield
+package field
 
 /*
 An ObjectFieldType allows us to emulate loose typing for ObjectField Values
