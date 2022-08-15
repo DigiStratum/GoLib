@@ -10,7 +10,6 @@ TODO:
 */
 
 import (
-	lib "github.com/DigiStratum/GoLib"
 	obj "github.com/DigiStratum/GoLib/Object"
 	objc "github.com/DigiStratum/GoLib/Object/collection"
 )

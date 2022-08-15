@@ -17,7 +17,7 @@ directly and without scanning as above
 import (
 	"fmt"
 
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
 	obj "github.com/DigiStratum/GoLib/Object"
 	objc "github.com/DigiStratum/GoLib/ObjectCollection"
 	objs "github.com/DigiStratum/GoLib/Object/store"
@@ -66,13 +66,13 @@ func NewObjectStoreManager() *ObjectStoreManager {
 
 // Accessible only by Scan method, each addition is lower in priority than the previous!
 func (r *ObjectStoreManager) AddObjectStore(objectStore objs.ObjectStoreIfc) {
-	lib.GetLogger().Trace("Adding Object ObjectStore")
+	log.GetLogger().Trace("Adding Object ObjectStore")
 	r.objectStoreCollection = append(r.objectStoreCollection, &objectStore)
 }
 
 // Accessible by Scan OR Name method!
 func (r *ObjectStoreManager) AddNamedObjectStore(name string, objectStore objs.ObjectStoreIfc) error {
-	lib.GetLogger().Trace("ObjectStoreManager.AddNamedObjectStore('%s', ObjectStoreIfc)", name)
+	log.GetLogger().Trace("ObjectStoreManager.AddNamedObjectStore('%s', ObjectStoreIfc)", name)
 
 	// If we already have an ObjectStore with this name...
 	if _, ok := r.objectStoreMap[name]; ok { return fmt.Errorf(
@@ -91,13 +91,13 @@ func (r *ObjectStoreManager) AddNamedObjectStore(name string, objectStore objs.O
 
 // Scan method
 func (r ObjectStoreManager) GetObject(path string) *obj.Object {
-	lib.GetLogger().Trace("ObjectStoreManager.GetObject('%s')", path)
+	log.GetLogger().Trace("ObjectStoreManager.GetObject('%s')", path)
 	return r.getObject(nil, path)
 }
 
 // Name method
 func (r ObjectStoreManager) GetNamedObjectStoreObject(objectStoreName string, path string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.GetNamedObjectStoreObject('%s', '%s')",
 		objectStoreName, path,
 	)
@@ -112,7 +112,7 @@ func (r ObjectStoreManager) GetNamedObjectStoreObject(objectStoreName string, pa
 
 // Scan method; Returns the Object or nil
 func (r ObjectStoreManager) FindMultilingualObject(base string, languages *[]string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindMultilingualObject('%s', [%d]string, '%s')",
 		base, len(*languages), relPath,
 	)
@@ -123,7 +123,7 @@ func (r ObjectStoreManager) FindMultilingualObject(base string, languages *[]str
 
 func (r ObjectStoreManager) FindObject(scope string, possibleContexts *[]string, languages *[]string, relPath string) *obj.Object {
 	for _, context := range *possibleContexts {
-                lib.GetLogger().Trace("Trying path: %s/{language}/%s", context, relPath)
+                log.GetLogger().Trace("Trying path: %s/{language}/%s", context, relPath)
                 object := r.FindContextualizedObject(scope, context, languages, relPath)
                 if nil == object { continue }
 		return object
@@ -133,7 +133,7 @@ func (r ObjectStoreManager) FindObject(scope string, possibleContexts *[]string,
 
 // Scan method; Returns the Object or nil
 func (r ObjectStoreManager) FindContextualizedObject(scope string, context string, languages *[]string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindContextualizedObject('%s', '%s', [%d]string, '%s')",
 		scope, context, len(*languages), relPath,
 	)
@@ -142,7 +142,7 @@ func (r ObjectStoreManager) FindContextualizedObject(scope string, context strin
 
 // Name method; Returns the Object or nil
 func (r ObjectStoreManager) FindNamedObjectStoreContextualizedObject(objectStoreName string, scope string, context string, languages *[]string, relPath string) *Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindNamedObjectStoreContextualizedObject('%s', '%s', '%s', [%d]string, '%s')",
 		objectStoreName, scope, context, len(*languages), relPath,
 	)
@@ -157,7 +157,7 @@ func (r ObjectStoreManager) FindNamedObjectStoreContextualizedObject(objectStore
 
 // Scan method; Returns the Object or nil
 func (r ObjectStoreManager) FindScopedObject(scope string, language string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindScopedObject('%s', '%s', '%s')",
 		scope, language, relPath,
 	)
@@ -166,7 +166,7 @@ func (r ObjectStoreManager) FindScopedObject(scope string, language string, relP
 
 // Name method; Returns the Object or nil
 func (r ObjectStoreManager) FindNamedObjectStoreScopedObject(objectStoreName string, scope string, language string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindScopedObject('%s', '%s', '%s', '%s')",
 		objectStoreName, scope, language, relPath,
 	)
@@ -181,13 +181,13 @@ func (r ObjectStoreManager) FindNamedObjectStoreScopedObject(objectStoreName str
 
 // Scan method; Returns the Object or nil
 func (r ObjectStoreManager) FindPrivateObject(language string, relPath string) *obj.Object {
-	lib.GetLogger().Trace("ObjectStoreManager.FindPrivateObject('%s', '%s')", language, relPath)
+	log.GetLogger().Trace("ObjectStoreManager.FindPrivateObject('%s', '%s')", language, relPath)
 	return r.findScopedObject(nil, "private", language, relPath)
 }
 
 // Name method; Returns the Object or nil
 func (r ObjectStoreManager) FindNamedObjectStorePrivateObject(objectStoreName string, language string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindPrivateObject('%s', '%s', '%s')",
 		objectStoreName, language, relPath,
 	)
@@ -203,19 +203,19 @@ func (r ObjectStoreManager) FindNamedObjectStorePrivateObject(objectStoreName st
 
 // Scan method; Returns the Object or nil
 func (r ObjectStoreManager) FindTemplate(language string, name string) *obj.Object {
-	lib.GetLogger().Trace("ObjectStoreManager.FindTemplate('%s', '%s')", language, name)
+	log.GetLogger().Trace("ObjectStoreManager.FindTemplate('%s', '%s')", language, name)
 	return r.FindPrivateObject(language, fmt.Sprintf("templates/%s.mustache", name))
 }
 
 // Name method; Returns the Object or nil
 func (r rObjectStoreManager) FindNamedObjectStoreTemplate(objectStoreName string, language string, name string) *obj.Object {
-	lib.GetLogger().Trace("ObjectStoreManager.FindTemplate('%s', '%s', '%s')", objectStoreName, language, name)
+	log.GetLogger().Trace("ObjectStoreManager.FindTemplate('%s', '%s', '%s')", objectStoreName, language, name)
 	return r.FindNamedObjectStorePrivateObject(objectStoreName, language, fmt.Sprintf("templates/%s.mustache", name))
 }
 
 // Name method; Returns the Object or nil
 func (r ObjectStoreManager) FindNamedObjectStoreMultilingualObject(objectStoreName string, base string, languages *[]string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindNamedObjectStoreMultilingualObject('%s', '%s', [%d]string, '%s')",
 		objectStoreName, base, len(*languages), relPath,
 	)
@@ -245,7 +245,7 @@ func (r ObjectStoreManager) GetNamedObjectStoreObjectCollection(objectStoreName 
 // -------------------------------------------------------------------------------------------------
 
 func (r ObjectStoreManager) getObject(objectStore *ObjectStoreIfc, path string) *obj.Object {
-	lib.GetLogger().Trace("ObjectStoreManager.getObject(*ObjectStoreIfc, '%s')", path)
+	log.GetLogger().Trace("ObjectStoreManager.getObject(*ObjectStoreIfc, '%s')", path)
 	// No particular ObjectStoreIfc specified..?
 	if nil == objectStore {
 		// Scan UP the list of ObjectStores in the search for this Object by path
@@ -262,7 +262,7 @@ func (r ObjectStoreManager) getObject(objectStore *ObjectStoreIfc, path string) 
 }
 
 func (r ObjectStoreManager) findMultilingualObject(objectStore *ObjectStoreIfc, base string, languages *[]string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.findMultilingualObject(*ObjectStoreIfc, '%s', [%d]string, '%s')",
 		base, len(*languages), relPath,
 	)
@@ -275,7 +275,7 @@ func (r ObjectStoreManager) findMultilingualObject(objectStore *ObjectStoreIfc, 
 }
 
 func (r ObjectStoreManager) findContextualizedObject(objectStore *objs.ObjectStoreIfc, scope string, context string, languages *[]string, relPath string) *Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.FindContextualizedObject(*ObjectStoreIfc, '%s', '%s', [%d]string, '%s')",
 		scope, context, len(*languages), relPath,
 	)
@@ -285,7 +285,7 @@ func (r ObjectStoreManager) findContextualizedObject(objectStore *objs.ObjectSto
 }
 
 func (r *ObjectStoreManager) findScopedObject(objectStore *objs.ObjectStoreIfc, scope string, language string, relPath string) *obj.Object {
-	lib.GetLogger().Trace(
+	log.GetLogger().Trace(
 		"ObjectStoreManager.findScopedObject(*ObjectStoreIfc, '%s', '%s', '%s')",
 		scope, language, relPath,
 	)

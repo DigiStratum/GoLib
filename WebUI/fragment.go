@@ -1,7 +1,7 @@
 package webui
 
 import(
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type Fragment struct {
@@ -11,7 +11,7 @@ type Fragment struct {
 
 // Make a new one of these
 func NewFragment() *Fragment {
-	lib.GetLogger().Trace("NewFragment()")
+	log.GetLogger().Trace("NewFragment()")
 	return &Fragment{
 		Name: "",
 		Content: "",

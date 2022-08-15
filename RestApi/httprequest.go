@@ -9,7 +9,8 @@ import(
 	"strings"
 	"net/url"
 
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
+	"github.com/DigiStratum/GoLib/Data/hashmap"
 )
 
 // Http Request public interface
@@ -39,8 +40,8 @@ type HttpRequestIfc interface {
 	GetAcceptableLanguages() *[]string
 	getWeightedHeaderList(headerName string) *[]string
 	IsIdempotentMethod() bool
-	SetPathParameters(params *lib.HashMap)
-	GetPathParameters() *lib.HashMap
+	SetPathParameters(params *hashmap.HashMap)
+	GetPathParameters() *hashmap.HashMap
 }
 
 type httpRequest struct {
@@ -56,7 +57,7 @@ type httpRequest struct {
 	body		*string
 	bodyData	*HttpBodyData
 	context		HttpRequestContextIfc
-	pathParams	*lib.HashMap
+	pathParams	*hashmap.HashMap
 }
 
 // Make a new one of these
@@ -112,7 +113,7 @@ func (request *httpRequest) GetURL() string {
 func (request *httpRequest) SetURL(urlStr string) {
 	u, err := url.Parse(urlStr)
 	if nil != err {
-		l := lib.GetLogger()
+		l := log.GetLogger()
 		l.Warn(fmt.Sprintf("HttpRequest.SetUrl() - failed to parse as a URL: '%s'", u))
 	}
 	request.url = u
@@ -192,12 +193,12 @@ func (request *httpRequest) IsIdempotentMethod() bool {
 }
 
 // Set the path parameters (should be endpointwrapper)
-func (request *httpRequest) SetPathParameters(params *lib.HashMap) {
+func (request *httpRequest) SetPathParameters(params *hashmap.HashMap) {
 	request.pathParams = params
 }
 
 // Get the path parameters (should be endpoint implementation)
-func (request *httpRequest) GetPathParameters() *lib.HashMap {
+func (request *httpRequest) GetPathParameters() *hashmap.HashMap {
 	return request.pathParams
 }
 

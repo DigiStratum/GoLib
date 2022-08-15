@@ -19,7 +19,7 @@ import (
 	"errors"
 	"net/url"
 
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 	cloud "github.com/DigiStratum/GoLib/Cloud"
@@ -48,7 +48,7 @@ type objectSpec struct {
 }
 
 type ObjectStoreMySQL struct {
-	storeConfig		lib.ConfigIfc
+	storeConfig		cfg.ConfigIfc
 	readCache		*MutableObjectStore
 	awsHelper		*cloud.AWSHelper
 	objectSpecs		map[string]objectSpec	// Object spec names must be part of object "path"
@@ -71,7 +71,7 @@ func NewObjectStoreMySQL() *ObjectStoreMySQL {
 // Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectStoreMySQL) Configure(config lib.ConfigIfc) error {
+func (r *ObjectStoreMySQL) Configure(config cfg.ConfigIfc) error {
 
 	// Validate that the config has what we need for MySQL!
 	requiredConfig := []string{ "dsn" }
@@ -114,7 +114,7 @@ func (r *ObjectStoreMySQL) HasObject(path string) (bool, error) {
 	// If MySQL has a non-zero count of this record, then there's an Object!
 	ps, err := os.parsePath(path)
 	if nil != err {
-		lib.GetLogger().Warn(fmt.Sprintf(
+		log.GetLogger().Warn(fmt.Sprintf(
 			"Failed to retrieve requested path '%s': %s",
 			path,
 			err.Error(),
@@ -125,7 +125,7 @@ func (r *ObjectStoreMySQL) HasObject(path string) (bool, error) {
 	// Get our Object Spec for this path spec...
 	objectSpec, ok := r.objectSpecs[ps.ObjectSpecName]
 	if ! ok {
-		lib.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
+		log.GetLogger().Warn("Failed to map requested Object Spec path '%s' (undefined!)")
 		return false
 	}
 */

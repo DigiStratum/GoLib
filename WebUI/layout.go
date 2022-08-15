@@ -1,7 +1,7 @@
 package webui
 
 import(
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type Layout struct {
@@ -10,7 +10,7 @@ type Layout struct {
 
 // Make a new one of these
 func NewLayout() *Layout {
-	lib.GetLogger().Trace("NewLayout()")
+	log.GetLogger().Trace("NewLayout()")
 	return &Layout{
 		content: "",
 	}

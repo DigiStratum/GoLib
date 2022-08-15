@@ -1,7 +1,7 @@
 package webui
 
 import(
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type Scheme struct {
@@ -12,7 +12,7 @@ type Scheme struct {
 
 // Make a new one of these
 func NewScheme() *Scheme {
-	lib.GetLogger().Trace("NewScheme()")
+	log.GetLogger().Trace("NewScheme()")
 	return &Scheme{
 		layout: nil,
 		fragmap: make(map[string]*Fragment),

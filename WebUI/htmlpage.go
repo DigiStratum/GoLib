@@ -11,20 +11,21 @@ package webui
 import(
 	"fmt"
 
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
+	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 const DEREFERENCE_MAX_LOOPS = 5
 
 type HtmlPage struct {
-	context			*lib.Config	// Contextual/Configuration data available for injection into Document
+	context			*cfg.Config	// Contextual/Configuration data available for injection into Document
 	scheme			*Scheme		// Page layout/styling/structural templating
 	document		*string		// Cached, final rendered document
 }
 
 // Make a new one of these; require a Scheme, but Context could be nil if there's nothing useful to inject
-func NewHtmlPage(scheme *Scheme, context *lib.Config) *HtmlPage {
-	log := lib.GetLogger()
+func NewHtmlPage(scheme *Scheme, context *cfg.Config) *HtmlPage {
+	log := log.GetLogger()
 	log.Trace("NewHtmlPage()")
 	if nil == scheme {
 		log.Error("nil Scheme, impossible to render HtmlPage!");
@@ -57,7 +58,7 @@ func (page *HtmlPage) renderDocument() *string {
 
 	// Inject Scheme stylesheet into the document
 	if nil == page.context {
-		page.context = lib.NewConfig()
+		page.context = cfg.NewConfig()
 	}
 	page.context.Add("stylesheet", page.scheme.GetStylesheet())
 
@@ -73,7 +74,7 @@ func (page *HtmlPage) renderDocument() *string {
 
 // Dereference all the Scheme's page Fragments, then Dereference the supplied document against them
 func (page *htmlPage) dereferenceFragments(document *string) *string {
-	fragments := lib.NewConfig()
+	fragments := cfg.NewConfig()
 	fragmap := page.scheme.GetFragMap()
 	for fragname, fragment := range fragmap {
 		// Fragment magic tags are as '%frag:fragment_name%'
@@ -81,7 +82,7 @@ func (page *htmlPage) dereferenceFragments(document *string) *string {
 	}
 	fullyResolved := fragments.DereferenceLoop(DEREFERENCE_MAX_LOOPS, fragments)
 	if ! fullyResolved {
-		lib.GetLogger().Warn(fmt.Sprintf(
+		log.GetLogger().Warn(fmt.Sprintf(
 			"Possible incomplete dereferencing of page fragments with %d loops",
 			DEREFERENCE_MAX_LOOPS,
 		));

@@ -1,7 +1,7 @@
 package webui
 
 import(
-	lib "github.com/DigiStratum/GoLib"
+	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type Style struct {
@@ -12,7 +12,7 @@ type Style struct {
 
 // Make a new one of these
 func NewStyle(selector, definition string) *Style {
-	lib.GetLogger().Trace("NewStyle()")
+	log.GetLogger().Trace("NewStyle()")
 	return &Style{
 		selector: selector,
 		definition: definition,

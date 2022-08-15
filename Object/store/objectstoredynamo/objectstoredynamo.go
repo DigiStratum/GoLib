@@ -33,13 +33,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	"github.com/DigiStratum/GoLib/Cloud"
 )
 
 type ObjectStoreDynamo struct {
-	storeConfig	lib.ConfigIfc
+	storeConfig	cfg.ConfigIfc
 	readCache	*MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 	awsDynamoDB	*dynamodb.DynamoDB
@@ -62,7 +62,7 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 // Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectStoreDynamo) Configure(config lib.ConfigIfc) error {
+func (r *ObjectStoreDynamo) Configure(config cfg.ConfigIfc) error {
 
 	// Validate that the config has what we need for AWS Dynamo!
 	requiredConfig := []string{ "awsregion", "tablename", "primarykey" }

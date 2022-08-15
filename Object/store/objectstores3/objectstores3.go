@@ -30,13 +30,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	"github.com/DigiStratum/GoLib/Cloud"
 )
 
 type ObjectStoreS3 struct {
-	storeConfig	lib.ConfigIfc
+	storeConfig	cfg.ConfigIfc
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
 	readCache	*MutableObjectStore
@@ -59,7 +59,7 @@ func NewObjectStoreS3() *ObjectStoreS3 {
 // Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ObjectStoreS3) Configure(config lib.ConfigIfc) error {
+func (r *ObjectStoreS3) Configure(config cfg.ConfigIfc) error {
 
 	// Validate that the config has what we need for S3!
 	requiredConfig := []string{ "awsregion", "s3bucket", "s3folder" }

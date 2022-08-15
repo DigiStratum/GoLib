@@ -13,7 +13,7 @@ right out of our compiled binary at runtime.
 import (
 	"fmt"
 
-	lib "github.com/DigiStratum/GoLib"
+	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 // -------------------------------------------------------------------------------------------------
@@ -21,7 +21,7 @@ import (
 // -------------------------------------------------------------------------------------------------
 
 // Make a new Config initialized with properties from a JSON Object
-func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Config, error) {
+func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (cfg.Config, error) {
 
 	// Check the ObjectStore
 	if nil == objectStore {
@@ -47,7 +47,7 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (lib.Conf
 	//lib.GetLogger().Trace(fmt.Sprintf("configJson: %s", *configJson))
 
 	// Load up a Config structure from the JSON
-	config := lib.NewConfig()
+	config := cfg.NewConfig()
 	if err := config.LoadFromJsonStringOrError(configJson); nil != err {
 		return nil, fmt.Errorf("Config: Error parsing ObjectStore JSON ('%s'): %s", objectPath, err.Error())
 	}
