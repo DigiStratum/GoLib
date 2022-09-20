@@ -19,7 +19,7 @@ type MutableObjectStoreIfc interface {
 	ObjectStoreIfc	// Embed ObjectStore interface
 
 	// Put the supplied Object into this ObjectStore at the specified path
-	PutObject(path string, object obj.ObjectIfc) error
+	PutObject(path string, object *obj.ObjectIfc) error
 }
 
 type MutableObjectStore struct {
@@ -47,6 +47,6 @@ func NewMutableObjectStore() *MutableObjectStore {
 // -------------------------------------------------------------------------------------------------
 
 // Put the supplied Object into this ObjectStore at the specified path
-func (r *MutableObjectStore) PutObject(path string, object obj.ObjectIfc) error {
+func (r *MutableObjectStore) PutObject(path string, object *obj.ObjectIfc) error {
 	return r.collection.PutObject(path, object)
 }
