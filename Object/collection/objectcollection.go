@@ -10,6 +10,7 @@ FIXME:
 
 TODO:
  * Add support to get the list of Object pats (keys)
+ * Add support for shared transcoder for all Objects in Collection; obj.transcoder is an IFC, so may be a pointer
 
 */
 
