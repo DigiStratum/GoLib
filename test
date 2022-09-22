@@ -12,7 +12,8 @@ say "BEGIN"
 
 # Lint all source files first
 PASS=1
-for f in `find . -name "*.go"`; do
+#for f in `find . -name "*.go"`; do
+for f in `find . -type f -name '*.go' | sed -r 's|/[^/]+$||' |sort |uniq`; do
 	go vet $f
 	if [ $? != 0 ]; then
 		PASS=0
