@@ -41,9 +41,9 @@ import (
 
 type ObjectStoreDynamo struct {
 	storeConfig	cfg.ConfigIfc
-	readCache	objs.*MutableObjectStore
-	awsHelper	*cloud.AWSHelper
-	awsDynamoDB	*dynamodb.DynamoDB
+	readCache	objs.MutableObjectStoreIfc
+	awsHelper	*cloud.AWSHelper		// TODO: change to IFC
+	awsDynamoDB	*dynamodb.DynamoDB		// TODO: change to IFC
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ type ObjectStoreDynamo struct {
 // Make a new one of these!
 func NewObjectStoreDynamo() *ObjectStoreDynamo {
 	r := ObjectStoreDynamo{
-		readCache: NewMutableObjectStore(),
+		readCache: objs.NewMutableObjectStore(),
 	}
 	return &r
 }

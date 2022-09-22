@@ -40,7 +40,7 @@ type ObjectStoreS3 struct {
 	storeConfig	cfg.ConfigIfc
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
-	readCache	objs.*MutableObjectStore
+	readCache	*objs.MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 }
 

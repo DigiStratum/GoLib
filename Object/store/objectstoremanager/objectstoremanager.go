@@ -23,7 +23,7 @@ import (
 	objs "github.com/DigiStratum/GoLib/Object/store"
 )
 
-type ObjectStoreManagerIfc {
+type ObjectStoreManagerIfc interface {
 	AddObjectStore(objectStore ObjectStoreIfc)
 	AddNamedObjectStore(name string, objectStore objs.ObjectStoreIfc) error
 	GetNamedObjectStoreObject(objectStoreName string, path string) *obj.Object
