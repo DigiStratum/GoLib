@@ -22,7 +22,7 @@ import (
 	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
-	cloud "github.com/DigiStratum/GoLib/Cloud"
+	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
 // A given path specifier for this type of object store can be parsed into this logical structure

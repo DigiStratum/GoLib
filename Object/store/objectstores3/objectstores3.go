@@ -32,14 +32,15 @@ import (
 
 	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
-	"github.com/DigiStratum/GoLib/Cloud"
+	objs "github.com/DigiStratum/GoLib/Object/store"
+	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
 type ObjectStoreS3 struct {
 	storeConfig	cfg.ConfigIfc
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
-	readCache	*MutableObjectStore
+	readCache	objs.*MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 }
 

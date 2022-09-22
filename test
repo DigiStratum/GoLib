@@ -10,6 +10,20 @@ set_death_dir $START_DIR
 
 say "BEGIN"
 
+# Lint all source files first
+PASS=1
+for f in `find . -name "*.go"`; do
+	go vet $f
+	if [ $? != 0 ]; then
+		PASS=0
+	fi
+done
+if [ $PASS == 0 ]; then
+	die "FAILED Vetting stage!"
+fi
+
+
+# Now run unit tests
 for testrunner in `find $SCRIPT_DIR -name "t"`; do
 	echo "Running test: '$testrunner'"
 	/bin/bash $testrunner

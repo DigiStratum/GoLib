@@ -34,13 +34,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	obj "github.com/DigiStratum/GoLib/Object"
-	"github.com/DigiStratum/GoLib/Cloud"
+	objs "github.com/DigiStratum/GoLib/Object"
+	mos "github.com/DigiStratum/GoLib/Object/store"
+	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
 type ObjectStoreDynamo struct {
 	storeConfig	cfg.ConfigIfc
-	readCache	*MutableObjectStore
+	readCache	objs.*MutableObjectStore
 	awsHelper	*cloud.AWSHelper
 	awsDynamoDB	*dynamodb.DynamoDB
 }

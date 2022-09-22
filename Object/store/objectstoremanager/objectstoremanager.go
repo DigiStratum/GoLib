@@ -19,7 +19,7 @@ import (
 
 	log "github.com/DigiStratum/GoLib/Logger"
 	obj "github.com/DigiStratum/GoLib/Object"
-	objc "github.com/DigiStratum/GoLib/ObjectCollection"
+	objc "github.com/DigiStratum/GoLib/Object/collection"
 	objs "github.com/DigiStratum/GoLib/Object/store"
 )
 
