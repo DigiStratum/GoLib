@@ -78,7 +78,7 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 // Get a full (deep) copy of this HashMap
 // This is so that we can give away a copy to someone else without allowing them to tamper with us
 // ref: https://developer20.com/be-aware-of-coping-in-go/
-func (r HashMap) Copy() *HashMap {
+func (r *HashMap) Copy() *HashMap {
 	n := NewHashMap()
 	for k, v := range r.hash { n.hash[k] = v }
 	return n
@@ -99,12 +99,12 @@ func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
 }
 
 // Check whether this HashMap is empty (has no properties)
-func (r HashMap) IsEmpty() bool {
+func (r *HashMap) IsEmpty() bool {
 	return 0 == r.Size()
 }
 
 // Get the number of properties in this HashMap
-func (r HashMap) Size() int {
+func (r *HashMap) Size() int {
 	return len(r.hash)
 }
 
@@ -126,13 +126,13 @@ func (r *HashMap) Set(key, value string) {
 }
 
 // Get a single data element by key name
-func (r HashMap) Get(key string) *string {
+func (r *HashMap) Get(key string) *string {
 	if val, ok := r.hash[key]; ok { return &val }
 	return nil
 }
 
 // Get a single data element by key name as an int64
-func (r HashMap) GetInt64(key string) *int64 {
+func (r *HashMap) GetInt64(key string) *int64 {
 	value := r.Get(key)
 	if nil != value {
 		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err { return &vc }
@@ -141,7 +141,7 @@ func (r HashMap) GetInt64(key string) *int64 {
 }
 
 // Get a single data element by key name as a boolean
-func (r HashMap) GetBool(key string) bool {
+func (r *HashMap) GetBool(key string) bool {
 	s := r.Get(key)
 	if nil == s { return false }
 	if ("true" == *s) || ("TRUE" == *s) || ("t" == *s) || ("T" == *s) || ("1" == *s) { return true }
@@ -152,18 +152,18 @@ func (r HashMap) GetBool(key string) bool {
 }
 
 // Check whether we have a data element by key name
-func (r HashMap) Has(key string) bool {
+func (r *HashMap) Has(key string) bool {
 	return r.Get(key) != nil
 }
 
 // Check whether we have configuration elements for all the key names
-func (r HashMap) HasAll(keys *[]string) bool {
+func (r *HashMap) HasAll(keys *[]string) bool {
 	for _, key := range *keys { if ! r.Has(key) { return false } }
 	return true
 }
 
 // Make a new hashmap from a subset of the key-values from this one
-func (r HashMap) GetSubset(keys *[]string) *HashMap {
+func (r *HashMap) GetSubset(keys *[]string) *HashMap {
 	n := NewHashMap()
 	if nil != keys {
 		for _, k := range *keys {
@@ -174,7 +174,7 @@ func (r HashMap) GetSubset(keys *[]string) *HashMap {
 }
 
 // Get the set of keys currently loaded into this hashmap
-func (r HashMap) GetKeys() []string {
+func (r *HashMap) GetKeys() []string {
 	keys := make([]string, len(r.hash))
 	i := 0
 	for key, _ := range r.hash { keys[i] = key; i++ }
@@ -200,7 +200,7 @@ func (r *HashMap) DropSet(keys *[]string) *HashMap {
 // -------------------------------------------------------------------------------------------------
 
 // Iterate over all of our items, returning each as a *KeyValuePair in the form of an interface{}
-func (r HashMap) GetIterator() func () interface{} {
+func (r *HashMap) GetIterator() func () interface{} {
 	kvps := make([]KeyValuePair, r.Size())
 	var idx int = 0
 	for k, v := range r.hash {
@@ -222,7 +222,7 @@ func (r HashMap) GetIterator() func () interface{} {
 // JsonSerializable Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r HashMap) ToJson() (*string, error) {
+func (r *HashMap) ToJson() (*string, error) {
 	jsonBytes, err := gojson.Marshal(r.hash)
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
