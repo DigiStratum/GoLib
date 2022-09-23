@@ -7,11 +7,11 @@ An ObjectPrototype is an established collection of named and typed fields from w
 import (
 	obj "github.com/DigiStratum/GoLib/Object"
 	objf "github.com/DigiStratum/GoLib/Object/field"
-}
+)
 
 type ObjectPrototypeIfc interface {
-	SetFieldType(fieldName string, ofType objectFieldType)
-	NewObject() *Object
+	SetFieldType(fieldName string, ofType objf.ObjectFieldType)
+	NewObject() *obj.Object		// TODO: change this to interface
 }
 
 type ObjectPrototype struct {
@@ -33,7 +33,7 @@ func NewObjectPrototype() *ObjectPrototype {
 func NewObjectPrototypeFromJson(json *string) *ObjectPrototype {
 	objectPrototype := NewObjectPrototype()
 	// TODO: Read JSON map of field name=type collection and create a new ObjectField for each
-	return &objectPrototype
+	return objectPrototype
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ func (r *ObjectPrototype) SetFieldType(fieldName string, ofType objf.ObjectField
 
 func (r ObjectPrototype) NewObject() *obj.Object {
 	object := obj.NewObject()
-	for fieldName, ofType, := range r.fields {
+	for fieldName, ofType := range r.fields {
 		objectField := objf.NewObjectField()
 		objectField.Type = ofType
 		object.SetField(fieldName, objectField)

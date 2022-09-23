@@ -135,16 +135,16 @@ func (r *Cache) SetTimeSource(timeSource chrono.TimeSourceIfc) {
 }
 
 // Check whether this Cache is empty (has no properties)
-func (r Cache) IsEmpty() bool {
+func (r *Cache) IsEmpty() bool {
 	return 0 == r.Count()
 }
 
 // Get the number of properties in this Cache
-func (r Cache) Size() int64 {
+func (r *Cache) Size() int64 {
 	return r.totalSize
 }
 // Return the count of entries currently being held in this cache
-func (r Cache) Count() int {
+func (r *Cache) Count() int {
 	return len(r.cache)
 }
 
@@ -163,13 +163,13 @@ func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) bool {
 }
 
 // Get the expiration timestamp for a given Cache item; returns nil if not set
-func (r Cache) GetExpires(key string) chrono.TimeStampIfc {
+func (r *Cache) GetExpires(key string) chrono.TimeStampIfc {
 	if ! r.Has(key) { return nil }
 	return r.cache[key].GetExpires()
 }
 
 // Get a single cache element by key name
-func (r Cache) Get(key string) interface{} {
+func (r *Cache) Get(key string) interface{} {
 	if ci, ok := r.cache[key]; ok {
 		if ! ci.IsExpired() { return ci.GetValue() }
 	}
@@ -177,13 +177,13 @@ func (r Cache) Get(key string) interface{} {
 }
 
 // Check whether we have a configuration element by key name
-func (r Cache) Has(key string) bool {
+func (r *Cache) Has(key string) bool {
 	_, ok := r.cache[key];
 	return ok
 }
 
 // Check whether we have configuration elements for all the key names
-func (r Cache) HasAll(keys *[]string) bool {
+func (r *Cache) HasAll(keys *[]string) bool {
 	for _, key := range *keys {
 		if ! r.Has(key) { return false }
 	}
@@ -236,7 +236,7 @@ func (r *Cache) Run() {
 	go r.runLoop()
 }
 
-func (r Cache) IsRunning() bool {
+func (r *Cache) IsRunning() bool {
 	return ! r.closed
 }
 
@@ -298,7 +298,7 @@ func (r *Cache) itemCanFit(size int64) bool {
 }
 
 // How many existing cache entries must be pruned to fit one of this size?
-func (r Cache) numToPrune(key string, size int64) int {
+func (r *Cache) numToPrune(key string, size int64) int {
 	var pruneCount, replaceCount int
 	var replaceSize int64
 	if element := r.findUsageListElementByKey(key, false); nil != element {
