@@ -24,7 +24,7 @@ import (
 )
 
 type ObjectStoreManagerIfc interface {
-	AddObjectStore(objectStore ObjectStoreIfc)
+	AddObjectStore(objectStore objs.ObjectStoreIfc)
 	AddNamedObjectStore(name string, objectStore objs.ObjectStoreIfc) error
 	GetNamedObjectStoreObject(objectStoreName string, path string) *obj.Object
 	FindMultilingualObject(base string, languages *[]string, relPath string) *obj.Object
@@ -85,6 +85,7 @@ func (r *ObjectStoreManager) AddNamedObjectStore(name string, objectStore objs.O
 
 	// Capture a reference to it by name into the map!
 	r.objectStoreMap[name] = &objectStore
+	return nil
 }
 
 // Get an Object with the specified path from our set of ObjectStores
@@ -141,7 +142,7 @@ func (r ObjectStoreManager) FindContextualizedObject(scope string, context strin
 }
 
 // Name method; Returns the Object or nil
-func (r ObjectStoreManager) FindNamedObjectStoreContextualizedObject(objectStoreName string, scope string, context string, languages *[]string, relPath string) *Object {
+func (r ObjectStoreManager) FindNamedObjectStoreContextualizedObject(objectStoreName string, scope string, context string, languages *[]string, relPath string) *obj.Object {
 	log.GetLogger().Trace(
 		"ObjectStoreManager.FindNamedObjectStoreContextualizedObject('%s', '%s', '%s', [%d]string, '%s')",
 		objectStoreName, scope, context, len(*languages), relPath,
@@ -208,7 +209,7 @@ func (r ObjectStoreManager) FindTemplate(language string, name string) *obj.Obje
 }
 
 // Name method; Returns the Object or nil
-func (r rObjectStoreManager) FindNamedObjectStoreTemplate(objectStoreName string, language string, name string) *obj.Object {
+func (r ObjectStoreManager) FindNamedObjectStoreTemplate(objectStoreName string, language string, name string) *obj.Object {
 	log.GetLogger().Trace("ObjectStoreManager.FindTemplate('%s', '%s', '%s')", objectStoreName, language, name)
 	return r.FindNamedObjectStorePrivateObject(objectStoreName, language, fmt.Sprintf("templates/%s.mustache", name))
 }
@@ -244,24 +245,24 @@ func (r ObjectStoreManager) GetNamedObjectStoreObjectCollection(objectStoreName 
 // ObjectStoreManagerIfc Private Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r ObjectStoreManager) getObject(objectStore *ObjectStoreIfc, path string) *obj.Object {
+func (r ObjectStoreManager) getObject(objectStore *objs.ObjectStoreIfc, path string) *obj.Object {
 	log.GetLogger().Trace("ObjectStoreManager.getObject(*ObjectStoreIfc, '%s')", path)
 	// No particular ObjectStoreIfc specified..?
-	if nil == objectStore {
-		// Scan UP the list of ObjectStores in the search for this Object by path
-		for _, store := range r.objectStoreCollection {
-			res := (*store).GetObject(path)
-			if nil != res { return res }
-		}
-		return nil
-	} else {
+	if nil != objectStore {
 		// Pluck out an Object from the specified ObjectStoreIfc with this path
-		res := (*objectStore).GetObject(path)
+		// Don't care about an error, just return nil for that case:
+		res, _ := (*objectStore).GetObject(path)
 		return res
 	}
+	// Scan UP the list of ObjectStores in the search for this Object by path
+	for _, store := range r.objectStoreCollection {
+		res, err := (*store).GetObject(path)
+		if (nil == err) && (nil != res) { return res }
+	}
+	return nil
 }
 
-func (r ObjectStoreManager) findMultilingualObject(objectStore *ObjectStoreIfc, base string, languages *[]string, relPath string) *obj.Object {
+func (r ObjectStoreManager) findMultilingualObject(objectStore *objs.ObjectStoreIfc, base string, languages *[]string, relPath string) *obj.Object {
 	log.GetLogger().Trace(
 		"ObjectStoreManager.findMultilingualObject(*ObjectStoreIfc, '%s', [%d]string, '%s')",
 		base, len(*languages), relPath,
@@ -274,7 +275,7 @@ func (r ObjectStoreManager) findMultilingualObject(objectStore *ObjectStoreIfc, 
 	return r.getObject(objectStore, fmt.Sprintf("%s/%s/%s", base, "default", relPath))
 }
 
-func (r ObjectStoreManager) findContextualizedObject(objectStore *objs.ObjectStoreIfc, scope string, context string, languages *[]string, relPath string) *Object {
+func (r ObjectStoreManager) findContextualizedObject(objectStore *objs.ObjectStoreIfc, scope string, context string, languages *[]string, relPath string) *obj.Object {
 	log.GetLogger().Trace(
 		"ObjectStoreManager.FindContextualizedObject(*ObjectStoreIfc, '%s', '%s', [%d]string, '%s')",
 		scope, context, len(*languages), relPath,
