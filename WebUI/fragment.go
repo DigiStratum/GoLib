@@ -5,8 +5,8 @@ import(
 )
 
 type Fragment struct {
-	Name		string,
-	Content		string,
+	Name		string
+	Content		string
 }
 
 // Make a new one of these

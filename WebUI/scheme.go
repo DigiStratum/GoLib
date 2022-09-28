@@ -5,9 +5,9 @@ import(
 )
 
 type Scheme struct {
-	layout		*Layout,
-	fragmap		map[string]*Fragment,	// key is Fragment.name
-	stylesheet	[]*Style,
+	layout		*Layout
+	fragmap		map[string]*Fragment	// key is Fragment.name
+	stylesheet	[]*Style
 }
 
 // Make a new one of these
@@ -16,7 +16,7 @@ func NewScheme() *Scheme {
 	return &Scheme{
 		layout: nil,
 		fragmap: make(map[string]*Fragment),
-		styles: make([]*Style),
+		stylesheet: make([]*Style, 0),
 	}
 }
 
@@ -26,7 +26,7 @@ func (scheme *Scheme) SetLayout(layout *Layout) {
 }
 
 // Get the layout for this scheme
-func (scheme *Scheme) GetLayout() string {
+func (scheme *Scheme) GetLayout() *Layout {
 	return scheme.layout
 }
 

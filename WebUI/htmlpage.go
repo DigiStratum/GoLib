@@ -50,8 +50,8 @@ func (page *HtmlPage) GetRenderedDocument() string {
 func (page *HtmlPage) renderDocument() *string {
 
 	// Start our document with the layout content for the scheme
-	var tmp *string
-	tmp = &page.scheme.GetLayout().GetContent()
+	tv := page.scheme.GetLayout().GetContent()
+	tmp := &tv
 
 	// Dereference layout fragments
 	tmp = page.dereferenceFragments(tmp)
@@ -60,25 +60,25 @@ func (page *HtmlPage) renderDocument() *string {
 	if nil == page.context {
 		page.context = cfg.NewConfig()
 	}
-	page.context.Add("stylesheet", page.scheme.GetStylesheet())
+	page.context.Set("stylesheet", page.scheme.GetStylesheet())
 
 	// TODO: Any string translations needed?
 
 	// Dereference Context/Config
-	page.Config.DereferenceLoop(page.Config, DEREFERENCE_MAX_LOOPS)
-	page.renderedDocument = page.Config.DereferenceString(page.Document)
+	page.context.DereferenceLoop(DEREFERENCE_MAX_LOOPS, page.context)
+	page.document = page.context.DereferenceString(*tmp)
 
 	// Return the final, rendered document
-	return tmp
+	return page.document
 }
 
 // Dereference all the Scheme's page Fragments, then Dereference the supplied document against them
-func (page *htmlPage) dereferenceFragments(document *string) *string {
+func (page *HtmlPage) dereferenceFragments(document *string) *string {
 	fragments := cfg.NewConfig()
 	fragmap := page.scheme.GetFragMap()
 	for fragname, fragment := range fragmap {
 		// Fragment magic tags are as '%frag:fragment_name%'
-		fragments[fmt.Sprintf("frag:%s", fragname)] = fragment.Content
+		fragments.Set(fmt.Sprintf("frag:%s", fragname), fragment.Content)
 	}
 	fullyResolved := fragments.DereferenceLoop(DEREFERENCE_MAX_LOOPS, fragments)
 	if ! fullyResolved {
@@ -87,6 +87,7 @@ func (page *htmlPage) dereferenceFragments(document *string) *string {
 			DEREFERENCE_MAX_LOOPS,
 		));
 	}
-	return &fragments.DereferenceString(*document
+	rv := fragments.DereferenceString(*document)
+	return rv
 }
 

@@ -1,6 +1,7 @@
 package webui
 
 import(
+	"fmt"
 	log "github.com/DigiStratum/GoLib/Logger"
 )
 
@@ -22,7 +23,8 @@ func NewStyle(selector, definition string) *Style {
 // Flatten into a CSS string ready to use in an HtmlPage
 func (style *Style) ToString() string {
 	if nil == style.flattened {
-		style.flattened = &fmt.Sprintf("%s {\n%s\n}\n", style.selector, style.definition)
+		tf := fmt.Sprintf("%s {\n%s\n}\n", style.selector, style.definition)
+		style.flattened = &tf
 	}
 	return *style.flattened
 }
