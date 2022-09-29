@@ -80,7 +80,7 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 // ref: https://developer20.com/be-aware-of-coping-in-go/
 func (r *HashMap) Copy() *HashMap {
 	n := NewHashMap()
-	for k, v := range r.hash { n.hash[k] = v }
+	for k, v := range (*r).hash { n.Set(k, v) }
 	return n
 }
 

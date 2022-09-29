@@ -35,6 +35,7 @@ type ConfigIfc interface {
 	hashmap.HashMapIfc
 	MergeConfig(mergeCfg ConfigIfc)
 	GetSubsetConfig(prefix string) *Config
+	GetSubsetKeys(keys *[]string) *Config
 	GetInverseSubsetConfig(prefix string) *Config
 	DereferenceString(str string) *string
 	Dereference(referenceConfig ConfigIfc) int
@@ -74,6 +75,11 @@ func (r *Config) MergeConfig(mergeCfg ConfigIfc) {
 // We also strip the prefix off leaving just the interesting parts
 func (r Config) GetSubsetConfig(prefix string) *Config {
 	return r.getSubset(prefix, true)
+}
+
+// Get configuration datum matching the specified keys, returned as a new Config pointer
+func (r Config) GetSubsetKeys(keys *[]string) *Config {
+	return &Config{ HashMap: r.HashMap.GetSubset(keys) }
 }
 
 // Get configuration datum whose keys DO NOT begin with the prefix...
