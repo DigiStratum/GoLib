@@ -51,7 +51,7 @@ type ObjectStoreS3 struct {
 // Make a new one of these!
 func NewObjectStoreS3() *ObjectStoreS3 {
 	r := ObjectStoreS3{
-		readCache: NewMutableObjectStore(),
+		readCache: objs.NewMutableObjectStore(),
 	}
 	return &r
 }
@@ -70,7 +70,11 @@ func (r *ObjectStoreS3) Configure(config cfg.ConfigIfc) error {
 	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
-	r.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
+	helperConfigKeys := []string{ "awsregion" }
+	helperConfig := config.GetSubsetKeys(&helperConfigKeys)
+	r.awsHelper = cloud.NewAWSHelper()
+	r.awsHelper.Configure(helperConfig)
+
 	return nil
 }
 
@@ -92,13 +96,13 @@ func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 		// The S3 key is the path prefixed with our configured folder for this store, if any
 		s3Folder := r.storeConfig.Get("s3folder")
 		key := path
-		if len(s3Folder) > 0 { key = fmt.Sprintf("%s/%s", s3Folder, path) }
+		if len(*s3Folder) > 0 { key = fmt.Sprintf("%s/%s", *s3Folder, path) }
 
 		// Now try to download the object from S3
 		_, err := downloader.Download(
 			buff,
 			&s3.GetObjectInput{
-				Bucket:	aws.String(os.storeConfig.Get("s3bucket")),
+				Bucket:	aws.String(*r.storeConfig.Get("s3bucket")),
 				Key:	aws.String(key),
 			},
 		)
@@ -108,7 +112,11 @@ func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 			path,
 			err.Error(),
 		)}
-		r.readCache.PutObject(path, NewObjectFromString(string(buff.Bytes())))
+		no := obj.NewObject()
+		noSerialized := string(buff.Bytes())
+		err = no.Deserialize(&noSerialized)
+		if nil != err { return nil, err }
+		r.readCache.PutObject(path, no)
 	}
 	return r.readCache.GetObject(path), nil
 }
@@ -124,8 +132,8 @@ func (r ObjectStoreS3) HasObject(path string) (bool, error) {
 	// ref: github.com/aws/aws-sdk-go/service/s3/examples_test.go ("HeadObject")
 	awsS3 := r.getS3()
 	_, err := awsS3.HeadObject(&s3.HeadObjectInput{
-			Bucket: aws.String(r.storeConfig.Get("s3bucket")),
-			Key:	aws.String(r.storeConfig.Get("s3folder") + "/" + path),
+			Bucket: aws.String(*r.storeConfig.Get("s3bucket")),
+			Key:	aws.String(*r.storeConfig.Get("s3folder") + "/" + path),
 		},
 	)
 	return nil == err, err
@@ -150,8 +158,8 @@ func (r *ObjectStoreS3) PutObject(path string, object *obj.Object) error {
 // Get our S3 connection
 func (r ObjectStoreS3) getS3() *s3.S3 {
 	if nil == r.awsS3 {
-		sess := r.awsHelper.GetSession();
-		if nil == sess { return nil }
+		sess, err := r.awsHelper.GetSession();
+		if (nil != err) || (nil == sess) { return nil }
 		r.awsS3 = s3.New(sess)
 	}
 	return r.awsS3
@@ -160,8 +168,8 @@ func (r ObjectStoreS3) getS3() *s3.S3 {
 // Get our S3 Downloader
 func (r ObjectStoreS3) getS3Downloader() *s3manager.Downloader {
 	if nil == r.awsS3Downloader {
-		sess := r.awsHelper.GetSession();
-		if nil == sess { return nil }
+		sess, err := r.awsHelper.GetSession();
+		if (nil != err) || (nil == sess) { return nil }
 		r.awsS3Downloader = s3manager.NewDownloader(sess)
 	}
 	return r.awsS3Downloader
