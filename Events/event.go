@@ -1,5 +1,9 @@
 package events
 
+import (
+	"encoding/json"
+)
+
 type EventIfc interface {
 }
 
@@ -23,8 +27,8 @@ func NewEvent(properties map[string]string) *Event {
 // -------------------------------------------------------------------------------------------------
 
 func (r Event) ToJson() (*string, error) {
-	atiJsonBytes, err := json.Marshal(ati)
+	jsonBytes, err := json.Marshal(r.properties)
 	if nil != err { return nil, err }
-	atiJsonString := string(atiJsonBytes[:])
-	return &atiJsonString, nil
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
 }
