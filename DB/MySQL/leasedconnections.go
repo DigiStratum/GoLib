@@ -56,7 +56,7 @@ func (r *LeasedConnections) Release(leaseKey int64) bool {
 // -------------------------------------------------------------------------------------------------
 
 // Is there a Lease on record now with this key?
-func (r LeasedConnections) leaseExists(leaseKey int64) bool {
+func (r *LeasedConnections) leaseExists(leaseKey int64) bool {
 	_, ok := r.leases[leaseKey]
 	return ok
 }

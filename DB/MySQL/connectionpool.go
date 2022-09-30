@@ -214,7 +214,7 @@ func (r *ConnectionPool) Release(leaseKey int64) error {
 
 // Max Idle has a default, but may be overridden by configuration; this gets access to the current setting value
 // TODO: Denote who need to know this & why...
-func (r ConnectionPool) GetMaxIdle() int {
+func (r *ConnectionPool) GetMaxIdle() int {
 	return r.maxIdle
 }
 
@@ -269,7 +269,7 @@ func (r *ConnectionPool) createNewConnection() *PooledConnection {
 	return newPooledConnection // nil if there was an error
 }
 
-func (r ConnectionPool) findExpiredLeaseConnection() *PooledConnection {
+func (r *ConnectionPool) findExpiredLeaseConnection() *PooledConnection {
 	for _, connection := range r.connections {
 		if connection.IsLeased() && connection.IsExpired() { return connection }
 	}
