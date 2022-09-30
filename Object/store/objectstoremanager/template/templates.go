@@ -16,7 +16,6 @@ TODO:
 import(
 	"fmt"
 	"bytes"
-	"errors"
 
 	osm "github.com/DigiStratum/GoLib/Object/store/objectstoremanager"
 	"github.com/DigiStratum/Go-cbroglie-mustache"
