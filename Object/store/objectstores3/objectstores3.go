@@ -118,7 +118,7 @@ func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 		if nil != err { return nil, err }
 		r.readCache.PutObject(path, no)
 	}
-	return r.readCache.GetObject(path), nil
+	return r.readCache.GetObject(path)
 }
 
 func (r ObjectStoreS3) HasObject(path string) (bool, error) {
