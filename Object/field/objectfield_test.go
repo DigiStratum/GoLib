@@ -8,7 +8,7 @@ import(
 
 func TestThat_ObjectField_NewObjectField_ReturnsSomething(t *testing.T) {
 	// Test
-	sut := NewObjectField()
+	sut := NewObjectField("bogusfield")
 
 	// Verify
 	ExpectNonNil(sut, t)

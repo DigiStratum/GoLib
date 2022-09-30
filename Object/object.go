@@ -22,8 +22,8 @@ the old Object into the new one. We could potentially add a helper method with s
 transform function to facilitate this should the need arise.
 
 TODO:
- * Refactor Object.fields to use a new of.ObjectFieldMap which extends lib.HashMap with support for
-   of.ObjectFieldTypes
+ * Refactor Object.fields to use a new objf.ObjectFieldMap which extends lib.HashMap with support for
+   objf.ObjectFieldTypes
  * Cache Serialize() result so that successive calls return the same value until it is cleared by
    some change made by another method
  * Add support for arbitrary field values, not just string (see SetFieldValue(); see also go 1.18
@@ -37,7 +37,7 @@ import (
 	"encoding/json"
 
 	"github.com/DigiStratum/GoLib/Data/serializable"
-	of "github.com/DigiStratum/GoLib/Object/field"
+	objf "github.com/DigiStratum/GoLib/Object/field"
 	xc "github.com/DigiStratum/GoLib/Data/transcoder"
 )
 
@@ -45,17 +45,18 @@ type ObjectIfc interface {
 	SetTranscoder(transcoder xc.TranscoderIfc)
 	SetContent(content *string)
 	GetContent() *string
-	AddField(fieldName string, value *string, ofType of.OFType) error
+	//AddField(fieldName string, value *string, ofType objf.OFType) error
+	AddField(objectField objf.ObjectFieldIfc, value *string)
 	HasField(fieldName string) bool
-	GetFieldType(fieldName string) *of.ObjectFieldType
+	GetFieldType(fieldName string) *objf.ObjectFieldType
 	SetFieldValue(fieldName string, value *string) error
-	GetField(fieldName string) (*of.ObjectField, error)
+	GetField(fieldName string) (*objf.ObjectField, error)
 }
 
 // An Object that we're going to codify
 type Object struct {
 	transcoder		xc.TranscoderIfc		// Transcoder for De|Serialization
-	fields			map[string]*of.ObjectField	// Field name to value map
+	fields			map[string]*objf.ObjectField	// Field name to value map
 	content			*string				// Non-Field-Mapped Object Content
 }
 
@@ -66,7 +67,7 @@ type Object struct {
 // Make a new one of these!
 func NewObject() *Object {
 	return &Object{
-		fields:			make(map[string]*of.ObjectField),
+		fields:			make(map[string]*objf.ObjectField),
 	}
 }
 
@@ -80,7 +81,7 @@ func (r *Object) SetTranscoder(transcoder xc.TranscoderIfc) {
 
 func (r *Object) SetContent(content *string) {
 	// Purge field map on setting content
-	r.fields = make(map[string]*of.ObjectField)
+	r.fields = make(map[string]*objf.ObjectField)
 	r.content = content
 }
 
@@ -88,45 +89,59 @@ func (r Object) GetContent() *string {
 	return r.content
 }
 
-func (r *Object) AddField(fieldName string, value *string, ofType of.OFType) error {
+func (r *Object) DefineField(objectField objf.ObjectFieldIfc) {
+	newOF := objf.NewObjectField(objectField.GetName())
+	newOF.SetType(objectField.GetType())
+	r.fields[objectField.GetName()] = newOF
+}
+
+func (r *Object) AddField(objectField objf.ObjectFieldIfc, value *string) {
+	r.DefineField(objectField)
+	r.SetFieldValue(objectField.GetName(), value)
+}
+
+/*
+func (r *Object) AddField(fieldName string, value *string, ofType objf.OFType) error {
 	// Purge string content on definition of a field map
 	if nil != r.content { r.content = nil }
 	if ! r.HasField(fieldName) {
-		objectField := of.NewObjectField()
-		objectField.Type = of.NewObjectFieldTypeFromOFType(ofType)
+		objectField := objf.NewObjectField()
+		objectField.Type = objf.NewObjectFieldTypeFromOFType(ofType)
 		r.fields[fieldName] = objectField
 	}
 
 	return r.SetFieldValue(fieldName, value)
 }
+*/
 
 func (r Object) HasField(fieldName string) bool {
 	_, ok := r.fields[fieldName]
 	return ok
 }
 
-func (r Object) GetFieldType(fieldName string) *of.ObjectFieldType {
+func (r Object) GetFieldType(fieldName string) *objf.ObjectFieldType {
 	if ! r.HasField(fieldName) { return nil }
-	return r.fields[fieldName].Type
+	return r.fields[fieldName].GetType()
 }
 
 // Set the named field to the specified value (including nil!)
 func (r *Object) SetFieldValue(fieldName string, value *string) error {
 	if objectField, ok := r.fields[fieldName]; ok {
-		if ! objectField.Type.IsValid(value) {
+		if ! objectField.GetType().IsValid(value) {
 			return fmt.Errorf(
 				"Object Field [name: '%s', type: '%s'] does not match supplied value",
-				fieldName, objectField.Type.ToString(),
+				fieldName, objectField.GetType().ToString(),
 			)
 		}
-		objectField.Value = value
-		r.fields[fieldName] = objectField
+		objectField.SetValue(value)
+		// TODO: Confirm: the line below is redundant because the objectField is a pointer reference and we are modifying it directly, no?
+		//r.fields[fieldName] = objectField
 		return nil
 	}
 	return fmt.Errorf("Object has no field named '%s'", fieldName)
 }
 
-func (r *Object) GetField(fieldName string) (*of.ObjectField, error) {
+func (r *Object) GetField(fieldName string) (*objf.ObjectField, error) {
 	if objectField, ok := r.fields[fieldName]; ok { return objectField, nil }
 	return nil, fmt.Errorf("Object has no field named '%s'", fieldName)
 }
@@ -159,7 +174,7 @@ func (r *Object) ToJson() (*string, error) {
 
 func (r *Object) FromJson(jsonString *string) error {
 	// Purge field map and content
-	r.fields = make(map[string]*of.ObjectField)
+	r.fields = make(map[string]*objf.ObjectField)
 	r.content = nil
 	// nil
 	if nil == jsonString { return nil }

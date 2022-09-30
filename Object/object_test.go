@@ -3,7 +3,7 @@ package object
 import(
 	"testing"
 
-	of "github.com/DigiStratum/GoLib/Object/field"
+	objf "github.com/DigiStratum/GoLib/Object/field"
 	xc "github.com/DigiStratum/GoLib/Data/transcoder"
 	enc "github.com/DigiStratum/GoLib/Data/transcoder/encodingscheme"
 
@@ -42,22 +42,28 @@ func TestThat_Object_GetContent_ReturnsNil_WhenContentIsUnset(t *testing.T) {
 	ExpectNil(actual, t)
 }
 
+// AddField(objectField objf.ObjectFieldIfc, value *string)
 func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing.T) {
 	// Setup
 	sut := NewObject()
 	expectedFieldName := "valid-object-field"
 	expectedValue := "bogus field value"
-	expectedFieldType := of.OFT_NUMERIC
+	expectedFieldType := objf.OFT_NUMERIC
 	oldcontent := "testcontent"
 	sut.SetContent(&oldcontent)
 
+	newOF := objf.NewObjectField(expectedFieldName)
+	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
+
 	// Test
-	err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
-	actualContent := sut.GetContent()
+	//err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
+	sut.AddField(newOF, &expectedValue)
+	//actualContent := sut.GetContent()
 
 	// Verify
-	ExpectNoError(err, t)
-	ExpectNil(actualContent, t)
+	//ExpectNoError(err, t)
+	//ExpectNil(actualContent, t)
+	ExpectNil(sut.GetContent(), t)
 }
 
 func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *testing.T) {
@@ -65,13 +71,18 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 	sut := NewObject()
 	expectedFieldName := "valid-object-field"
 	expectedValue := "bogus field value"
-	expectedFieldType := of.OFT_UNKNOWN
+	expectedFieldType := objf.OFT_UNKNOWN
+
+	newOF := objf.NewObjectField(expectedFieldName)
+	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
+	//err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
+	sut.AddField(newOF, &expectedValue)
 
 	// Verify
-	ExpectError(err, t)
+	//ExpectError(err, t)
+	ExpectTrue(sut.HasField(expectedValue), t)
 }
 
 func TestThat_Object_HasField_ReturnsFalse(t *testing.T) {
@@ -93,18 +104,22 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	sut.SetTranscoder(transcoder)
 	expectedFieldName := "valid-object-field"
 	originalValue := "222"
-	expectedFieldType := of.OFT_NUMERIC
+	expectedFieldType := objf.OFT_NUMERIC
 	newValue := "333"
 	expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6e30sIlZhbHVlIjoiMzMzIn19]"
 
+	newOF := objf.NewObjectField(expectedFieldName)
+	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
+
 	// Test
-	err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	//err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	sut.AddField(newOF, &originalValue)
 	err2 := sut.SetFieldValue(expectedFieldName, &newValue)
 	actual, err3 := sut.Serialize()
 	hasIt := sut.HasField(expectedFieldName)
 
 	// Verify
-	ExpectNoError(err1, t)
+	//ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNoError(err3, t)
 	ExpectTrue(hasIt, t)
@@ -139,15 +154,19 @@ func TestThat_Object_GetField_ReturnsField_ForGoodField(t *testing.T) {
 	sut := NewObject()
 	expectedFieldName := "valid-object-field"
 	originalValue := "222"
-	expectedFieldType := of.OFT_NUMERIC
+	expectedFieldType := objf.OFT_NUMERIC
+
+	newOF := objf.NewObjectField(expectedFieldName)
+	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	//err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	sut.AddField(newOF, &originalValue)
 	actual, err2 := sut.GetField(expectedFieldName)
-	actualValue := *actual.Value
+	actualValue := *actual.GetValue()
 
 	// Verify
-	ExpectNoError(err1, t)
+	//ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNonNil(actual, t)
 	ExpectString(originalValue, actualValue, t)
@@ -169,15 +188,19 @@ func TestThat_Object_GetFieldType_ReturnsFieldType_ForGoodField(t *testing.T) {
 	sut := NewObject()
 	expectedFieldName := "valid-object-field"
 	originalValue := "222"
-	expectedFieldType := of.OFT_NUMERIC
+	expectedFieldType := objf.OFT_NUMERIC
+
+	newOF := objf.NewObjectField(expectedFieldName)
+	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	err := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	//err := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
+	sut.AddField(newOF, &originalValue)
 	actual := sut.GetFieldType(expectedFieldName)
 	actualFieldType := actual.GetType()
 
 	// Verify
-	ExpectNoError(err, t)
+	//ExpectNoError(err, t)
 	ExpectNonNil(actual, t)
 	ExpectTrue(expectedFieldType == actualFieldType, t)
 }

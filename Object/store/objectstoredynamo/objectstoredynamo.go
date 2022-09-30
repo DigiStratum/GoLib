@@ -112,11 +112,6 @@ func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 
 		// Unmarshall the Dynamo result into a basic map of key=value strings
 		// ref: https://stackoverflow.com/questions/11066946/partly-json-unmarshal-into-a-map-in-go
-		type tobj struct {
-			Key	string
-			Content	string
-		}
-		//item := tobj{}
 		item := struct{ Key, Content string }{}
 		err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 		if err != nil { return nil, fmt.Errorf(
