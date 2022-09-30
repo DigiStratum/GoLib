@@ -16,11 +16,12 @@ FIXME:
 
 import (
 	"fmt"
-	"errors"
+	"strings"
 	"net/url"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
+	objs "github.com/DigiStratum/GoLib/Object/store"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
@@ -43,13 +44,13 @@ type querySpec struct {
 
 // A given database object spec couples access queries with matching field definitions
 type objectSpec struct {
-	template		ObjectTemplate
+	//template		ObjectTemplate
 	queries			map[string]mysql.QueryIfc
 }
 
 type ObjectStoreMySQL struct {
 	storeConfig		cfg.ConfigIfc
-	readCache		*MutableObjectStore
+	readCache		*objs.MutableObjectStore
 	awsHelper		*cloud.AWSHelper
 	objectSpecs		map[string]objectSpec	// Object spec names must be part of object "path"
 }
@@ -61,7 +62,7 @@ type ObjectStoreMySQL struct {
 // Make a new one of these!
 func NewObjectStoreMySQL() *ObjectStoreMySQL {
 	r := ObjectStoreMySQL{
-		readCache:	NewMutableObjectStore(),
+		readCache:	objs.NewMutableObjectStore(),
 		objectSpecs:	make(map[string]objectSpec),
 	}
 	return &r
@@ -98,7 +99,7 @@ func (r *ObjectStoreMySQL) GetObject(path string) (*obj.Object, error) {
 	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from MySQL into cache
 	}
-	return r.readCache.GetObject(path), nil
+	return r.readCache.GetObject(path)
 }
 
 // path format: "objectspecname?key1=value1&key2=value2&keyN=valueN
@@ -136,7 +137,7 @@ func (r *ObjectStoreMySQL) HasObject(path string) (bool, error) {
 
 	// ref: http://go-database-sql.org/prepared.html
 
-	return false
+	return false, nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -192,7 +193,7 @@ func (r ObjectStoreMySQL) parsePath(path string) (*pathSpec, error) {
 		if len(keyList) > 0 {
 			// Each key is a name=value - split them apart!
 			for i := range keyList {
-				name, value, err := os.parseURLKeyValuePair(keyList[i])
+				name, value, err := r.parseURLKeyValuePair(keyList[i])
 				if nil != err {
 					return nil, err
 				}
