@@ -51,8 +51,8 @@ func NewObjectStorePreloaded(collection *objc.ObjectCollection) *ObjectStore {
 // Satisfies ObjectStoreIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r ObjectStore) GetObject(path string) *obj.Object {
-	return r.collection.GetObject(path)
+func (r ObjectStore) GetObject(path string) (*obj.Object, error) {
+	return r.collection.GetObject(path), nil
 }
 
 func (r ObjectStore) HasObject(path string) bool {

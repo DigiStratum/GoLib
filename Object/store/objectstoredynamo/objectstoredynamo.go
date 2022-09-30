@@ -34,8 +34,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	objs "github.com/DigiStratum/GoLib/Object"
-	mos "github.com/DigiStratum/GoLib/Object/store"
+	obj "github.com/DigiStratum/GoLib/Object"
+	objs "github.com/DigiStratum/GoLib/Object/store"
 	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
@@ -68,12 +68,14 @@ func (r *ObjectStoreDynamo) Configure(config cfg.ConfigIfc) error {
 	// Validate that the config has what we need for AWS Dynamo!
 	requiredConfig := []string{ "awsregion", "tablename", "primarykey" }
 	if ! (config.HasAll(&requiredConfig)) {
-		return errors.New("Incomplete ObjectStoreDynamo configuration provided")
+		return fmt.Errorf("Incomplete ObjectStoreDynamo configuration provided")
 	}
 	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
-	r.awsHelper = cloud.NewAWSHelper(config.Get("awsregion"))
+	r.awsHelper = cloud.NewAWSHelper()
+	awsHelperConfigKeys := []string{ "awsregion"}
+	r.awsHelper.Configure(config.GetSubsetKeys(&awsHelperConfigKeys))
 	return nil
 }
 
@@ -91,14 +93,16 @@ func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 	// If it's not yet in the cache
 	if ! r.readCache.HasObject(path) {
 		// TODO: Read the Object from our Dynamo Table into cache
+		primaryKey := r.storeConfig.Get("primarykey")
 		key := map[string]*dynamodb.AttributeValue{
-			r.storeConfig.Get("primarykey"): {
+			*primaryKey: {
 				S: aws.String(path),
 			},
 		}
+		tableName := r.storeConfig.Get("tablename")
 		input := &dynamodb.GetItemInput{
 			Key: key,
-			TableName: aws.String(r.storeConfig.Get("tablename")),
+			TableName: aws.String(*tableName),
 		}
 		result, err := r.awsDynamoDB.GetItem(input)
 		if nil != err {	return nil, fmt.Errorf(
@@ -108,20 +112,23 @@ func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 
 		// Unmarshall the Dynamo result into a basic map of key=value strings
 		// ref: https://stackoverflow.com/questions/11066946/partly-json-unmarshal-into-a-map-in-go
-		type obj struct {
+		type tobj struct {
 			Key	string
 			Content	string
 		}
-		item := obj{}
+		//item := tobj{}
+		item := struct{ Key, Content string }{}
 		err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 		if err != nil { return nil, fmt.Errorf(
 			"ObjectStoreDynamo.GetObject() JSON UnmarshallMap() : Error: '%s'",
 			err.Error(),
 		)}
 
-		r.readCache.PutObject(path, NewObjectFromString(item.Content))
+		rcObj := obj.NewObject()
+		rcObj.Deserialize(&item.Content)
+		r.readCache.PutObject(path, rcObj)
 	}
-	return r.readCache.GetObject(path), nil
+	return r.readCache.GetObject(path)
 }
 
 func (r ObjectStoreDynamo) HasObject(path string) (bool, error) {
@@ -129,11 +136,11 @@ func (r ObjectStoreDynamo) HasObject(path string) (bool, error) {
 	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
 
 	// If it's already in the cache, then we know we have it!
-	if r.readCache.HasObject(path) { return true }
+	if r.readCache.HasObject(path) { return true, nil }
 
 	// TODO: Figure out if Dynamo has this object without necessarily retrieving it
 	var err error
-	return nil == err
+	return nil == err, err
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -155,7 +162,10 @@ func (r *ObjectStoreDynamo) PutObject(path string, object *obj.Object) error {
 // Get the DynamoDB service session
 func (r *ObjectStoreDynamo) getDynamoService() *dynamodb.DynamoDB {
 	if nil == r.awsDynamoDB {
-		r.awsDynamoDB = dynamodb.New(r.awsHelper.GetSession())
+		awsSession, err := r.awsHelper.GetSession()
+		if nil == err {
+			r.awsDynamoDB = dynamodb.New(awsSession)
+		}
 	}
 	return r.awsDynamoDB
 }

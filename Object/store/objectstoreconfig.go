@@ -30,11 +30,8 @@ func NewObjectStoreConfig(objectStore *ObjectStore, objectPath string) (*cfg.Con
 	}
 
 	// Request the JSON Object
-	configObject := objectStore.GetObject(objectPath)
-	if nil == configObject {
-		err := fmt.Errorf("Config: ObjectStore does not have Object with path: '%s'", objectPath)
-		return nil, err
-	}
+	configObject, err := objectStore.GetObject(objectPath)
+	if (nil != err) || (nil == configObject) { return nil, err }
 
 	// Get the JSON Object content
 	configJson := configObject.GetContent()
