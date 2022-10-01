@@ -4,6 +4,10 @@ package field
 An ObjectField encapsulates the properties of a single field for a given Object
 */
 
+import (
+	"fmt"
+)
+
 type ObjectFieldIfc interface {
 	GetName() string
 	GetType() *ObjectFieldType
@@ -52,5 +56,17 @@ func (r ObjectField) GetValue() *string {
 
 func (r *ObjectField) SetValue(value *string) {
 	r.value = value
+}
+
+// -------------------------------------------------------------------------------------------------
+// MarshalJSON Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *ObjectField) MarshalJSON() ([]byte, error) {
+	v := "null"
+	if nil != r.value { v = *r.value }
+	// FIXME: JSON Escape v so that embedded quotes and backslashes don't break everything
+	j := fmt.Sprintf("{ \"Type\": \"%s\", \"Value\": \"%s\"}", r.ofType.ToString(), v)
+	return []byte(j), nil
 }
 

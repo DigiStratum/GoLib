@@ -106,7 +106,9 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	originalValue := "222"
 	expectedFieldType := objf.OFT_NUMERIC
 	newValue := "333"
-	expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6e30sIlZhbHVlIjoiMzMzIn19]"
+	//expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6e30sIlZhbHVlIjoiMzMzIn19]"
+	// Serialization of: {"valid-object-field":{"Type":"numeric","Value":"333"}}
+	expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6Im51bWVyaWMiLCJWYWx1ZSI6IjMzMyJ9fQ==]"
 
 	newOF := objf.NewObjectField(expectedFieldName)
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
