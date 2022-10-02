@@ -45,7 +45,6 @@ type ObjectIfc interface {
 	SetTranscoder(transcoder xc.TranscoderIfc)
 	SetContent(content *string)
 	GetContent() *string
-	//AddField(fieldName string, value *string, ofType objf.OFType) error
 	AddField(objectField objf.ObjectFieldIfc, value *string)
 	HasField(fieldName string) bool
 	GetFieldType(fieldName string) *objf.ObjectFieldType
@@ -93,26 +92,14 @@ func (r *Object) DefineField(objectField objf.ObjectFieldIfc) {
 	newOF := objf.NewObjectField(objectField.GetName())
 	newOF.SetType(objectField.GetType())
 	r.fields[objectField.GetName()] = newOF
+	// Invalidate string content when we touch the fieldmap
+	r.content = nil
 }
 
 func (r *Object) AddField(objectField objf.ObjectFieldIfc, value *string) {
 	r.DefineField(objectField)
 	r.SetFieldValue(objectField.GetName(), value)
 }
-
-/*
-func (r *Object) AddField(fieldName string, value *string, ofType objf.OFType) error {
-	// Purge string content on definition of a field map
-	if nil != r.content { r.content = nil }
-	if ! r.HasField(fieldName) {
-		objectField := objf.NewObjectField()
-		objectField.Type = objf.NewObjectFieldTypeFromOFType(ofType)
-		r.fields[fieldName] = objectField
-	}
-
-	return r.SetFieldValue(fieldName, value)
-}
-*/
 
 func (r Object) HasField(fieldName string) bool {
 	_, ok := r.fields[fieldName]
@@ -134,8 +121,6 @@ func (r *Object) SetFieldValue(fieldName string, value *string) error {
 			)
 		}
 		objectField.SetValue(value)
-		// TODO: Confirm: the line below is redundant because the objectField is a pointer reference and we are modifying it directly, no?
-		//r.fields[fieldName] = objectField
 		return nil
 	}
 	return fmt.Errorf("Object has no field named '%s'", fieldName)

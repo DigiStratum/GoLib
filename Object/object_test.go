@@ -42,7 +42,6 @@ func TestThat_Object_GetContent_ReturnsNil_WhenContentIsUnset(t *testing.T) {
 	ExpectNil(actual, t)
 }
 
-// AddField(objectField objf.ObjectFieldIfc, value *string)
 func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing.T) {
 	// Setup
 	sut := NewObject()
@@ -56,13 +55,9 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForGoodFieldType(t *testing
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	//err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
 	sut.AddField(newOF, &expectedValue)
-	//actualContent := sut.GetContent()
 
 	// Verify
-	//ExpectNoError(err, t)
-	//ExpectNil(actualContent, t)
 	ExpectNil(sut.GetContent(), t)
 }
 
@@ -77,12 +72,10 @@ func TestThat_Object_AddField_AddsField_WithoutError_ForUnknownFieldType(t *test
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	//err := sut.AddField(expectedFieldName, &expectedValue, expectedFieldType)
 	sut.AddField(newOF, &expectedValue)
 
 	// Verify
-	//ExpectError(err, t)
-	ExpectTrue(sut.HasField(expectedValue), t)
+	ExpectTrue(sut.HasField(expectedFieldName), t)
 }
 
 func TestThat_Object_HasField_ReturnsFalse(t *testing.T) {
@@ -106,7 +99,6 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	originalValue := "222"
 	expectedFieldType := objf.OFT_NUMERIC
 	newValue := "333"
-	//expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6e30sIlZhbHVlIjoiMzMzIn19]"
 	// Serialization of: {"valid-object-field":{"Type":"numeric","Value":"333"}}
 	expected := "ser[j64:T2JqZWN0:eyJ2YWxpZC1vYmplY3QtZmllbGQiOnsiVHlwZSI6Im51bWVyaWMiLCJWYWx1ZSI6IjMzMyJ9fQ==]"
 
@@ -114,14 +106,12 @@ func TestThat_Object_SetFieldValue_SetsFieldValue_WithoutError_ForGoodValue(t *t
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	//err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
 	sut.AddField(newOF, &originalValue)
 	err2 := sut.SetFieldValue(expectedFieldName, &newValue)
 	actual, err3 := sut.Serialize()
 	hasIt := sut.HasField(expectedFieldName)
 
 	// Verify
-	//ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNoError(err3, t)
 	ExpectTrue(hasIt, t)
@@ -162,13 +152,11 @@ func TestThat_Object_GetField_ReturnsField_ForGoodField(t *testing.T) {
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	//err1 := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
 	sut.AddField(newOF, &originalValue)
 	actual, err2 := sut.GetField(expectedFieldName)
 	actualValue := *actual.GetValue()
 
 	// Verify
-	//ExpectNoError(err1, t)
 	ExpectNoError(err2, t)
 	ExpectNonNil(actual, t)
 	ExpectString(originalValue, actualValue, t)
@@ -196,13 +184,11 @@ func TestThat_Object_GetFieldType_ReturnsFieldType_ForGoodField(t *testing.T) {
 	newOF.SetType( objf.NewObjectFieldTypeFromOFType(expectedFieldType))
 
 	// Test
-	//err := sut.AddField(expectedFieldName, &originalValue, expectedFieldType)
 	sut.AddField(newOF, &originalValue)
 	actual := sut.GetFieldType(expectedFieldName)
 	actualFieldType := actual.GetType()
 
 	// Verify
-	//ExpectNoError(err, t)
 	ExpectNonNil(actual, t)
 	ExpectTrue(expectedFieldType == actualFieldType, t)
 }
