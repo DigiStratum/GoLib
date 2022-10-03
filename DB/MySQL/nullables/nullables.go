@@ -103,7 +103,8 @@ func (r *Nullable) SetValue(value interface{}) bool {
 	r.ni = NullInt64{ Valid: false }
 	r.nb = NullBool{ Valid: false }
 	r.nf = NullFloat64{ Valid: false }
-	r.ns = NullString{ Valid: false }
+	//r.ns = NullString{ Valid: false }
+	r.ns = NullString{ }
 	r.nt = NullTime{ Valid: false }
 	if nil == value { return r.setNil() }
 	if v, ok := value.(int); ok { return r.setInt64(int64(v)) }
@@ -142,9 +143,13 @@ func (r Nullable) GetInt64() *int64 {
 			// NullFloat64 converts to an int64
 			v := int64(r.nf.Float64)
 			return &v
-		case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
 			// NullString converts to an int64
-			if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil == err {
+			//if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil == err {
+			s := r.ns.GetValue()
+			if nil == s { return nil }
+			if vc, err := strconv.ParseInt(*s, 0, 64); nil == err {
 				return &vc
 			}
 		case NULLABLE_TIME==r.nullableType && r.nt.Valid:
@@ -169,14 +174,16 @@ func (r Nullable) GetBool() *bool {
 			// NullFloat64 converts to a bool (true if we drop the decimal and the remaining int != 0)
 			v := (int64(r.nf.Float64) != 0)
 			return &v
-		case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
 			// NullString converts to a bool (true if "true" or stringified int and != 0 )
-			lcv := strings.ToLower(r.ns.String)
-			if lcv == "true" {
-				v := true
-				return &v
-			}
-			if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil != err {
+			//lcv := strings.ToLower(r.ns.String)
+			s := r.ns.GetValue()
+			if nil == s { return nil }
+			lcv := strings.ToLower(*s)
+			if lcv == "true" { v := true; return &v }
+			//if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil != err {
+			if vc, err := strconv.ParseInt(*s, 0, 64); nil != err {
 				v := (vc != 0)
 				return &v
 			}
@@ -205,9 +212,13 @@ func (r Nullable) GetFloat64() *float64 {
 		case NULLABLE_FLOAT64==r.nullableType && r.nf.Valid:
 			// NullFloat64 passes through unmodified
 			return &r.nf.Float64
-		case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
 			// NullString converts to a Float64
-			if vc, err := strconv.ParseFloat(r.ns.String, 64); nil == err {
+			//if vc, err := strconv.ParseFloat(r.ns.String, 64); nil == err {
+			s := r.ns.GetValue()
+			if nil == s { return nil }
+			if vc, err := strconv.ParseFloat(*s, 64); nil == err {
 				return &vc
 			}
 		// NullTime conversion to a Float64 not supported
@@ -232,9 +243,11 @@ func (r Nullable) GetString() *string {
 			// NullFloat64 converts to a string
 			v := strconv.FormatFloat(r.nf.Float64, 'E', -1, 64)
 			return &v
-		case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
 			// NullString passes through unmodified
-			return &r.ns.String
+			//return &r.ns.String
+			return r.ns.GetValue()
 		case NULLABLE_TIME==r.nullableType && r.nt.Valid:
 			// NullTime converts to a string
 			// ref: https://stackoverflow.com/questions/33119748/convert-time-time-to-string
@@ -256,9 +269,13 @@ func (r Nullable) GetTime() *time.Time {
 			// NullFloat64 converts to an int64, then to a time
 			v := time.Unix(int64(r.nf.Float64), 0)
 			return &v
-		case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
+		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
 			// NullString parses as a datetime (MySQL style)
-			v, err := time.Parse("2006-01-02T15:04:05Z", r.ns.String)
+			s := r.ns.GetValue()
+			if nil == s { return nil }
+			//v, err := time.Parse("2006-01-02T15:04:05Z", r.ns.String)
+			v, err := time.Parse("2006-01-02T15:04:05Z", *s)
 			if nil != err { return nil }
 			return &v
 		case NULLABLE_TIME==r.nullableType && r.nt.Valid:
@@ -356,8 +373,9 @@ func (r *Nullable) setFloat64(value float64) bool {
 
 func (r *Nullable) setString(value string) bool {
 	r.nullableType = NULLABLE_STRING
-	r.ns.String = value
-	r.ns.Valid = true
+	//r.ns.String = value
+	r.ns.SetValue(&value)
+	//r.ns.Valid = true
 	r.isNil = false
 	return true
 }
