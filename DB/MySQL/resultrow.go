@@ -50,6 +50,8 @@ func NewResultRow() *ResultRow {
 // ResultRowIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// Get the named field value as a nullable from this ResultRow
+// Note: Defies "accept interfaces, return structs" convention to support multiple Nullable types
 func (r ResultRow) Get(field string) nullables.NullableIfc {
 	if value, ok := r.props.values[field]; ok { return &value }
 	return nil
