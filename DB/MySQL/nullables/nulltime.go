@@ -8,8 +8,30 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
+// NullTime has non-exported sql.NullTime, requires use of exported receiver functions to access
+type NullTimeIfc interface {
+	GetValue() *time
+	SetValue(value *time)
+}
+
 // NullTime is an alias for sql.NullTime data type which we extend
-type NullTime mysql.NullTime
+type NullTime struct {
+	n	mysql.NullTime
+}
+
+// -------------------------------------------------------------------------------------------------
+// NullString Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullTime) GetValue() *time.Time {
+	if ! r.n.Valid { return nil }
+	return &r.n.Time
+}
+
+func (r *NullTime) SetValue(value *time.Time) {
+	if nil != value { r.n.Time = *value }
+	r.n.Valid = (nil != value)
+}
 
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface

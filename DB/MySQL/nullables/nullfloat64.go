@@ -6,8 +6,29 @@ import (
 	"database/sql"
 )
 
-// NullFloat64 is an alias for sql.NullFloat64 data type which we extend
-type NullFloat64 sql.NullFloat64
+// NullFloat has non-exported sql.NullFloat, requires use of exported receiver functions to access
+type NullFloatIfc interface {
+	GetValue() *float64
+	SetValue(value *float64)
+}
+
+type NullFloat struct {
+	n	sql.NullFloat
+}
+
+// -------------------------------------------------------------------------------------------------
+// NullString Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullFloat) GetValue() *float64 {
+	if ! r.n.Valid { return nil }
+	return  &r.n.Float64
+}
+
+func (r *NullFloat) SetValue(value *float64) {
+	if nil != value { r.n.Float64 = *value }
+	r.n.Valid = (nil != value)
+}
 
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface

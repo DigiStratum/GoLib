@@ -6,8 +6,29 @@ import (
 	"database/sql"
 )
 
-// NullInt64 is an alias for sql.NullInt64 data type which we extend
-type NullInt64 sql.NullInt64
+// NullInt64 has non-exported sql.NullInt64, requires use of exported receiver functions to access
+type NullInt64Ifc interface {
+	GetValue() *int64
+	SetValue(value *int64)
+}
+
+type NullInt64 struct {
+	n	sql.NullInt64
+}
+
+// -------------------------------------------------------------------------------------------------
+// NullString Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullInt64) GetValue() *int64 {
+	if ! r.n.Valid { return nil }
+	return &r.n.Int64
+}
+
+func (r *NullInt64) SetValue(value *int64) {
+	if nil != value { r.n.Int64 = *value }
+	r.n.Valid = (nil != value)
+}
 
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface

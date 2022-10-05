@@ -9,7 +9,6 @@ import (
 type NullStringIfc interface {
 	GetValue() *string
 	SetValue(value *string)
-	IsValid() bool
 }
 
 // NullString has non-exported sql.NullString, requires use of exported receiver functions to access
@@ -30,10 +29,6 @@ func (r *NullString) GetValue() *string {
 func (r *NullString) SetValue(value *string) {
 	if nil != value { r.n.String = *value }
 	r.n.Valid = (nil != value)
-}
-
-func (r *NullString) IsValid() bool {
-	return r.n.Valid
 }
 
 // -------------------------------------------------------------------------------------------------

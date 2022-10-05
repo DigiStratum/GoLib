@@ -100,12 +100,16 @@ func (r Nullable) IsNil() bool { return r.isNil }
 // Convert value to appropriate Nullable; return true on success, else false
 func (r *Nullable) SetValue(value interface{}) bool {
 	// Set Valid=false property for each nullable; this indicates to base object that it is nil
-	r.ni = NullInt64{ Valid: false }
-	r.nb = NullBool{ Valid: false }
-	r.nf = NullFloat64{ Valid: false }
+	//r.ni = NullInt64{ Valid: false }
+	r.ni = NullInt64{ }
+	//r.nb = NullBool{ Valid: false }
+	r.nb = NullBool{ }
+	//r.nf = NullFloat64{ Valid: false }
+	r.nf = NullFloat64{ }
 	//r.ns = NullString{ Valid: false }
 	r.ns = NullString{ }
-	r.nt = NullTime{ Valid: false }
+	//r.nt = NullTime{ Valid: false }
+	r.nt = NullTime{ }
 	if nil == value { return r.setNil() }
 	if v, ok := value.(int); ok { return r.setInt64(int64(v)) }
 	if v, ok := value.(int8); ok { return r.setInt64(int64(v)) }
@@ -131,17 +135,25 @@ func (r *Nullable) IsTime() bool { return r.nullableType == NULLABLE_TIME }
 // Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
 func (r Nullable) GetInt64() *int64 {
 	switch {
-		case NULLABLE_INT64==r.nullableType && r.ni.Valid:
+		//case NULLABLE_INT64==r.nullableType && r.ni.Valid:
+		case NULLABLE_INT64==r.nullableType && r.ni.IsValid():
 			// NullInt64 passes through unmodified
-			return &r.ni.Int64
-		case NULLABLE_BOOL==r.nullableType && r.nb.Valid:
+			return r.ni.GetValue()
+		//case NULLABLE_BOOL==r.nullableType && r.nb.Valid:
+		case NULLABLE_BOOL==r.nullableType && r.nb.IsValid():
 			// NullBool converts to a int64
 			var v int64 = 0
+			//if r.nb.Bool { v = 1 }
+			b := r.nb.Bool { v = 1 }
 			if r.nb.Bool { v = 1 }
 			return &v
-		case NULLABLE_FLOAT64==r.nullableType && r.nf.Valid:
+		//case NULLABLE_FLOAT64==r.nullableType && r.nf.Valid:
+		case NULLABLE_FLOAT64==r.nullableType && r.nf.IsValid():
 			// NullFloat64 converts to an int64
-			v := int64(r.nf.Float64)
+			//v := int64(r.nf.Float64)
+			f := r.nf.GetValue()
+			if nil == f { return nil }
+			v := int64(f)
 			return &v
 		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
 		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
@@ -152,9 +164,10 @@ func (r Nullable) GetInt64() *int64 {
 			if vc, err := strconv.ParseInt(*s, 0, 64); nil == err {
 				return &vc
 			}
-		case NULLABLE_TIME==r.nullableType && r.nt.Valid:
+		//case NULLABLE_TIME==r.nullableType && r.nt.Valid:
+		case NULLABLE_TIME==r.nullableType && r.nt.IsValid():
 			// NullTime converts to an int64 (timestamp)
-			vc := r.nt.Time.Unix()
+			vc := r.nt.GetValue().Unix()
 			return &vc
 	}
 	return nil
