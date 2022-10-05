@@ -20,6 +20,16 @@ type NullTime struct {
 }
 
 // -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewNullTime(v *time.Time) *NullTime {
+	n := NullTime{}
+	n.SetValue(v)
+	return &n
+}
+
+// -------------------------------------------------------------------------------------------------
 // NullString Public Interface
 // -------------------------------------------------------------------------------------------------
 
@@ -28,9 +38,17 @@ func (r *NullTime) GetValue() *time.Time {
 	return &r.n.Time
 }
 
-func (r *NullTime) SetValue(value *time.Time) {
-	if nil != value { r.n.Time = *value }
+func (r *NullTime) SetValue(v *time.Time) {
+	if nil != v { r.n.Time = *value }
 	r.n.Valid = (nil != value)
+}
+
+// -------------------------------------------------------------------------------------------------
+// NullableValueIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullTime) GetType() NullableType {
+	return NULLABLE_TIME
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -53,32 +53,27 @@ const (
 	NULLABLE_TIME
 )
 
-type NullableIfc interface {
-	IsNil() bool
-	SetValue(value interface{}) bool
+type NullableValueIfc interface {
 	GetType() NullableType
-	IsInt64() bool
-        IsBool() bool
-        IsFloat64() bool
-        IsString() bool
-        IsTime() bool
-        GetInt64() *int64
-        GetBool() *bool
-        GetFloat64() *float64
-        GetString() *string
-        MarshalJSON() ([]byte, error)
-        UnmarshalJSON(b []byte) error
-        Scan(value interface{}) error
+}
+
+type NullableIfc interface {
+	SetValue(value interface{}) error
+	GetType() NullableType
+	GetInt64() *int64
+	GetBool() *bool
+	GetFloat64() *float64
+	GetString() *string
+	GetTime() *time.Time
+	// TODO: Do these still work for us if we don't declare them? The
+	// consumer can just assert the appropriate interface, que no?
+	//MarshalJSON() ([]byte, error)
+	//UnmarshalJSON(b []byte) error
+	//Scan(value interface{}) error
 }
 
 type Nullable struct {
-	isNil		bool
-	nullableType	NullableType
-	ni		NullInt64
-	nb		NullBool
-	nf		NullFloat64
-	ns		NullString
-	nt		NullTime
+	value	NullableValueIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -87,7 +82,8 @@ type Nullable struct {
 
 func NewNullable(value interface{}) *Nullable {
 	n := Nullable{}
-	if res := n.SetValue(value); res { return &n }
+	err := n.SetValue(value)
+	if nil == err { return &n }
 	return nil
 }
 
@@ -95,10 +91,20 @@ func NewNullable(value interface{}) *Nullable {
 // NullableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r Nullable) IsNil() bool { return r.isNil }
-
 // Convert value to appropriate Nullable; return true on success, else false
-func (r *Nullable) SetValue(value interface{}) bool {
+func (r *Nullable) SetValue(v interface{}) error {
+	switch t := v.(type) {
+		case nil: r.value = nil
+		case int, int8, int16, int32, int64: r.value = NewNullInt64(int64(v))
+		case float32, float64: r.value = NewNullFloat64(float64(v))
+		case bool: r.value = NewNullBool(bool(v))
+		case string: r.value = NewNullString(string(v))
+		// TODO: @HERE Do the others above like this; no need for setter func, add factory func for each type
+		case time.Time: r.value = NewNullTime(time.Time(v))
+		default: return fmt.Errorf("Supplied value did not match a supported type")
+	}
+	return nil
+	/*
 	// Set Valid=false property for each nullable; this indicates to base object that it is nil
 	//r.ni = NullInt64{ Valid: false }
 	r.ni = NullInt64{ }
@@ -122,41 +128,34 @@ func (r *Nullable) SetValue(value interface{}) bool {
 	if v, ok := value.(string); ok { return r.setString(v) }
 	if v, ok := value.(time.Time); ok { return r.setTime(v) }
 	return false
+	*/
 }
 
 func (r *Nullable) GetType() NullableType { return r.nullableType }
 
-func (r *Nullable) IsInt64() bool { return r.nullableType == NULLABLE_INT64 }
-func (r *Nullable) IsBool() bool { return r.nullableType == NULLABLE_BOOL }
-func (r *Nullable) IsFloat64() bool { return r.nullableType == NULLABLE_FLOAT64 }
-func (r *Nullable) IsString() bool { return r.nullableType == NULLABLE_STRING }
-func (r *Nullable) IsTime() bool { return r.nullableType == NULLABLE_TIME }
-
 // Return the value as an Int64, complete with data conversions, or nil if nil or conversion problem
 func (r Nullable) GetInt64() *int64 {
-	switch {
-		//case NULLABLE_INT64==r.nullableType && r.ni.Valid:
-		case NULLABLE_INT64==r.nullableType && r.ni.IsValid():
+	if nil == r.value { return nil }
+	nType := r.value.GetType()
+	switch nType {
+		case NULLABLE_INT64 == nType:
 			// NullInt64 passes through unmodified
 			return r.ni.GetValue()
-		//case NULLABLE_BOOL==r.nullableType && r.nb.Valid:
-		case NULLABLE_BOOL==r.nullableType && r.nb.IsValid():
+		case NULLABLE_BOOL == nType:
 			// NullBool converts to a int64
 			var v int64 = 0
 			//if r.nb.Bool { v = 1 }
 			b := r.nb.Bool { v = 1 }
 			if r.nb.Bool { v = 1 }
 			return &v
-		//case NULLABLE_FLOAT64==r.nullableType && r.nf.Valid:
-		case NULLABLE_FLOAT64==r.nullableType && r.nf.IsValid():
+		case NULLABLE_FLOAT64 == nType:
 			// NullFloat64 converts to an int64
 			//v := int64(r.nf.Float64)
 			f := r.nf.GetValue()
 			if nil == f { return nil }
 			v := int64(f)
 			return &v
-		//case NULLABLE_STRING==r.nullableType && r.ns.Valid:
-		case NULLABLE_STRING==r.nullableType && r.ns.IsValid():
+		case NULLABLE_STRING == nType:
 			// NullString converts to an int64
 			//if vc, err := strconv.ParseInt(r.ns.String, 0, 64); nil == err {
 			s := r.ns.GetValue()
@@ -164,8 +163,7 @@ func (r Nullable) GetInt64() *int64 {
 			if vc, err := strconv.ParseInt(*s, 0, 64); nil == err {
 				return &vc
 			}
-		//case NULLABLE_TIME==r.nullableType && r.nt.Valid:
-		case NULLABLE_TIME==r.nullableType && r.nt.IsValid():
+		case NULLABLE_TIME == nType:
 			// NullTime converts to an int64 (timestamp)
 			vc := r.nt.GetValue().Unix()
 			return &vc
@@ -385,19 +383,31 @@ func (r *Nullable) setFloat64(value float64) bool {
 }
 
 func (r *Nullable) setString(value string) bool {
+/*
 	r.nullableType = NULLABLE_STRING
 	//r.ns.String = value
 	r.ns.SetValue(&value)
 	//r.ns.Valid = true
 	r.isNil = false
 	return true
+*/
 }
 
-func (r *Nullable) setTime(value time.Time) bool {
+func (r *Nullable) setTime(v *time.Time) error {
+/*
 	r.nullableType = NULLABLE_TIME
 	r.nt.Time = value
 	r.nt.Valid = true
 	r.isNil = false
 	return true
+	r.nullableType
+*/
+	r.value = NewNullTime(v)
+	return nil
+}
+
+func (r *Nullable) setNil() error {
+	r.value = nil
+	return nil
 }
 

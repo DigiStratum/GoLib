@@ -17,7 +17,7 @@ type NullBool struct {
 }
 
 // -------------------------------------------------------------------------------------------------
-// NullString Public Interface
+// NullBoolIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *NullBool) GetValue() *bool {
@@ -28,6 +28,14 @@ func (r *NullBool) GetValue() *bool {
 func (r *NullBool) SetValue(value *bool) {
 	if nil != value { r.n.Bool = *value }
 	r.n.Valid = (nil != value)
+}
+
+// -------------------------------------------------------------------------------------------------
+// NullableValueIfc Public Interface
+// -------------------------------------------------------------------------------------------------
+
+func (r *NullBool) GetType() NullableType {
+	return NULLABLE_BOOL
 }
 
 // -------------------------------------------------------------------------------------------------
