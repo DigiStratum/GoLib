@@ -10,8 +10,8 @@ import (
 
 // NullTime has non-exported sql.NullTime, requires use of exported receiver functions to access
 type NullTimeIfc interface {
-	GetValue() *time
-	SetValue(value *time)
+	GetValue() *time.Time
+	SetValue(value *time.Time)
 }
 
 // NullTime is an alias for sql.NullTime data type which we extend
@@ -23,9 +23,9 @@ type NullTime struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewNullTime(v *time.Time) *NullTime {
+func NewNullTime(v time.Time) *NullTime {
 	n := NullTime{}
-	n.SetValue(v)
+	n.SetValue(&v)
 	return &n
 }
 
@@ -39,8 +39,8 @@ func (r *NullTime) GetValue() *time.Time {
 }
 
 func (r *NullTime) SetValue(v *time.Time) {
-	if nil != v { r.n.Time = *value }
-	r.n.Valid = (nil != value)
+	if nil != v { r.n.Time = *v }
+	r.n.Valid = (nil != v)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -49,6 +49,40 @@ func (r *NullTime) SetValue(v *time.Time) {
 
 func (r *NullTime) GetType() NullableType {
 	return NULLABLE_TIME
+}
+
+func (r *NullTime) GetInt64() *int64 {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	v := (*rv).Unix()
+	return &v
+}
+
+func (r *NullTime) GetBool() *bool {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	// Any non-nil NullTime converts to a bool=true
+	v := true
+	return &v
+}
+
+func (r *NullTime) GetFloat64() *float64 {
+	// NullTime conversion to a Float64 not supported
+	// (timestamp) would lose precision, so we will 0 it out, no value
+	return nil
+}
+
+func (r *NullTime) GetString() *string {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	// ref: https://stackoverflow.com/questions/33119748/convert-time-time-to-string
+	// ref: (so annoying...) https://pkg.go.dev/time#Time.Format
+	v := (*rv).Format("2006-01-02T15:04:05Z")
+	return &v
+}
+
+func (r *NullTime) GetTime() *time.Time {
+	return r.GetValue()
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -60,9 +94,8 @@ func (r *NullTime) Scan(value interface{}) error {
         if nil == r { return fmt.Errorf("NullTime.Scan() - cannot scan into nil receiver") }
 	var t mysql.NullTime
 	err := t.Scan(value)
-        r.Time = t.Time
-        r.Valid = t.Valid
-        if r.Valid { return nil }
+        r.n = t
+        if r.n.Valid { return nil }
         if nil != err { return err }
         return fmt.Errorf("NullTime.Scan() - Invalid result without error")
 
@@ -75,8 +108,8 @@ func (r *NullTime) Scan(value interface{}) error {
 func (r *NullTime) MarshalJSON() ([]byte, error) {
         // Nil reciever? Bogus request!
         if nil == r { return make([]byte, 0), fmt.Errorf("NullTime.MarshalJSON() - cannot make nothing into JSON") }
-	if ! r.Valid { return []byte("null"), nil }
-	val := fmt.Sprintf("\"%s\"", r.Time.Format(time.RFC3339))
+	if ! r.n.Valid { return []byte("null"), nil }
+	val := fmt.Sprintf("\"%s\"", r.n.Time.Format(time.RFC3339))
 	return []byte(val), nil
 }
 
@@ -92,7 +125,7 @@ func (r *NullTime) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); nil != err { return err }
 	// Then parse the string as a datetime per RFC3339 formatting
 	x, err := time.Parse(time.RFC3339, s)
-	r.Time = x
-        r.Valid = (nil == err)
+	r.n.Time = x
+        r.n.Valid = (nil == err)
 	return err
 }

@@ -2,6 +2,9 @@ package nullables
 
 import (
 	"fmt"
+	"time"
+	"strings"
+	"strconv"
 	"encoding/json"
 	"database/sql"
 )
@@ -17,11 +20,21 @@ type NullString struct {
 }
 
 // -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
+func NewNullString(value string) *NullString {
+	r := NullString{}
+	r.SetValue(&value)
+	return &r
+}
+
+// -------------------------------------------------------------------------------------------------
 // NullString Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r *NullString) GetValue() *string {
-	if ! r.IsValid() { return nil }
+	if ! r.n.Valid { return nil }
 	return  &r.n.String
 }
 
@@ -36,6 +49,45 @@ func (r *NullString) SetValue(value *string) {
 
 func (r *NullString) GetType() NullableType {
 	return NULLABLE_STRING
+}
+
+func (r *NullString) GetInt64() *int64 {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	if vc, err := strconv.ParseInt(*rv, 0, 64); nil == err { return &vc }
+	return nil
+}
+
+func (r *NullString) GetBool() *bool {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	// NullString converts to a bool (true if "true" or stringified int and != 0 )
+	var v bool;
+	lcv := strings.ToLower(*rv)
+	if lcv == "true" { v = true; return &v }
+	if vc, err := strconv.ParseInt(*rv, 0, 64); nil != err {
+		v = (vc != 0)
+		return &v
+	}
+	return &v
+}
+
+func (r *NullString) GetFloat64() *float64 {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	if vc, err := strconv.ParseFloat(*rv, 64); nil == err { return &vc }
+	return nil
+}
+
+func (r *NullString) GetString() *string {
+	return r.GetValue()
+}
+
+func (r *NullString) GetTime() *time.Time {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	if v, err := time.Parse("2006-01-02T15:04:05Z", *rv); nil == err { return &v }
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------

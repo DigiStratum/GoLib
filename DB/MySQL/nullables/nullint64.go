@@ -2,6 +2,7 @@ package nullables
 
 import (
 	"fmt"
+	"time"
 	"encoding/json"
 	"database/sql"
 )
@@ -14,6 +15,16 @@ type NullInt64Ifc interface {
 
 type NullInt64 struct {
 	n	sql.NullInt64
+}
+
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
+func NewNullInt64(value int64) *NullInt64 {
+	r := NullInt64{}
+	r.SetValue(&value)
+	return &r
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -38,6 +49,38 @@ func (r *NullInt64) GetType() NullableType {
 	return NULLABLE_INT64
 }
 
+func (r *NullInt64) GetInt64() *int64 {
+	return r.GetValue()
+}
+
+func (r *NullInt64) GetBool() *bool {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	v := (*rv == 1)
+	return &v
+}
+
+func (r *NullInt64) GetFloat64() *float64 {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	v := float64(*rv)
+	return &v
+}
+
+func (r *NullInt64) GetString() *string {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	v := fmt.Sprintf("%d", *rv)
+	return &v
+}
+
+func (r *NullInt64) GetTime() *time.Time {
+	rv := r.GetValue()
+	if nil == rv { return nil }
+	v := time.Unix(*rv, 0)
+	return &v
+}
+
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface
 // -------------------------------------------------------------------------------------------------
@@ -47,9 +90,9 @@ func (r *NullInt64) Scan(value interface{}) error {
 	if nil == r { return fmt.Errorf("NullInt64.Scan() - cannot scan into nil receiver") }
 	var i sql.NullInt64
 	err := i.Scan(value)
-	r.Int64 = i.Int64
-	r.Valid = i.Valid
-	if r.Valid { return nil }
+	r.n.Int64 = i.Int64
+	r.n.Valid = i.Valid
+	if r.n.Valid { return nil }
 	if nil != err { return err }
 	return fmt.Errorf("NullInt64.Scan() - Invalid result without error")
 }
@@ -61,8 +104,8 @@ func (r *NullInt64) Scan(value interface{}) error {
 func (r *NullInt64) MarshalJSON() ([]byte, error) {
 	// Nil reciever? Bogus request!
 	if nil == r { return make([]byte, 0), fmt.Errorf("NullInt64.MarshalJSON() - cannot make nothing into JSON") }
-	if ! r.Valid { return []byte("null"), nil }
-	return json.Marshal(r.Int64)
+	if ! r.n.Valid { return []byte("null"), nil }
+	return json.Marshal(r.n.Int64)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -72,7 +115,7 @@ func (r *NullInt64) MarshalJSON() ([]byte, error) {
 func (r *NullInt64) UnmarshalJSON(b []byte) error {
 	// Nil reciever? Bogus request!
 	if nil == r { return fmt.Errorf("NullInt64.UnmarshalJSON() - cannot decode JSON into nil receiver") }
-	err := json.Unmarshal(b, &r.Int64)
-	r.Valid = (nil == err)
+	err := json.Unmarshal(b, &r.n.Int64)
+	r.n.Valid = (nil == err)
 	return err
 }
