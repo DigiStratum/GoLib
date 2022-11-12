@@ -193,164 +193,6 @@ func TestThat_NewNullable_Returns_NullableTime_ForTime(t *testing.T) {
 	ExpectTrue(sut.GetType() == NULLABLE_TIME, t)
 }
 
-// Checkers
-
-func TestThat_Nullable_IsNil_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsNil()
-	actuali := suti.IsNil()
-	actualb := sutb.IsNil()
-	actualf := sutf.IsNil()
-	actualt := sutt.IsNil()
-	actuals := suts.IsNil()
-
-	// Verify
-	ExpectTrue(actualn, t)
-	ExpectFalse(actuali, t)
-	ExpectFalse(actualb, t)
-	ExpectFalse(actualf, t)
-	ExpectFalse(actualt, t)
-	ExpectFalse(actuals, t)
-}
-
-func TestThat_Nullable_IsInt64_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsInt64()
-	actuali := suti.IsInt64()
-	actualb := sutb.IsInt64()
-	actualf := sutf.IsInt64()
-	actualt := sutt.IsInt64()
-	actuals := suts.IsInt64()
-
-	// Verify
-	ExpectFalse(actualn, t)
-	ExpectTrue(actuali, t)
-	ExpectFalse(actualb, t)
-	ExpectFalse(actualf, t)
-	ExpectFalse(actualt, t)
-	ExpectFalse(actuals, t)
-}
-
-func TestThat_Nullable_IsBool_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsBool()
-	actuali := suti.IsBool()
-	actualb := sutb.IsBool()
-	actualf := sutf.IsBool()
-	actualt := sutt.IsBool()
-	actuals := suts.IsBool()
-
-	// Verify
-	ExpectFalse(actualn, t)
-	ExpectFalse(actuali, t)
-	ExpectTrue(actualb, t)
-	ExpectFalse(actualf, t)
-	ExpectFalse(actualt, t)
-	ExpectFalse(actuals, t)
-}
-
-func TestThat_Nullable_IsFloat64_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsFloat64()
-	actuali := suti.IsFloat64()
-	actualb := sutb.IsFloat64()
-	actualf := sutf.IsFloat64()
-	actualt := sutt.IsFloat64()
-	actuals := suts.IsFloat64()
-
-	// Verify
-	ExpectFalse(actualn, t)
-	ExpectFalse(actuali, t)
-	ExpectFalse(actualb, t)
-	ExpectTrue(actualf, t)
-	ExpectFalse(actualt, t)
-	ExpectFalse(actuals, t)
-}
-
-func TestThat_Nullable_IsTime_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsTime()
-	actuali := suti.IsTime()
-	actualb := sutb.IsTime()
-	actualf := sutf.IsTime()
-	actualt := sutt.IsTime()
-	actuals := suts.IsTime()
-
-	// Verify
-	ExpectFalse(actualn, t)
-	ExpectFalse(actuali, t)
-	ExpectFalse(actualb, t)
-	ExpectFalse(actualf, t)
-	ExpectTrue(actualt, t)
-	ExpectFalse(actuals, t)
-}
-
-func TestThat_Nullable_IsString_Returns_ExpectedResult_ForEachNullableType(t *testing.T) {
-	// Setup
-	sutn := NewNullable(nil)
-	suti := NewNullable(333)
-	sutb := NewNullable(true)
-	sutf := NewNullable(3.3)
-	sutt := NewNullable(time.Now())
-	suts := NewNullable("super stringy!")
-
-	// Test
-	actualn := sutn.IsString()
-	actuali := suti.IsString()
-	actualb := sutb.IsString()
-	actualf := sutf.IsString()
-	actualt := sutt.IsString()
-	actuals := suts.IsString()
-
-	// Verify
-	ExpectFalse(actualn, t)
-	ExpectFalse(actuali, t)
-	ExpectFalse(actualb, t)
-	ExpectFalse(actualf, t)
-	ExpectFalse(actualt, t)
-	ExpectTrue(actuals, t)
-}
-
 // Getters
 
 func TestThat_Nullable_GetInt64_Returns_Nil_ForNilValue(t *testing.T) {
@@ -374,7 +216,7 @@ func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForInt64Value(t *testing.T)
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 333, t)
-	ExpectTrue(sut.IsInt64(), t)
+	ExpectTrue(sut.GetType() == NULLABLE_INT64, t)
 }
 
 func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForBoolValue(t *testing.T) {
@@ -389,10 +231,10 @@ func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForBoolValue(t *testing.T) 
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectInt64(*actual0, 0, t)
-	ExpectTrue(sut0.IsBool(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_BOOL, t)
 	ExpectNonNil(actual1, t)
 	ExpectInt64(*actual1, 1, t)
-	ExpectTrue(sut1.IsBool(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_BOOL, t)
 }
 
 func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForFloatValue(t *testing.T) {
@@ -407,10 +249,10 @@ func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForFloatValue(t *testing.T)
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectInt64(*actual0, 0, t)
-	ExpectTrue(sut0.IsFloat64(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_FLOAT64, t)
 	ExpectNonNil(actual1, t)
 	ExpectInt64(*actual1, 1, t)
-	ExpectTrue(sut1.IsFloat64(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_FLOAT64, t)
 }
 
 func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForStringValue(t *testing.T) {
@@ -423,7 +265,7 @@ func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForStringValue(t *testing.T
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 333, t)
-	ExpectTrue(sut.IsString(), t)
+	ExpectTrue(sut.GetType() == NULLABLE_STRING, t)
 }
 
 func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForTimeValue(t *testing.T) {
@@ -437,7 +279,7 @@ func TestThat_Nullable_GetInt64_Returns_ValuePointer_ForTimeValue(t *testing.T) 
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectInt64(*actual, 1652385000, t)
-	ExpectTrue(sut.IsTime(), t)
+	ExpectTrue(sut.GetType() == NULLABLE_TIME, t)
 }
 
 func TestThat_Nullable_GetBool_Returns_Nil_ForNilValue(t *testing.T) {
@@ -463,10 +305,10 @@ func TestThat_Nullable_GetBool_Returns_ValuePointer_ForBoolValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectFalse(*actual0, t)
-	ExpectTrue(sut0.IsBool(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_BOOL, t)
 	ExpectNonNil(actual1, t)
 	ExpectTrue(*actual1, t)
-	ExpectTrue(sut1.IsBool(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_BOOL, t)
 }
 
 func TestThat_Nullable_GetBool_Returns_ValuePointer_ForInt64Value(t *testing.T) {
@@ -481,10 +323,10 @@ func TestThat_Nullable_GetBool_Returns_ValuePointer_ForInt64Value(t *testing.T) 
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectFalse(*actual0, t)
-	ExpectTrue(sut0.IsInt64(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_INT64, t)
 	ExpectNonNil(actual1, t)
 	ExpectTrue(*actual1, t)
-	ExpectTrue(sut1.IsInt64(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_INT64, t)
 }
 
 func TestThat_Nullable_GetBool_Returns_ValuePointer_ForFloat64Value(t *testing.T) {
@@ -499,10 +341,10 @@ func TestThat_Nullable_GetBool_Returns_ValuePointer_ForFloat64Value(t *testing.T
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectFalse(*actual0, t)
-	ExpectTrue(sut0.IsFloat64(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_FLOAT64, t)
 	ExpectNonNil(actual1, t)
 	ExpectTrue(*actual1, t)
-	ExpectTrue(sut1.IsFloat64(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_FLOAT64, t)
 }
 
 func TestThat_Nullable_GetBool_Returns_ValuePointer_ForStringValue(t *testing.T) {
@@ -517,10 +359,10 @@ func TestThat_Nullable_GetBool_Returns_ValuePointer_ForStringValue(t *testing.T)
 	// Verify
 	ExpectNonNil(actual0, t)
 	ExpectFalse(*actual0, t)
-	ExpectTrue(sut0.IsString(), t)
+	ExpectTrue(sut0.GetType() == NULLABLE_STRING, t)
 	ExpectNonNil(actual1, t)
 	ExpectTrue(*actual1, t)
-	ExpectTrue(sut1.IsString(), t)
+	ExpectTrue(sut1.GetType() == NULLABLE_STRING, t)
 }
 
 func TestThat_Nullable_GetBool_Returns_ValuePointer_ForTimeValue(t *testing.T) {
@@ -534,7 +376,7 @@ func TestThat_Nullable_GetBool_Returns_ValuePointer_ForTimeValue(t *testing.T) {
 	// Verify
 	ExpectNonNil(actual, t)
 	ExpectTrue(*actual, t)
-	ExpectTrue(sut.IsTime(), t)
+	ExpectTrue(sut.GetType() == NULLABLE_TIME, t)
 }
 
 func TestThat_Nullable_GetFloat64_Returns_Nil_ForNilValue(t *testing.T) {
@@ -834,28 +676,28 @@ func TestThat_Nullable_UmmarshalJSON_Returns_JSONByteSliceWithoutError_ForEachNu
 
 	ExpectNoError(err2, t)
 	ExpectNonNil(actuali, t)
-	ExpectTrue(suti.IsInt64(), t)
+	ExpectTrue(suti.GetType() == NULLABLE_INT64, t)
 	ExpectInt64(444, *actuali, t)
 
 	ExpectNoError(err3, t)
 	ExpectNonNil(actualb, t)
-	ExpectTrue(sutb.IsBool(), t)
+	ExpectTrue(sutb.GetType() == NULLABLE_BOOL, t)
 	ExpectFalse(*actualb, t)
 
 	ExpectNoError(err4, t)
 	ExpectNonNil(actualf, t)
-	ExpectTrue(sutf.IsFloat64(), t)
+	ExpectTrue(sutf.GetType() == NULLABLE_FLOAT64, t)
 	ExpectFloat64(4.4, *actualf, t)
 
 	ExpectNoError(err5, t)
 	ExpectNonNil(actualt, t)
-	ExpectTrue(sutt.IsTime(), t)
+	ExpectTrue(sutt.GetType() == NULLABLE_TIME, t)
 	actualStr := (*actualt).Format("2006-01-02T15:04:05Z")
 	ExpectString("2000-01-02T12:34:56Z", actualStr, t)
 
 	ExpectNoError(err6, t)
 	ExpectNonNil(actuals, t)
-	ExpectTrue(suts.IsString(), t)
+	ExpectTrue(suts.GetType() == NULLABLE_STRING, t)
 	ExpectString("silly string!", *actuals, t)
 }
 
@@ -893,29 +735,29 @@ func TestThat_Nullable_Scan_Returns_WithoutError_ForEachNullableType(t *testing.
 
 	ExpectNoError(err2, t)
 	ExpectNonNil(actuali, t)
-	ExpectTrue(suti.IsInt64(), t)
+	ExpectTrue(suti.GetType() == NULLABLE_INT64, t)
 	ExpectInt64(expectedi, *actuali, t)
 
 	ExpectNoError(err3, t)
 	ExpectNonNil(actualb, t)
-	ExpectTrue(sutb.IsBool(), t)
+	ExpectTrue(sutb.GetType() == NULLABLE_BOOL, t)
 	ExpectBool(expectedb, *actualb, t)
 
 	ExpectNoError(err4, t)
 	ExpectNonNil(actualf, t)
-	ExpectTrue(sutf.IsFloat64(), t)
+	ExpectTrue(sutf.GetType() == NULLABLE_FLOAT64, t)
 	ExpectFloat64(expectedf, *actualf, t)
 
 	ExpectNoError(err5, t)
 	ExpectNonNil(actualt, t)
-	ExpectTrue(sutt.IsTime(), t)
+	ExpectTrue(sutt.GetType() == NULLABLE_TIME, t)
 	actualStr := (*actualt).Format("2006-01-02T15:04:05Z")
 	expectedStr := (expectedt).Format("2006-01-02T15:04:05Z")
 	ExpectString(expectedStr, actualStr, t)
 
 	ExpectNoError(err6, t)
 	ExpectNonNil(actuals, t)
-	ExpectTrue(suts.IsString(), t)
+	ExpectTrue(suts.GetType() == NULLABLE_STRING, t)
 	ExpectString(expecteds, *actuals, t)
 }
 
@@ -943,22 +785,22 @@ func TestThat_Nullable_Scan_Returns_Error_ForEachNullableType(t *testing.T) {
 	// Verify
 	ExpectError(err1, t)
 	ExpectNil(actuali, t)
-	ExpectTrue(suti.IsInt64(), t)
+	ExpectTrue(suti.GetType() == NULLABLE_INT64, t)
 
 	ExpectError(err2, t)
 	ExpectNil(actualb, t)
-	ExpectTrue(sutb.IsBool(), t)
+	ExpectTrue(sutb.GetType() == NULLABLE_BOOL, t)
 
 	ExpectError(err3, t)
 	ExpectNil(actualf, t)
-	ExpectTrue(sutf.IsFloat64(), t)
+	ExpectTrue(sutf.GetType() == NULLABLE_FLOAT64, t)
 
 	ExpectError(err4, t)
 	ExpectNil(actualt, t)
-	ExpectTrue(sutt.IsTime(), t)
+	ExpectTrue(sutt.GetType() == NULLABLE_TIME, t)
 
 	ExpectError(err5, t)
 	ExpectNil(actuals, t)
-	ExpectTrue(suts.IsString(), t)
+	ExpectTrue(suts.GetType() == NULLABLE_STRING, t)
 }
 

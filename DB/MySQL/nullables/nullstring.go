@@ -90,6 +90,10 @@ func (r *NullString) GetTime() *time.Time {
 	return nil
 }
 
+func (r *NullString) IsNil() bool {
+	return (nil == r.GetValue())
+}
+
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface
 // -------------------------------------------------------------------------------------------------

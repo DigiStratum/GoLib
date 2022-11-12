@@ -59,6 +59,7 @@ type NullableValueIfc interface {
 	GetFloat64() *float64
 	GetString() *string
 	GetTime() *time.Time
+	IsNil() bool
 	Scan(value interface{}) error
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
@@ -66,10 +67,6 @@ type NullableValueIfc interface {
 
 type NullableIfc interface {
 	NullableValueIfc
-	//SetValue(value interface{}) error
-	//MarshalJSON() ([]byte, error)
-	//UnmarshalJSON(b []byte) error
-	//Scan(value interface{}) error
 }
 
 type Nullable struct {
@@ -95,8 +92,13 @@ func NewNullable(value interface{}) *Nullable {
 func (r *Nullable) SetValue(v interface{}) error {
 	switch v.(type) {
 		case nil: r.value = nil
-		case int, int8, int16, int32, int64: r.value = NewNullInt64(v.(int64))
-		case float32, float64: r.value = NewNullFloat64(v.(float64))
+		case int: r.value = NewNullInt64(int64(v.(int)))
+		case int8: r.value = NewNullInt64(int64(v.(int8)))
+		case int16: r.value = NewNullInt64(int64(v.(int16)))
+		case int32: r.value = NewNullInt64(int64(v.(int32)))
+		case int64: r.value = NewNullInt64(v.(int64))
+		case float32: r.value = NewNullFloat64(float64(v.(float32)))
+		case float64: r.value = NewNullFloat64(v.(float64))
 		case bool: r.value = NewNullBool(v.(bool))
 		case string: r.value = NewNullString(v.(string))
 		case time.Time: r.value = NewNullTime(v.(time.Time))
@@ -110,29 +112,34 @@ func (r *Nullable) GetType() NullableType {
 	return r.value.GetType()
 }
 
-func (r Nullable) GetInt64() *int64 {
+func (r *Nullable) GetInt64() *int64 {
 	if nil == r.value { return nil }
 	return r.value.GetInt64()
 }
 
-func (r Nullable) GetBool() *bool {
+func (r *Nullable) GetBool() *bool {
 	if nil == r.value { return nil }
 	return r.value.GetBool()
 }
 
-func (r Nullable) GetFloat64() *float64 {
+func (r *Nullable) GetFloat64() *float64 {
 	if nil == r.value { return nil }
 	return r.value.GetFloat64()
 }
 
-func (r Nullable) GetString() *string {
+func (r *Nullable) GetString() *string {
 	if nil == r.value { return nil }
 	return r.value.GetString()
 }
 
-func (r Nullable) GetTime() *time.Time {
+func (r *Nullable) GetTime() *time.Time {
 	if nil == r.value { return nil }
 	return r.value.GetTime()
+}
+
+func (r *Nullable) IsNil() bool {
+	if nil == r.value { return true }
+	return r.value.IsNil()
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -142,14 +149,14 @@ func (r Nullable) GetTime() *time.Time {
 // Scan for Nullable - we just sub it out to the underlying Nullable type
 func (r *Nullable) Scan(value interface{}) error {
 	if nil == r.value { return nil }
-	return r.Scan(value)
+	return r.value.Scan(value)
 }
 
 // -------------------------------------------------------------------------------------------------
 // encoding/json.Marshaler Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r Nullable) MarshalJSON() ([]byte, error) {
+func (r *Nullable) MarshalJSON() ([]byte, error) {
 	if (r.value == nil) || (r.value.GetType() == NULLABLE_NIL) { return []byte("null"), nil }
 	return r.value.MarshalJSON()
 }
@@ -163,63 +170,3 @@ func (r *Nullable) UnmarshalJSON(b []byte) error {
 	return r.value.UnmarshalJSON(b)
 }
 
-/*
-// -------------------------------------------------------------------------------------------------
-// Nullable private supporting functions
-// -------------------------------------------------------------------------------------------------
-
-func (r *Nullable) setNil() bool {
-	r.nullableType = NULLABLE_NIL
-	r.isNil = true
-	return true
-}
-
-func (r *Nullable) setInt64(value int64) bool {
-	r.nullableType = NULLABLE_INT64
-	r.ni.Int64 = value
-	r.ni.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setBool(value bool) bool {
-	r.nullableType = NULLABLE_BOOL
-	r.nb.Bool = value
-	r.nb.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setFloat64(value float64) bool {
-	r.nullableType = NULLABLE_FLOAT64
-	r.nf.Float64 = value
-	r.nf.Valid = true
-	r.isNil = false
-	return true
-}
-
-func (r *Nullable) setString(value string) bool {
-//	r.nullableType = NULLABLE_STRING
-//	//r.ns.String = value
-//	r.ns.SetValue(&value)
-//	//r.ns.Valid = true
-//	r.isNil = false
-//	return true
-}
-
-func (r *Nullable) setTime(v *time.Time) error {
-//	r.nullableType = NULLABLE_TIME
-//	r.nt.Time = value
-//	r.nt.Valid = true
-//	r.isNil = false
-//	return true
-//	r.nullableType
-	r.value = NewNullTime(v)
-	return nil
-}
-
-func (r *Nullable) setNil() error {
-	r.value = nil
-	return nil
-}
-*/

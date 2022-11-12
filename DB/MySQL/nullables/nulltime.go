@@ -85,6 +85,10 @@ func (r *NullTime) GetTime() *time.Time {
 	return r.GetValue()
 }
 
+func (r *NullTime) IsNil() bool {
+	return (nil == r.GetValue())
+}
+
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface
 // -------------------------------------------------------------------------------------------------

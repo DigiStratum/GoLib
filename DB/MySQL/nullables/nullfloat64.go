@@ -83,6 +83,10 @@ func (r *NullFloat64) GetTime() *time.Time {
 	return &v
 }
 
+func (r *NullFloat64) IsNil() bool {
+	return (nil == r.GetValue())
+}
+
 // -------------------------------------------------------------------------------------------------
 // database/sql.Scanner Public Interface
 // -------------------------------------------------------------------------------------------------
@@ -92,9 +96,9 @@ func (r *NullFloat64) Scan(value interface{}) error {
 	if nil == r { return fmt.Errorf("NullFloat64.Scan() - cannot scan into nil receiver") }
 	var f sql.NullFloat64
 	err := f.Scan(value)
-	r.Float64 = f.Float64
-	r.Valid = f.Valid
-	if r.Valid { return nil }
+	r.n.Float64 = f.Float64
+	r.n.Valid = f.Valid
+	if r.n.Valid { return nil }
 	if nil != err { return err }
 	return fmt.Errorf("NullFloat64.Scan() - Invalid result without error")
 }
@@ -106,8 +110,8 @@ func (r *NullFloat64) Scan(value interface{}) error {
 func (r *NullFloat64) MarshalJSON() ([]byte, error) {
 	// Nil reciever? Bogus request!
 	if nil == r { return make([]byte, 0), fmt.Errorf("NullFloat64.MarshalJSON() - cannot make nothing into JSON") }
-	if ! r.Valid { return []byte("null"), nil }
-	return json.Marshal(r.Float64)
+	if ! r.n.Valid { return []byte("null"), nil }
+	return json.Marshal(r.n.Float64)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -117,8 +121,8 @@ func (r *NullFloat64) MarshalJSON() ([]byte, error) {
 func (r *NullFloat64) UnmarshalJSON(b []byte) error {
 	// Nil reciever? Bogus request!
 	if nil == r { return fmt.Errorf("NullFloat64.UnmarshalJSON() - cannot decode JSON into nil receiver") }
-	err := json.Unmarshal(b, &r.Float64)
-	r.Valid = (nil == err)
+	err := json.Unmarshal(b, &r.n.Float64)
+	r.n.Valid = (nil == err)
 	return err
 }
 
