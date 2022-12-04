@@ -67,6 +67,11 @@ type NullableValueIfc interface {
 
 type NullableIfc interface {
 	NullableValueIfc
+	GetInt64Default(d int64) int64
+	GetBoolDefault(d bool) bool
+	GetFloat64Default(d float64) float64
+	GetStringDefault(d string) string
+	GetTimeDefault(d time.Time) time.Time
 }
 
 type Nullable struct {
@@ -117,9 +122,21 @@ func (r *Nullable) GetInt64() *int64 {
 	return r.value.GetInt64()
 }
 
+func (r *Nullable) GetInt64Default(d int64) int64 {
+	if (nil == r) { return d }
+	if v := r.GetInt64(); (nil != v) { return *v }
+	return d;
+}
+
 func (r *Nullable) GetBool() *bool {
 	if nil == r.value { return nil }
 	return r.value.GetBool()
+}
+
+func (r *Nullable) GetBoolDefault(d bool) bool {
+	if (nil == r) { return d }
+	if v := r.GetBool(); (nil != v) { return *v }
+	return d;
 }
 
 func (r *Nullable) GetFloat64() *float64 {
@@ -127,14 +144,32 @@ func (r *Nullable) GetFloat64() *float64 {
 	return r.value.GetFloat64()
 }
 
+func (r *Nullable) GetFloat64Default(d float64) float64 {
+	if (nil == r) { return d }
+	if v := r.GetFloat64(); (nil != v) { return *v }
+	return d;
+}
+
 func (r *Nullable) GetString() *string {
 	if nil == r.value { return nil }
 	return r.value.GetString()
 }
 
+func (r *Nullable) GetStringDefault(d string) string {
+	if (nil == r) { return d }
+	if v := r.GetString(); (nil != v) { return *v }
+	return d;
+}
+
 func (r *Nullable) GetTime() *time.Time {
 	if nil == r.value { return nil }
 	return r.value.GetTime()
+}
+
+func (r *Nullable) GetTimeDefault(d time.Time) time.Time {
+	if (nil == r) { return d }
+	if v := r.GetTime(); (nil != v) { return *v }
+	return d;
 }
 
 func (r *Nullable) IsNil() bool {
