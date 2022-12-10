@@ -15,6 +15,7 @@ import (
 	gojson "encoding/json"
 
 	"github.com/DigiStratum/GoLib/Data/json"
+	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type KeyValuePair struct {
@@ -42,6 +43,7 @@ type HashMapIfc interface {
 	DropSet(keys *[]string) *HashMap
 	GetIterator() func () interface{}
 	ToJson() (*string, error)
+	ToLog(logger log.LoggerIfc, level log.LogLevel, label string)
 }
 
 type HashMap struct {
@@ -193,6 +195,13 @@ func (r *HashMap) DropSet(keys *[]string) *HashMap {
 	if nil == keys { return r }
 	for _, k := range *keys { r.Drop(k) }
 	return r
+}
+
+// Dump JSON-like representation of our entries in readable form to supplied logger
+func (r *HashMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) {
+	if nil == logger { return }
+	logger.Any(level, "\"%s\": {", label)
+	for k, v := range r.hash { logger.Any(level, "\"%s\": \"%s\"", k, v) }
 }
 
 // -------------------------------------------------------------------------------------------------
