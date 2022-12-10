@@ -1,10 +1,11 @@
 package logwriter
 
+// StdOut LogWriter
+
 import (
 	"fmt"
 )
 
-// StdOut LogWriter
 type StdOutLogWriter struct {}
 
 // -------------------------------------------------------------------------------------------------
@@ -20,6 +21,7 @@ func NewStdOutLogWriter() *StdOutLogWriter {
 // LogWriterIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r StdOutLogWriter) Log(message string) {
-	fmt.Println(message)
+func (r StdOutLogWriter) Log(format string, a ...interface{}) {
+	fmt.Println(fmt.Sprintf(format, a...))
 }
+

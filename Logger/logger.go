@@ -15,8 +15,9 @@ just that, as needed.
 
 TODO:
  * Add support to connect log output to a file, database, or API (event stream), etc
+ * Add support for multiple LogWriter's so that we can send logs to more than one place
 
-*/
+ */
 
 import (
 	"fmt"
@@ -29,6 +30,7 @@ type LoggerIfc interface {
 	SetMinLogLevel(minLogLevel LogLevel)
 	SetLogWriter(logWriter lw.LogWriterIfc)
 	LogTimestamp(logTimestamp bool)
+	Any(level LogLevel, format string, a ...interface{}) error
 	Crazy(format string, a ...interface{}) error
 	Trace(format string, a ...interface{}) error
 	Debug(format string, a ...interface{}) error
@@ -41,8 +43,8 @@ type LoggerIfc interface {
 type Logger struct {
 	streamId	string			// Quasi-distinct streamId to filter log output by thread
 	minLogLevel	LogLevel		// The minimum logging level
-	logWriter	lw.LogWriterIfc		// The LogWriter we are going to use (TODO: Add support for multiple)
-	logTimestamp	bool			// Conditionally disable timestamps on the log output (consumer may do this for us)
+	logWriter	lw.LogWriterIfc		// The LogWriter we are going to use
+	logTimestamp	bool			// Add timestamps on the log output (default=true)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -51,7 +53,7 @@ type Logger struct {
 
 var loggerInstance Logger
 
-// Automagically set up our singleton
+// Automagically set up our default singleton
 func init() {
 	// Default log streamId is our instantiation timestamp
 	streamId := fmt.Sprintf("%d", time.Now().UTC().UnixNano())
@@ -88,7 +90,6 @@ func (r *Logger) SetMinLogLevel(minLogLevel LogLevel) {
 }
 
 // Replace the current LogWriter with something more to our liking
-// TODO: Add support for multiple LogWriter's so that we can send logs to more than one place
 func (r *Logger) SetLogWriter(logWriter lw.LogWriterIfc) {
 	r.logWriter = logWriter
 }
@@ -98,47 +99,8 @@ func (r *Logger) LogTimestamp(logTimestamp bool) {
 	r.logTimestamp = logTimestamp
 }
 
-// Log CRAZY output
-func (r Logger) Crazy(format string, a ...interface{}) error {
-	return r.log(CRAZY, format, a...)
-}
-
-// Log TRACE output
-func (r Logger) Trace(format string, a ...interface{}) error {
-	return r.log(TRACE, format, a...)
-}
-
-// Log DEBUG output
-func (r Logger) Debug(format string, a ...interface{}) error {
-	return r.log(DEBUG, format, a...)
-}
-
-// Log INFO output
-func (r Logger) Info(format string, a ...interface{}) error {
-	return r.log(INFO, format, a...)
-}
-
-// Log WARN output
-func (r Logger) Warn(format string, a ...interface{}) error {
-	return r.log(WARN, format, a...)
-}
-
-// Log ERROR output
-func (r Logger) Error(format string, a ...interface{}) error {
-	return r.log(ERROR, format, a...)
-}
-
-// Log FATAL output (caller should exit/panic after this)
-func (r Logger) Fatal(format string, a ...interface{}) error {
-	return r.log(FATAL, format, a...)
-}
-
-// -------------------------------------------------------------------------------------------------
-// Logger Private Interface
-// -------------------------------------------------------------------------------------------------
-
 // Log some output; return a matching error for WARN|ERROR|FATAL, else nil
-func (r Logger) log(level LogLevel, format string, a ...interface{}) error {
+func (r Logger) Any(level LogLevel, format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
 	logMsg := fmt.Sprintf("%5s %s", level.ToString(), msg)
 	if level >= r.minLogLevel {
@@ -159,3 +121,39 @@ func (r Logger) log(level LogLevel, format string, a ...interface{}) error {
 	if level >= WARN { return errors.New(logMsg) }
 	return nil
 }
+
+// Log CRAZY output
+func (r Logger) Crazy(format string, a ...interface{}) error {
+	return r.Any(CRAZY, format, a...)
+}
+
+// Log TRACE output
+func (r Logger) Trace(format string, a ...interface{}) error {
+	return r.Any(TRACE, format, a...)
+}
+
+// Log DEBUG output
+func (r Logger) Debug(format string, a ...interface{}) error {
+	return r.Any(DEBUG, format, a...)
+}
+
+// Log INFO output
+func (r Logger) Info(format string, a ...interface{}) error {
+	return r.Any(INFO, format, a...)
+}
+
+// Log WARN output
+func (r Logger) Warn(format string, a ...interface{}) error {
+	return r.Any(WARN, format, a...)
+}
+
+// Log ERROR output
+func (r Logger) Error(format string, a ...interface{}) error {
+	return r.Any(ERROR, format, a...)
+}
+
+// Log FATAL output (caller should exit/panic after this)
+func (r Logger) Fatal(format string, a ...interface{}) error {
+	return r.Any(FATAL, format, a...)
+}
+

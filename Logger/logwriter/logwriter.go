@@ -1,5 +1,5 @@
 package logwriter
 
 type LogWriterIfc interface {
-	Log(message string)
+	Log(format string, a ...interface{})
 }

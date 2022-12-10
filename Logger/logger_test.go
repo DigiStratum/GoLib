@@ -1,17 +1,17 @@
 package logger
 
 import(
-//	"fmt"
+	"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-var LastMessage *string
+var LastMessage string
 type mockLogWriter struct { }
 
-func (r mockLogWriter) Log(message string) {
-	LastMessage = &message
+func (r mockLogWriter) Log(format string, a ...interface{}) {
+	LastMessage = fmt.Sprintf(format, a...)
 }
 
 func TestThat_GetLogger_ReturnsSomething(t *testing.T) {
@@ -41,9 +41,8 @@ func TestThat_Logger_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 	sut.Error(expectedMessage)
 
 	// Verify
-	ExpectNonNil(LastMessage, t)
 	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
-	ExpectMatch("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}-\\d{2}:\\d{2}\\s*thread:\\d+\\s+ERROR test message$", *LastMessage, t)
+	ExpectMatch("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}-\\d{2}:\\d{2}\\s*thread:\\d+\\s+ERROR test message$", LastMessage, t)
 }
 
 func TestThat_Logger_LogTimestamp_EliminatesTimestampFromMessages(t *testing.T) {
@@ -58,9 +57,8 @@ func TestThat_Logger_LogTimestamp_EliminatesTimestampFromMessages(t *testing.T) 
 	sut.Error(expectedMessage)
 
 	// Verify
-	ExpectNonNil(LastMessage, t)
 	// Actual: thread:1652972604971037495 ERROR test message
-	ExpectMatch("^thread:\\d+\\s+ERROR test message$", *LastMessage, t)
+	ExpectMatch("^thread:\\d+\\s+ERROR test message$", LastMessage, t)
 }
 
 
@@ -78,12 +76,12 @@ func TestThat_Logger_DefaultMinLogLevel_SuppressesLogLevelsBelowDefault(t *testi
 	actualMessageAbove := LastMessage
 
 	// Verify
-	ExpectNil(actualMessageBelow, t)
-	ExpectNonNil(actualMessageAt, t)
-	ExpectNonNil(actualMessageAbove, t)
+	ExpectEmptyString(actualMessageBelow, t)
+	ExpectNonEmptyString(actualMessageAt, t)
+	ExpectNonEmptyString(actualMessageAbove, t)
 	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR|INFO test message
-	ExpectMatch("^.*INFO test message$", *actualMessageAt, t)
-	ExpectMatch("^.*ERROR test message$", *actualMessageAbove, t)
+	ExpectMatch("^.*INFO test message$", actualMessageAt, t)
+	ExpectMatch("^.*ERROR test message$", actualMessageAbove, t)
 }
 
 func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *testing.T) {
@@ -94,19 +92,19 @@ func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *t
 	// Test / Verify
 	sut.SetMinLogLevel(CRAZY)
 	sut.Fatal(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Error(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Warn(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Info(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Debug(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Trace(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 	sut.Crazy(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 }
 
 func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
@@ -117,19 +115,19 @@ func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
 	// Test / Verify
 	sut.SetMinLogLevel(FATAL)
 	sut.Error(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Warn(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Info(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Debug(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Trace(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Crazy(expectedMessage)
-	ExpectNil(LastMessage, t)
+	ExpectEmptyString(LastMessage, t)
 	sut.Fatal(expectedMessage)
-	ExpectNonNil(LastMessage, t)
+	ExpectNonEmptyString(LastMessage, t)
 }
 
 func TestThat_Logger_ErrorsReturnedOverWarnLevel(t *testing.T) {
@@ -158,7 +156,7 @@ func TestThat_Logger_ErrorsReturnedOverWarnLevel(t *testing.T) {
 func getMockedLogger() *Logger {
 	var sut *Logger = GetLogger()
 	sut.SetLogWriter(mockLogWriter{})
-	LastMessage = nil
+	LastMessage = ""
 	return sut
 }
 
