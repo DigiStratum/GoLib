@@ -2,7 +2,6 @@ package restapi
 
 import(
 	"fmt"
-	"sync"
 	"strings"
 	"mime"
 
@@ -11,20 +10,58 @@ import(
 
 type HttpStatus int
 
+type HelperIfc interface {
+	// HttpResponse Helpers
+	Response(status HttpStatus, body *string, contentType string) HttpResponseIfc
+	ReponseCode(status HttpStatus) HttpResponseIfc
+	ResponseSimpleJson(status HttpStatus) HttpResponseIfc
+	ResponseError(status HttpStatus) HttpResponseIfc
+	ResponseOk(body *string, contentType string) HttpResponseIfc
+	ResponseErrorJson(status HttpStatus, message string) HttpResponseIfc
+	ResponseObject(object *obj.Object, uri string) HttpResponseIfc
+	ResponseObjectCacheable(object *obj.Object, uri string, maxAgeSeconds int) HttpResponseIfc
+	ResponseWithHeaders(status HttpStatus, body *string, headers HttpHeadersIfc) HttpResponseIfc
+	ResponseRedirect(URL string) HttpResponseIfc
+	ResponseRedirectPermanent(URL string) HttpResponseIfc
+
+	// Payload Helpers
+	SingularizePostData(bodyData *HttpBodyData) map[string]string
+	GetMimetype(uri string) string
+
+	// HttpStatus Helpers
+	IsStatus2xx(httpStatus HttpStatus) bool
+	IsStatus3xx(httpStatus HttpStatus) bool
+	IsStatus4xx(httpStatus HttpStatus) bool
+	IsStatus5xx(httpStatus HttpStatus) bool
+	GetHttpStatusCode(httpStatus HttpStatus) int
+	GetHttpStatusText(httpStatus HttpStatus) string
+}
+
 type helper struct { }
 
 var instance *helper
 
-// TODO: Make this the same as we do other "singletons"; this sync.Once thing may
-// only be needed for multithreaded confusion that we don't need (or do we?)
-// Get the singleton instance of our helper
-func GetHelper() *helper {
-	var once sync.Once
-	once.Do(func() {
-		instance = &helper{ }
-	})
+func init() {
+	// Instantiate our singleton
+	instance = NewHelper()
+}
+
+// Get our singleton
+func GetHelper() HelperIfc {
 	return instance
 }
+
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewHelper() *helper {
+	return &helper{}
+}
+
+// -------------------------------------------------------------------------------------------------
+// HelperIfc Implementation
+// -------------------------------------------------------------------------------------------------
 
 // Produce an HTTP response with standard headers
 func (hlpr *helper) Response(status HttpStatus, body *string, contentType string) HttpResponseIfc {

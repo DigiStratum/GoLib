@@ -20,57 +20,64 @@ type HttpHeadersIfc interface {
 // Name/value pair header map for Request or Response
 type httpHeaders map[string]string
 
-// Make a new one of these
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewHttpHeaders() HttpHeadersIfc {
 	hh := make(httpHeaders)
 	return &hh
 }
 
+// -------------------------------------------------------------------------------------------------
+// HttpHeadersIfc Implementation
+// -------------------------------------------------------------------------------------------------
+
 // DO we have the named header?
-func (hdrs *httpHeaders) Has(name string) bool {
-	if _, ok := (*hdrs)[name]; ok { return true }
+func (r *httpHeaders) Has(name string) bool {
+	if _, ok := (*r)[name]; ok { return true }
 	return false
 }
 
 // Get a single header
 // TODO: Change this to return nil (string pointer instead of string) if the value is not set - the difference between unset and set-but-empty
-func (hdrs *httpHeaders) Get(name string) string {
-	if value, ok := (*hdrs)[name]; ok { return value }
+func (r *httpHeaders) Get(name string) string {
+	if value, ok := (*r)[name]; ok { return value }
 	return ""
 }
 
 // Set a single header
-func (hdrs *httpHeaders) Set(name string, value string) {
-	(*hdrs)[name] = value
+func (r *httpHeaders) Set(name string, value string) {
+	(*r)[name] = value
 }
 
 // Merge an HttpHeaders set into our own
-func (hdrs *httpHeaders) Merge(headers HttpHeadersIfc) {
+func (r *httpHeaders) Merge(headers HttpHeadersIfc) {
 	names := headers.GetHeaderNames()
 	for _, name := range *names {
-		(*hdrs)[name] = headers.Get(name)
+		(*r)[name] = headers.Get(name)
 	}
 }
 
 // Get the complete set of names
-func (hdrs *httpHeaders) GetHeaderNames() *[]string {
+func (r *httpHeaders) GetHeaderNames() *[]string {
 	names := make([]string, 0)
-	for name, _ := range *hdrs {
+	for name, _ := range *r {
 		names = append(names, name)
 	}
 	return &names
 }
 
 // Are there NO headers set?
-func (hdrs *httpHeaders) IsEmpty() bool {
-	return 0 == len(*hdrs)
+func (r *httpHeaders) IsEmpty() bool {
+	return 0 == len(*r)
 }
 
 // Some consumers need headers in the form of a simple data structure
-func (hdrs *httpHeaders) ToMap() *map[string]string {
+func (r *httpHeaders) ToMap() *map[string]string {
 	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
-	r := make(map[string]string)
-	for n, v := range *hdrs { r[n] = v }
-	return &r
+	h := make(map[string]string)
+	for n, v := range *r { h[n] = v }
+	return &h
 }
 

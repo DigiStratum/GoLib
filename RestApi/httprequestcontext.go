@@ -20,40 +20,47 @@ type httpRequestContext struct {
 	requestId	string	// UUID for this request
 }
 
-// Make a new one of these!
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewHttpRequestContext() HttpRequestContextIfc {
 	return &httpRequestContext{}
 }
 
-func (ctx *httpRequestContext) SetServerPath(serverPath string) {
-	ctx.serverPath = serverPath
+// -------------------------------------------------------------------------------------------------
+// HttpRequestContextIfc Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r *httpRequestContext) SetServerPath(serverPath string) {
+	r.serverPath = serverPath
 }
 
-func (ctx *httpRequestContext) GetServerPath() string {
-	return ctx.serverPath
+func (r *httpRequestContext) GetServerPath() string {
+	return r.serverPath
 }
 
-func (ctx *httpRequestContext) SetModulePath(modulePath string) {
-	ctx.modulePath = modulePath
+func (r *httpRequestContext) SetModulePath(modulePath string) {
+	r.modulePath = modulePath
 }
 
-func (ctx *httpRequestContext) GetModulePath() string {
-	return ctx.modulePath
+func (r *httpRequestContext) GetModulePath() string {
+	return r.modulePath
 }
 
-func (ctx *httpRequestContext) SetPrefixPath(prefixPath string) {
-	ctx.prefixPath = prefixPath
+func (r *httpRequestContext) SetPrefixPath(prefixPath string) {
+	r.prefixPath = prefixPath
 }
 
-func (ctx *httpRequestContext) GetPrefixPath() string {
-	return ctx.prefixPath
+func (r *httpRequestContext) GetPrefixPath() string {
+	return r.prefixPath
 }
 
-func (ctx *httpRequestContext) SetRequestId(requestId string) {
-	ctx.requestId = requestId
+func (r *httpRequestContext) SetRequestId(requestId string) {
+	r.requestId = requestId
 }
 
-func (ctx *httpRequestContext) GetRequestId() string {
-	return ctx.requestId
+func (r *httpRequestContext) GetRequestId() string {
+	return r.requestId
 }
 

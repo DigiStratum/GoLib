@@ -15,30 +15,37 @@ type httpResponse struct {
 	body		*string
 }
 
-// Make a new one of these!
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewHttpResponse() HttpResponseIfc {
 	return &httpResponse{
 		headers: NewHttpHeaders(),
 	}
 }
 
-func (hr *httpResponse) GetBody() *string {
-	return hr.body
+// -------------------------------------------------------------------------------------------------
+// HttpResponseIfc Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r *httpResponse) GetBody() *string {
+	return r.body
 }
 
-func (hr *httpResponse) SetBody(body *string) {
-	hr.body = body
+func (r *httpResponse) SetBody(body *string) {
+	r.body = body
 }
 
-func (hr *httpResponse) GetStatus() HttpStatus {
-	return hr.status
+func (r *httpResponse) GetStatus() HttpStatus {
+	return r.status
 }
 
-func (hr *httpResponse) SetStatus(status HttpStatus) {
-	hr.status = status
+func (r *httpResponse) SetStatus(status HttpStatus) {
+	r.status = status
 }
 
-func (hr *httpResponse) GetHeaders() HttpHeadersIfc {
-	return hr.headers
+func (r *httpResponse) GetHeaders() HttpHeadersIfc {
+	return r.headers
 }
 

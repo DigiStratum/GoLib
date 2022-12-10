@@ -5,7 +5,6 @@ package restapi
 // ref: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
 
 import(
-	"fmt"
 	"strings"
 	"net/url"
 
@@ -60,7 +59,10 @@ type httpRequest struct {
 	pathParams	*hashmap.HashMap
 }
 
-// Make a new one of these
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewRequest() HttpRequestIfc {
 	bodyData := make(HttpBodyData)
 	return &httpRequest{
@@ -71,115 +73,116 @@ func NewRequest() HttpRequestIfc {
 }
 
 // -------------------------------------------------------------------------------------------------
-// HttpRequestIfc
+// HttpRequestIfc Implementation
+// -------------------------------------------------------------------------------------------------
 
-func (request *httpRequest) GetProtocol() string {
-	return request.protocol
+func (r *httpRequest) GetProtocol() string {
+	return r.protocol
 }
 
-func (request *httpRequest) SetProtocol(protocol string) {
-	request.protocol = protocol
+func (r *httpRequest) SetProtocol(protocol string) {
+	r.protocol = protocol
 }
 
-func (request *httpRequest) GetHost() string {
-	return request.host
+func (r *httpRequest) GetHost() string {
+	return r.host
 }
 
-func (request *httpRequest) SetHost(host string) {
-	request.host = host
+func (r *httpRequest) SetHost(host string) {
+	r.host = host
 }
 
-func (request *httpRequest) GetRemoteAddr() string {
-	return request.remoteAddr
+func (r *httpRequest) GetRemoteAddr() string {
+	return r.remoteAddr
 }
 
-func (request *httpRequest) SetRemoteAddr(remoteAddr string) {
-	request.remoteAddr = remoteAddr
+func (r *httpRequest) SetRemoteAddr(remoteAddr string) {
+	r.remoteAddr = remoteAddr
 }
 
-func (request *httpRequest) GetScheme() string {
-	return request.scheme
+func (r *httpRequest) GetScheme() string {
+	return r.scheme
 }
 
-func (request *httpRequest) SetScheme(scheme string) {
-	request.scheme = scheme
+func (r *httpRequest) SetScheme(scheme string) {
+	r.scheme = scheme
 }
 
-func (request *httpRequest) GetURL() string {
-	if nil == request.url { return "" }
-	return request.url.String()
+func (r *httpRequest) GetURL() string {
+	if nil == r.url { return "" }
+	return r.url.String()
 }
 
-func (request *httpRequest) SetURL(urlStr string) {
+func (r *httpRequest) SetURL(urlStr string) {
 	u, err := url.Parse(urlStr)
 	if nil != err {
-		l := log.GetLogger()
-		l.Warn(fmt.Sprintf("HttpRequest.SetUrl() - failed to parse as a URL: '%s'", u))
+		log.GetLogger().Warn("HttpRequest.SetUrl() - failed to parse as a URL: '%s'", u)
+		return
 	}
-	request.url = u
+	r.url = u
 }
 
-func (request *httpRequest) GetMethod() string {
-	return request.method
+func (r *httpRequest) GetMethod() string {
+	return r.method
 }
 
-func (request *httpRequest) SetMethod(method string) {
-	request.method = method
+func (r *httpRequest) SetMethod(method string) {
+	r.method = method
 }
 
-func (request *httpRequest) GetURI() string {
-	return request.uri
+func (r *httpRequest) GetURI() string {
+	return r.uri
 }
 
-func (request *httpRequest) SetURI(uri string) {
-	request.uri = uri
+func (r *httpRequest) SetURI(uri string) {
+	r.uri = uri
 }
 
-func (request *httpRequest) GetQueryString() string {
-	return request.queryString
+func (r *httpRequest) GetQueryString() string {
+	return r.queryString
 }
 
-func (request *httpRequest) SetQueryString(queryString string) {
-	request.queryString = queryString
+func (r *httpRequest) SetQueryString(queryString string) {
+	r.queryString = queryString
 }
 
-func (request *httpRequest) GetBody() *string {
-	return request.body
+func (r *httpRequest) GetBody() *string {
+	return r.body
 }
 
-func (request *httpRequest) SetBody(body *string) {
-	request.body = body
+func (r *httpRequest) SetBody(body *string) {
+	r.body = body
 }
 
-func (request *httpRequest) GetBodyData() *HttpBodyData {
-	return request.bodyData
+func (r *httpRequest) GetBodyData() *HttpBodyData {
+	return r.bodyData
 }
 
-func (request *httpRequest) SetBodyData(bodyData *HttpBodyData) {
-	request.bodyData = bodyData
+func (r *httpRequest) SetBodyData(bodyData *HttpBodyData) {
+	r.bodyData = bodyData
 }
 
 // TODO: Add helpers for Body Data to build it up one name/value at a time
 
 // Get the Request Context
-func (request *httpRequest) GetContext() HttpRequestContextIfc {
-	return request.context
+func (r *httpRequest) GetContext() HttpRequestContextIfc {
+	return r.context
 }
 
 // Set the Request Context
-func (request *httpRequest) SetContext(context HttpRequestContextIfc) {
-	request.context = context
+func (r *httpRequest) SetContext(context HttpRequestContextIfc) {
+	r.context = context
 }
 
 // Get the Request Headers
-func (request *httpRequest) GetHeaders() HttpHeadersIfc {
-	return request.headers
+func (r *httpRequest) GetHeaders() HttpHeadersIfc {
+	return r.headers
 }
 
 // Extract a list of languages from the Accept-Language header (if any)
 // ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
-func (request *httpRequest) GetAcceptableLanguages() *[]string {
-	languages := request.getWeightedHeaderList("Accept-Language")
+func (r *httpRequest) GetAcceptableLanguages() *[]string {
+	languages := r.getWeightedHeaderList("Accept-Language")
 	// TODO: filter results according to what we support
 	// (i.e. code, code-locale, code-locale-orthography); remove orthography/anything after locale
 	// TODO: convert "*" into "default"
@@ -187,30 +190,31 @@ func (request *httpRequest) GetAcceptableLanguages() *[]string {
 }
 
 // Quick check if the current request is expected to be idempotent in implementation
-func (request *httpRequest) IsIdempotentMethod() bool {
-	if request.method == "post" { return false }
+func (r *httpRequest) IsIdempotentMethod() bool {
+	if "post" == r.method { return false }
 	return true
 }
 
 // Set the path parameters (should be endpointwrapper)
-func (request *httpRequest) SetPathParameters(params *hashmap.HashMap) {
-	request.pathParams = params
+func (r *httpRequest) SetPathParameters(params *hashmap.HashMap) {
+	r.pathParams = params
 }
 
 // Get the path parameters (should be endpoint implementation)
-func (request *httpRequest) GetPathParameters() *hashmap.HashMap {
-	return request.pathParams
+func (r *httpRequest) GetPathParameters() *hashmap.HashMap {
+	return r.pathParams
 }
 
 // -------------------------------------------------------------------------------------------------
-// Private implementation
+// httpRequest Implementation
+// -------------------------------------------------------------------------------------------------
 
 // Extract a list of values from headers, ordered by preference expressed as quality value
 // ref: https://developer.mozilla.org/en-US/docs/Glossary/Quality_values
-func (request *httpRequest) getWeightedHeaderList(headerName string) *[]string {
+func (r *httpRequest) getWeightedHeaderList(headerName string) *[]string {
 
 	// Get the value of the header we're after
-	headerValue := request.GetHeaders().Get(headerName)
+	headerValue := r.GetHeaders().Get(headerName)
 	if len(headerValue)  == 0 {
 		// no header, no list!
 		values := make([]string, 0)
