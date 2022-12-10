@@ -4,7 +4,8 @@ import(
 	"testing"
 	"encoding/json"
 
-	"github.com/DigiStratum/GoLib/DB/MySQL/nullables"
+	nulls "github.com/DigiStratum/GoLib/DB/MySQL/nullables"
+
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
@@ -32,7 +33,7 @@ func TestThat_ResultRow_Fields_ReturnsFieldNames_WhenFieldsSet(t *testing.T) {
 	sut := NewResultRow()
 	expectedFields := []string{"one", "two", "three"}
 	for _, field := range expectedFields {
-		nullableValue := nullables.NewNullable(field)
+		nullableValue := nulls.NewNullable(field)
 		sut.Set(field, *nullableValue)
 	}
 
@@ -60,7 +61,7 @@ func TestThat_ResultRow_Fields_ReturnsValue_ForSetFields(t *testing.T) {
 	sut := NewResultRow()
 	expectedFields := []string{"one", "two", "three"}
 	for _, field := range expectedFields {
-		nullableValue := nullables.NewNullable(field)
+		nullableValue := nulls.NewNullable(field)
 		sut.Set(field, *nullableValue)
 	}
 
@@ -68,7 +69,8 @@ func TestThat_ResultRow_Fields_ReturnsValue_ForSetFields(t *testing.T) {
 	for _, field := range expectedFields {
 		actualNullableValue := sut.Get(field)
 		ExpectNonNil(actualNullableValue, t)
-		ExpectTrue(actualNullableValue.IsString(), t)
+		//ExpectTrue(actualNullableValue.IsString(), t)
+		ExpectTrue(nulls.NULLABLE_STRING == actualNullableValue.GetType(), t)
 		actualStringValue := actualNullableValue.GetString()
 		ExpectNonNil(actualStringValue, t)
 		ExpectString(field, *actualStringValue, t)
@@ -93,7 +95,7 @@ func TestThat_ResultRow_ToJson_ReturnsPopulatedObject_WhenFieldsSet(t *testing.T
 	sut := NewResultRow()
 	expectedFields := []string{"one", "two", "three"}
 	for _, field := range expectedFields {
-		nullableValue := nullables.NewNullable(field)
+		nullableValue := nulls.NewNullable(field)
 		sut.Set(field, *nullableValue)
 	}
 

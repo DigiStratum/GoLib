@@ -12,6 +12,8 @@ We capture two values, encoded and raw so that we can cache the encode/decode re
 to avoid re-running expensive en|decode operations on repeat requests. When we set either value,
 encoded or deccoded, we wipe out the cached value of the other to prevent returning stale results
 and cause the conversion to run again and re-cache.
+
+ref: https://www.rfc-editor.org/rfc/rfc4648#section-4
 */
 
 type EncodingSchemeBase64 struct {

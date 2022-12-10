@@ -8,6 +8,7 @@ package restapi
 
 // TODO: Can we refactor this to just use lib.HashMapIfc instead?
 type HttpHeadersIfc interface {
+	Has(name string) bool
 	Get(name string) string
 	Set(name string, value string)
 	Merge(headers HttpHeadersIfc)
@@ -22,6 +23,12 @@ type httpHeaders map[string]string
 func NewHttpHeaders() HttpHeadersIfc {
 	hh := make(httpHeaders)
 	return &hh
+}
+
+// DO we have the named header?
+func (hdrs *httpHeaders) Has(name string) bool {
+	if _, ok := (*hdrs)[name]; ok { return true }
+	return false
 }
 
 // Get a single header
