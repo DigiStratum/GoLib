@@ -41,6 +41,16 @@ func getCaller() string {
 	return ""
 }
 
+func ExpectEmptyString(actual string, t *testing.T) {
+	if 0 == len(actual) { return }
+	t.Errorf("\n\n%s:\nExpect len('%s') == 0, Actual: %d", getCaller(), actual, len(actual))
+}
+
+func ExpectNonEmptyString(actual string, t *testing.T) {
+	if 0 < len(actual) { return }
+	t.Errorf("\n\n%s:\nExpect len('%s') > 0, Actual: %d", getCaller(), actual, len(actual))
+}
+
 func ExpectString(expect, actual string, t *testing.T) {
 	if expect == actual { return }
 	t.Errorf("\n\n%s:\nExpect: '%s', Actual: '%s'", getCaller(), expect, actual)
