@@ -201,7 +201,8 @@ func (r *HashMap) DropSet(keys *[]string) *HashMap {
 func (r *HashMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) {
 	if nil == logger { return }
 	logger.Any(level, "\"%s\": {", label)
-	for k, v := range r.hash { logger.Any(level, "\"%s\": \"%s\"", k, v) }
+	for k, v := range r.hash { logger.Any(level, "\t\"%s\": \"%s\"", k, v) }
+	logger.Any(level, "}")
 }
 
 // -------------------------------------------------------------------------------------------------
