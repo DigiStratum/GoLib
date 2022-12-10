@@ -13,6 +13,7 @@ type HttpHeadersIfc interface {
 	Set(name string, value string)
 	Merge(headers HttpHeadersIfc)
 	GetHeaderNames() *[]string
+	ToMap() *map[string]string
 	IsEmpty() bool
 }
 
@@ -64,3 +65,12 @@ func (hdrs *httpHeaders) GetHeaderNames() *[]string {
 func (hdrs *httpHeaders) IsEmpty() bool {
 	return 0 == len(*hdrs)
 }
+
+// Some consumers need headers in the form of a simple data structure
+func (hdrs *httpHeaders) ToMap() *map[string]string {
+	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
+	r := make(map[string]string)
+	for n, v := range *hdrs { r[n] = v }
+	return &r
+}
+
