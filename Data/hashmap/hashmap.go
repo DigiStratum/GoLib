@@ -44,6 +44,7 @@ type HashMapIfc interface {
 	GetSubset(keys *[]string) *HashMap
 	Drop(key string) *HashMap
 	DropSet(keys *[]string) *HashMap
+	DropAll()
 	GetIterator() func () interface{}
 	ToJson() (*string, error)
 	ToLog(logger log.LoggerIfc, level log.LogLevel, label string)
@@ -200,6 +201,11 @@ func (r *HashMap) DropSet(keys *[]string) *HashMap {
 	return r
 }
 
+// Drop all keys/values (reset to empty state)
+func (r *HashMap) DropAll() {
+	r.hash = make(map[string]string)
+}
+
 // Dump JSON-like representation of our entries in readable form to supplied logger
 func (r *HashMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) {
 	if nil == logger { return }
@@ -240,6 +246,22 @@ func (r *HashMap) ToJson() (*string, error) {
 	if nil != err { return nil, err }
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Marshaler Interface Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r *HashMap) MarshalJSON() ([]byte, error) {
+	return gojson.Marshal(r.hash)
+}
+
+// -------------------------------------------------------------------------------------------------
+// encoding/json.Unmarshaler Interface Implementation
+// -------------------------------------------------------------------------------------------------
+
+func (r *HashMap) UnmarshalJSON(value []byte) error {
+	return gojson.Unmarshal(value, &(r.hash))
 }
 
 // -------------------------------------------------------------------------------------------------
