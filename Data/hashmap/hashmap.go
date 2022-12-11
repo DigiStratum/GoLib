@@ -6,6 +6,9 @@ package hashmap
 This HashMap class wraps a basic Go map with essential helper functions to make life easier for
 dealing with simple key/value pair data. *Should* be thread-safe.
 
+FIXME:
+ * Replace the mutex with go-routine+channel for concurrency orchestration
+
 */
 
 import (
