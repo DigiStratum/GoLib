@@ -47,7 +47,7 @@ func TestThat_Timesource_Now_Returns_GoodTimeStamp(t *testing.T) {
 }
 
 // Get us to within 5msec of the next change of TimeStamp according to this TimeSource
-func waitForSecondChange(ts *TimeSource) (bool, int64) {
+func waitForSecondChange(ts TimeSourceIfc) (bool, int64) {
 	maxIter := 600
 	for ; maxIter > 0; maxIter-- {
 		t2 := ts.NowUnixTimeStampMilli()

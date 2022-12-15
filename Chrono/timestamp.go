@@ -1,18 +1,18 @@
 package chrono
 
 /*
-Abstraction of time-based considerations for basic timeStamp handling so that we can more easily
-refactor later without bothering consumers. All times will be based on UTC, unix timeStamps. Initial
-implementation uses Go runtime environment which could vary from one host to the next.
+Abstraction of time-based considerations for basic timeStamp handling with 1-second precisionso
+that we can more easily refactor later without bothering consumers. All times will be based on UTC,
+unix timeStamps. Initial implementation uses Go runtime environment which could vary from one host
+to the next. Defaults to local TimeSource.
 
-Defaults to local TimeSource
 */
 
 type TimeStampIfc interface {
-	Add(offset int64) *TimeStamp
-	Compare(ts *TimeStamp) int
+	Add(offset int64) *timeStamp
+	Compare(ts TimeStampIfc) int
 	CompareToNow() int
-	Diff(ts *TimeStamp) int64
+	Diff(ts TimeStampIfc) int64
 	DiffNow() int64
 
 	IsForever() bool
@@ -22,7 +22,7 @@ type TimeStampIfc interface {
 	ToUnixTimeStamp() int64
 }
 
-type TimeStamp struct {
+type timeStamp struct {
 	timeStamp	int64
 	timeSource	TimeSourceIfc
 	isForever	bool
@@ -32,15 +32,15 @@ type TimeStamp struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewTimeStamp(timeSource TimeSourceIfc) *TimeStamp {
+func NewTimeStamp(timeSource TimeSourceIfc) *timeStamp {
 	if nil == timeSource { return nil }
 	return NewFromUnixTimeStamp(timeSource, timeSource.NowUnixTimeStamp())
 }
 
-func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeStamp {
+func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *timeStamp {
 	// Require a TimeSource
 	if nil == timeSource { return nil }
-	ts := TimeStamp{
+	ts := timeStamp{
 		timeStamp: unixTimeStamp,
 		timeSource: timeSource,
 		isForever: false,
@@ -48,8 +48,8 @@ func NewFromUnixTimeStamp(timeSource TimeSourceIfc, unixTimeStamp int64) *TimeSt
 	return &ts
 }
 
-func NewTimeStampForever() *TimeStamp {
-	ts := TimeStamp{
+func NewTimeStampForever() *timeStamp {
+	ts := timeStamp{
 		isForever:	true,
 	}
 	return &ts
@@ -60,51 +60,56 @@ func NewTimeStampForever() *TimeStamp {
 // -------------------------------------------------------------------------------------------------
 
 // Chainable
-func (r *TimeStamp) Add(offset int64) *TimeStamp {
+func (r *timeStamp) Add(offset int64) *timeStamp {
 	if ! r.isForever { r.timeStamp += offset }
 	return r
 }
 
-func (r TimeStamp) Compare(ts *TimeStamp) int {
+func (r timeStamp) Compare(ts TimeStampIfc) int {
 	if r.isForever { return 1 }			// Forever is always in the future
-	if r.timeStamp < ts.timeStamp { return -1 }	// Past
-	if r.timeStamp == ts.timeStamp { return 0 }	// Present
+	if t, ok := ts.(*timeStamp); ok {
+		if r.timeStamp < t.timeStamp { return -1 }	// Past
+		if r.timeStamp == t.timeStamp { return 0 }	// Present
+	}
 	return 1					// Future
 }
 
-func (r TimeStamp) CompareToNow() int {
+func (r timeStamp) CompareToNow() int {
 	if r.isForever { return 1 }			// Forever is always in the future
 	return r.Compare(r.timeSource.Now())
 }
 
-func (r TimeStamp) Diff(ts *TimeStamp) int64 {
+func (r timeStamp) Diff(ts TimeStampIfc) int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
-
-	return r.timeStamp - ts.timeStamp
+	if t, ok := ts.(*timeStamp); ok {
+		return r.timeStamp - t.timeStamp
+	}
+	return 0
 }
 
-func (r TimeStamp) DiffNow() int64 {
+func (r timeStamp) DiffNow() int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
 	now := r.timeSource.Now()
 	return r.Diff(now)
 }
 
-func (r TimeStamp) IsForever() bool {
+func (r timeStamp) IsForever() bool {
 	return r.isForever
 }
 
-func (r TimeStamp) IsPast() bool {
+func (r timeStamp) IsPast() bool {
 	if r.isForever { return false }			// Forever is never in the past
 	diff := r.DiffNow()
 	return (diff < 0)
 }
 
-func (r TimeStamp) IsFuture() bool {
+func (r timeStamp) IsFuture() bool {
 	if r.isForever { return true }			// Forever is always in the future
 	return (r.DiffNow() > 0)
 }
 
-func (r TimeStamp) ToUnixTimeStamp() int64 {
+func (r timeStamp) ToUnixTimeStamp() int64 {
 	if r.isForever { return 0 }			// Forever has no definite timestamp
 	return r.timeStamp
 }
+

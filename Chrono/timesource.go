@@ -14,34 +14,35 @@ import (
 )
 
 type TimeSourceIfc interface {
-	Now() *TimeStamp
+	Now() TimeStampIfc
 	NowUnixTimeStamp() int64
 	NowUnixTimeStampMilli() int64
 }
 
-type TimeSource struct {
+type timeSource struct {
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewTimeSource() *TimeSource {
-	return &TimeSource{}
+func NewTimeSource() *timeSource {
+	return &timeSource{}
 }
 
 // -------------------------------------------------------------------------------------------------
 // TimeSourceIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r TimeSource) Now() *TimeStamp {
+func (r timeSource) Now() TimeStampIfc {
 	return NewTimeStamp(r)
 }
 
-func (r TimeSource) NowUnixTimeStamp() int64 {
+func (r timeSource) NowUnixTimeStamp() int64 {
 	return time.Now().Unix()
 }
 
-func (r TimeSource) NowUnixTimeStampMilli() int64 {
+func (r timeSource) NowUnixTimeStampMilli() int64 {
 	return time.Now().UnixMilli()
 }
+
