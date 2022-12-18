@@ -33,7 +33,7 @@ type memcacheItem struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewMemcacheItem() *memcacheItem {
+func newMemcacheItem() *memcacheItem {
 	return &memcacheItem{}
 }
 
