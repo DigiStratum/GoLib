@@ -17,7 +17,6 @@ func main() {
 }
 
 TODO:
- * Add factory function to create new cache items
  * Add example(s) and test coverage
 */
 
@@ -30,6 +29,9 @@ import (
 const MAX_KEY_LEN = 250
 
 type MemcacheClientIfc interface {
+	NewCacheItem(name string, value *[]byte, flags uint32, expiresIn int32) *memcacheItem	// MemcachItemIfc
+
+	// Memcached Primitives
 	Ping() error
 	FlushAll() error
 	Get(key string) (MemcacheItemIfc, error)
@@ -82,6 +84,11 @@ func NewMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) *memcac
 // -------------------------------------------------------------------------------------------------
 // MemcacheClientIfc Implementation
 // -------------------------------------------------------------------------------------------------
+
+func (r *memcacheClient) NewCacheItem(key string, value *[]byte, flags uint32, expiresIn int32) *memcacheItem {
+	e := r.timeSource.Now().Add(int64(expiresIn))
+	return newMemcacheItem().SetKey(key).SetValue(value).SetFlags(flags).SetExpiration(e)
+}
 
 func (r *memcacheClient) Ping() error {
 	return r.client.Ping()
@@ -145,7 +152,7 @@ func (r *memcacheClient) CompareAndSwap(item MemcacheItemIfc) error {
 
 func (r *memcacheClient) toItem(i *mc.Item) MemcacheItemIfc {
 	var e chrono.TimeStampIfc = nil
-	if 0 != i.Expiration { e = chrono.NewTimeStamp(r.timeSource).Add(int64(i.Expiration)) }
+	if 0 != i.Expiration { e = r.timeSource.Now().Add(int64(i.Expiration)) }
 	return newMemcacheItem().SetKey(i.Key).SetValue(&i.Value).SetFlags(i.Flags).SetExpiration(e)
 }
 
