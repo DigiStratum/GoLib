@@ -86,8 +86,13 @@ func NewMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) *memcac
 // -------------------------------------------------------------------------------------------------
 
 func (r *memcacheClient) NewCacheItem(key string, value *[]byte, flags uint32, expiresIn int32) *memcacheItem {
-	e := r.timeSource.Now().Add(int64(expiresIn))
-	return newMemcacheItem().SetKey(key).SetValue(value).SetFlags(flags).SetExpiration(e)
+	var e chrono.TimeStampIfc = nil
+	if 0 != expiresIn { e = r.timeSource.Now().Add(int64(expiresIn)) }
+	return newMemcacheItem().
+		SetKey(key).
+		SetValue(value).
+		SetFlags(flags).
+		SetExpiresAt(e)
 }
 
 func (r *memcacheClient) Ping() error {
@@ -153,7 +158,7 @@ func (r *memcacheClient) CompareAndSwap(item MemcacheItemIfc) error {
 func (r *memcacheClient) toItem(i *mc.Item) MemcacheItemIfc {
 	var e chrono.TimeStampIfc = nil
 	if 0 != i.Expiration { e = r.timeSource.Now().Add(int64(i.Expiration)) }
-	return newMemcacheItem().SetKey(i.Key).SetValue(&i.Value).SetFlags(i.Flags).SetExpiration(e)
+	return newMemcacheItem().SetKey(i.Key).SetValue(&i.Value).SetFlags(i.Flags).SetExpiresAt(e)
 }
 
 func (r *memcacheClient) fromItem(memcacheItem MemcacheItemIfc) *mc.Item {
@@ -164,7 +169,7 @@ func (r *memcacheClient) fromItem(memcacheItem MemcacheItemIfc) *mc.Item {
 		Key:		memcacheItem.GetKey(),
 		Value:		*v,
 		Flags:		memcacheItem.GetFlags(),
-		Expiration:	int32(memcacheItem.GetExpiration().DiffNow()),
+		Expiration:	int32(memcacheItem.GetExpiresAt().DiffNow()),
 	}
 }
 

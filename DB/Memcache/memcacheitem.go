@@ -13,20 +13,20 @@ type MemcacheItemIfc  interface {
 	GetKey() string
 	GetValue() *[]byte
 	GetFlags() uint32
-	GetExpiration() chrono.TimeStampIfc
+	GetExpiresAt() chrono.TimeStampIfc
 
 	// Chainable setters
 	SetKey(key string) *memcacheItem
 	SetValue(value *[]byte) *memcacheItem
 	SetFlags(flags uint32) *memcacheItem
-	SetExpiration(expiration chrono.TimeStampIfc) *memcacheItem
+	SetExpiresAt(expiresAt chrono.TimeStampIfc) *memcacheItem
 }
 
 type memcacheItem struct {
 	key		string			// Item key, unique id, max length 250
 	value		[]byte			// Item value, max size based on memcached config
 	flags		uint32			// 32 bit binary flag; app-defined, optional
-	expiration	chrono.TimeStampIfc	// Expiration time in seconds
+	expiresAt	chrono.TimeStampIfc	// Expiration time in seconds
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -49,8 +49,8 @@ func (r *memcacheItem) GetFlags() uint32 {
 	return r.flags
 }
 
-func (r *memcacheItem) GetExpiration() chrono.TimeStampIfc {
-	return r.expiration
+func (r *memcacheItem) GetExpiresAt() chrono.TimeStampIfc {
+	return r.expiresAt
 }
 
 func (r *memcacheItem) SetKey(key string) *memcacheItem {
@@ -68,8 +68,8 @@ func (r *memcacheItem) SetFlags(flags uint32) *memcacheItem {
 	return r
 }
 
-func (r *memcacheItem) SetExpiration(expiration chrono.TimeStampIfc) *memcacheItem {
-	r.expiration = expiration
+func (r *memcacheItem) SetExpiresAt(expiresAt chrono.TimeStampIfc) *memcacheItem {
+	r.expiresAt = expiresAt
 	return r
 }
 
