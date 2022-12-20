@@ -21,6 +21,8 @@ TODO:
 */
 
 import (
+	"fmt"
+
 	mc "github.com/DigiStratum/go-bradfitz-gomemcache/memcache"
 
 	chrono "github.com/DigiStratum/GoLib/Chrono"
@@ -38,7 +40,9 @@ type defaultMemcacheClient struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDefaultMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) *defaultMemcacheClient {
+func NewDefaultMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) (*defaultMemcacheClient, error) {
+	if len(hosts) == 0 { return nil, fmt.Errorf("At least one memcached host must be specified") }
+
 	var verifiedHosts []string
 	for _, host := range hosts {
 		// TODO: Validate host network specifier as ip|hostname:port (check out net.Addr)
@@ -51,15 +55,12 @@ func NewDefaultMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) 
 	// Connect and check!
 	client := mc.New(hosts...)
 	err := client.Ping()
-	if nil != err {
-		// TODO: Log error
-		return nil
-	}
+	if nil != err { return nil, err }
 
 	return &defaultMemcacheClient{
 		hosts:		verifiedHosts,
 		client:		client,
-	}
+	}, nil
 }
 
 // -------------------------------------------------------------------------------------------------
