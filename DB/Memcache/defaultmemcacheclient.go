@@ -42,6 +42,7 @@ type defaultMemcacheClient struct {
 
 func NewDefaultMemcacheClient(timeSource chrono.TimeSourceIfc, hosts ...string) (*defaultMemcacheClient, error) {
 	if len(hosts) == 0 { return nil, fmt.Errorf("At least one memcached host must be specified") }
+	if nil == timeSource { return nil, fmt.Errorf("TimeSource was nil!") }
 
 	var verifiedHosts []string
 	for _, host := range hosts {
