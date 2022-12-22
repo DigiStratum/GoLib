@@ -41,9 +41,11 @@ func TestThat_NewDefaultMemcacheClient_ReturnsError_WhenTimeSourceNil(t *testing
 
 func TestThat_NewDefaultMemcacheClient_ReturnsNonNil_NoError(t *testing.T) {
 	// Setup
-	fakeServer, err := newFakeMemcachedServer(true)
+	fms, err := newFakeMemcachedServer()
 	ExpectNoError(err, t)
-        defer fakeServer.Close()
+        defer fms.Close()
+	//fms.Verbose()
+
 	ts := chrono.NewTimeSource()
 	hosts := []string{ fmt.Sprintf("%s:%d", FAKE_MEMCACHED_HOST, FAKE_MEMCACHED_PORT) }
 
@@ -57,43 +59,52 @@ func TestThat_NewDefaultMemcacheClient_ReturnsNonNil_NoError(t *testing.T) {
 
 type fakeMemcachedServer struct {
 	host		string
+	listening	bool
 	listener	net.Listener
 	waitGroup	sync.WaitGroup	// ref: https://gobyexample.com/waitgroups
 	verbose		bool
 }
 
-func newFakeMemcachedServer(verbose bool) (*fakeMemcachedServer, error) {
-	host := fmt.Sprintf("%s:%d", FAKE_MEMCACHED_HOST, FAKE_MEMCACHED_PORT)
-	listener, err := net.Listen( "tcp", host )
-	if nil != err { return nil, err }
+func newFakeMemcachedServer() (*fakeMemcachedServer, error) {
+	// Make a new one of these
 	fms := fakeMemcachedServer{
-		listener:	listener,
-		verbose:	verbose,
-		host:		host,
+		host:		fmt.Sprintf("%s:%d", FAKE_MEMCACHED_HOST, FAKE_MEMCACHED_PORT),
 	}
+
+	// Start up a socket listener
+	err := fms.Listen()
+	if nil != err { return nil, err }
+
 	// Spin off a Go Routine for the FMS Listener
-	go fms.Listen()
+	go fms.Accept()
 	return &fms, nil
 }
+func (r *fakeMemcachedServer) Listen() error {
+	if nil == r { return fmt.Errorf("Nope: nil!") }
+	if r.listening { return fmt.Errorf("Nope: already listening!") }
+	listener, err := net.Listen( "tcp", r.host )
+	if nil != err { return err }
+	r.listener = listener
+	r.VPrintf("Listening on '%s'", r.host)
+	r.listening = true
+	return nil
+}
 
-// TODO: Any value in a generalized CloseableIfc to organize different Close()able types through?
 // ref: https://www.reddit.com/r/golang/comments/a4nim7/nonblocking_accept_for_tcp_connections/
 func (r *fakeMemcachedServer) Close() {
+	if (nil == r) || (! r.listening) { return }
 	r.waitGroup.Wait()
 	r.listener.Close()
 }
 
 // ref: https://www.developer.com/languages/intro-socket-programming-go/
-func (r *fakeMemcachedServer) Listen() {
-	if r.verbose {
-		fmt.Printf("\tFakeMemcachedServer: Ready to Accept Connections on '%s'\n", r.host)
-	}
+func (r *fakeMemcachedServer) Accept() {
+	if nil == r { return }
+	r.VPrintf("Ready to Accept Connections")
 	for {
 		connection, err := r.listener.Accept()
 		if err == nil {
-			if r.verbose {
-				fmt.Println("\tFakeMemcachedServer: Got new client connection!\t")
-			}
+			r.VPrintf("Got new client connection!")
 			go r.handleConnection(connection)
 		}
 	}
@@ -101,6 +112,11 @@ func (r *fakeMemcachedServer) Listen() {
 
 // Now that we have a memcache client connected, let's interact
 func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
+	if nil == r { return }
+
+	// No matter what happens, close this connection before we return to caller
+	defer connection.Close()
+
 	// Make sure the Server waits for us to finish before Close()ing the Listener
 	r.waitGroup.Add(1)
 	defer r.waitGroup.Done()
@@ -109,9 +125,7 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	buffer := make([]byte, 1024)
 	mLen, err := connection.Read(buffer)
 	if err != nil {
-		if r.verbose {
-			fmt.Println("\tFakeMemcachedServer: Error reading:", err.Error())
-		}
+		r.VPrintf("Error reading: %s", err.Error())
 		return
 	}
 
@@ -120,17 +134,25 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	directive := strings.Trim(string(buffer[:mLen]), " \t\n\r")
 	switch directive {
 		case "version":
-			if r.verbose {
-				fmt.Printf("\tFakeMemcachedServer: Got 'version' directive!\n")
-			}
+			r.VPrintf("Got 'version' directive!")
 			connection.Write([]byte("VERSION 0.0\n"))
 
 		default:
-			if r.verbose {
-				fmt.Printf("\tFakeMemcachedServer: Unhandled directive: '%s'\n", directive)
-			}
+			r.VPrintf("Unhandled directive: '%s'", directive)
 	}
+}
 
-	connection.Close()
+// Enable verbose output for this instance
+func (r *fakeMemcachedServer) Verbose() {
+	if (nil == r) || r.verbose { return }
+	r.verbose = true
+	r.VPrintf("Listening on '%s'", r.host)
+}
+
+// Put out a verbose message, ala Printf formatting
+func (r *fakeMemcachedServer) VPrintf(formatter string, args ...interface{}) {
+	if (nil == r) || ! r.verbose { return }
+	if ! r.verbose { return }
+	fmt.Printf("\tFakeMemcachedServer: " + formatter + "\n", args...)
 }
 
