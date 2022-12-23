@@ -9,10 +9,11 @@ TODO:
 */
 
 type MemcacheClientIfc interface {
-	NewCacheItem(name string, value *[]byte, flags uint32, expiresIn int32) *memcacheItem	// MemcachItemIfc
+
+	// Memcache Item Factory Functions
+	NewCacheItem(name string, value *[]byte, flags uint32, expiresIn int32) *memcacheItem
 
 	// Memcached Primitives
-	Ping() error
 	FlushAll() error
 	Get(key string) (MemcacheItemIfc, error)
 	Touch(key string, seconds int32) error
@@ -25,5 +26,9 @@ type MemcacheClientIfc interface {
 	Append(item MemcacheItemIfc) error
 	Prepend(item MemcacheItemIfc) error
 	CompareAndSwap(item MemcacheItemIfc) error
+
+	// Memcached Helpers
+	Ping() error
+
 }
 
