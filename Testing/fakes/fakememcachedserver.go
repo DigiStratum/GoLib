@@ -1,5 +1,14 @@
 package fakes
 
+/*
+
+A fake Memcached Server implementation
+
+ref: https://github.com/memcached/memcached/blob/master/doc/protocol.txt
+ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-interfaces-protocol.html
+
+*/
+
 import(
 	"fmt"
 	"net"
@@ -8,6 +17,7 @@ import(
 	"strconv"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
+	hash "github.com/DigiStratum/GoLib/Data/hashmap"
 )
 
 const FAKE_MEMCACHED_DEFAULT_PORT = 21212
@@ -25,6 +35,7 @@ type fakeMemcachedServer struct {
 	listener	net.Listener
 	waitGroup	sync.WaitGroup	// ref: https://gobyexample.com/waitgroups
 	verbose		bool
+	items		hash.HashMapIfc	// TODO: Replace HashMap with a map[string]interface{}, and place some structs in there to capture the flags with the value
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -55,6 +66,7 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 	// Make a new one of these
 	fms := fakeMemcachedServer{
 		host: fmt.Sprintf("%s:%d", host, port ),
+		items: hash.NewHashMap(),
 	}
 
 	// Start up a socket listener
@@ -146,11 +158,12 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 		r.vprintf("Empty command, nothing to do!")
 		return
 	}
+	var response string
 	switch commandWords[0] {
 		// TODO: Add other commands
 		case "version":
 			r.vprintf("Got 'version' directive!")
-			connection.Write([]byte("VERSION 0.0\n"))
+			response = "VERSION 0.0\n"
 
 		case "set":
 			// Most common command. Store this data, possibly overwriting any existing data. New items are at the top of the LRU.
@@ -167,6 +180,21 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has updated the data since you read it last. Useful for resolving race conditions on updating cache data.
 		case "get":
 			// Command for retrieving data. Takes one or more keys and returns all found items.
+			// get xyzkey\r\n
+			// VALUE xyzkey 0 6\r\n
+			// abcdef\r\n
+			if len(commandWords) >= 2 {
+				key := commandWords[1]
+				value := r.items.Get(key)
+				if nil != value {
+					flags := 0
+					response = fmt.Sprintf("VALUE %s %d %d\r\n%s\r\n", key, flags, len(value), value)
+				} else {
+					// TODO: What response is expected for get of invalid key (doesn't exist)?
+				}
+			} else {
+				// TODO: What response is expected for a get with no specified key?
+			}
 		case "gets":
 			// An alternative get command for using with CAS. Returns a CAS identifier (a unique 64bit number) with the item. Return this value with the cas command. If the item's CAS value has changed since you gets'ed it, it will not be stored.
 		case "delete":
@@ -189,7 +217,9 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// This command does not pause the server, as it returns immediately. It does not free up or flush memory at all, it just causes all items to expire.
 		default:
 			r.vprintf("Unhandled directive: '%s'", commandWords[0])
+			return
 	}
+	connection.Write([]byte(response))
 }
 
 // Put out a verbose message, ala Printf formatting
