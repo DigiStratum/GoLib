@@ -13,11 +13,11 @@ import(
 	"fmt"
 	"net"
 	"sync"
+	"time"
 	"strings"
 	"strconv"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	hash "github.com/DigiStratum/GoLib/Data/hashmap"
 )
 
 const FAKE_MEMCACHED_DEFAULT_PORT = 21212
@@ -29,13 +29,19 @@ type FakeMemcachedServerIfc interface {
 	Verbose()		// Enable verbose output for this instance
 }
 
+type fakeCacheItem struct {
+	Value		[]byte
+	Flags		uint32
+	Expires		time.Time
+}
+
 type fakeMemcachedServer struct {
 	host		string
 	listening	bool
 	listener	net.Listener
 	waitGroup	sync.WaitGroup	// ref: https://gobyexample.com/waitgroups
 	verbose		bool
-	items		hash.HashMapIfc	// TODO: Replace HashMap with a map[string]interface{}, and place some structs in there to capture the flags with the value
+	cache		map[string]fakeCacheItem
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -66,7 +72,7 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 	// Make a new one of these
 	fms := fakeMemcachedServer{
 		host: fmt.Sprintf("%s:%d", host, port ),
-		items: hash.NewHashMap(),
+		cache: make(map[string]fakeCacheItem),
 	}
 
 	// Start up a socket listener
@@ -185,10 +191,8 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// abcdef\r\n
 			if len(commandWords) >= 2 {
 				key := commandWords[1]
-				value := r.items.Get(key)
-				if nil != value {
-					flags := 0
-					response = fmt.Sprintf("VALUE %s %d %d\r\n%s\r\n", key, flags, len(value), value)
+				if ci, ok := r.cache[key]; ok {
+					response = r.getValueResponse(key, &ci)
 				} else {
 					// TODO: What response is expected for get of invalid key (doesn't exist)?
 				}
@@ -221,6 +225,17 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	}
 	connection.Write([]byte(response))
 }
+
+func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem) string {
+	return fmt.Sprintf(
+		"VALUE %s %d %d\r\n%s\r\n",
+		key,
+		ci.Flags,
+		len(ci.Value),
+		string(ci.Value),
+	)
+}
+
 
 // Put out a verbose message, ala Printf formatting
 func (r *fakeMemcachedServer) vprintf(formatter string, args ...interface{}) {
