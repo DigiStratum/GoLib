@@ -4,8 +4,73 @@ package fakes
 
 A fake Memcached Server implementation
 
+-----
+
 ref: https://github.com/memcached/memcached/blob/master/doc/protocol.txt
+
+-----
+
 ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-interfaces-protocol.html
+
+## Storage commands to the server take the form:
+
+>> command key [flags] [exptime] length [noreply]
+
+Or when using compare and swap (cas):
+
+>> cas key [flags] [exptime] length [casunique] [noreply]
+
+Where:
+ * command: The command name.
+ * set: Store value against key
+ * add: Store this value against key if the key does not already exist
+ * replace: Store this value against key if the key already exists
+ * append: Append the supplied value to the end of the value for the specified key. The flags and
+   exptime arguments should not be used.
+ * prepend: Append value currently in the cache to the end of the supplied value for the specified
+   key. The flags and exptime arguments should not be used.
+ * cas: Set the specified key to the supplied value, only if the supplied casunique matches. This is
+   effectively the equivalent of change the information if nobody has updated it since I last fetched it.
+ * key: The key. All data is stored using a the specific key. The key cannot contain control characters
+   or whitespace, and can be up to 250 characters in size.
+ * flags: The flags for the operation (as an integer). Flags in memcached are transparent. The memcached
+   server ignores the contents of the flags. They can be used by the client to indicate any type of
+   information. In memcached 1.2.0 and lower the value is a 16-bit integer value. In memcached 1.2.1 and
+   higher the value is a 32-bit integer.
+ * exptime: The expiry time, or zero for no expiry.
+ * length: The length of the supplied value block in bytes, excluding the terminating \r\n characters.
+ * casunique: A unique 64-bit value of an existing entry. This is used to compare against the existing
+   value. Use the value returned by the gets command when issuing cas updates.
+ * noreply: Tells the server not to reply to the command.
+
+The return value from the server is one line, specifying the status or error information.
+
+...
+
+
+
+## Retrieval commands take the form:
+
+>> get key1 [key2 .... keyn]
+>> gets key1 [key2 ... keyn]
+
+You can supply multiple keys to the commands, with each requested key separated by whitespace.
+
+The server responds with an information line of the form:
+
+>> VALUE key flags bytes [casunique]
+
+Where:
+
+ * key: The key name.
+ * flags: The value of the flag integer supplied to the memcached server when the value was stored.
+ * bytes: The size (excluding the terminating \r\n character sequence) of the stored value.
+ * casunique: The unique 64-bit integer that identifies the item.
+
+The information line is immediately followed by the value data block.
+
+TODO:
+ * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
 
 */
 
@@ -31,8 +96,9 @@ type FakeMemcachedServerIfc interface {
 
 type fakeCacheItem struct {
 	Value		[]byte
-	Flags		uint32
-	Expires		time.Time
+	Flags		uint32	// Note:  In memcached 1.2.0 and lower the value is a 16-bit integer value. In memcached 1.2.1 and higher the value is a 32-bit integer.
+	Expires		int64	// 0 for non-expiring items
+	CASUnique	string	// Simple hash to compare and swap (md5?)
 }
 
 type fakeMemcachedServer struct {
