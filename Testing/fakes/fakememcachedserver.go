@@ -69,6 +69,101 @@ Where:
 
 The information line is immediately followed by the value data block.
 
+## Deletion commands take the form:
+
+>> delete key [time] [noreply]
+
+Where:
+ * key: The key name.
+ * time: The time in seconds (or a specific Unix time) for which the client wishes the server to
+   refuse add or replace commands on this key. All add, replace, get, and gets commands fail during
+   this period. set operations succeed. After this period, the key is deleted permanently and all
+   commands are accepted.
+
+If not supplied, the value is assumed to be zero (delete immediately).
+
+noreply: Tells the server not to reply to the command.
+
+Responses to the command are either DELETED to indicate that the key was successfully removed, or NOT_FOUND to indicate that the specified key could not be found.
+
+## The increment and decrement commands change the value of a key within the server without performing a separate get/set sequence. The operations assume that the currently stored value is a 64-bit integer. If the stored value is not a 64-bit integer, then the value is assumed to be zero before the increment or decrement operation is applied.
+
+## Increment and decrement commands take the form:
+
+>> incr key value [noreply]
+>> decr key value [noreply]
+
+Where:
+ * key: The key name.
+ * value: An integer to be used as the increment or decrement value.
+ * noreply: Tells the server not to reply to the command.
+
+The response is:
+
+>> NOT_FOUND: The specified key could not be located.
+>> value: The new value associated with the specified key.
+
+Values are assumed to be unsigned. For decr operations, the value is never decremented below 0. For incr operations, the value wraps around the 64-bit maximum.
+
+## The stats command provides detailed statistical information about the current status of the memcached instance and the data it is storing.
+
+Statistics commands take the form:
+
+>> STAT [name] [value]
+
+Where:
+ * name: The optional name of the statistics to return. If not specified, the general statistics are returned.
+ * value: A specific value to be used when performing certain statistics operations.
+
+The return value is a list of statistics data, formatted as follows:
+
+>> STAT name value
+
+The statistics are terminated with a single line, END.
+
+-----
+
+Command		Command Formats
+set		set key flags exptime length, set key flags exptime length noreply
+add		add key flags exptime length, add key flags exptime length noreply
+replace		replace key flags exptime length, replace key flags exptime length noreply
+append		append key length, append key length noreply
+prepend		prepend key length, prepend key length noreply
+cas		cas key flags exptime length casunique, cas key flags exptime length casunique noreply
+get		get key1 [key2 ... keyn]
+gets
+delete		delete key, delete key noreply, delete key expiry, delete key expiry noreply
+incr		incr key, incr key noreply, incr key value, incr key value noreply
+decr		decr key, decr key noreply, decr key value, decr key value noreply
+stat		stat, stat name, stat name value
+
+-----
+
+## memcached Protocol Responses
+
+String				Description
+STORED				Value has successfully been stored.
+NOT_STORED			The value was not stored, but not because of an error. For commands
+				where you are adding a or updating a value if it exists (such as add
+				and replace), or where the item has already been set to be deleted.
+EXISTS				When using a cas command, the item you are trying to store already
+				exists and has been modified since you last checked it.
+NOT_FOUND			The item you are trying to store, update or delete does not exist or
+				has already been deleted.
+ERROR				You submitted a nonexistent command name.
+CLIENT_ERROR errorstring	There was an error in the input line, the detail is contained in
+				errorstring.
+SERVER_ERROR errorstring	There was an error in the server that prevents it from returning the
+				information. In extreme conditions, the server may disconnect the
+				client after this error occurs.
+VALUE keys flags length		The requested key has been found, and the stored key, flags and data
+				block are returned, of the specified length.
+DELETED				The requested key was deleted from the server.
+STAT name value			A line of statistics data.
+END				The end of the statistics data.
+
+-----
+
 TODO:
  * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
 
@@ -78,7 +173,6 @@ import(
 	"fmt"
 	"net"
 	"sync"
-	"time"
 	"strings"
 	"strconv"
 
