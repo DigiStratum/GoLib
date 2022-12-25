@@ -166,7 +166,6 @@ END				The end of the statistics data.
 
 TODO:
  * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
- * Bring in chrono.TimeSource to use for expiraiton timing
 */
 
 import(
