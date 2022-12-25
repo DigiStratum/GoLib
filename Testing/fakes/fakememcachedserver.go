@@ -173,11 +173,11 @@ import(
 	"fmt"
 	"net"
 	"sync"
-	"time"
 	"strings"
 	"strconv"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
+	chrono "github.com/DigiStratum/GoLib/Chrono"
 )
 
 const FAKE_MEMCACHED_DEFAULT_PORT = 21212
@@ -204,6 +204,7 @@ type fakeMemcachedServer struct {
 	waitGroup	sync.WaitGroup	// ref: https://gobyexample.com/waitgroups
 	verbose		bool
 	cache		map[string]fakeCacheItem
+	timeSource	chrono.TimeSourceIfc
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -216,6 +217,7 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 	var err error
 	port := FAKE_MEMCACHED_DEFAULT_PORT
 	host := FAKE_MEMCACHED_DEFAULT_HOST
+	var timeSource chrono.TimeSourceIfc = chrono.NewTimeSource()
 	for _, ci := range config {
 		switch ci.GetName() {
 			case "port":
@@ -228,6 +230,11 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 				if vs, ok := vi.(string); ok {
 					host = vs
 				}
+			case "TimeSource":
+				vi := ci.GetValue()
+				if vts, ok := vi.(chrono.TimeSourceIfc); ok {
+					timeSource = vts
+				}
 		}
 	}
 
@@ -235,6 +242,7 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 	fms := fakeMemcachedServer{
 		host: fmt.Sprintf("%s:%d", host, port ),
 		cache: make(map[string]fakeCacheItem),
+		timeSource: timeSource,
 	}
 
 	// Start up a socket listener
@@ -404,9 +412,11 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 
 func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
 	ci, _ := r.cache[key]
-	// TODO: check if it's expired (Accessed + Expires < now() )
-
-	return &ci
+	// Make sure it either never expires or not expired (Accessed + Expires < now() )
+	if (0 == ci.Expires) || (ci.Accessed + ci.Expires < r.timeSource.NowUnixTimeStamp()) {
+		return &ci
+	}
+	return nil
 }
 
 func (r *fakeMemcachedServer) existsCacheItem(key string) bool {
@@ -419,7 +429,7 @@ func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) {
 
 func (r *fakeMemcachedServer) touchCacheItem(key string) {
 	if ci :=r.readCacheItem(key); nil != ci {
-		ci.Accessed = time.Now().Unix()
+		ci.Accessed = r.timeSource.NowUnixTimeStamp()
 		r.writeCacheItem(key, ci)
 	}
 }
