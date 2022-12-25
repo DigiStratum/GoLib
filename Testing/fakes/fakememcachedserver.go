@@ -166,7 +166,7 @@ END				The end of the statistics data.
 
 TODO:
  * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
-
+ * Bring in chrono.TimeSource to use for expiraiton timing
 */
 
 import(
@@ -341,13 +341,12 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
 			if len(commandWords) >= 2 {
 				key := commandWords[1]
-				ci, exists := r.cache[key]
-				if exists {
-					// TODO: Touch the last access timestamp
-					ci.Accessed = time.Now().Unix()
+				if r.existsCacheItem(key) {
+					r.touchCacheItem(key)
 				} else {
 					// TODO: Set normally
 				}
+				// TODO: What response is expected following add command?
 			} else {
 				// TODO: What response is expected for a get with no specified key?
 			}
@@ -366,8 +365,8 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// abcdef\r\n
 			if len(commandWords) >= 2 {
 				key := commandWords[1]
-				if ci, exists := r.cache[key]; exists {
-					response = r.getValueResponse(key, &ci)
+				if ci := r.readCacheItem(key); nil != ci {
+					response = r.getValueResponse(key, ci)
 				} else {
 					// TODO: What response is expected for get of invalid key (doesn't exist)?
 				}
@@ -400,6 +399,32 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	}
 	connection.Write([]byte(response))
 }
+
+// HELPERS
+
+func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
+	ci, _ := r.cache[key]
+	// TODO: check if it's expired (Accessed + Expires < now() )
+
+	return &ci
+}
+
+func (r *fakeMemcachedServer) existsCacheItem(key string) bool {
+	return nil != r.readCacheItem(key)
+}
+
+func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) {
+	r.cache[key] = *ci
+}
+
+func (r *fakeMemcachedServer) touchCacheItem(key string) {
+	if ci :=r.readCacheItem(key); nil != ci {
+		ci.Accessed = time.Now().Unix()
+		r.writeCacheItem(key, ci)
+	}
+}
+
+// RESPONSES
 
 func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem) string {
 	return fmt.Sprintf(
