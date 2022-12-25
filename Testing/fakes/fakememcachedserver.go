@@ -212,11 +212,13 @@ type fakeMemcachedServer struct {
 
 // Instantiate FakeMemcachedServer with optional config items: 'port' and 'host'
 func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, error) {
-	// Configure
 	var err error
+
+	// Configure with sane/working defaults
 	port := FAKE_MEMCACHED_DEFAULT_PORT
 	host := FAKE_MEMCACHED_DEFAULT_HOST
 	var timeSource chrono.TimeSourceIfc = chrono.NewTimeSource()
+
 	for _, ci := range config {
 		switch ci.GetName() {
 			case "port":
@@ -326,7 +328,6 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	}
 
 	// Got a message
-	// TODO: Break off just the first word as the directive
 	commandLine := strings.Trim(string(buffer[:mLen]), " \t\n\r")
 	commandWords := strings.Fields(commandLine)
 	if len(commandWords) == 0 {
