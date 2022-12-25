@@ -173,6 +173,7 @@ import(
 	"fmt"
 	"net"
 	"sync"
+	"time"
 	"strings"
 	"strconv"
 
@@ -192,6 +193,7 @@ type fakeCacheItem struct {
 	Value		[]byte
 	Flags		uint32	// Note:  In memcached 1.2.0 and lower the value is a 16-bit integer value. In memcached 1.2.1 and higher the value is a 32-bit integer.
 	Expires		int64	// 0 for non-expiring items
+	Accessed	int64	// When was this item last accessed (factors into LRU algorithm)
 	CASUnique	string	// Simple hash to compare and swap (md5?)
 }
 
@@ -329,6 +331,7 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 		// TODO: Add other commands
 		case "version":
 			r.vprintf("Got 'version' directive!")
+			// TODO: Make the version variable/configurable, simulate different behaviors expected for different versions
 			response = "VERSION 0.0\n"
 
 		case "set":
@@ -336,6 +339,18 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 
 		case "add":
 			// Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
+			if len(commandWords) >= 2 {
+				key := commandWords[1]
+				ci, exists := r.cache[key]
+				if exists {
+					// TODO: Touch the last access timestamp
+					ci.Accessed = time.Now().Unix()
+				} else {
+					// TODO: Set normally
+				}
+			} else {
+				// TODO: What response is expected for a get with no specified key?
+			}
 		case "replace":
 			// Store this data, but only if the data already exists. Almost never used, and exists for protocol completeness (set, add, replace, etc)
 		case "append":
@@ -351,7 +366,7 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 			// abcdef\r\n
 			if len(commandWords) >= 2 {
 				key := commandWords[1]
-				if ci, ok := r.cache[key]; ok {
+				if ci, exists := r.cache[key]; exists {
 					response = r.getValueResponse(key, &ci)
 				} else {
 					// TODO: What response is expected for get of invalid key (doesn't exist)?
