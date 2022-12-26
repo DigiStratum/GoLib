@@ -189,21 +189,7 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 	switch *command {
 		case "version": return r.handleVersionCommand(cmd)
 		case "set": return r.handleSetCommand(cmd)
-		case "add":
-			// Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
-			/*
-			if len(commandWords) >= 2 {
-				key := commandWords[1]
-				if r.existsCacheItem(key) {
-					r.touchCacheItem(key)
-				} else {
-					// TODO: Set normally
-				}
-				// TODO: What response is expected following add command?
-			} else {
-				// TODO: What response is expected for a get with no specified key?
-			}
-			*/
+		case "add": return r.handleAddCommand(cmd)
 		case "replace":
 			// Store this data, but only if the data already exists. Almost never used, and exists for protocol completeness (set, add, replace, etc)
 		case "append":
@@ -263,6 +249,7 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 	return r.getErrorResponse(fmt.Sprintf("Unhandled command: '%s'", *command))
 }
 
+// Get the fake memcached server version
 func (r *fakeMemcachedServer) handleVersionCommand(cmd *commandTokenizer) string {
 	return r.getVersionResponse()
 }
@@ -275,12 +262,12 @@ func (r *fakeMemcachedServer) handleSetCommand(cmd *commandTokenizer) string {
 	expires := cmd.GetTokenInt()
 	bytelen := cmd.GetTokenInt()
 	if (nil == key) || (nil == flags) || (nil == expires) || (nil == bytelen) {
-		return r.getErrorResponse("set command: requires `set <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
+		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
 	}
 	noReply := cmd.IsNoReply()
 	value := cmd.GetTokenBytes(*bytelen)
 	if nil == value {
-		return r.getErrorResponse(fmt.Sprintf("set command: failed to read %d bytes for value", *bytelen))
+		return r.getErrorResponse(fmt.Sprintf("storage command: failed to read %d bytes for value", *bytelen))
 	}
 
 	ci := fakeCacheItem{
@@ -291,6 +278,22 @@ func (r *fakeMemcachedServer) handleSetCommand(cmd *commandTokenizer) string {
 	r.writeCacheItem(*key, &ci)
 	if noReply { return "" }
 	return r.getStoredResponse()
+}
+
+// Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
+func (r *fakeMemcachedServer) handleAddCommand(cmd *commandTokenizer) string {
+	// Parse: add <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
+	cmd.SetRewindPoint()
+	key := cmd.GetTokenString()
+	cmd.Rewind()
+	if nil == key {
+		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
+	}
+	if r.existsCacheItem(*key) {
+		r.touchCacheItem(*key)
+		return r.getOkResponse()
+	}
+	return r.handleSetCommand(cmd)
 }
 
 /*
@@ -304,14 +307,6 @@ func (r *fakeMemcachedServer) handleCommand(commandLine string) string {
 // -----------------------------------------------
 // HELPERS
 // -----------------------------------------------
-
-func (r *fakeMemcachedServer) atoiMulti(values ...string) []int {
-	var ints []int
-	for _, v := range values {
-		if i, err := strconv.Atoi(v); nil == err { ints = append(ints, i) }
-	}
-	return ints
-}
 
 func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
 	ci, _ := r.cache[key]
@@ -383,27 +378,37 @@ func (r *fakeMemcachedServer) vprintf(formatter string, args ...interface{}) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Command Tokenizer Implementation
+// Lexical Command Tokenizer Implementation
 // -------------------------------------------------------------------------------------------------
 
 type commandTokenizer struct {
-	cursor		int
-	command		[]byte
+	cursor		int		// Current cursor location
+	rewind		int		// Rewind location
+	command		[]byte		// Command "text" that we are lexing
 }
 
 func newCommandTokenizer(command *[]byte) *commandTokenizer {
 	return &commandTokenizer{
 		cursor:		0,
+		rewind:		0,
 		command:	*command,
 	}
+}
+
+func (r *commandTokenizer) SetRewindPoint() {
+	r.rewind = r.cursor
+}
+
+func (r *commandTokenizer) Rewind() {
+	r.cursor = r.rewind
 }
 
 // Absorb white space/separators, then get any non-white space as the token up to next white-space/separator/EOL
 func (r *commandTokenizer) GetTokenString() *string {
 	inToken := false
-	i := r.cursor
-	for ; i < len(r.command); i++ {
-		ch := r.command[i]
+	start := r.cursor
+	for ; r.cursor < len(r.command); r.cursor++ {
+		ch := r.command[r.cursor]
 		// Any char that's white space or separator is a token boundary:
 		if (ch == ' ') || (ch == '\r') || (ch == '\n') || (ch == '\t') {
 			if inToken { break }
@@ -412,14 +417,14 @@ func (r *commandTokenizer) GetTokenString() *string {
 	}
 	// Seems we found no token, only white-space
 	if ! inToken { return nil }
-	token := r.command[r.cursor:i]
+	token := r.command[start:r.cursor]
 	tokenstr := string(token)
-	r.cursor = i+1
 	return &tokenstr
 }
 
 // Return optional patemeter (such as '[noreply]') matching pattern in the next Token, or don't consume it
 func (r *commandTokenizer) GetOptionalTokenString(pattern string) *string {
+	// Use this instead of Rewind so that outside caller can still Rewind() back past OptionalTokenStrings...
 	initialCursor := r.cursor
 	token := r.GetTokenString()
 	if nil == token { return nil }
