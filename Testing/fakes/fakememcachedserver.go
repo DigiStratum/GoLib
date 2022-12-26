@@ -14,7 +14,9 @@ ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-interfaces-p
 
 ## Storage commands to the server take the form:
 
->> command key [flags] [exptime] length [noreply]
+>> <command name> <key> <flags> <exptime> <bytes> [noreply]\r\n
+
+such that <command name> = set|add|replace|append|prepend
 
 Or when using compare and swap (cas):
 
@@ -530,6 +532,32 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 
 		case "set":
 			// Most common command. Store this data, possibly overwriting any existing data. New items are at the top of the LRU.
+			// command key [flags] [exptime] length [noreply]
+			// <command name> <key> <flags> <exptime> <bytes> [noreply]\r\n
+			if len(commandWords) >= 4 {
+				words := 4
+				key := commandWords[1]
+				// TODO: check and handle Atoi() errors:
+				flags, _ := strconv.Atoi(commandWords[2])
+				expires,_ := strconv.Atoi(commandWords[3])
+				bytelen,_ := strconv.Atoi(commandWords[4])
+				noreply := false
+				if len(commandWords) >= 5 {
+					if "noreply" == commandWords[5] { noreply = true }
+					words++
+				}
+				commandLines := strings.Split(commandLine, "\r\n")
+				if len(commandLines) >= 2 {
+					value := commandLines[1][:bytelen]
+					ci := fakeCacheItem{
+						Value: []byte(value),
+						Expires: int64(expires),
+						Flags: uint32(flags),
+					}
+					r.writeCacheItem(key, &ci)
+					if ! noreply { response = r.getStoredResponse() }
+				}
+			}
 
 		case "add":
 			// Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
