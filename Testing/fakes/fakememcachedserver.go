@@ -6,9 +6,12 @@ A fake Memcached Server implementation
 
 ref: https://github.com/memcached/memcached/blob/master/doc/protocol.txt
 ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-interfaces-protocol.html
+ref: https://github.com/memcached/memcached/wiki/MetaCommands
 
 TODO:
  * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
+ * Simulate max item size and rejection of over-sized values
+
 */
 
 import(
@@ -190,10 +193,8 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 		case "version": return r.handleVersionCommand(cmd)
 		case "set": return r.handleSetCommand(cmd)
 		case "add": return r.handleAddCommand(cmd)
-		case "replace":
-			// Store this data, but only if the data already exists. Almost never used, and exists for protocol completeness (set, add, replace, etc)
-		case "append":
-			// Add this data after the last byte in an existing item. This does not allow you to extend past the item limit. Useful for managing lists.
+		case "replace": return r.handleReplaceCommand(cmd)
+		case "append": return r.handleAppendCommand(cmd)
 		case "prepend":
 			// Same as append, but adding new data before existing data.
 		case "cas":
@@ -256,51 +257,84 @@ func (r *fakeMemcachedServer) handleVersionCommand(cmd *commandTokenizer) string
 
 // Most common command. Store this data, possibly overwriting any existing data. New items are at the top of the LRU.
 func (r *fakeMemcachedServer) handleSetCommand(cmd *commandTokenizer) string {
-	// Parse: set <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
-	key := cmd.GetTokenString()
-	flags := cmd.GetTokenInt()
-	expires := cmd.GetTokenInt()
-	bytelen := cmd.GetTokenInt()
-	if (nil == key) || (nil == flags) || (nil == expires) || (nil == bytelen) {
-		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
-	}
-	noReply := cmd.IsNoReply()
-	value := cmd.GetTokenBytes(*bytelen)
-	if nil == value {
-		return r.getErrorResponse(fmt.Sprintf("storage command: failed to read %d bytes for value", *bytelen))
-	}
-
+	key, flags, expires, noReply, value, err := r.parseStorageCmd(cmd)
+	if nil != err { return r. getErrorResponse(err.Error()) }
 	ci := fakeCacheItem{
-		Value: []byte(*value),
-		Expires: int64(*expires),
-		Flags: uint32(*flags),
+		Value: value,
+		Expires: int64(expires),
+		Flags: uint32(flags),
 	}
-	r.writeCacheItem(*key, &ci)
+	r.writeCacheItem(key, &ci)
 	if noReply { return "" }
 	return r.getStoredResponse()
 }
 
 // Store this data, only if it does not already exist. New items are at the top of the LRU. If an item already exists and an add fails, it promotes the item to the front of the LRU anyway.
 func (r *fakeMemcachedServer) handleAddCommand(cmd *commandTokenizer) string {
-	// Parse: add <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
+	// Parse: add <key> [...] just to peek at the key and put it back
 	cmd.SetRewindPoint()
 	key := cmd.GetTokenString()
 	cmd.Rewind()
 	if nil == key {
 		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
 	}
-	if r.existsCacheItem(*key) {
-		r.touchCacheItem(*key)
-		return r.getOkResponse()
+	// If this item doesn't exist in the cache, then set it normally
+	if ! r.existsCacheItem(*key) { return r.handleSetCommand(cmd) }
+	// Otherwise just update the last accessed timestamp
+	r.touchCacheItem(*key)
+	return r.getOkResponse()
+}
+
+// Store this data, but only if the data already exists. Almost never used, and exists for protocol completeness (set, add, replace, etc)
+func (r *fakeMemcachedServer) handleReplaceCommand(cmd *commandTokenizer) string {
+	// Parse: replace <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
+	cmd.SetRewindPoint()
+	key := cmd.GetTokenString()
+	cmd.Rewind()
+	if nil == key {
+		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
 	}
+	if r.existsCacheItem(*key) { return r.getNotStoredResponse() }
 	return r.handleSetCommand(cmd)
 }
 
+// Add this data after the last byte in an existing item. This does not allow you to extend past the item limit. Useful for managing lists.
+func (r *fakeMemcachedServer) handleAppendCommand(cmd *commandTokenizer) string {
+	key, _, _, noReply, value, err := r.parseStorageCmd(cmd)
+	if nil != err { return r. getErrorResponse(err.Error()) }
+	if ci := r.readCacheItem(key); nil != ci {
+		// Append supplied value to the existing ci Value
+		ci.Value = append(ci.Value, value...)
+		// TODO: Validate max length of Value
+		// TODO: What is expected of provided expires/flags? Are we supposed to replace these values or ignore?
+		r.writeCacheItem(key, ci)
+		if noReply { return "" }
+		return r.getStoredResponse()
+	}
+	// TODO: What is the expected reponse on attempt to Append to an non-existing key?
+	if noReply { return "" }
+	return r.getNotStoredResponse()
+}
+
+// Parse: command <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
+func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, int, int, bool, []byte, error) {
+	key := cmd.GetTokenString()
+	flags := cmd.GetTokenInt()
+	expires := cmd.GetTokenInt()
+	bytelen := cmd.GetTokenInt()
+	if (nil == key) || (nil == flags) || (nil == expires) || (nil == bytelen) {
+		return "", 0, 0, false, []byte{}, fmt.Errorf("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
+	}
+	noReply := cmd.IsNoReply()
+	value := cmd.GetTokenBytes(*bytelen)
+	if nil == value {
+		return "", 0, 0, false, []byte{}, fmt.Errorf("storage command: failed to read %d bytes for value", *bytelen)
+	}
+	return *key, *flags, *expires, noReply, *value, nil
+}
+
 /*
-func (r *fakeMemcachedServer) handleCommand(commandLine string) string {
-	commandWords := strings.Fields(commandLine)
-	response := ""		// Empty response is default ("noreply" reinforces this)
-	return response
+func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 }
 */
 
@@ -322,6 +356,7 @@ func (r *fakeMemcachedServer) existsCacheItem(key string) bool {
 }
 
 func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) {
+	ci.Accessed = r.timeSource.NowUnixTimeStamp()
 	r.cache[key] = *ci
 }
 
