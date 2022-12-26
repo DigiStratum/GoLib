@@ -315,6 +315,41 @@ DELETED				The requested key was deleted from the server.
 STAT name value			A line of statistics data.
 END				The end of the statistics data.
 
+## Other Commands
+ref: https://github.com/memcached/memcached/blob/master/doc/protocol.txt
+
+"cache_memlimit" is a command with a numeric argument. This allows runtime
+adjustments of the cache memory limit. It returns "OK\r\n" or an error (unless
+"noreply" is given as the last parameter).
+
+"shutdown" is a command with an optional argument used to stop memcached with
+a kill signal. By default, "shutdown" alone raises SIGINT, though "graceful"
+may be specified as the single argument to instead trigger a graceful shutdown
+with SIGUSR1. The shutdown command is disabled by default, and can be enabled
+with the -A/--enable-shutdown flag.
+
+"version" is a command with no arguments:
+
+version\r\n
+
+In response, the server sends
+
+"VERSION <version>\r\n", where <version> is the version string for the
+server.
+
+"verbosity" is a command with a numeric argument. It always succeeds,
+and the server sends "OK\r\n" in response (unless "noreply" is given
+as the last parameter). Its effect is to set the verbosity level of
+the logging output.
+
+"quit" is a command with no arguments:
+
+quit\r\n
+
+Upon receiving this command, the server closes the
+connection. However, the client may also simply close the connection
+when it no longer needs it, without issuing this command.
+
 -----
 
 TODO:
@@ -491,9 +526,7 @@ func (r *fakeMemcachedServer) handleConnection(connection net.Conn) {
 	switch commandWords[0] {
 		// TODO: Add other commands
 		case "version":
-			r.vprintf("Got 'version' directive!")
-			// TODO: Make the version variable/configurable, simulate different behaviors expected for different versions
-			response = "VERSION 0.0\n"
+			response = r.getVersionResponse()
 
 		case "set":
 			// Most common command. Store this data, possibly overwriting any existing data. New items are at the top of the LRU.
@@ -608,6 +641,26 @@ func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem) st
 
 func (r *fakeMemcachedServer) getOkResponse() string {
 	return fmt.Sprintf("OK\r\n")
+}
+
+func (r *fakeMemcachedServer) getErrorResponse(msg string) string {
+	return fmt.Sprintf("ERROR %s\r\n", msg)
+}
+
+func (r *fakeMemcachedServer) getStoredResponse() string {
+	return fmt.Sprintf("STORED\r\n")
+}
+
+func (r *fakeMemcachedServer) getNotStoredResponse() string {
+	return fmt.Sprintf("NOT_STORED\r\n")
+}
+
+func (r *fakeMemcachedServer) getVersionResponse() string {
+	// TODO: Make version configurable; we want to also be able to alter certain behaviors based on version differences
+	vmajor := 0
+	vminor := 0
+	vpatch := 0
+	return fmt.Sprintf("VERSION %d.%d.%d\r\n", vmajor, vminor, vpatch)
 }
 
 // Put out a verbose message, ala Printf formatting
