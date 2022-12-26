@@ -195,8 +195,7 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 		case "add": return r.handleAddCommand(cmd)
 		case "replace": return r.handleReplaceCommand(cmd)
 		case "append": return r.handleAppendCommand(cmd)
-		case "prepend":
-			// Same as append, but adding new data before existing data.
+		case "prepend": return r.handlePrependCommand(cmd)
 		case "cas":
 			// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has updated the data since you read it last. Useful for resolving race conditions on updating cache data.
 		case "get":
@@ -220,11 +219,8 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 			// An alternative get command for using with CAS. Returns a CAS identifier (a unique 64bit number) with the item. Return this value with the cas command. If the item's CAS value has changed since you gets'ed it, it will not be stored.
 		case "delete":
 			// Removes an item from the cache, if it exists.
-		case "incr":
-			// Increment and Decrement. If an item stored is the string representation of an unsigned 64bit integer, you may run incr or decr commands to modify that number. You may only incr by positive values, or decr by positive values. They do not accept negative values.
-
-			// If a value does not already exist, incr/decr will fail.
-		case "decr":
+		case "incr": return r.handleIncrementCommand(cmd, 1)
+		case "decr": return r.handleIncrementCommand(cmd, -1)
 		case "stats":
 			// basic stats command.
 			// sub-commands are "items", "slabs", and "sizes"
@@ -311,10 +307,56 @@ func (r *fakeMemcachedServer) handleAppendCommand(cmd *commandTokenizer) string 
 		if noReply { return "" }
 		return r.getStoredResponse()
 	}
-	// TODO: What is the expected reponse on attempt to Append to an non-existing key?
 	if noReply { return "" }
-	return r.getNotStoredResponse()
+	return r.getNotFoundResponse()
 }
+
+// Same as append, but adding new data before existing data.
+func (r *fakeMemcachedServer) handlePrependCommand(cmd *commandTokenizer) string {
+	key, _, _, noReply, value, err := r.parseStorageCmd(cmd)
+	if nil != err { return r. getErrorResponse(err.Error()) }
+	if ci := r.readCacheItem(key); nil != ci {
+		// Append the existing ci value to the supplied value
+		ci.Value = append(value, ci.Value...)
+		// TODO: Validate max length of Value
+		// TODO: What is expected of provided expires/flags? Are we supposed to replace these values or ignore?
+		r.writeCacheItem(key, ci)
+		if noReply { return "" }
+		return r.getStoredResponse()
+	}
+	if noReply { return "" }
+	return r.getNotFoundResponse()
+}
+
+// Increment and Decrement. If an item stored is the string representation of an unsigned 64bit integer, you may run incr or decr commands to modify that number. You may only incr by positive values, or decr by positive values. They do not accept negative values.
+func (r *fakeMemcachedServer) handleIncrementCommand(cmd *commandTokenizer, direction int) string {
+	key := cmd.GetTokenString()
+	delta := cmd.GetTokenInt()
+	if (nil == key) || (nil == delta) { return r.getErrorResponse("incr/decr command: must supply <key> <value>") }
+	noReply := cmd.IsNoReply()
+	if ci := r.readCacheItem(*key); nil != ci {
+		intval, err := strconv.Atoi(string(ci.Value))
+		if nil != err { return r.getErrorResponse("inc/dec command: existing entry does not appear to be numeric") }
+		newintval := intval+(*delta*direction)
+		if newintval < 0 { newintval = 0 }
+		newValue := fmt.Sprintf("%d", newintval)
+		ci.Value = []byte(newValue)
+		r.writeCacheItem(*key, ci)
+		if noReply { return "" }
+		return r.getValueOnlyResponse(newValue)
+	}
+	if noReply { return "" }
+	return r.getNotFoundResponse()
+}
+
+/*
+func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
+}
+*/
+
+// -----------------------------------------------
+// HELPERS
+// -----------------------------------------------
 
 // Parse: command <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
 func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, int, int, bool, []byte, error) {
@@ -332,15 +374,6 @@ func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, in
 	}
 	return *key, *flags, *expires, noReply, *value, nil
 }
-
-/*
-func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
-}
-*/
-
-// -----------------------------------------------
-// HELPERS
-// -----------------------------------------------
 
 func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
 	ci, _ := r.cache[key]
@@ -371,6 +404,13 @@ func (r *fakeMemcachedServer) touchCacheItem(key string) {
 // RESPONSES
 // -----------------------------------------------
 
+func (r *fakeMemcachedServer) getValueOnlyResponse(value string) string {
+	return fmt.Sprintf(
+		"VALUE %s\r\n",
+		value,
+	)
+}
+
 func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem) string {
 	return fmt.Sprintf(
 		"VALUE %s %d %d\r\n%s\r\n",
@@ -395,6 +435,10 @@ func (r *fakeMemcachedServer) getStoredResponse() string {
 
 func (r *fakeMemcachedServer) getNotStoredResponse() string {
 	return fmt.Sprintf("NOT_STORED\r\n")
+}
+
+func (r *fakeMemcachedServer) getNotFoundResponse() string {
+	return fmt.Sprintf("NOT_FOUND\r\n")
 }
 
 func (r *fakeMemcachedServer) getVersionResponse() string {
