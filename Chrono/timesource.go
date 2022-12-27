@@ -17,6 +17,8 @@ type TimeSourceIfc interface {
 	Now() TimeStampIfc
 	NowUnixTimeStamp() int64
 	NowUnixTimeStampMilli() int64
+	NowUnixTimeStampMicro() int64
+	NowUnixTimeStampNano() int64
 }
 
 type timeSource struct {
@@ -44,5 +46,13 @@ func (r timeSource) NowUnixTimeStamp() int64 {
 
 func (r timeSource) NowUnixTimeStampMilli() int64 {
 	return time.Now().UnixMilli()
+}
+
+func (r timeSource) NowUnixTimeStampMicro() int64 {
+	return time.Now().UnixMicro()
+}
+
+func (r timeSource) NowUnixTimeStampNano() int64 {
+	return time.Now().UnixNano()
 }
 

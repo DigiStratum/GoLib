@@ -18,6 +18,7 @@ import(
 	"fmt"
 	"net"
 	"sync"
+	"strings"
 	"strconv"
 	"regexp"
 
@@ -39,7 +40,7 @@ type fakeCacheItem struct {
 	Flags		uint32	// Note:  In memcached 1.2.0 and lower the value is a 16-bit integer value. In memcached 1.2.1 and higher the value is a 32-bit integer.
 	Expires		int64	// 0 for non-expiring items
 	Accessed	int64	// When was this item last accessed (factors into LRU algorithm)
-	CASUnique	string	// Simple hash to compare and swap (md5?)
+	CASUnique	int64	// Simple unique ID assigned to this Cache Item; seems to be internally generated "generation" of this record for cas updates 
 	IsDeleted	bool	// Soft deleted item - no operations possible after this (except purge upon expiration)
 }
 
@@ -197,27 +198,9 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 		case "replace": return r.handleReplaceCommand(cmd)
 		case "append": return r.handleAppendCommand(cmd)
 		case "prepend": return r.handlePrependCommand(cmd)
-		case "cas":
-			// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has updated the data since you read it last. Useful for resolving race conditions on updating cache data.
-		case "get":
-			// Command for retrieving data. Takes one or more keys and returns all found items.
-			// get xyzkey\r\n
-			// VALUE xyzkey 0 6\r\n
-			// abcdef\r\n
-			/*
-			if len(commandWords) >= 2 {
-				key := commandWords[1]
-				if ci := r.readCacheItem(key); nil != ci {
-					response = r.getValueResponse(key, ci)
-				} else {
-					// TODO: What response is expected for get of invalid key (doesn't exist)?
-				}
-			} else {
-				// TODO: What response is expected for a get with no specified key?
-			}
-			*/
-		case "gets":
-			// An alternative get command for using with CAS. Returns a CAS identifier (a unique 64bit number) with the item. Return this value with the cas command. If the item's CAS value has changed since you gets'ed it, it will not be stored.
+		case "cas": return r.handleCasCommand(cmd)
+		case "get": return r.handleGetCommand(cmd, false)
+		case "gets": return r.handleGetCommand(cmd, true)
 		case "delete": return r.handleDeleteCommand(cmd)
 		case "incr": return r.handleIncrementCommand(cmd, 1)
 		case "decr": return r.handleIncrementCommand(cmd, -1)
@@ -246,9 +229,74 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 	return r.getErrorResponse(fmt.Sprintf("Unhandled command: '%s'", *command))
 }
 
+// Command for retrieving data. Takes one or more keys and returns all found items.
+// An alternative get command for using with CAS. Returns a CAS identifier (a unique 64bit number)
+// with the item. Return this value with the cas command. If the item's CAS value has changed since
+// you gets'ed it, it will not be stored.
+func (r *fakeMemcachedServer) handleGetCommand(cmd *commandTokenizer, withCAS bool) string {
+	// REQUEST:
+	//   get key1 [key2 .... keyn]
+	//   gets key1 [key2 ... keyn]
+	// RESPONSE:
+	//   VALUE key1 flags bytes [casunique]\r\n
+	//   VALUE key2 flags bytes [casunique]\r\n
+	//   VALUE keyn flags bytes [casunique]\r\n
+	// Note: [casunique] is for the gets variant, not get
+	var response strings.Builder
+	numKeys := 0
+	numFound := 0
+	for key := cmd.GetTokenString(); nil != key; key = cmd.GetTokenString() {
+		numKeys++
+		if ci := r.readCacheItem(*key); nil != ci {
+			response.WriteString(r.getValueResponse(*key, ci, withCAS))
+			numFound++
+		}
+	}
+	// No key(s) specified?
+	if 0 == numKeys { return r.getErrorResponse("requires `command <key1> [key2 ... keyN]`") }
+	// No keys found can result in NOT_FOUND, but one or more found means we can't respond this way
+	if 0 == numFound { return r.getNotFoundResponse() }
+	return response.String()
+}
+
 // Get the fake memcached server version
 func (r *fakeMemcachedServer) handleVersionCommand(cmd *commandTokenizer) string {
 	return r.getVersionResponse()
+}
+
+// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has updated the data since you read it last. Useful for resolving race conditions on updating cache data.
+// Set the specified key to the supplied value, only if the supplied casunique matches. This is effectively the equivalent of change the information if nobody has updated it since I last fetched it.
+// cas key [flags] [exptime] length [casunique] [noreply]
+func (r *fakeMemcachedServer) handleCasCommand(cmd *commandTokenizer) string {
+	key := cmd.GetTokenString()
+	flags := cmd.GetTokenUint32()
+	expires := cmd.GetTokenInt64()
+	bytelen := cmd.GetTokenInt()
+	if (nil == key) || (nil == flags) || (nil == expires) || (nil == bytelen) {
+		return r.getErrorResponse("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
+	}
+	casunique := cmd.GetTokenInt64()
+	noReply := cmd.IsNoReply()
+	value := cmd.GetTokenBytes(*bytelen)
+	if nil == value {
+		return r.getErrorResponse(fmt.Sprintf("storage command: failed to read %d bytes for value", *bytelen))
+	}
+	// Read Cache Item matching this key
+	if ci := r.readCacheItem(*key); nil != ci {
+		// If the CASUnique of the stored CI matches that passed in...
+		if ci.CASUnique == *casunique {
+			// Update the Value and other properties and save it!
+			ci.Value = *value
+			ci.Flags = *flags
+			ci.Expires = *expires
+			r.writeCacheItem(*key, ci)
+			if noReply { return "" }
+			return r.getStoredResponse()
+		} else {
+			return r.getNotStoredResponse()
+		}
+	}
+	return r.getNotFoundResponse()
 }
 
 // Most common command. Store this data, possibly overwriting any existing data. New items are at the top of the LRU.
@@ -376,10 +424,10 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 // -----------------------------------------------
 
 // Parse: command <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n
-func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, int, int, bool, []byte, error) {
+func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, uint32, int64, bool, []byte, error) {
 	key := cmd.GetTokenString()
-	flags := cmd.GetTokenInt()
-	expires := cmd.GetTokenInt()
+	flags := cmd.GetTokenUint32()
+	expires := cmd.GetTokenInt64()
 	bytelen := cmd.GetTokenInt()
 	if (nil == key) || (nil == flags) || (nil == expires) || (nil == bytelen) {
 		return "", 0, 0, false, []byte{}, fmt.Errorf("requires `command <key> <flags> <exptime> <bytes> [noreply]\\r\\n<data>\\r\\n`")
@@ -391,6 +439,10 @@ func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, in
 	}
 	return *key, *flags, *expires, noReply, *value, nil
 }
+
+// -----------------------------------------------
+// CACHE ACCESSORS
+// -----------------------------------------------
 
 func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
 	if ci, ok := r.cache[key]; ok {
@@ -413,6 +465,7 @@ func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) erro
 		return fmt.Errorf("writeCacheItem(): Cannot write over deleted key with dalayed purge")
 	}
 	ci.Accessed = r.timeSource.NowUnixTimeStamp()
+	ci.CASUnique = r.timeSource.NowUnixTimeStampNano()
 	r.cache[key] = *ci
 	return nil
 }
@@ -458,7 +511,17 @@ func (r *fakeMemcachedServer) getValueOnlyResponse(value string) string {
 	)
 }
 
-func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem) string {
+func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem, withCAS bool) string {
+	if withCAS {
+		return fmt.Sprintf(
+			"VALUE %s %d %d %d\r\n%s\r\n",
+			key,
+			ci.Flags,
+			len(ci.Value),
+			ci.CASUnique,
+			string(ci.Value),
+		)
+	}
 	return fmt.Sprintf(
 		"VALUE %s %d %d\r\n%s\r\n",
 		key,
@@ -583,6 +646,19 @@ func (r *commandTokenizer) GetOptionalTokenInt() *int {
 	return token
 }
 
+// Return optional patemeter (such as '[casunique]' 64bit int) matching pattern in the next Token, or don't consume it
+func (r *commandTokenizer) GetOptionalTokenInt64() *int64 {
+	// Use this instead of Rewind so that outside caller can still Rewind() back past OptionalTokenStrings...
+	initialCursor := r.cursor
+	token := r.GetTokenInt64()
+	if nil == token {
+		// No Match! Rewind the cursor
+		r.cursor = initialCursor
+		return nil
+	}
+	return token
+}
+
 // Check whether we have an optional noreply token at the current cursor position
 func (r *commandTokenizer) IsNoReply() bool {
 	return nil != r.GetOptionalTokenString("^noreply$")
@@ -594,6 +670,26 @@ func (r *commandTokenizer) GetTokenInt() *int {
 	tokenstr := r.GetTokenString()
 	if nil == tokenstr { return nil }
 	token, err := strconv.Atoi(*tokenstr)
+	if nil != err { return nil }
+	return &token
+}
+
+// Get the next token, and convert to int
+// TODO: is int32 good enough, or do we need another type? how big can these numbers get?
+func (r *commandTokenizer) GetTokenUint32() *uint32 {
+	tokenstr := r.GetTokenString()
+	if nil == tokenstr { return nil }
+	token, err := strconv.ParseInt(*tokenstr, 10, 32)
+	if nil != err { return nil }
+	tokenu32 := uint32(token)
+	return &tokenu32
+}
+
+// Get the next token, and convert to int
+func (r *commandTokenizer) GetTokenInt64() *int64 {
+	tokenstr := r.GetTokenString()
+	if nil == tokenstr { return nil }
+	token, err := strconv.ParseInt(*tokenstr, 10, 64)
 	if nil != err { return nil }
 	return &token
 }
