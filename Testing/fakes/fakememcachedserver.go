@@ -38,6 +38,7 @@ type FakeMemcachedServerIfc interface {
 type fakeCacheItem struct {
 	Value		[]byte
 	Flags		uint32	// Note:  In memcached 1.2.0 and lower the value is a 16-bit integer value. In memcached 1.2.1 and higher the value is a 32-bit integer.
+	Created		int64	// Track the time of creation; anything older than the server flushTime is effectively flushed (doesn't exist), subject to garbage collection
 	Expires		int64	// 0 for non-expiring items
 	Accessed	int64	// When was this item last accessed (factors into LRU algorithm)
 	CASUnique	int64	// Simple unique ID assigned to this Cache Item; seems to be internally generated "generation" of this record for cas updates 
@@ -52,6 +53,7 @@ type fakeMemcachedServer struct {
 	verbose		bool
 	cache		map[string]fakeCacheItem
 	timeSource	chrono.TimeSourceIfc
+	flushTime	int64
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -206,27 +208,36 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 		case "decr": return r.handleIncrementCommand(cmd, -1)
 		case "stats":
 			// basic stats command.
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats.html
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-general.html
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-slabs.html
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-items.html
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-sizes.html
+			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-detail.html
+
 			// sub-commands are "items", "slabs", and "sizes"
 			// items: Returns some information, broken down by slab, about items stored in memcached.
 			// slabs: Returns more information, broken down by slab, about items stored in memcached. More centered to performance of a slab rather than counts of particular items.
 			// sizes: A special command that shows you how items would be distributed if slabs were broken into 32byte buckets instead of your current number of slabs. Useful for determining how efficient your slab sizing is.
 
 			// WARNING this is a development command. As of 1.4 it is still the only command which will lock your memcached instance for some time. If you have many millions of stored items, it can become unresponsive for several minutes. Run this at your own risk. It is roadmapped to either make this feature optional or at least speed it up.
-		case "flush_all":
-			// Invalidate all existing cache items. Optionally takes a parameter, which means to invalidate all items after N seconds have passed.
-			// This command does not pause the server, as it returns immediately. It does not free up or flush memory at all, it just causes all items to expire.
-			/*
-			r.cache = make(map[string]fakeCacheItem)
-			if len(commandWords) >= 2 {
-				next := commandWords[1]
-				if "noreply" != next {
-					response = r.getOkResponse()
-				}
-			}
-			*/
-		default:
+		case "flush_all": return r.handleFlushAllCommand(cmd)
 	}
 	return r.getErrorResponse(fmt.Sprintf("Unhandled command: '%s'", *command))
+}
+
+
+/*
+func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
+}
+*/
+
+// Invalidate all existing cache items. Optionally takes a parameter, which means to invalidate all items after N seconds have passed.
+// This command does not pause the server, as it returns immediately. It does not free up or flush memory at all, it just causes all items to expire.
+// ref: https://github.com/memcached/memcached/blob/597645db6a2b138710f01ffe5e92e453117b987a/doc/protocol.txt#L1728
+func (r *fakeMemcachedServer) handleFlushAllCommand(cmd *commandTokenizer) string {
+	r.flushTime = r.timeSource.NowUnixTimeStamp()
+	return r.getOkResponse()
 }
 
 // Command for retrieving data. Takes one or more keys and returns all found items.
@@ -414,11 +425,6 @@ func (r *fakeMemcachedServer) handleDeleteCommand(cmd *commandTokenizer) string 
 	return r.getDeletedResponse()
 }
 
-/*
-func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
-}
-*/
-
 // -----------------------------------------------
 // HELPERS
 // -----------------------------------------------
@@ -448,7 +454,7 @@ func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
 	if ci, ok := r.cache[key]; ok {
 		// Make sure that it's not soft-deleted with a delay and that it
 		// either never expires or not expired (Accessed + Expires < now() )
-		if (! ci.IsDeleted) || (0 == ci.Expires) || (ci.Accessed + ci.Expires < r.timeSource.NowUnixTimeStamp()) {
+		if (! ci.IsDeleted) || (ci.Created < r.flushTime) || (0 == ci.Expires) || (ci.Accessed + ci.Expires < r.timeSource.NowUnixTimeStamp()) {
 			return &ci
 		}
 	}
@@ -464,7 +470,9 @@ func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) erro
 	if chk, ok := r.cache[key]; ok && chk.IsDeleted {
 		return fmt.Errorf("writeCacheItem(): Cannot write over deleted key with dalayed purge")
 	}
-	ci.Accessed = r.timeSource.NowUnixTimeStamp()
+	now := r.timeSource.NowUnixTimeStamp()
+	ci.Accessed = now
+	ci.Created = now
 	ci.CASUnique = r.timeSource.NowUnixTimeStampNano()
 	r.cache[key] = *ci
 	return nil
@@ -473,8 +481,8 @@ func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) erro
 func (r *fakeMemcachedServer) touchCacheItem(key string) error {
 	// Make sure that it's not soft-deleted with a delay
 	if ci, ok := r.cache[key]; ok {
-		if ci.IsDeleted {
-			return fmt.Errorf("touchCacheItem(): Cannot write over deleted key with dalayed purge")
+		if ci.IsDeleted || (ci.Created < r.flushTime) {
+			return fmt.Errorf("touchCacheItem(): soft-deleted or flushed")
 		}
 		ci.Accessed = r.timeSource.NowUnixTimeStamp()
 		return r.writeCacheItem(key, &ci)
@@ -484,7 +492,7 @@ func (r *fakeMemcachedServer) touchCacheItem(key string) error {
 
 func (r *fakeMemcachedServer) deleteCacheItem(key string, delay int) {
 	// Make sure that it's not already soft-deleted with a delay; prevent overriding that with immediate deletion
-	if ci, ok := r.cache[key]; ok && (! ci.IsDeleted) {
+	if ci, ok := r.cache[key]; ok && (! ci.IsDeleted) && (ci.Created > r.flushTime) {
 
 		// No delay, delete immediately
 		if 0 == delay {
