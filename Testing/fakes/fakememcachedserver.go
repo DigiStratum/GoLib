@@ -11,7 +11,7 @@ ref: https://github.com/memcached/memcached/wiki/MetaCommands
 TODO:
  * Simulate memcached version <= 1.2.0 for 16 bit flags on cache items vs 32 bits vs 1.2.1+
  * Simulate max item size and rejection of over-sized values
-
+ * Spawn a main loop GoRoutine which, in turn, spawns periodic maintenance cycles to purge deleted/expired items
 */
 
 import(
@@ -40,6 +40,7 @@ type fakeCacheItem struct {
 	Expires		int64	// 0 for non-expiring items
 	Accessed	int64	// When was this item last accessed (factors into LRU algorithm)
 	CASUnique	string	// Simple hash to compare and swap (md5?)
+	IsDeleted	bool	// Soft deleted item - no operations possible after this (except purge upon expiration)
 }
 
 type fakeMemcachedServer struct {
@@ -217,8 +218,7 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 			*/
 		case "gets":
 			// An alternative get command for using with CAS. Returns a CAS identifier (a unique 64bit number) with the item. Return this value with the cas command. If the item's CAS value has changed since you gets'ed it, it will not be stored.
-		case "delete":
-			// Removes an item from the cache, if it exists.
+		case "delete": return r.handleDeleteCommand(cmd)
 		case "incr": return r.handleIncrementCommand(cmd, 1)
 		case "decr": return r.handleIncrementCommand(cmd, -1)
 		case "stats":
@@ -349,6 +349,23 @@ func (r *fakeMemcachedServer) handleIncrementCommand(cmd *commandTokenizer, dire
 	return r.getNotFoundResponse()
 }
 
+// Removes an item from the cache, if it exists.
+func (r *fakeMemcachedServer) handleDeleteCommand(cmd *commandTokenizer) string {
+	key := cmd.GetTokenString()
+	time := cmd.GetOptionalTokenInt()
+	if nil == key { return r.getErrorResponse("delete command: must supply <key>") }
+	noReply := cmd.IsNoReply()
+	if nil == time {
+		// No refusal time, so delete immediately
+		r.deleteCacheItem(*key, 0)
+	} else {
+		// Optional refusal time, so delete with delayed removal
+		r.deleteCacheItem(*key, *time)
+	}
+	if noReply { return "" }
+	return r.getDeletedResponse()
+}
+
 /*
 func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 }
@@ -376,10 +393,12 @@ func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, in
 }
 
 func (r *fakeMemcachedServer) readCacheItem(key string) *fakeCacheItem {
-	ci, _ := r.cache[key]
-	// Make sure it either never expires or not expired (Accessed + Expires < now() )
-	if (0 == ci.Expires) || (ci.Accessed + ci.Expires < r.timeSource.NowUnixTimeStamp()) {
-		return &ci
+	if ci, ok := r.cache[key]; ok {
+		// Make sure that it's not soft-deleted with a delay and that it
+		// either never expires or not expired (Accessed + Expires < now() )
+		if (! ci.IsDeleted) || (0 == ci.Expires) || (ci.Accessed + ci.Expires < r.timeSource.NowUnixTimeStamp()) {
+			return &ci
+		}
 	}
 	return nil
 }
@@ -388,15 +407,43 @@ func (r *fakeMemcachedServer) existsCacheItem(key string) bool {
 	return nil != r.readCacheItem(key)
 }
 
-func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) {
+func (r *fakeMemcachedServer) writeCacheItem(key string, ci *fakeCacheItem) error {
+	// Make sure that it's not soft-deleted with a delay
+	if chk, ok := r.cache[key]; ok && chk.IsDeleted {
+		return fmt.Errorf("writeCacheItem(): Cannot write over deleted key with dalayed purge")
+	}
 	ci.Accessed = r.timeSource.NowUnixTimeStamp()
 	r.cache[key] = *ci
+	return nil
 }
 
-func (r *fakeMemcachedServer) touchCacheItem(key string) {
-	if ci :=r.readCacheItem(key); nil != ci {
+func (r *fakeMemcachedServer) touchCacheItem(key string) error {
+	// Make sure that it's not soft-deleted with a delay
+	if ci, ok := r.cache[key]; ok {
+		if ci.IsDeleted {
+			return fmt.Errorf("touchCacheItem(): Cannot write over deleted key with dalayed purge")
+		}
 		ci.Accessed = r.timeSource.NowUnixTimeStamp()
-		r.writeCacheItem(key, ci)
+		return r.writeCacheItem(key, &ci)
+	}
+	return fmt.Errorf("touchCacheItem(): Key not found")
+}
+
+func (r *fakeMemcachedServer) deleteCacheItem(key string, delay int) {
+	// Make sure that it's not already soft-deleted with a delay; prevent overriding that with immediate deletion
+	if ci, ok := r.cache[key]; ok && (! ci.IsDeleted) {
+
+		// No delay, delete immediately
+		if 0 == delay {
+			delete(r.cache, key)
+		} else {
+			// Delayed removal for deletion (blocks read/write operations against the same key)
+			ci.Accessed = r.timeSource.NowUnixTimeStamp()
+			ci.Expires = int64(delay)
+			ci.IsDeleted = true
+			ci.Value = []byte{}
+			r.writeCacheItem(key, &ci)
+		}
 	}
 }
 
@@ -439,6 +486,10 @@ func (r *fakeMemcachedServer) getNotStoredResponse() string {
 
 func (r *fakeMemcachedServer) getNotFoundResponse() string {
 	return fmt.Sprintf("NOT_FOUND\r\n")
+}
+
+func (r *fakeMemcachedServer) getDeletedResponse() string {
+	return fmt.Sprintf("DELETED\r\n")
 }
 
 func (r *fakeMemcachedServer) getVersionResponse() string {
@@ -506,8 +557,25 @@ func (r *commandTokenizer) GetOptionalTokenString(pattern string) *string {
 	// Use this instead of Rewind so that outside caller can still Rewind() back past OptionalTokenStrings...
 	initialCursor := r.cursor
 	token := r.GetTokenString()
-	if nil == token { return nil }
+	if nil == token {
+		// No Match! Rewind the cursor
+		r.cursor = initialCursor
+		return nil
+	}
 	if matched, _ := regexp.MatchString(pattern, *token); ! matched {
+		// No Match! Rewind the cursor
+		r.cursor = initialCursor
+		return nil
+	}
+	return token
+}
+
+// Return optional patemeter (such as '[time]' count of seconds) matching pattern in the next Token, or don't consume it
+func (r *commandTokenizer) GetOptionalTokenInt() *int {
+	// Use this instead of Rewind so that outside caller can still Rewind() back past OptionalTokenStrings...
+	initialCursor := r.cursor
+	token := r.GetTokenInt()
+	if nil == token {
 		// No Match! Rewind the cursor
 		r.cursor = initialCursor
 		return nil
