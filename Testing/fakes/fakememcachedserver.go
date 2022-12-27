@@ -15,6 +15,7 @@ TODO:
 */
 
 import(
+	"os"
 	"fmt"
 	"net"
 	"sync"
@@ -28,6 +29,13 @@ import(
 
 const FAKE_MEMCACHED_DEFAULT_PORT = 21212
 const FAKE_MEMCACHED_DEFAULT_HOST = "localhost"
+
+// Default version (current latest stable as of this writing)
+// Version configurable; to be able to fork logic based on version
+// ref: https://memcached.org/downloads
+const FAKE_MEMCACHED_DEFAULT_VMAJOR int16 = 1
+const FAKE_MEMCACHED_DEFAULT_VMINOR int16 = 6
+const FAKE_MEMCACHED_DEFAULT_VPATCH int16 = 17
 
 type FakeMemcachedServerIfc interface {
 	Listen() error		// Start listening on host:port (if not already)
@@ -45,15 +53,33 @@ type fakeCacheItem struct {
 	IsDeleted	bool	// Soft deleted item - no operations possible after this (except purge upon expiration)
 }
 
+type FakeStat int
+
+const (
+	FAKE_STAT_DYNAMIC FakeStat = iota
+	FAKE_STAT_BOOL
+	FAKE_STAT_STRING
+	FAKE_STAT_INT
+)
+
+type fakeStat struct {
+	fsType		FakeStat
+	nvalue		int64
+	svalue		string
+	bvalue		bool
+}
+
 type fakeMemcachedServer struct {
-	host		string
-	listening	bool
-	listener	net.Listener
-	waitGroup	sync.WaitGroup	// ref: https://gobyexample.com/waitgroups
-	verbose		bool
-	cache		map[string]fakeCacheItem
-	timeSource	chrono.TimeSourceIfc
-	flushTime	int64
+	vmajor, vminor, vpatch		int16			// Version components
+	host				string
+	listening			bool
+	listener			net.Listener
+	waitGroup			sync.WaitGroup		// ref: https://gobyexample.com/waitgroups
+	verbose				bool
+	cache				map[string]fakeCacheItem
+	timeSource			chrono.TimeSourceIfc
+	flushTime			int64
+	stats				map[string]fakeStat
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -67,14 +93,36 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 	// Configure with sane/working defaults
 	port := FAKE_MEMCACHED_DEFAULT_PORT
 	host := FAKE_MEMCACHED_DEFAULT_HOST
+	vmajor := FAKE_MEMCACHED_DEFAULT_VMAJOR
+	vminor := FAKE_MEMCACHED_DEFAULT_VMINOR
+	vpatch := FAKE_MEMCACHED_DEFAULT_VPATCH
 	var timeSource chrono.TimeSourceIfc = chrono.NewTimeSource()
 
 	for _, ci := range config {
 		switch ci.GetName() {
+			case "vmajor":
+				vi := ci.GetValue()
+				if vs, ok := vi.(string); ok {
+					vt, err := strconv.Atoi(vs)
+					if nil == err {	vmajor = int16(vt) }
+				}
+			case "vminor":
+				vi := ci.GetValue()
+				if vs, ok := vi.(string); ok {
+					vt, err := strconv.Atoi(vs)
+					if nil == err {	vminor = int16(vt) }
+				}
+			case "vpatch":
+				vi := ci.GetValue()
+				if vs, ok := vi.(string); ok {
+					vt, err := strconv.Atoi(vs)
+					if nil == err {	vpatch = int16(vt) }
+				}
 			case "port":
 				vi := ci.GetValue()
 				if vs, ok := vi.(string); ok {
-					port, err = strconv.Atoi(vs)
+					vt, err := strconv.Atoi(vs)
+					if nil == err {	port = vt }
 				}
 			case "host":
 				vi := ci.GetValue()
@@ -91,9 +139,13 @@ func NewFakeMemcachedServer(config ...cfg.ConfigItemIfc) (*fakeMemcachedServer, 
 
 	// Make a new one of these
 	fms := fakeMemcachedServer{
-		host: fmt.Sprintf("%s:%d", host, port ),
-		cache: make(map[string]fakeCacheItem),
-		timeSource: timeSource,
+		vmajor:		vmajor,
+		vminor:		vminor,
+		vpatch:		vpatch,
+		host:		fmt.Sprintf("%s:%d", host, port),
+		cache:		make(map[string]fakeCacheItem),
+		stats:		make(map[string]fakeStat),
+		timeSource:	timeSource,
 	}
 
 	// Start up a socket listener
@@ -117,6 +169,7 @@ func (r *fakeMemcachedServer) Listen() error {
 	r.listener = listener
 	r.vprintf("Listening on '%s'", r.host)
 	r.listening = true
+	r.recordStaticStats()
 
 	// Spin off a Go Routine for the FMS Listener
 	go r.accept()
@@ -141,6 +194,16 @@ func (r *fakeMemcachedServer) Verbose() {
 	if (nil == r) || r.verbose { return }
 	r.verbose = true
 	r.vprintf("Listening on '%s'", r.host)
+}
+
+// On startup, there are certain stats that are not subject to change; these are they
+func (r *fakeMemcachedServer) recordStaticStats() {
+	r.stats["pid"] = fakeStat{ fsType: FAKE_STAT_INT, nvalue: int64(os.Getpid()) }
+	// uptime - this stat just captures the start time and request for it later subtracts from current time
+	r.stats["uptime"] = fakeStat{ fsType: FAKE_STAT_DYNAMIC, nvalue: r.timeSource.NowUnixTimeStamp() }
+	// time - this stat is a placeholder to calculate time at the time of request
+	r.stats["time"] = fakeStat{ fsType: FAKE_STAT_DYNAMIC, nvalue: 0 }
+	r.stats["version"] = fakeStat{ fsType: FAKE_STAT_STRING, svalue: r.getVersionString() }
 }
 
 // -----------------------------------------------
@@ -206,34 +269,76 @@ func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
 		case "delete": return r.handleDeleteCommand(cmd)
 		case "incr": return r.handleIncrementCommand(cmd, 1)
 		case "decr": return r.handleIncrementCommand(cmd, -1)
-		case "stats":
-			// basic stats command.
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats.html
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-general.html
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-slabs.html
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-items.html
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-sizes.html
-			// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-detail.html
-
-			// sub-commands are "items", "slabs", and "sizes"
-			// items: Returns some information, broken down by slab, about items stored in memcached.
-			// slabs: Returns more information, broken down by slab, about items stored in memcached. More centered to performance of a slab rather than counts of particular items.
-			// sizes: A special command that shows you how items would be distributed if slabs were broken into 32byte buckets instead of your current number of slabs. Useful for determining how efficient your slab sizing is.
-
-			// WARNING this is a development command. As of 1.4 it is still the only command which will lock your memcached instance for some time. If you have many millions of stored items, it can become unresponsive for several minutes. Run this at your own risk. It is roadmapped to either make this feature optional or at least speed it up.
+		case "stats": return r.handleStatsCommand(cmd)
 		case "flush_all": return r.handleFlushAllCommand(cmd)
 	}
 	return r.getErrorResponse(fmt.Sprintf("Unhandled command: '%s'", *command))
 }
 
-
-/*
-func (r *fakeMemcachedServer) handleCommand(cmd *commandTokenizer) string {
+// basic stats command.
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats.html
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-general.html
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-slabs.html
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-items.html
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-sizes.html
+// ref: https://docs.oracle.com/cd/E17952_01/mysql-5.6-en/ha-memcached-stats-detail.html
+// sub-commands are "items", "slabs", and "sizes"
+// items: Returns some information, broken down by slab, about items stored in memcached.
+// slabs: More centered to performance of a slab rather than counts of particular items.
+// sizes: A special command that shows you how items would be distributed if slabs were broken into
+//        32byte buckets instead of your current number of slabs. Useful for determining how
+//        efficient your slab sizing is.
+// WARNING this is a development command. As of 1.4 it is still the only command which will lock
+// your memcached instance for some time. If you have many millions of stored items, it can become
+// unresponsive for several minutes. Run this at your own risk. It is roadmapped to either make this
+// feature optional or at least speed it up.
+func (r *fakeMemcachedServer) handleStatsCommand(cmd *commandTokenizer) string {
+	var response strings.Builder
+	for name, fakeStat := range r.stats {
+		switch fakeStat.fsType {
+			case FAKE_STAT_DYNAMIC:
+				// Dynamic stats are all calculated differently depending on the stat name
+				switch name {
+					case "uptime":
+						uptime := r.timeSource.NowUnixTimeStamp() - fakeStat.nvalue
+						response.WriteString(
+							r.getStatResponse(name, fmt.Sprintf("%d", uptime)),
+						)
+					case "time":
+						nowtime := r.timeSource.NowUnixTimeStamp()
+						response.WriteString(
+							r.getStatResponse(name, fmt.Sprintf("%d", nowtime)),
+						)
+					default:
+						response.WriteString(
+							r.getStatResponse(name, "Error: Unhandled Dynamic Stat"),
+						)
+				}
+			case FAKE_STAT_BOOL:
+				response.WriteString(
+					r.getStatResponse(name, fmt.Sprintf("%t", fakeStat.bvalue)),
+				)
+			case FAKE_STAT_STRING:
+				response.WriteString(
+					r.getStatResponse(name, fakeStat.svalue),
+				)
+			case FAKE_STAT_INT:
+				response.WriteString(
+					r.getStatResponse(name, fmt.Sprintf("%d", fakeStat.nvalue)),
+				)
+			default:
+				response.WriteString(
+					r.getStatResponse(name, fmt.Sprintf("Error: Unhandled StatType: %d", fakeStat.fsType)),
+				)
+		}
+	}
+	response.WriteString(r.getEndResponse())
+	return response.String()
 }
-*/
 
-// Invalidate all existing cache items. Optionally takes a parameter, which means to invalidate all items after N seconds have passed.
-// This command does not pause the server, as it returns immediately. It does not free up or flush memory at all, it just causes all items to expire.
+// Invalidate all existing cache items. Optionally takes a parameter, which means to invalidate all
+// items after N seconds have passed. This command does not pause the server, as it returns
+// immediately. It does not free up or flush memory at all, it just causes all items to expire.
 // ref: https://github.com/memcached/memcached/blob/597645db6a2b138710f01ffe5e92e453117b987a/doc/protocol.txt#L1728
 func (r *fakeMemcachedServer) handleFlushAllCommand(cmd *commandTokenizer) string {
 	r.flushTime = r.timeSource.NowUnixTimeStamp()
@@ -275,8 +380,12 @@ func (r *fakeMemcachedServer) handleVersionCommand(cmd *commandTokenizer) string
 	return r.getVersionResponse()
 }
 
-// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has updated the data since you read it last. Useful for resolving race conditions on updating cache data.
-// Set the specified key to the supplied value, only if the supplied casunique matches. This is effectively the equivalent of change the information if nobody has updated it since I last fetched it.
+// Check And Set (or Compare And Swap). An operation that stores data, but only if no one else has
+// updated the data since you read it last. Useful for resolving race conditions on updating cache
+// data.
+// Set the specified key to the supplied value, only if the supplied casunique matches. This is
+// effectively the equivalent of change the information if nobody has updated it since I last
+// fetched it.
 // cas key [flags] [exptime] length [casunique] [noreply]
 func (r *fakeMemcachedServer) handleCasCommand(cmd *commandTokenizer) string {
 	key := cmd.GetTokenString()
@@ -446,6 +555,10 @@ func (r *fakeMemcachedServer) parseStorageCmd(cmd *commandTokenizer) (string, ui
 	return *key, *flags, *expires, noReply, *value, nil
 }
 
+func (r *fakeMemcachedServer) getVersionString() string {
+	return fmt.Sprintf("%d.%d.%d", r.vmajor, r.vminor, r.vpatch)
+}
+
 // -----------------------------------------------
 // CACHE ACCESSORS
 // -----------------------------------------------
@@ -539,6 +652,14 @@ func (r *fakeMemcachedServer) getValueResponse(key string, ci *fakeCacheItem, wi
 	)
 }
 
+func (r *fakeMemcachedServer) getStatResponse(name, value string) string {
+	return fmt.Sprintf("STAT %s %s\r\n", name, value)
+}
+
+func (r *fakeMemcachedServer) getEndResponse() string {
+	return fmt.Sprintf("END\r\n")
+}
+
 func (r *fakeMemcachedServer) getOkResponse() string {
 	return fmt.Sprintf("OK\r\n")
 }
@@ -564,11 +685,7 @@ func (r *fakeMemcachedServer) getDeletedResponse() string {
 }
 
 func (r *fakeMemcachedServer) getVersionResponse() string {
-	// TODO: Make version configurable; we want to also be able to alter certain behaviors based on version differences
-	vmajor := 0
-	vminor := 0
-	vpatch := 0
-	return fmt.Sprintf("VERSION %d.%d.%d\r\n", vmajor, vminor, vpatch)
+	return fmt.Sprintf("VERSION %s\r\n", r.getVersionString())
 }
 
 // Put out a verbose message, ala Printf formatting
