@@ -12,18 +12,13 @@ FIXME:
 */
 
 import (
-	"fmt"
 	"sync"
 	"strconv"
-	gojson "encoding/json"
-
-	"github.com/DigiStratum/GoLib/Data/json"
-	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type KeyValuePair struct {
 	Key	string
-	Value	string
+	Value	[]byte
 }
 
 // ByteMap public interface
@@ -32,7 +27,7 @@ type ByteMapIfc interface {
 	Merge(mergeHash ByteMapIfc)
 	IsEmpty() bool
 	Size() int
-	Set(key, value []byte)
+	Set(key string, value []byte)
 	Get(key string) *[]byte
 	GetInt64(key string) *int64
 	GetBool(key string) bool
@@ -47,7 +42,7 @@ type ByteMapIfc interface {
 }
 
 type ByteMap struct {
-	hash		map[string]string
+	data		map[string][]byte
 	mutex		sync.Mutex
 }
 
@@ -57,20 +52,8 @@ type ByteMap struct {
 
 func NewByteMap() *ByteMap {
 	return &ByteMap{
-		hash:	make(map[string]string),
+		data:	make(map[string][]byte),
 	}
-}
-
-func NewByteMapFromJsonString(json *string) (*ByteMap, error) {
-	r := NewByteMap()
-	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
-	return r, nil
-}
-
-func NewByteMapFromJsonFile(jsonFile string) (*ByteMap, error) {
-	r := NewByteMap()
-	if err := r.LoadFromJsonFile(jsonFile); nil != err { return nil, err }
-	return r, nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -82,32 +65,8 @@ func NewByteMapFromJsonFile(jsonFile string) (*ByteMap, error) {
 // ref: https://developer20.com/be-aware-of-coping-in-go/
 func (r *ByteMap) Copy() *ByteMap {
 	n := NewByteMap()
-	for k, v := range (*r).hash { n.Set(k, v) }
+	for k, v := range (*r).data { n.Set(k, v) }
 	return n
-}
-
-// Load our hash map with JSON data from a string (or return an error)
-func (r *ByteMap) LoadFromJsonString(jsonStr *string) error {
-	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
-	r.mutex.Lock(); defer r.mutex.Unlock()
-	return json.NewJson(jsonStr).Load(&r.hash)
-}
-
-// Load our hash map with JSON data from a file (or return an error)
-func (r *ByteMap) LoadFromJsonFile(jsonFile string) error {
-	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
-	r.mutex.Lock(); defer r.mutex.Unlock()
-	return json.NewJsonFromFile(jsonFile).Load(&r.hash)
-}
-
-// Check whether this ByteMap is empty (has no properties)
-func (r *ByteMap) IsEmpty() bool {
-	return 0 == r.Size()
-}
-
-// Get the number of properties in this ByteMap
-func (r *ByteMap) Size() int {
-	return len(r.hash)
 }
 
 // Merge some additional data on top of our own
@@ -121,33 +80,48 @@ func (r *ByteMap) Merge(mergeHash ByteMapIfc) {
 	}
 }
 
+// Check whether this ByteMap is empty (has no properties)
+func (r *ByteMap) IsEmpty() bool {
+	return 0 == r.Size()
+}
+
+// Get the number of properties in this ByteMap
+func (r *ByteMap) Size() int {
+	if nil == r { return 0 }
+	return len(r.data)
+}
+
 // Set a single data element key to the specified value
-func (r *ByteMap) Set(key, value string) {
+func (r *ByteMap) Set(key string, value []byte) {
 	if nil == r { return }
 	r.set(key, value)
 }
 
 // Get a single data element by key name
-func (r *ByteMap) Get(key string) *string {
-	if val, ok := r.hash[key]; ok { return &val }
+func (r *ByteMap) Get(key string) *[]byte {
+	if nil == r { return nil }
+	if val, ok := r.data[key]; ok { return &val }
 	return nil
 }
 
 // Get a single data element by key name as an int64
 func (r *ByteMap) GetInt64(key string) *int64 {
+	if nil == r { return nil }
 	value := r.Get(key)
 	if nil != value {
-		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err { return &vc }
+		if vc, err := strconv.ParseInt(string(*value), 0, 64); nil == err { return &vc }
 	}
 	return nil
 }
 
 // Get a single data element by key name as a boolean
 func (r *ByteMap) GetBool(key string) bool {
+	if nil == r { return false }
 	s := r.Get(key)
 	if nil == s { return false }
-	if ("true" == *s) || ("TRUE" == *s) || ("t" == *s) || ("T" == *s) || ("1" == *s) { return true }
-	if ("on" == *s) || ("ON" == *s) || ("yes" == *s) || ("YES" == *s) { return true }
+	str := string(*s)
+	if ("true" == str) || ("TRUE" == str) || ("t" == str) || ("T" == str) || ("1" == str) { return true }
+	if ("on" == str) || ("ON" == str) || ("yes" == str) || ("YES" == str) { return true }
 	n := r.GetInt64(key)
 	if nil == n { return false }
 	return *n != 0
@@ -155,59 +129,58 @@ func (r *ByteMap) GetBool(key string) bool {
 
 // Check whether we have a data element by key name
 func (r *ByteMap) Has(key string) bool {
+	if nil == r { return false }
 	return r.Get(key) != nil
 }
 
 // Check whether we have configuration elements for all the key names
 func (r *ByteMap) HasAll(keys *[]string) bool {
+	if nil == r { return false }
 	for _, key := range *keys { if ! r.Has(key) { return false } }
 	return true
 }
 
-// Make a new hashmap from a subset of the key-values from this one
+// Make a new bytemap from a subset of the key-values from this one
 func (r *ByteMap) GetSubset(keys *[]string) *ByteMap {
+	if nil == r { return nil }
 	n := NewByteMap()
 	if nil != keys {
 		for _, k := range *keys {
-			if v, ok := r.hash[k]; ok { n.hash[k] = v }
+			if v, ok := r.data[k]; ok { n.data[k] = v }
 		}
 	}
 	return n
 }
 
-// Get the set of keys currently loaded into this hashmap
+// Get the set of keys currently loaded into this bytemap
 func (r *ByteMap) GetKeys() []string {
-	keys := make([]string, len(r.hash))
+	if nil == r { return make([]string, 0) }
+	keys := make([]string, len(r.data))
 	i := 0
-	for key, _ := range r.hash { keys[i] = key; i++ }
+	for key, _ := range r.data { keys[i] = key; i++ }
 	return keys
 }
 
-// Drop a single key from the hashmap, if it's set
+// Drop a single key from the bytemap, if it's set
 func (r *ByteMap) Drop(key string) *ByteMap {
+	if nil == r { return nil }
 	if ! r.Has(key) { return r }
-	delete(r.hash, key)
+	delete(r.data, key)
 	return r
 }
 
-// Drop an set of keys from the hashmap, if any are set
+// Drop an set of keys from the bytemap, if any are set
 func (r *ByteMap) DropSet(keys *[]string) *ByteMap {
-	if nil == keys { return r }
+	if nil == r { return nil }
+	if (nil == keys) || (len(*keys) == 0) { return r }
 	for _, k := range *keys { r.Drop(k) }
 	return r
 }
 
 // Drop all keys/values (reset to empty state)
 func (r *ByteMap) DropAll() {
-	r.hash = make(map[string]string)
-}
-
-// Dump JSON-like representation of our entries in readable form to supplied logger
-func (r *ByteMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) {
-	if nil == logger { return }
-	logger.Any(level, "\"%s\": {", label)
-	for k, v := range r.hash { logger.Any(level, "\t\"%s\": \"%s\"", k, v) }
-	logger.Any(level, "}")
+	if nil == r { return }
+	r.data = make(map[string][]byte)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -216,9 +189,10 @@ func (r *ByteMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) 
 
 // Iterate over all of our items, returning each as a *KeyValuePair in the form of an interface{}
 func (r *ByteMap) GetIterator() func () interface{} {
+	if nil == r { return nil }
 	kvps := make([]KeyValuePair, r.Size())
 	var idx int = 0
-	for k, v := range r.hash {
+	for k, v := range r.data {
 		kvps[idx] = KeyValuePair{ Key: k, Value: v }
 		idx++
 	}
@@ -234,38 +208,11 @@ func (r *ByteMap) GetIterator() func () interface{} {
 }
 
 // -------------------------------------------------------------------------------------------------
-// JsonSerializable Public Interface
-// -------------------------------------------------------------------------------------------------
-
-func (r *ByteMap) ToJson() (*string, error) {
-	jsonBytes, err := gojson.Marshal(r.hash)
-	if nil != err { return nil, err }
-	jsonString := string(jsonBytes[:])
-	return &jsonString, nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// encoding/json.Marshaler Interface Implementation
-// -------------------------------------------------------------------------------------------------
-
-func (r *ByteMap) MarshalJSON() ([]byte, error) {
-	return gojson.Marshal(r.hash)
-}
-
-// -------------------------------------------------------------------------------------------------
-// encoding/json.Unmarshaler Interface Implementation
-// -------------------------------------------------------------------------------------------------
-
-func (r *ByteMap) UnmarshalJSON(value []byte) error {
-	return gojson.Unmarshal(value, &(r.hash))
-}
-
-// -------------------------------------------------------------------------------------------------
-// ByteMapIfc Private Interface
+// ByteMap Private Implementation
 // -------------------------------------------------------------------------------------------------
 
 // Set a single data element key to the specified value
-func (r *ByteMap) set(key, value string) {
+func (r *ByteMap) set(key string, value []byte) {
 	if nil == r { return }
-	r.hash[key] = value
+	r.data[key] = value
 }
