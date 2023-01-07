@@ -63,7 +63,7 @@ type httpRequest struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewRequest() HttpRequestIfc {
+func NewRequest() *httpRequest {
 	bodyData := make(HttpBodyData)
 	return &httpRequest{
 		headers: NewHttpHeaders(),

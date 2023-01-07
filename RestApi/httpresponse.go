@@ -19,7 +19,7 @@ type httpResponse struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewHttpResponse() HttpResponseIfc {
+func NewHttpResponse() *httpResponse {
 	return &httpResponse{
 		headers: NewHttpHeaders(),
 	}
