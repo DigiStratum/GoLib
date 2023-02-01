@@ -1,4 +1,4 @@
-package restapi
+package http
 
 // TODO: Add support for builder pattern, or chaining, or "functional options":
 // ref: https://www.calhoun.io/using-functional-options-instead-of-method-chaining-in-go/

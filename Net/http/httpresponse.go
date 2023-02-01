@@ -1,4 +1,4 @@
-package restapi
+package http
 
 // HTTP Response public interface
 type HttpResponseIfc interface {

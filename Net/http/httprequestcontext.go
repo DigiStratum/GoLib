@@ -1,4 +1,4 @@
-package restapi
+package http
 
 type HttpRequestContextIfc interface {
 	SetServerPath(serverPath string)

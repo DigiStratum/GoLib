@@ -1,4 +1,4 @@
-package restapi
+package http
 
 // TODO: Refactor into separate files for each of the data structures/method collections
 
