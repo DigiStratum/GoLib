@@ -5,6 +5,9 @@ package json
 
 Dealing with JSON at a level of abstraction above encoding/json.
 
+TODO:
+ * Implement our own json parser; explode it into a general tree structure that can use XPath style notation to access individual values
+
 */
 
 import(

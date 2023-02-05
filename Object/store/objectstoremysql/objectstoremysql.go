@@ -48,6 +48,7 @@ type objectSpec struct {
 	queries			map[string]mysql.QueryIfc
 }
 
+// FIXME: Don't export this
 type ObjectStoreMySQL struct {
 	storeConfig		cfg.ConfigIfc
 	readCache		*objs.MutableObjectStore

@@ -19,6 +19,7 @@ TODO:
  * Change mutex to go-routine+channel for multithreaded orchestration
  * Look more closely at sql.DB which is a connection pool natively; would it give us enough control/visibility over state?
    * ref: https://pkg.go.dev/database/sql#DB
+ * Why is this in the MySQL package? There doesn't seem to be anything MySQL-specific. Move up to DB package if possible!
 
 */
 
@@ -42,6 +43,7 @@ type ConnectionPoolIfc interface {
 	Close() error
 }
 
+// FIXME: this should not be exported
 type ConnectionPool struct {
 	di			*dependencies.DependencyInjected
 	configured		bool
@@ -59,7 +61,10 @@ const DEFAULT_MIN_CONNECTIONS = 1
 const DEFAULT_MAX_CONNECTIONS = 1
 const DEFAULT_MAX_IDLE = 60
 
-// Make a new one of these
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 	cp := ConnectionPool{
 		configured:		false,
@@ -72,6 +77,11 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 	}
 
 	return &cp
+}
+
+func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
+	if ii, ok := i.(ConnectionPoolIfc); ok { return ii, nil }
+	return nil, fmt.Errorf("Does not implement ConnectionPoolIfc")
 }
 
 // -------------------------------------------------------------------------------------------------
