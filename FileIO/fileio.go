@@ -4,9 +4,11 @@ package fileio
 import(
 	"os"
 	"fmt"
+	"strings"
 	"io"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 )
 
 // Write the contents of a string to a file
@@ -91,3 +93,19 @@ func CopyFile(src, dst string) error {
 	err = out.Sync()
 	return err
 }
+
+func GetDirFilesBySuffix(dir, suffix string) (*[]string, error) {
+	files := make([]string, 0)
+	if ! IsDir(dir) { return nil, fmt.Errorf("Not a directory: %s", dir) }
+	if err := filepath.Walk(dir,
+			func (file string, f os.FileInfo, err error) error {
+				if nil != err { return err }				// Fail!
+				if ! IsFile(file) { return nil }			// No Match
+				if ! strings.HasSuffix(file, suffix) { return nil }	// No Match
+				files = append(files, file)				// Match!
+				return nil
+			},
+		); nil != err { return nil, err }
+        return &files, nil
+}
+
