@@ -1,17 +1,53 @@
 package dependencies
 
-type Dependency struct {
-	name	string
-	dep	interface{}
+/*
+
+A Dependency is metadata to uniquely identify some DependencyInstance. It is convenient to pass
+around the Dependency metadata for purposes of identifying, organizing, and assessing dependency
+requirements. Thus, an Injectable (which consumes DependencyInstances) can declaratively identify
+the dependencies that it requires as a set of Dependencies such that the Injector (which injects
+DependencyInstances) can ensure that the Dependency requirements are met.
+
+*/
+
+import (
+	"fmt"
+)
+
+type DependencyIfc interface {
+	GetName() string
+	GetVariant() string
+	GetUniqueId() string
 }
 
-func NewDependency(name string, dep interface{}) *Dependency {
-	return &Dependency{
-		name:	name,
-		dep:	dep,
+type dependency struct {
+	name, variant		string
+}
+
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewDependency(name, variant string) *dependency {
+	return &dependency{
+		name:		name,
+		variant:	variant,
 	}
 }
 
-func (r Dependency) GetDep() (string, interface{}) {
-	return r.name, r.dep
+// -------------------------------------------------------------------------------------------------
+// DependencyIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *dependency) GetName() string {
+	return r.name
 }
+
+func r *dependency) GetVariant() string {
+	return r.variant
+}
+
+func (r *dependency) GetUniqueId() string {
+	return fmt.Sprintf("%s(%s)", r.name, r.variant)
+}
+

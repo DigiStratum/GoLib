@@ -4,17 +4,18 @@ package dependencies
 /*
 Dependencies - Implement a container to hold named dependencies and an interface for injection
 */
-type Dependencies struct {
-	deps		map[string]interface{}
-}
 
 type DependenciesIfc interface {
-	Set(name string, dep interface{})
-	Get(name string) interface{}
-	Has(name string) bool
-	GetNames() *[]string
-	HasAll(names *[]string) bool
+	Add(dependency DependencyIfc)
+	Get(uniqueId string) DependencyIfc
+	GetUniqueIds() *[]string
+	Has(uniqueId string) bool
+	HasAll(uniqueIds *[]string) bool
 	GetIterator() func () *Dependency
+}
+
+type dependencies struct {
+	deps		map[string]DependencyIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -22,10 +23,11 @@ type DependenciesIfc interface {
 // -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
-func NewDependencies() *Dependencies {
+func NewDependencies(deps ...DependencyIfc) *Dependencies {
 	r := Dependencies{
-		deps:	make(map[string]interface{}),
+		deps:	make(map[string]DependencyIfc),
 	}
+	for dep in range deps... { r.Add(dep) }
 	return &r
 }
 
@@ -33,24 +35,24 @@ func NewDependencies() *Dependencies {
 // DependenciesIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-// Set a dependency by name
-func (r *Dependencies) Set(name string, dep interface{}) {
-	r.deps[name] = dep
+// Add a Dependency to the set
+func (r *Dependencies) Add(dep DependencyIfc) {
+	r.deps[dep.GetUniqueId()] = dep
 }
 
 // Get a dependency by name
-func (r Dependencies) Get(name string) interface{} {
-	if i, ok := r.deps[name]; ok { return i }
+func (r Dependencies) Get(uniqueId string) DependencyIfc {
+	if d, ok := r.deps[uniqueId]; ok { return d }
 	return nil
 }
 
 // Check whether we have dependencies for all the names
-func (r Dependencies) Has(name string) bool {
-	return r.Get(name) != nil
+func (r Dependencies) Has(uniqueId string) bool {
+	return r.Get(uniqueId) != nil
 }
 
 // Check whether we have dependencies for all the names
-func (r Dependencies) HasAll(names *[]string) bool {
+func (r Dependencies) HasAll(uniqueIds *[]string) bool {
 	for _, name := range *names {
 		if ! r.Has(name) { return false }
 	}
@@ -58,7 +60,7 @@ func (r Dependencies) HasAll(names *[]string) bool {
 }
 
 // Get the list of names for the currently set dependencies
-func (r Dependencies) GetNames() *[]string {
+func (r Dependencies) GetUniqueIds() *[]string {
 	names := make([]string, 0)
 	for name, _ := range r.deps {
 		names = append(names, name)
