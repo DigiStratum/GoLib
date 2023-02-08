@@ -18,20 +18,23 @@ type DependencyIfc interface {
 	GetName() string
 	GetVariant() string
 	GetUniqueId() string
+	IsRequired() bool
 }
 
 type dependency struct {
 	name, variant		string
+	isRequired		bool
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDependency(name, variant string) *dependency {
+func NewDependency(name, variant string, isRequired bool) *dependency {
 	return &dependency{
 		name:		name,
 		variant:	variant,
+		isRequired:	isRequired,
 	}
 }
 
@@ -49,5 +52,9 @@ func r *dependency) GetVariant() string {
 
 func (r *dependency) GetUniqueId() string {
 	return fmt.Sprintf("%s(%s)", r.name, r.variant)
+}
+
+func (r *dependency) IsRequired() bool {
+	return r.isRequired
 }
 
