@@ -7,8 +7,13 @@ expression of what a client needs/wants from the provider.
 */
 
 type DependenciesIfc interface {
+	// Add a Dependency to the set
 	Add(dep dependency)
+	// Get a dependency by uniqueId
 	Get(uniqueId string) *dependency
+	// Check whether a dependency is in the set by uniqueId
+	Has(uniqueId string) bool
+	// Get the list of uniqueIds for the currently set dependencies
 	GetUniqueIds() *[]string
 }
 
@@ -38,13 +43,19 @@ func (r *Dependencies) Add(dep dependency) {
 	r.deps[dep.GetUniqueId()] = dep
 }
 
-// Get a dependency by name
+// Get a dependency by uniqueId
 func (r *dependencies) Get(uniqueId string) dependency {
 	if d, ok := r.deps[uniqueId]; ok { return d }
 	return nil
 }
 
-// Get the list of names for the currently set dependencies
+// Check whether a dependency is in the set by uniqueId
+func (r *dependencies) Has(uniqueId string) bool {
+	_, ok := r.deps[uniqueId]
+	return ok
+}
+
+// Get the list of uniqueIds for the currently set dependencies
 func (r *dependencies) GetUniqueIds() *[]string {
 	names := make([]string, 0)
 	for name, _ := range r.deps { names = append(names, name) }

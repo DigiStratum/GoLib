@@ -10,16 +10,24 @@ can benefit from the same capabilities without duplicate code running rampant.
 ref: https://en.wikipedia.org/wiki/Dependency_injection
 */
 
-// Whatever implements this interface is able to publicly receive Dependencies
+// Implementation can consume injected DependencyInstanceIfc's
 type DependencyInjectableIfc interface {
-	GetDependencyRequirements() []DependencyIfc
-	GetDependenciesInjected() []DependencyIfc
-	HasRequiredDependencies() bool
-        InjectDependencies(deps DependenciesIfc) error
+        ConsumeDependencies(depinst ...DependencyInstanceIfc) error
 }
 
-// Dependency can inject itself into a provided client
-type DependencyInjectorIfc interface {
-        InjectInto(client DependencyInjectableIfc) error
+// Implementation can provide information about its declared dependencies
+type DependencyDiscoveryIfc interface {
+	// What are all the declared Dependecies?
+	GetDeclaredDependencies() DependenciesIfc
+	// What are just the required Dependencies?
+	GetRequiredDependencies() DependenciesIfc
+	// What Dependencies are Required that have not yet been injected?
+	GetMissingDependencies() DependenciesIfc
+	// What are just the optional Dependencies?
+	GetOptionalDependencies() DependenciesIfc
+	// What are the injected DependencyInstances?
+	GetInjectedDependencies() DependenciesIfc
+	// Have all the required Dependencies been injected?
+	HasRequiredDependencies() bool
 }
 

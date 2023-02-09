@@ -1,14 +1,15 @@
 package dependencies
 
 /*
-Boilerplate code for DependencyInjected "classes" to inspect the injected dependencies for
-completeness/validity. Bearer must declare which dependency names are Optional and/or Required,
-and point us at the injected Dependencies. Validity checking will be performed against these
-data points.
+Boilerplate code for DependencyInjected clients to inspect injected dependencies for completeness
+and validity. Bearer must declare which dependency names are Optional and/or Required, and point
+us at the injected Dependencies. Validity checking will be performed against these data points.
 
 TODO:
  * Capture mutation vs. validity state so that IsValid() uses cached validity if not mutated,
    and mutation flag updates with changes to Set functions
+ * Add support for redefinition and/or replacement of one or more Dependencies at after
+   initialization to support runtime reconfigurability.
 
 */
 
@@ -20,138 +21,95 @@ import (
 
 // This interface may not be used, but helps for readability here nonetheless
 type DependencyInjectedIfc interface {
-	SetRequired(required *[]string) *DependencyInjected
-	GetRequired() *[]string
-	NumRequired() int
-	SetOptional(optional *[]string) *DependencyInjected
-	GetOptional() *[]string
-	NumOptional() int
-	IsValid() bool
-	GetValidationError() error
-	GetMissingRequiredDependencyNames() *[]string
-	GetInvalidDependencyNames() *[]string
+	// This implementation supports all the Discovery functions (so embed the interface!)
+	DependencyDiscoveryIfc
+	// This implementation is injectable (so embed the interface!)
+	DependencyInjectableIfc
 }
 
-type DependencyInjected struct {
-	isInstantiated	bool
-	deps		DependenciesIfc
-	required	[]string
-	optional	[]string
-	isValid		bool
+type dependencyInjected struct {
+	hasRequired	bool
+	declared	DependenciesIfc
+	provided	map[string]DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDependencyInjected(deps DependenciesIfc) *DependencyInjected {
-	if nil == deps { return nil }
+func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInjected {
 	return &DependencyInjected{
-		isInstantiated:	true,
-		deps:		deps,
-		required:	make([]string, 0),
-		optional:	make([]string, 0),
+		hasRequired:	false,
+		declared:	declaredDependencies,
+		provided:	make(map[string]DependencyInstanceIfc),
 	}
 }
 
 // -------------------------------------------------------------------------------------------------
-// DependencyInjected Public Interface
+// DependencyDiscoveryIfc
 // -------------------------------------------------------------------------------------------------
 
-// TODO: make this additive?
-func (r *DependencyInjected) SetRequired(required *[]string) *DependencyInjected {
-	if nil == r { return nil }
-	if r.isInstantiated { r.required = *required }
-	return r
-}
-
-func (r DependencyInjected) GetRequired() *[]string {
-	required := make([]string, r.NumRequired())
-	for i := range r.required { required[i] = r.required[i] }
-	return &required
-}
-
-func (r DependencyInjected) NumRequired() int {
-	return len(r.required)
-}
-
-// TODO: make this additive?
-func (r *DependencyInjected) SetOptional(optional *[]string) *DependencyInjected {
-	if nil == r { return nil }
-	if r.isInstantiated { r.optional = *optional }
-	return r
-}
-
-func (r DependencyInjected) GetOptional() *[]string {
-	optional := make([]string, r.NumOptional())
-	for i := range r.optional { optional[i] = r.optional[i] }
-	return &optional
-}
-
-func (r DependencyInjected) NumOptional() int {
-	return len(r.optional)
-}
-
-func (r *DependencyInjected) IsValid() bool {
-	if (nil == r) || (! r.isInstantiated) { return false }
-	missingDeps := r.GetMissingRequiredDependencyNames()
-	if (nil != missingDeps) && (len(*missingDeps) > 0) { return false }
-	invalidDeps := r.GetInvalidDependencyNames()
-	if (nil != invalidDeps) && (len(*invalidDeps) > 0) { return false }
-	return true
-}
-
-func (r DependencyInjected) GetValidationError() error {
-	if r.IsValid() { return nil }
-	// TODO: Detail which required dependencies are missing, and/or which provided dependencies are invalid
-	return fmt.Errorf("Injected Dependencies are invalid")
-}
-
-// If some named dependencies are required, then they must all be present
-func (r *DependencyInjected) GetMissingRequiredDependencyNames() *[]string {
-	if (nil == r) || (! r.isInstantiated) { return nil }
-	missingDeps := make([]string, 0)
-	if r.NumRequired() > 0 {
-		// For each of the required dependency names...
-		for _, name := range (*r).required {
-			// ... is this named dependency present...?
-			if r.deps.Has(name) {
-				// ... and non-nil?
-				dep := r.deps.Get(name)
-				if nil != dep { continue }
-			}
-			// Missing or nil!
-			missingDeps = append(missingDeps, name)
-		}
+func (r *dependencyInjected) GetDeclaredDependencies() DependenciesIfc {
+	// Make a copy of this so that an outsider can't tamper with the contents
+	declared := NewDependencies()
+	for _, uniqueId := range r.declared.GetUniqueIds() {
+		declared.Add(r.declared.Get(uniqueId))
 	}
-	return &missingDeps
+	return declared
 }
 
-// If some named dependencies are optional, then all present must be valid (either required or optional)
-func (r *DependencyInjected) GetInvalidDependencyNames() *[]string {
-	if (nil == r) || (! r.isInstantiated) || (len(r.optional) == 0) { return nil }
-	givenNames := stringset.NewStringSet()
-	givenNames.SetAll(r.deps.GetNames())
-	givenNames.DropAll(&r.optional)
-	if len(r.required) > 0 { givenNames.DropAll(&r.required) }
-	invalidDeps := givenNames.ToArray()
-	if len(*invalidDeps) == 0 { return nil }
-	return invalidDeps
+func (r *dependencyInjected) GetRequiredDependencies() DependenciesIfc {
+	// Make a copy of this so that an outsider can't tamper with the contents
+	required := NewDependencies()
+	for _, uniqueId := range r.declared.GetUniqueIds() {
+		dep := r.declared.Get(uniqueId)
+		if dep.isRequired() { required.Add(dep) }
+	}
+	return required
 }
 
-/*
-func (r *DependencyInjected) MapDependencies(dependencyMap *map[string]interface) error {
-	if ! r.IsValid() { return fmt.Errorf("Dependencies invalid, cannot map") }
-	for name, mappedDependencyIfc := range *dependencyMap {
-		if ! r.deps.Has(name) { continue }
-		dep := r.deps.Get(name)
-		mappedType := mappedDependencyIfc.(type)
-		depType := dep.(type)
-		if mappedType == depType {
-			// Can't change the pointer (maybe a pointer-to-pointer?) as it will only modify local copy
-		}
+func (r *dependencyInjected) GetMissingDependencies() DependenciesIfc {
+	missing := NewDependencies()
+	injected := r.GetInjectedDependencies()
+	required := r.GetRequiredDependencies()
+	for _, uniqueId := range required.GetUniqueIds() {
+		if ! injected.Has(uniqueId) { missing.Add(required.Get(uniqueId)) }
+	}
+	return missing
+}
+
+func (r *dependencyInjected) GetOptionalDependencies() DependenciesIfc {
+	// Make a copy of this so that an outsider can't tamper with the contents
+	optional := NewDependencies()
+	for _, uniqueId := range r.declared.GetUniqueIds() {
+		dep := r.declared.Get(uniqueId)
+		if ! dep.isRequired() { optional.Add(dep) }
+	}
+	return optional
+}
+
+func (r *dependencyInjected) GetInjectedDependencies() DependenciesIfc {
+	injected := NewDependencies()
+	for _, instance := range r.provided {
+		injected.Add(instance.GetDependency())
+	}
+	return injected
+}
+
+func (r *dependencyInjected) HasRequiredDependencies() bool {
+	missing := r.GetMissingDependencies()
+	return len(missing.GetUniqueIds()) == 0
+}
+
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *dependencyInjected) ConsumeDependencies(depinst ...DependencyInstanceIfc) error {
+	for instance := range depinst... {
+		if nil == instance { continue }
+		r.provided[instance.GetDependency().GetUniqueId()] = instance
 	}
 	return nil
 }
 
-*/
