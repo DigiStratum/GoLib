@@ -13,18 +13,16 @@ TODO:
 
 */
 
-import (
-	"fmt"
-
-	"github.com/DigiStratum/GoLib/Data/stringset"
-)
-
 // This interface may not be used, but helps for readability here nonetheless
 type DependencyInjectedIfc interface {
 	// This implementation supports all the Discovery functions (so embed the interface!)
 	DependencyDiscoveryIfc
 	// This implementation is injectable (so embed the interface!)
 	DependencyInjectableIfc
+	// Embed all the readableDependenciesIfc requirements
+	readableDependenciesIfc
+
+	GetInstance(uniqueId string) interface{}
 }
 
 type dependencyInjected struct {
@@ -37,8 +35,8 @@ type dependencyInjected struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInjected {
-	return &DependencyInjected{
+func NewDependencyInjected(declaredDependencies DependenciesIfc) *dependencyInjected {
+	return &dependencyInjected{
 		hasRequired:	false,
 		declared:	declaredDependencies,
 		provided:	make(map[string]DependencyInstanceIfc),
@@ -50,20 +48,18 @@ func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInje
 // -------------------------------------------------------------------------------------------------
 
 func (r *dependencyInjected) GetDeclaredDependencies() DependenciesIfc {
-	// Make a copy of this so that an outsider can't tamper with the contents
 	declared := NewDependencies()
-	for _, uniqueId := range r.declared.GetUniqueIds() {
+	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
 		declared.Add(r.declared.Get(uniqueId))
 	}
 	return declared
 }
 
 func (r *dependencyInjected) GetRequiredDependencies() DependenciesIfc {
-	// Make a copy of this so that an outsider can't tamper with the contents
 	required := NewDependencies()
-	for _, uniqueId := range r.declared.GetUniqueIds() {
+	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
 		dep := r.declared.Get(uniqueId)
-		if dep.isRequired() { required.Add(dep) }
+		if dep.IsRequired() { required.Add(dep) }
 	}
 	return required
 }
@@ -72,18 +68,17 @@ func (r *dependencyInjected) GetMissingDependencies() DependenciesIfc {
 	missing := NewDependencies()
 	injected := r.GetInjectedDependencies()
 	required := r.GetRequiredDependencies()
-	for _, uniqueId := range required.GetUniqueIds() {
+	for _, uniqueId := range *(required.GetUniqueIds()) {
 		if ! injected.Has(uniqueId) { missing.Add(required.Get(uniqueId)) }
 	}
 	return missing
 }
 
 func (r *dependencyInjected) GetOptionalDependencies() DependenciesIfc {
-	// Make a copy of this so that an outsider can't tamper with the contents
 	optional := NewDependencies()
-	for _, uniqueId := range r.declared.GetUniqueIds() {
+	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
 		dep := r.declared.Get(uniqueId)
-		if ! dep.isRequired() { optional.Add(dep) }
+		if ! dep.IsRequired() { optional.Add(dep) }
 	}
 	return optional
 }
@@ -98,7 +93,7 @@ func (r *dependencyInjected) GetInjectedDependencies() DependenciesIfc {
 
 func (r *dependencyInjected) HasRequiredDependencies() bool {
 	missing := r.GetMissingDependencies()
-	return len(missing.GetUniqueIds()) == 0
+	return len(*(missing.GetUniqueIds())) == 0
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -106,10 +101,39 @@ func (r *dependencyInjected) HasRequiredDependencies() bool {
 // -------------------------------------------------------------------------------------------------
 
 func (r *dependencyInjected) ConsumeDependencies(depinst ...DependencyInstanceIfc) error {
-	for instance := range depinst... {
+	for _, instance := range depinst {
 		if nil == instance { continue }
 		r.provided[instance.GetDependency().GetUniqueId()] = instance
 	}
+	return nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// readableDependenciesIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *dependencyInjected) Get(uniqueId string) *dependency {
+	if instance, ok := r.provided[uniqueId]; ok { return instance.GetDependency() }
+	return nil
+}
+
+func (r *dependencyInjected) Has(uniqueId string) bool {
+	_, ok := r.provided[uniqueId]
+	return ok
+}
+
+func (r *dependencyInjected) GetUniqueIds() *[]string {
+	uniqueIds := make([]string, len(r.provided))
+	for uniqueId, _ := range r.provided { uniqueIds = append(uniqueIds, uniqueId) }
+	return &uniqueIds
+}
+
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectedIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *dependencyInjected) GetInstance(uniqueId string) interface{} {
+	if depinst, ok := r.provided[uniqueId]; ok { return depinst.GetInstance() }
 	return nil
 }
 

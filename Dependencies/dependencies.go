@@ -6,15 +6,20 @@ Dependencies is a Dependency set; it represents the complete collection of Depen
 expression of what a client needs/wants from the provider.
 */
 
-type DependenciesIfc interface {
-	// Add a Dependency to the set
-	Add(dep dependency)
+type readableDependenciesIfc interface {
 	// Get a dependency by uniqueId
 	Get(uniqueId string) *dependency
 	// Check whether a dependency is in the set by uniqueId
 	Has(uniqueId string) bool
 	// Get the list of uniqueIds for the currently set dependencies
 	GetUniqueIds() *[]string
+}
+
+type DependenciesIfc interface {
+	// Embed all the readableDependenciesIfc requirements
+	readableDependenciesIfc
+	// Add a Dependency to the set
+	Add(dep *dependency)
 }
 
 type dependencies struct {
@@ -26,11 +31,11 @@ type dependencies struct {
 // -------------------------------------------------------------------------------------------------
 
 // Make a new one of these!
-func NewDependencies(deps ...dependency) *dependencies {
+func NewDependencies(deps ...*dependency) *dependencies {
 	r := dependencies{
-		deps:	make(map[string]dependency),
+		deps:	make(map[string]*dependency),
 	}
-	for dep in range deps... { r.Add(dep) }
+	for _, dep := range deps { r.Add(dep) }
 	return &r
 }
 
@@ -39,12 +44,12 @@ func NewDependencies(deps ...dependency) *dependencies {
 // -------------------------------------------------------------------------------------------------
 
 // Add a Dependency to the set
-func (r *Dependencies) Add(dep dependency) {
+func (r *dependencies) Add(dep *dependency) {
 	r.deps[dep.GetUniqueId()] = dep
 }
 
 // Get a dependency by uniqueId
-func (r *dependencies) Get(uniqueId string) dependency {
+func (r *dependencies) Get(uniqueId string) *dependency {
 	if d, ok := r.deps[uniqueId]; ok { return d }
 	return nil
 }

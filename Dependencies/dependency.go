@@ -46,7 +46,7 @@ func (r *dependency) GetName() string {
 	return r.name
 }
 
-func r *dependency) GetVariant() string {
+func (r *dependency) GetVariant() string {
 	return r.variant
 }
 
