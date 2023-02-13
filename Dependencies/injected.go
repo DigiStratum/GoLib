@@ -6,10 +6,10 @@ and validity. Bearer must declare which dependency names are Optional and/or Req
 us at the injected Dependencies. Validity checking will be performed against these data points.
 
 TODO:
- * Capture mutation vs. validity state so that IsValid() uses cached validity if not mutated,
-   and mutation flag updates with changes to Set functions
- * Add support for redefinition and/or replacement of one or more Dependencies at after
-   initialization to support runtime reconfigurability.
+ * Cache HasRequired() vs. mutation funcs so that we only re-eval HasRequired() as needed
+ * Add support for redefinition and/or replacement of one or more Dependencies after initialization
+   to support runtime reconfigurability.
+ * Add support for Discovery of "extra" dependencies injected, but undeclared
 
 */
 
@@ -26,9 +26,8 @@ type DependencyInjectedIfc interface {
 }
 
 type dependencyInjected struct {
-	hasRequired	bool
 	declared	DependenciesIfc
-	provided	map[string]DependencyInstanceIfc
+	injected	map[string]DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -37,9 +36,8 @@ type dependencyInjected struct {
 
 func NewDependencyInjected(declaredDependencies DependenciesIfc) *dependencyInjected {
 	return &dependencyInjected{
-		hasRequired:	false,
 		declared:	declaredDependencies,
-		provided:	make(map[string]DependencyInstanceIfc),
+		injected:	make(map[string]DependencyInstanceIfc),
 	}
 }
 
@@ -85,7 +83,7 @@ func (r *dependencyInjected) GetOptionalDependencies() DependenciesIfc {
 
 func (r *dependencyInjected) GetInjectedDependencies() DependenciesIfc {
 	injected := NewDependencies()
-	for _, instance := range r.provided {
+	for _, instance := range r.injected {
 		injected.Add(instance.GetDependency())
 	}
 	return injected
@@ -103,7 +101,7 @@ func (r *dependencyInjected) HasRequiredDependencies() bool {
 func (r *dependencyInjected) ConsumeDependencies(depinst ...DependencyInstanceIfc) error {
 	for _, instance := range depinst {
 		if nil == instance { continue }
-		r.provided[instance.GetDependency().GetUniqueId()] = instance
+		r.injected[instance.GetDependency().GetUniqueId()] = instance
 	}
 	return nil
 }
@@ -113,18 +111,18 @@ func (r *dependencyInjected) ConsumeDependencies(depinst ...DependencyInstanceIf
 // -------------------------------------------------------------------------------------------------
 
 func (r *dependencyInjected) Get(uniqueId string) *dependency {
-	if instance, ok := r.provided[uniqueId]; ok { return instance.GetDependency() }
+	if instance, ok := r.injected[uniqueId]; ok { return instance.GetDependency() }
 	return nil
 }
 
 func (r *dependencyInjected) Has(uniqueId string) bool {
-	_, ok := r.provided[uniqueId]
+	_, ok := r.injected[uniqueId]
 	return ok
 }
 
 func (r *dependencyInjected) GetUniqueIds() *[]string {
-	uniqueIds := make([]string, len(r.provided))
-	for uniqueId, _ := range r.provided { uniqueIds = append(uniqueIds, uniqueId) }
+	uniqueIds := make([]string, len(r.injected))
+	for uniqueId, _ := range r.injected { uniqueIds = append(uniqueIds, uniqueId) }
 	return &uniqueIds
 }
 
@@ -133,7 +131,7 @@ func (r *dependencyInjected) GetUniqueIds() *[]string {
 // -------------------------------------------------------------------------------------------------
 
 func (r *dependencyInjected) GetInstance(uniqueId string) interface{} {
-	if depinst, ok := r.provided[uniqueId]; ok { return depinst.GetInstance() }
+	if depinst, ok := r.injected[uniqueId]; ok { return depinst.GetInstance() }
 	return nil
 }
 
