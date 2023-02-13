@@ -98,7 +98,7 @@ func (r *dependencyInjected) HasRequiredDependencies() bool {
 // DependencyInjectableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *dependencyInjected) ConsumeDependencies(depinst ...DependencyInstanceIfc) error {
+func (r *dependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc) error {
 	for _, instance := range depinst {
 		if nil == instance { continue }
 		r.injected[instance.GetDependency().GetUniqueId()] = instance

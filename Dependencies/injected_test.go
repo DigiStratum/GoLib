@@ -188,20 +188,20 @@ func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet
 	ExpectTrue(actual, t)
 }
 
-func TestThat_DependencyInjected_ConsumeDependencies_ReturnsNoError_ForEmptySet(t *testing.T) {
+func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
 		NewDependencies(),
 	)
 
 	// Test
-	actual := sut.ConsumeDependencies()
+	actual := sut.InjectDependencies()
 
 	// Verify
 	ExpectNoError(actual, t)
 }
 
-func TestThat_DependencyInjected_ConsumeDependencies_InjectsOptionalDependency(t *testing.T) {
+func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t *testing.T) {
 	// Setup
 	expectedDep := NewDependency(DEP_NAME, DEP_VARIANT, true)
 	sut := NewDependencyInjected(
@@ -216,7 +216,7 @@ func TestThat_DependencyInjected_ConsumeDependencies_InjectsOptionalDependency(t
 
 	// Test
 	missing := sut.GetMissingDependencies()
-	actual := sut.ConsumeDependencies(
+	actual := sut.InjectDependencies(
 		depInst,
 	)
 	actualInj := sut.GetInjectedDependencies()
