@@ -8,7 +8,7 @@ import(
 
 func TestThat_NewDependencies_ReturnsSomething(t *testing.T) {
 	// Setup
-	var sut *Dependencies
+	var sut DependenciesIfc
 
 	// Test
 	sut = NewDependencies()
@@ -17,45 +17,54 @@ func TestThat_NewDependencies_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_Dependencies_Set_AddsNamedDependency(t *testing.T) {
+func TestThat_Dependencies_GetUniqueIds_IsEmpty_ForNewDependencies(t *testing.T) {
 	// Setup
-	var sut *Dependencies = NewDependencies()
-	expectedName := "bogusname"
-	expectedValue := "bogusvalue"
-
-	// Test & Verify
-	sut.Set(expectedName, expectedValue)
-	hasIt := sut.Has(expectedName)
-	ExpectTrue(hasIt, t)
-	actual := sut.Get(expectedName)
-	ExpectNonNil(actual, t)
-	actualValue := actual.(string)
-	ExpectString(expectedValue, actualValue, t)
-	names := sut.GetNames()
-	ExpectTrue(sut.HasAll(names), t)
-	ExpectFalse(sut.Has("unexpectedname"), t)
-}
-
-// GetIterator() func () *Dependency
-
-func TestThat_Dependencies_GetIterator_ReturnsGoodIterator(t *testing.T) {
-	// Setup
-	var sut *Dependencies = NewDependencies()
-	sut.Set("name0", "value0")
-	sut.Set("name1", "value1")
-	sut.Set("name2", "value2")
+	sut := NewDependencies()
 
 	// Test
-	var it func () *Dependency = sut.GetIterator()
+	actual := sut.GetUniqueIds()
 
 	// Verify
-	ExpectNonNil(it, t)
-	num := 0
-	for dep := it(); nil != dep; dep = it() {
-		num++
-		if 3 < num { break }
-	}
-	ExpectInt(3, num, t)
+	ExpectInt(0, len(*actual), t)
+}
 
+func TestThat_Dependencies_GetUniqueIds_HasExpectedOneDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencies(
+		NewDependency(DEP_NAME, DEP_VARIANT, false),
+	)
+
+	// Test
+	actual := sut.GetUniqueIds()
+
+	// Verify
+	ExpectInt(1, len(*actual), t)
+	ExpectTrue(sut.Has((*actual)[0]), t)
+}
+
+func TestThat_Dependencies_Has_ReturnsFalse_ForMissingDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencies()
+
+	// Test
+	actual := sut.Has("bogusdep")
+
+	// Verify
+	ExpectFalse(actual, t)
+}
+
+func TestThat_Dependencies_Add_AddsDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencies()
+
+	// Test
+	sut.Add(
+		NewDependency(DEP_NAME, DEP_VARIANT, false),
+	)
+	actual := sut.GetUniqueIds()
+
+	// Verify
+	ExpectInt(1, len(*actual), t)
+	ExpectTrue(sut.Has((*actual)[0]), t)
 }
 
