@@ -17,6 +17,6 @@ accept or reject into our overall DI scheme as a long-term resident.
 */
 
 type DependencyInjectorIfc interface {
-        ProvideDependencies(client DependencyInjectableIfc) error
+	InjectInto(client DependencyInjectableIfc, variant ...string) error
 }
 

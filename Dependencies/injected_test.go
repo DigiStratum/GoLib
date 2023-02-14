@@ -210,8 +210,9 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 		),
 	)
 	depInst := NewDependencyInstance(
-		expectedDep,
-		NewDependencies(), // Arbitrary interface that we already have
+		expectedDep.GetName(),
+		expectedDep.GetVariant(),
+		NewDependencies(),		// Arbitrary interface that we already have
 	)
 
 	// Test
@@ -232,7 +233,6 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 	actualDep := actualInj.Get(expectedDep.GetUniqueId())
 	ExpectString(DEP_NAME, actualDep.GetName(), t)
 	ExpectString(DEP_VARIANT, actualDep.GetVariant(), t)
-	ExpectTrue(actualDep.IsRequired(), t)
 
 	ExpectTrue(sut.Has(expectedDep.GetUniqueId()), t)
 	ExpectTrue(sut.HasRequiredDependencies(), t)
