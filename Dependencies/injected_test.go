@@ -44,7 +44,7 @@ func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsEmptySet(t *test
 
 func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsExpectedSet(t *testing.T) {
 	// Setup
-	expectedDep := NewDependency(DEP_NAME, DEP_VARIANT, false)
+	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT)
 	sut := NewDependencyInjected(
 		NewDependencies(
 			expectedDep,
@@ -87,7 +87,7 @@ func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet(t *test
 
 func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet_ForOptionalDeps(t *testing.T) {
 	// Setup
-	expectedDep := NewDependency(DEP_NAME, DEP_VARIANT, false)
+	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT)
 	sut := NewDependencyInjected(
 		NewDependencies(
 			expectedDep,
@@ -108,7 +108,7 @@ func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet_ForOpti
 
 func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsExpectedSet_ForRequiredDeps(t *testing.T) {
 	// Setup
-	expectedDep := NewDependency(DEP_NAME, DEP_VARIANT, true)
+	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
 	sut := NewDependencyInjected(
 		NewDependencies(
 			expectedDep,
@@ -203,7 +203,7 @@ func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t
 
 func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t *testing.T) {
 	// Setup
-	expectedDep := NewDependency(DEP_NAME, DEP_VARIANT, true)
+	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
 	sut := NewDependencyInjected(
 		NewDependencies(
 			expectedDep,
@@ -211,9 +211,8 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 	)
 	depInst := NewDependencyInstance(
 		expectedDep.GetName(),
-		expectedDep.GetVariant(),
 		NewDependencies(),		// Arbitrary interface that we already have
-	)
+	).SetVariant(DEP_VARIANT)
 
 	// Test
 	missing := sut.GetMissingDependencies()
@@ -231,6 +230,7 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 	ExpectNonNil(actualInj, t)
 	ExpectInt(1, len(*(actualInj.GetUniqueIds())), t)
 	actualDep := actualInj.Get(expectedDep.GetUniqueId())
+	ExpectNonNil(actualDep, t)
 	ExpectString(DEP_NAME, actualDep.GetName(), t)
 	ExpectString(DEP_VARIANT, actualDep.GetVariant(), t)
 

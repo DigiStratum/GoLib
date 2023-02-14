@@ -31,7 +31,7 @@ func TestThat_Dependencies_GetUniqueIds_IsEmpty_ForNewDependencies(t *testing.T)
 func TestThat_Dependencies_GetUniqueIds_HasExpectedOneDependency(t *testing.T) {
 	// Setup
 	sut := NewDependencies(
-		NewDependency(DEP_NAME, DEP_VARIANT, false),
+		NewDependency(DEP_NAME).SetVariant(DEP_VARIANT),
 	)
 
 	// Test
@@ -59,7 +59,7 @@ func TestThat_Dependencies_Add_AddsDependency(t *testing.T) {
 
 	// Test
 	sut.Add(
-		NewDependency(DEP_NAME, DEP_VARIANT, false),
+		NewDependency(DEP_NAME).SetVariant(DEP_VARIANT),
 	)
 	actual := sut.GetUniqueIds()
 

@@ -19,6 +19,8 @@ type DependencyIfc interface {
 	GetVariant() string
 	GetUniqueId() string
 	IsRequired() bool
+	SetVariant(variant string) *dependency
+	SetRequired() *dependency
 }
 
 type dependency struct {
@@ -26,15 +28,17 @@ type dependency struct {
 	isRequired		bool
 }
 
+const DEP_VARIANT_DEFAULT = "default"
+
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDependency(name, variant string, isRequired bool) *dependency {
+func NewDependency(name string) *dependency {
 	return &dependency{
 		name:		name,
-		variant:	variant,
-		isRequired:	isRequired,
+		variant:	DEP_VARIANT_DEFAULT,	// Optionally override with SetVariant()
+		isRequired:	false,			// Optionally override with SetRequired()
 	}
 }
 
@@ -56,5 +60,15 @@ func (r *dependency) GetUniqueId() string {
 
 func (r *dependency) IsRequired() bool {
 	return r.isRequired
+}
+
+func (r *dependency) SetVariant(variant string) *dependency {
+	r.variant = variant
+	return r
+}
+
+func (r *dependency) SetRequired() *dependency {
+	r.isRequired = true
+	return r
 }
 

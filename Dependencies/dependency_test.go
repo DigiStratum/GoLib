@@ -6,23 +6,21 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-// NewDependency(name string, dep interface{}) *Dependency
 func TestThat_NewDependency_ReturnsSomething(t *testing.T) {
 	// Setup
 	var sut DependencyIfc
 
 	// Test
-	sut = NewDependency(DEP_NAME, DEP_VARIANT, true)
+	sut = NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
 
 	// Verify
 	ExpectNonNil(sut, t)
 }
 
-// NewDependency(name string, dep interface{}) *Dependency
 func TestThat_NewDependency_MatchesExpectedProperties(t *testing.T) {
 	// Setup
 	var sut DependencyIfc
-	sut = NewDependency(DEP_NAME, DEP_VARIANT, true)
+	sut = NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
 
 	// Test
 	actualName := sut.GetName()

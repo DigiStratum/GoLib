@@ -5,6 +5,10 @@ Boilerplate code for DependencyInjected clients to inspect injected dependencies
 and validity. Bearer must declare which dependency names are Optional and/or Required, and point
 us at the injected Dependencies. Validity checking will be performed against these data points.
 
+Note that we export the DependencyInjected struct itself so that it may be embedded into other
+structs that want to inherit this functionality; if it's not exported, then it can't be accessed by
+another package.
+
 TODO:
  * Cache HasRequired() vs. mutation funcs so that we only re-eval HasRequired() as needed
  * Add support for redefinition and/or replacement of one or more Dependencies after initialization
@@ -84,7 +88,7 @@ func (r *DependencyInjected) GetOptionalDependencies() DependenciesIfc {
 func (r *DependencyInjected) GetInjectedDependencies() DependenciesIfc {
 	injected := NewDependencies()
 	for _, instance := range r.injected {
-		injected.Add(NewDependency(instance.GetName(), instance.GetVariant(), false))
+		injected.Add(NewDependency(instance.GetName()).SetVariant(instance.GetVariant()))
 	}
 	return injected
 }
@@ -111,7 +115,7 @@ func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *DependencyInjected) Get(uniqueId string) *dependency {
-	if instance, ok := r.injected[uniqueId]; ok { return NewDependency(instance.GetName(), instance.GetVariant(), false) }
+	if instance, ok := r.injected[uniqueId]; ok { return NewDependency(instance.GetName()).SetVariant(instance.GetVariant()) }
 	return nil
 }
 
@@ -121,7 +125,7 @@ func (r *DependencyInjected) Has(uniqueId string) bool {
 }
 
 func (r *DependencyInjected) GetUniqueIds() *[]string {
-	uniqueIds := make([]string, len(r.injected))
+	uniqueIds := []string{}
 	for uniqueId, _ := range r.injected { uniqueIds = append(uniqueIds, uniqueId) }
 	return &uniqueIds
 }

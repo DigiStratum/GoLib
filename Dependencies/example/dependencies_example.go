@@ -14,10 +14,10 @@ func (r *usefulService) UsefulActivity() {
 }
 
 func (r *usefulService) InjectInto(client dep.DependencyInjectableIfc, variant ...string) error {
-	v := "default"
+	v := dep.DEP_VARIANT_DEFAULT
 	for _, v = range variant {}
 	return client.InjectDependencies(
-		dep.NewDependencyInstance("usefulService", v, r),
+		dep.NewDependencyInstance("usefulService", r).SetVariant(v),
 	)
 }
 
@@ -26,22 +26,24 @@ type dependentLayer struct {
 }
 
 func (r *dependentLayer) DoWork() {
-	uids := r.DependencyInjected.GetUniqueIds()
-	if 0 == len(*uids) { fmt.Println("Seems to be empty...") }
-	d := r.DependencyInjected.GetInstance((*uids)[0])
-	if nil == d { fmt.Printf("Seems to be nil... [%s]\n", (*uids)[0]) }
+	var uids *[]string = r.DependencyInjected.GetUniqueIds()
+	//if (nil == uids) || (0 == len(*uids)) { fmt.Println("Seems to be empty...") }
+	var uid  string = (*uids)[0]
+	//fmt.Printf("Found UID: '%s'\n", uid)
+	d := r.DependencyInjected.GetInstance(uid)
 	if us, ok := d.(*usefulService); ok {
 		us.UsefulActivity()
 	} else {
 		fmt.Println("Doesn't seem to be a usefulService...")
 	}
+	//if nil == d { fmt.Printf("Seems to be nil... [%s]\n", uid) }
 }
 
 func main() {
 	dl := &dependentLayer{
 		DependencyInjected: dep.NewDependencyInjected(
 			dep.NewDependencies(
-				dep.NewDependency("usefulService", "default", true),
+				dep.NewDependency("usefulService").SetRequired(),
 			),
 		),
 	}

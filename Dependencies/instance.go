@@ -14,10 +14,11 @@ type DependencyInstanceIfc interface {
 	GetVariant() string
 	GetUniqueId() string
 	GetInstance() interface{}
+	SetVariant(variant string) *dependencyInstance
 }
 
 type dependencyInstance struct {
-	dep		*dependency
+	*dependency
 	instance	interface{}
 }
 
@@ -25,9 +26,9 @@ type dependencyInstance struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDependencyInstance(name, variant string, instance interface{}) *dependencyInstance {
+func NewDependencyInstance(name string, instance interface{}) *dependencyInstance {
 	return &dependencyInstance{
-		dep:		NewDependency(name, variant, false),
+		dependency:	NewDependency(name),
 		instance:	instance,
 	}
 }
@@ -36,23 +37,12 @@ func NewDependencyInstance(name, variant string, instance interface{}) *dependen
 // DependencyInstanceIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *dependencyInstance) GetDependency() *dependency {
-	return r.dep
-}
-
-func (r *dependencyInstance) GetName() string {
-	return r.dep.GetName()
-}
-
-func (r *dependencyInstance) GetVariant() string {
-	return r.dep.GetVariant()
-}
-
-func (r *dependencyInstance) GetUniqueId() string {
-	return r.dep.GetUniqueId()
-}
-
 func (r *dependencyInstance) GetInstance() interface{} {
 	return r.instance
+}
+
+func (r *dependencyInstance) SetVariant(variant string) *dependencyInstance {
+	r.dependency.SetVariant(variant)
+	return r
 }
 
