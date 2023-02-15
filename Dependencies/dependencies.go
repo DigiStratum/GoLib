@@ -7,12 +7,16 @@ expression of what a client needs/wants from the provider.
 */
 
 type readableDependenciesIfc interface {
-	// Get a dependency by uniqueId
-	Get(uniqueId string) *dependency
-	// Check whether a dependency is in the set by uniqueId
-	Has(uniqueId string) bool
-	// Get the list of uniqueIds for the currently set dependencies
-	GetUniqueIds() *[]string
+	// Get a dependency by name/variant
+	Get(name string) *dependency
+	GetVariant(name, variant string) *dependency
+
+	// Check whether a dependency is in the set by name/variant
+	Has(name string) bool
+	HasVariant(name, variant string) bool
+
+	// Get the list of currently set dependencies
+	GetVariants() map[string][]string
 }
 
 type DependenciesIfc interface {
@@ -23,7 +27,7 @@ type DependenciesIfc interface {
 }
 
 type dependencies struct {
-	deps		map[string]*dependency
+	deps		map[string]map[string]*dependency	// map[name][variant] -> DependencyIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -33,7 +37,7 @@ type dependencies struct {
 // Make a new one of these!
 func NewDependencies(deps ...*dependency) *dependencies {
 	r := dependencies{
-		deps:	make(map[string]*dependency),
+		deps:	make(map[string]map[string]*dependency),
 	}
 	for _, dep := range deps { r.Add(dep) }
 	return &r
@@ -43,27 +47,37 @@ func NewDependencies(deps ...*dependency) *dependencies {
 // DependenciesIfc
 // -------------------------------------------------------------------------------------------------
 
-// Add a Dependency to the set
 func (r *dependencies) Add(dep *dependency) {
-	r.deps[dep.GetUniqueId()] = dep
+	r.deps[dep.GetName()][dep.GetVariant()] = dep
 }
 
-// Get a dependency by uniqueId
-func (r *dependencies) Get(uniqueId string) *dependency {
-	if d, ok := r.deps[uniqueId]; ok { return d }
+func (r *dependencies) Get(name string) *dependency {
+	return r.GetVariant(name, DEP_VARIANT_DEFAULT)
+}
+
+func (r *dependencies) GetVariant(name, variant string) *dependency {
+	if d, ok := r.deps[name][variant]; ok { return d }
 	return nil
 }
 
-// Check whether a dependency is in the set by uniqueId
-func (r *dependencies) Has(uniqueId string) bool {
-	_, ok := r.deps[uniqueId]
+func (r *dependencies) Has(name string) bool {
+	return r.HasVariant(name, DEP_VARIANT_DEFAULT)
+}
+
+func (r *dependencies) HasVariant(name, variant string) bool {
+	_, ok := r.deps[name][variant]
 	return ok
 }
 
-// Get the list of uniqueIds for the currently set dependencies
-func (r *dependencies) GetUniqueIds() *[]string {
-	names := make([]string, 0)
-	for name, _ := range r.deps { names = append(names, name) }
-	return &names
+func (r *dependencies) GetVariants() map[string][]string {
+	vmap := make(map[string][]string)
+	for name, variants := range r.deps {
+		vstrs := []string{}
+		for variant, _ := range variants {
+			vstrs = append(vstrs, variant)
+		}
+		vmap[name]=vstrs
+	}
+	return vmap
 }
 

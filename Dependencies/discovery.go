@@ -10,16 +10,16 @@ TODO:
 
 type DependencyDiscoveryIfc interface {
 	// What are all the declared Dependecies?
-	GetDeclaredDependencies() DependenciesIfc
+	GetDeclaredDependencies() readableDependenciesIfc
 	// What are just the required Dependencies?
-	GetRequiredDependencies() DependenciesIfc
+	GetRequiredDependencies() readableDependenciesIfc
 	// What Dependencies are Required that have not yet been injected?
-	GetMissingDependencies() DependenciesIfc
+	GetMissingDependencies() readableDependenciesIfc
 	// What are just the optional Dependencies?
-	GetOptionalDependencies() DependenciesIfc
+	GetOptionalDependencies() readableDependenciesIfc
 	// What are the injected DependencyInstances?
-	GetInjectedDependencies() DependenciesIfc
+	GetInjectedDependencies() readableDependenciesIfc
 	// Have all the required Dependencies been injected?
-	HasRequiredDependencies() bool
+	HasAllRequiredDependencies() bool
 }
 

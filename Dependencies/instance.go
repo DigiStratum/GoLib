@@ -12,13 +12,12 @@ dependencies.
 type DependencyInstanceIfc interface {
 	GetName() string
 	GetVariant() string
-	GetUniqueId() string
 	GetInstance() interface{}
 	SetVariant(variant string) *dependencyInstance
 }
 
 type dependencyInstance struct {
-	*dependency
+	*dependency	// Implements GetName() and GetVariant()
 	instance	interface{}
 }
 

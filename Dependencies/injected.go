@@ -10,7 +10,7 @@ structs that want to inherit this functionality; if it's not exported, then it c
 another package.
 
 TODO:
- * Cache HasRequired() vs. mutation funcs so that we only re-eval HasRequired() as needed
+ * Cache HasAllRequiredDependencies() vs. mutation funcs so we only re-eval fully as needed
  * Add support for redefinition and/or replacement of one or more Dependencies after initialization
    to support runtime reconfigurability.
  * Add support for Discovery of "extra" dependencies injected, but undeclared
@@ -26,12 +26,13 @@ type DependencyInjectedIfc interface {
 	// Embed all the readableDependenciesIfc requirements
 	readableDependenciesIfc
 
-	GetInstance(uniqueId string) interface{}
+	GetInstance(name string) interface{}
+	GetInstanceVariant(name, variant string) interface{}
 }
 
 type DependencyInjected struct {
 	declared	DependenciesIfc
-	injected	map[string]DependencyInstanceIfc
+	injected	map[string]map[string]DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -41,7 +42,7 @@ type DependencyInjected struct {
 func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInjected {
 	return &DependencyInjected{
 		declared:	declaredDependencies,
-		injected:	make(map[string]DependencyInstanceIfc),
+		injected:	make(map[string]map[string]DependencyInstanceIfc),
 	}
 }
 
@@ -49,53 +50,77 @@ func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInje
 // DependencyDiscoveryIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *DependencyInjected) GetDeclaredDependencies() DependenciesIfc {
+func (r *DependencyInjected) GetDeclaredDependencies() readableDependenciesIfc {
 	declared := NewDependencies()
-	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
-		declared.Add(r.declared.Get(uniqueId))
+	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
+	for name, variants := range r.declared.GetVariants() {
+		for _, variant := range variants {
+			dep := NewDependency(name).SetVariant(variant)
+			if r.declared.GetVariant(name, variant).IsRequired() { dep.SetRequired() }
+			declared.Add(dep)
+		}
 	}
 	return declared
 }
 
-func (r *DependencyInjected) GetRequiredDependencies() DependenciesIfc {
+func (r *DependencyInjected) GetRequiredDependencies() readableDependenciesIfc {
 	required := NewDependencies()
-	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
-		dep := r.declared.Get(uniqueId)
-		if dep.IsRequired() { required.Add(dep) }
+	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
+	for name, variants := range r.declared.GetVariants() {
+		for _, variant := range variants {
+			// We're only interested in the required ones - skip others
+			if ! r.declared.GetVariant(name, variant).IsRequired() { continue }
+			required.Add(NewDependency(name).SetVariant(variant).SetRequired())
+		}
 	}
 	return required
 }
 
-func (r *DependencyInjected) GetMissingDependencies() DependenciesIfc {
-	missing := NewDependencies()
-	injected := r.GetInjectedDependencies()
-	required := r.GetRequiredDependencies()
-	for _, uniqueId := range *(required.GetUniqueIds()) {
-		if ! injected.Has(uniqueId) { missing.Add(required.Get(uniqueId)) }
-	}
-	return missing
-}
-
-func (r *DependencyInjected) GetOptionalDependencies() DependenciesIfc {
+func (r *DependencyInjected) GetOptionalDependencies() readableDependenciesIfc {
 	optional := NewDependencies()
-	for _, uniqueId := range *(r.declared.GetUniqueIds()) {
-		dep := r.declared.Get(uniqueId)
-		if ! dep.IsRequired() { optional.Add(dep) }
+	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
+	for name, variants := range r.declared.GetVariants() {
+		for _, variant := range variants {
+			// We're only interested in the optional (non-required) ones - skip others
+			if r.declared.GetVariant(name, variant).IsRequired() { continue }
+			optional.Add(NewDependency(name).SetVariant(variant))
+		}
 	}
 	return optional
 }
 
-func (r *DependencyInjected) GetInjectedDependencies() DependenciesIfc {
+func (r *DependencyInjected) GetMissingDependencies() readableDependenciesIfc {
+	missing := NewDependencies()
+	injected := r.GetInjectedDependencies()
+	required := r.GetRequiredDependencies()
+	// Iterate over required Dependencies' names and variants (map[(name)][]string(variant)
+	for name, variants := range required.GetVariants() {
+		for _, variant := range variants {
+			// We're only interested in the missing ones - skip others
+			if injected.HasVariant(name, variant) { continue }
+			missing.Add(NewDependency(name).SetVariant(variant).SetRequired())
+		}
+	}
+	return missing
+}
+
+func (r *DependencyInjected) GetInjectedDependencies() readableDependenciesIfc {
 	injected := NewDependencies()
-	for _, instance := range r.injected {
-		injected.Add(NewDependency(instance.GetName()).SetVariant(instance.GetVariant()))
+	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
+	for name, variants := range r.injected {
+		for variant, _:= range variants {
+			dep := NewDependency(name).SetVariant(variant)
+			decl := r.declared.GetVariant(name, variant)
+			if (nil != decl) && decl.IsRequired() { dep.SetRequired() }
+			injected.Add(dep)
+		}
 	}
 	return injected
 }
 
-func (r *DependencyInjected) HasRequiredDependencies() bool {
+func (r *DependencyInjected) HasAllRequiredDependencies() bool {
 	missing := r.GetMissingDependencies()
-	return len(*(missing.GetUniqueIds())) == 0
+	return len(missing.GetVariants()) == 0
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -105,7 +130,7 @@ func (r *DependencyInjected) HasRequiredDependencies() bool {
 func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc) error {
 	for _, instance := range depinst {
 		if nil == instance { continue }
-		r.injected[instance.GetUniqueId()] = instance
+		r.injected[instance.GetName()][instance.GetVariant()] = instance
 	}
 	return nil
 }
@@ -114,28 +139,36 @@ func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc
 // readableDependenciesIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *DependencyInjected) Get(uniqueId string) *dependency {
-	if instance, ok := r.injected[uniqueId]; ok { return NewDependency(instance.GetName()).SetVariant(instance.GetVariant()) }
-	return nil
+func (r *DependencyInjected) Get(name string) *dependency {
+	return r.GetVariant(name, DEP_VARIANT_DEFAULT)
 }
 
-func (r *DependencyInjected) Has(uniqueId string) bool {
-	_, ok := r.injected[uniqueId]
-	return ok
+func (r *DependencyInjected) GetVariant(name, variant string) *dependency {
+	return r.GetInjectedDependencies().GetVariant(name, variant)
 }
 
-func (r *DependencyInjected) GetUniqueIds() *[]string {
-	uniqueIds := []string{}
-	for uniqueId, _ := range r.injected { uniqueIds = append(uniqueIds, uniqueId) }
-	return &uniqueIds
+func (r *DependencyInjected) Has(name string) bool {
+	return r.HasVariant(name, DEP_VARIANT_DEFAULT)
+}
+
+func (r *DependencyInjected) HasVariant(name, variant string) bool {
+	return r.GetInjectedDependencies().HasVariant(name, variant)
+}
+
+func (r *DependencyInjected) GetVariants() map[string][]string {
+	return r.GetInjectedDependencies().GetVariants()
 }
 
 // -------------------------------------------------------------------------------------------------
 // DependencyInjectedIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *DependencyInjected) GetInstance(uniqueId string) interface{} {
-	if depinst, ok := r.injected[uniqueId]; ok { return depinst.GetInstance() }
+func (r *DependencyInjected) GetInstance(name string) interface{} {
+	return r.GetInstanceVariant(name, DEP_VARIANT_DEFAULT)
+}
+
+func (r *DependencyInjected) GetInstanceVariant(name, variant string) interface{} {
+	if depinst, ok := r.injected[name][variant]; ok { return depinst.GetInstance() }
 	return nil
 }
 

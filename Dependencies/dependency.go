@@ -10,17 +10,16 @@ DependencyInstances) can ensure that the Dependency requirements are met.
 
 */
 
-import (
-	"fmt"
-)
+const DEP_VARIANT_DEFAULT = "default"
 
 type DependencyIfc interface {
 	GetName() string
-	GetVariant() string
-	GetUniqueId() string
-	IsRequired() bool
+
 	SetVariant(variant string) *dependency
+	GetVariant() string
+
 	SetRequired() *dependency
+	IsRequired() bool
 }
 
 type dependency struct {
@@ -28,7 +27,6 @@ type dependency struct {
 	isRequired		bool
 }
 
-const DEP_VARIANT_DEFAULT = "default"
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
@@ -50,25 +48,21 @@ func (r *dependency) GetName() string {
 	return r.name
 }
 
-func (r *dependency) GetVariant() string {
-	return r.variant
-}
-
-func (r *dependency) GetUniqueId() string {
-	return fmt.Sprintf("%s(%s)", r.name, r.variant)
-}
-
-func (r *dependency) IsRequired() bool {
-	return r.isRequired
-}
-
 func (r *dependency) SetVariant(variant string) *dependency {
 	r.variant = variant
 	return r
 }
 
+func (r *dependency) GetVariant() string {
+	return r.variant
+}
+
 func (r *dependency) SetRequired() *dependency {
 	r.isRequired = true
 	return r
+}
+
+func (r *dependency) IsRequired() bool {
+	return r.isRequired
 }
 
