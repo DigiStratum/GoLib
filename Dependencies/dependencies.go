@@ -23,7 +23,7 @@ type DependenciesIfc interface {
 	// Embed all the readableDependenciesIfc requirements
 	readableDependenciesIfc
 	// Add a Dependency to the set
-	Add(dep *dependency)
+	Add(deps ...*dependency)
 }
 
 type dependencies struct {
@@ -39,7 +39,7 @@ func NewDependencies(deps ...*dependency) *dependencies {
 	r := dependencies{
 		deps:	make(map[string]map[string]*dependency),
 	}
-	for _, dep := range deps { r.Add(dep) }
+	r.Add(deps...)
 	return &r
 }
 
@@ -47,9 +47,19 @@ func NewDependencies(deps ...*dependency) *dependencies {
 // DependenciesIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *dependencies) Add(dep *dependency) {
-	r.deps[dep.GetName()][dep.GetVariant()] = dep
+func (r *dependencies) Add(deps ...*dependency) {
+	for _, dep := range deps {
+		name := dep.GetName()
+		if _, ok := r.deps[name]; ! ok {
+			r.deps[name] = make(map[string]*dependency)
+		}
+		r.deps[name][dep.GetVariant()] = dep
+	}
 }
+
+// -------------------------------------------------------------------------------------------------
+// readableDependenciesIfc
+// -------------------------------------------------------------------------------------------------
 
 func (r *dependencies) Get(name string) *dependency {
 	return r.GetVariant(name, DEP_VARIANT_DEFAULT)

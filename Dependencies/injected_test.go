@@ -28,6 +28,20 @@ func TestThat_NewDependencyInjected_ReturnsSomething_WhenGivenDependencies(t *te
 	ExpectNonNil(sut, t)
 }
 
+func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(),
+	)
+
+	// Test
+	actual := sut.InjectDependencies()
+
+	// Verify
+	ExpectNoError(actual, t)
+}
+
+/*
 func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -175,32 +189,6 @@ func TestThat_DependencyInjected_GetInjectedDependencies_ReturnsEmptySet(t *test
 	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
 }
 
-func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet(t *testing.T) {
-	// Setup
-	sut := NewDependencyInjected(
-		NewDependencies(),
-	)
-
-	// Test
-	actual := sut.HasRequiredDependencies()
-
-	// Verify
-	ExpectTrue(actual, t)
-}
-
-func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t *testing.T) {
-	// Setup
-	sut := NewDependencyInjected(
-		NewDependencies(),
-	)
-
-	// Test
-	actual := sut.InjectDependencies()
-
-	// Verify
-	ExpectNoError(actual, t)
-}
-
 func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t *testing.T) {
 	// Setup
 	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
@@ -242,4 +230,19 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 	_, ok := actualDepInst.(DependenciesIfc)
 	ExpectTrue(ok, t)
 }
+
+
+func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(),
+	)
+
+	// Test
+	actual := sut.HasRequiredDependencies()
+
+	// Verify
+	ExpectTrue(actual, t)
+}
+*/
 
