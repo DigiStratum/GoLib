@@ -6,21 +6,26 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
+// NewDependency()
 func TestThat_NewDependency_ReturnsSomething(t *testing.T) {
 	// Setup
 	var sut DependencyIfc
 
 	// Test
-	sut = NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
+	sut = NewDependency(DEP_NAME)
+	_, interfaceAssertionOk := sut.(DependencyIfc)
 
 	// Verify
 	ExpectNonNil(sut, t)
+	ExpectTrue(interfaceAssertionOk, t)
 }
 
-func TestThat_NewDependency_MatchesExpectedProperties(t *testing.T) {
+// GetName() string
+// GetVariant() string
+// IsRequired() bool
+func TestThat_Dependency_DefaultProperties_MatcheExpectations(t *testing.T) {
 	// Setup
-	var sut DependencyIfc
-	sut = NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
+	sut := NewDependency(DEP_NAME)
 
 	// Test
 	actualName := sut.GetName()
@@ -29,6 +34,33 @@ func TestThat_NewDependency_MatchesExpectedProperties(t *testing.T) {
 
 	// Verify
 	ExpectString(DEP_NAME, actualName, t)
+	ExpectString(DEP_VARIANT_DEFAULT, actualVariant, t)
+	ExpectFalse(actualIsRequired, t)
+}
+
+// SetVariant(variant string) *dependency
+func TestThat_Dependency_SetVariant_ChangesVariantValue(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+
+	// Test
+	sut.SetVariant(DEP_VARIANT)
+	actualVariant := sut.GetVariant()
+
+	// Verify
 	ExpectString(DEP_VARIANT, actualVariant, t)
+}
+
+// SetRequired() *dependency
+func TestThat_Dependency_SetRequired_ChangesRequiredValue(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+
+	// Test
+	sut.SetRequired()
+	actualIsRequired := sut.IsRequired()
+
+	// Verify
 	ExpectTrue(actualIsRequired, t)
 }
+
