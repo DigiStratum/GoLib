@@ -1,33 +1,13 @@
 package dependencies
 
 import(
+	"strings"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-/*
-type readableDependenciesIfc interface {
-        // Get a dependency by name/variant
-        Get(name string) *dependency
-        GetVariant(name, variant string) *dependency
-
-        // Check whether a dependency is in the set by name/variant
-        Has(name string) bool
-        HasVariant(name, variant string) bool
-
-        // Get the list of currently set dependencies
-        GetVariants() map[string][]string
-}
-
-type DependenciesIfc interface {
-        // Embed all the readableDependenciesIfc requirements
-        readableDependenciesIfc
-        // Add a Dependency to the set
-        Add(dep ...*dependency)
-}
-
-*/
+// NewDependencies()
 func TestThat_NewDependencies_ReturnsSomething(t *testing.T) {
 	// Setup
 	var sut DependenciesIfc
@@ -53,6 +33,8 @@ func TestThat_Dependencies_Get_ReturnsNil_ForMissingDependency(t *testing.T) {
 	ExpectNil(actual, t)
 }
 
+// Add(deps ...*dependency)
+// Has(name string) bool
 func TestThat_Dependencies_Get_ReturnsDependency_From_Add(t *testing.T) {
 	// Setup
 	sut := NewDependencies()
@@ -60,62 +42,69 @@ func TestThat_Dependencies_Get_ReturnsDependency_From_Add(t *testing.T) {
 	// Test
 	sut.Add(NewDependency("sampledep"))
 	actual := sut.Get("sampledep")
+	actualHas := sut.Has("sampledep")
+	actualHasNot := sut.Has("bogusdep")
 
 	// Verify
 	ExpectNonNil(actual, t)
+	ExpectTrue(actualHas, t)
+	ExpectFalse(actualHasNot, t)
 }
 
-
-/*
-func TestThat_Dependencies_GetUniqueIds_IsEmpty_ForNewDependencies(t *testing.T) {
+// GetVariant(name, variant string) *dependency
+// HasVariant(name, variant string) bool
+func TestThat_Dependencies_GetVariant_ReturnsNil_ForMissingVariant(t *testing.T) {
 	// Setup
 	sut := NewDependencies()
 
 	// Test
-	actual := sut.GetUniqueIds()
+	sut.Add(NewDependency("sampledep"))
+	actual := sut.GetVariant("sampledep", "bogusvariant")
+	actualHas := sut.HasVariant("sampledep", DEP_VARIANT_DEFAULT)
+	actualHasNot := sut.HasVariant("sampledep", "bogusvariant")
 
 	// Verify
-	ExpectInt(0, len(*actual), t)
+	ExpectNil(actual, t)
+	ExpectTrue(actualHas, t)
+	ExpectFalse(actualHasNot, t)
 }
 
-func TestThat_Dependencies_GetUniqueIds_HasExpectedOneDependency(t *testing.T) {
+
+// GetVariants() map[string][]string
+func TestThat_Dependencies_GetVariants_ReturnsEmptySet_ForNewDependencies(t *testing.T) {
 	// Setup
-	sut := NewDependencies(
-		NewDependency(DEP_NAME).SetVariant(DEP_VARIANT),
-	)
+	sut := NewDependencies()
 
 	// Test
-	actual := sut.GetUniqueIds()
+	actual := sut.GetVariants()
 
 	// Verify
-	ExpectInt(1, len(*actual), t)
-	ExpectTrue(sut.Has((*actual)[0]), t)
+	ExpectInt(0, len(actual), t)
 }
 
-func TestThat_Dependencies_Add_AddsDependency(t *testing.T) {
+func TestThat_Dependencies_GetVariants_Returns4_For2Names2Variants(t *testing.T) {
 	// Setup
 	sut := NewDependencies()
 
 	// Test
 	sut.Add(
-		NewDependency(DEP_NAME).SetVariant(DEP_VARIANT),
+		NewDependency("sampledepA"),
+		NewDependency("sampledepA").SetVariant("alternateA"),
+		NewDependency("sampledepB"),
+		NewDependency("sampledepB").SetVariant("alternateB"),
 	)
-	actual := sut.GetUniqueIds()
+	actual := sut.GetVariants()
+	actualA, okA := actual["sampledepA"]
+	actualAVariants := strings.Join(actualA[:], ":")
+	actualB, okB := actual["sampledepB"]
+	actualBVariants := strings.Join(actualB[:], ":")
 
 	// Verify
-	ExpectInt(1, len(*actual), t)
-	ExpectTrue(sut.Has((*actual)[0]), t)
-}
-*/
-
-func TestThat_Dependencies_Has_ReturnsFalse_ForMissingDependency(t *testing.T) {
-	// Setup
-	sut := NewDependencies()
-
-	// Test
-	actual := sut.Has("bogusdep")
-
-	// Verify
-	ExpectFalse(actual, t)
+	ExpectInt(2, len(actual), t)
+	ExpectTrue(okA && okB, t)
+	ExpectInt(2, len(actualA), t)
+	ExpectInt(2, len(actualB), t)
+	ExpectTrue(((actualAVariants == "default:alternateA") || (actualAVariants == "alternateA:default")), t)
+	ExpectTrue(((actualBVariants == "default:alternateB") || (actualBVariants == "alternateB:default")), t)
 }
 
