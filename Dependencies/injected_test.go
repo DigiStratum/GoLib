@@ -6,6 +6,7 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
+// NewDependencyInjected(declaredDependencies DependenciesIfc)
 func TestThat_NewDependencyInjected_ReturnsSomething_WhenGivenNil(t *testing.T) {
 	// Setup
 	var sut DependencyInjectedIfc
@@ -17,17 +18,22 @@ func TestThat_NewDependencyInjected_ReturnsSomething_WhenGivenNil(t *testing.T) 
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_NewDependencyInjected_ReturnsSomething_WhenGivenDependencies(t *testing.T) {
+func TestThat_NewDependencyInjected_InterfaceAssertions_Pass(t *testing.T) {
 	// Setup
-	deps := NewDependencies()
+	var sut DependencyInjectedIfc
+	sut = NewDependencyInjected(NewDependencies())
 
 	// Test
-	sut := NewDependencyInjected(deps)
+	_, discoveryIfcOk := sut.(DependencyDiscoveryIfc)
+	_, injectableIfcOk := sut.(DependencyInjectableIfc)
+	_, readableIfcOk := sut.(readableDependenciesIfc)
 
 	// Verify
 	ExpectNonNil(sut, t)
+	ExpectTrue(discoveryIfcOk && injectableIfcOk && readableIfcOk, t)
 }
 
+// InjectDependencies(depinst ...DependencyInstanceIfc) error
 func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -41,7 +47,9 @@ func TestThat_DependencyInjected_InjectDependencies_ReturnsNoError_ForEmptySet(t
 	ExpectNoError(actual, t)
 }
 
-/*
+// GetDeclaredDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -53,9 +61,13 @@ func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsEmptySet(t *test
 
 	// Verify
 	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectInt(0, len(actual.GetVariants()), t)
 }
 
+// GetDeclaredDependencies() readableDependenciesIfc
+// GetRequiredDependencies() readableDependenciesIfc
+// GetOptionalDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsExpectedSet(t *testing.T) {
 	// Setup
 	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT)
@@ -66,25 +78,33 @@ func TestThat_DependencyInjected_GetDeclaredDependencies_ReturnsExpectedSet(t *t
 	)
 
 	// Test
-	actual := sut.GetDeclaredDependencies()
+	actualDec := sut.GetDeclaredDependencies()
 	actualReq := sut.GetRequiredDependencies()
 	actualOpt := sut.GetOptionalDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(1, len(*(actual.GetUniqueIds())), t)
-	actualDep := actual.Get(expectedDep.GetUniqueId())
+	ExpectNonNil(actualDec, t)
+	ExpectNonNil(actualReq, t)
+	ExpectNonNil(actualOpt, t)
+
+	// One declared dependency with matching name and variant, not required
+	ExpectInt(1, len(actualDec.GetVariants()), t)
+	actualDep := actualDec.GetVariant(DEP_NAME, DEP_VARIANT)
 	ExpectString(DEP_NAME, actualDep.GetName(), t)
 	ExpectString(DEP_VARIANT, actualDep.GetVariant(), t)
 	ExpectFalse(actualDep.IsRequired(), t)
 
+	// Zero required dependencies
 	ExpectNonNil(actualReq, t)
-	ExpectInt(0, len(*(actualReq.GetUniqueIds())), t)
+	ExpectInt(0, len(actualReq.GetVariants()), t)
 
+	// One optional dependency
 	ExpectNonNil(actualOpt, t)
-	ExpectInt(1, len(*(actualOpt.GetUniqueIds())), t)
+	ExpectInt(1, len(actualOpt.GetVariants()), t)
 }
 
+// GetRequiredDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -96,9 +116,12 @@ func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet(t *test
 
 	// Verify
 	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectInt(0, len(actual.GetVariants()), t)
 }
 
+// GetRequiredDependencies() readableDependenciesIfc
+// GetOptionalDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet_ForOptionalDeps(t *testing.T) {
 	// Setup
 	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT)
@@ -109,17 +132,20 @@ func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsEmptySet_ForOpti
 	)
 
 	// Test
-	actual := sut.GetRequiredDependencies()
+	actualReq := sut.GetRequiredDependencies()
 	actualOpt := sut.GetOptionalDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectNonNil(actualReq, t)
+	ExpectInt(0, len(actualReq.GetVariants()), t)
 
 	ExpectNonNil(actualOpt, t)
-	ExpectInt(1, len(*(actualOpt.GetUniqueIds())), t)
+	ExpectInt(1, len(actualOpt.GetVariants()), t)
 }
 
+// GetRequiredDependencies() readableDependenciesIfc
+// GetOptionalDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsExpectedSet_ForRequiredDeps(t *testing.T) {
 	// Setup
 	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
@@ -130,21 +156,23 @@ func TestThat_DependencyInjected_GetRequiredDependencies_ReturnsExpectedSet_ForR
 	)
 
 	// Test
-	actual := sut.GetRequiredDependencies()
+	actualReq := sut.GetRequiredDependencies()
 	actualOpt := sut.GetOptionalDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(1, len(*(actual.GetUniqueIds())), t)
-	actualDep := actual.Get(expectedDep.GetUniqueId())
+	ExpectNonNil(actualReq, t)
+	ExpectInt(1, len(actualReq.GetVariants()), t)
+	actualDep := actualReq.GetVariant(expectedDep.GetName(), expectedDep.GetVariant())
 	ExpectString(DEP_NAME, actualDep.GetName(), t)
 	ExpectString(DEP_VARIANT, actualDep.GetVariant(), t)
 	ExpectTrue(actualDep.IsRequired(), t)
 
 	ExpectNonNil(actualOpt, t)
-	ExpectInt(0, len(*(actualOpt.GetUniqueIds())), t)
+	ExpectInt(0, len(actualOpt.GetVariants()), t)
 }
 
+// GetOptionalDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetOptionalDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -152,15 +180,17 @@ func TestThat_DependencyInjected_GetOptionalDependencies_ReturnsEmptySet(t *test
 	)
 
 	// Test
-	actual := sut.GetOptionalDependencies()
+	actualOpt := sut.GetOptionalDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectNonNil(actualOpt, t)
+	ExpectInt(0, len(actualOpt.GetVariants()), t)
 }
 
 // The ones below are for an instance checking what has been injected:
 
+// GetMissingDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetMissingDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -168,13 +198,15 @@ func TestThat_DependencyInjected_GetMissingDependencies_ReturnsEmptySet(t *testi
 	)
 
 	// Test
-	actual := sut.GetMissingDependencies()
+	actualMiss := sut.GetMissingDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectNonNil(actualMiss, t)
+	ExpectInt(0, len(actualMiss.GetVariants()), t)
 }
 
+// GetInjectedDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
 func TestThat_DependencyInjected_GetInjectedDependencies_ReturnsEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -182,16 +214,19 @@ func TestThat_DependencyInjected_GetInjectedDependencies_ReturnsEmptySet(t *test
 	)
 
 	// Test
-	actual := sut.GetInjectedDependencies()
+	actualInj := sut.GetInjectedDependencies()
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectInt(0, len(*(actual.GetUniqueIds())), t)
+	ExpectNonNil(actualInj, t)
+	ExpectInt(0, len(actualInj.GetVariants()), t)
 }
 
+// GetInjectedDependencies() readableDependenciesIfc
+// GetVariants() map[string][]string
+// GetInstance(name string) interface{}
 func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t *testing.T) {
 	// Setup
-	expectedDep := NewDependency(DEP_NAME).SetVariant(DEP_VARIANT).SetRequired()
+	expectedDep := NewDependency(DEP_NAME).SetRequired()
 	sut := NewDependencyInjected(
 		NewDependencies(
 			expectedDep,
@@ -200,38 +235,35 @@ func TestThat_DependencyInjected_InjectDependencies_InjectsOptionalDependency(t 
 	depInst := NewDependencyInstance(
 		expectedDep.GetName(),
 		NewDependencies(),		// Arbitrary interface that we already have
-	).SetVariant(DEP_VARIANT)
+	)
 
 	// Test
-	missing := sut.GetMissingDependencies()
-	actual := sut.InjectDependencies(
-		depInst,
-	)
+	actualMiss := sut.GetMissingDependencies()
+	actualErr := sut.InjectDependencies(depInst)
 	actualInj := sut.GetInjectedDependencies()
-	actualDepInst := sut.GetInstance(expectedDep.GetUniqueId())
+	actualDepInst := sut.GetInstance(expectedDep.GetName())
 
 	// Verify
-	ExpectInt(1, len(*(missing.GetUniqueIds())), t)
+	ExpectInt(1, len(actualMiss.GetVariants()), t)
 
-	ExpectNoError(actual, t)
+	ExpectNoError(actualErr, t)
 
 	ExpectNonNil(actualInj, t)
-	ExpectInt(1, len(*(actualInj.GetUniqueIds())), t)
-	actualDep := actualInj.Get(expectedDep.GetUniqueId())
+	ExpectInt(1, len(actualInj.GetVariants()), t)
+	actualDep := actualInj.Get(expectedDep.GetName())
 	ExpectNonNil(actualDep, t)
 	ExpectString(DEP_NAME, actualDep.GetName(), t)
-	ExpectString(DEP_VARIANT, actualDep.GetVariant(), t)
+	ExpectString(DEP_VARIANT_DEFAULT, actualDep.GetVariant(), t)
 
-	ExpectTrue(sut.Has(expectedDep.GetUniqueId()), t)
-	ExpectTrue(sut.HasRequiredDependencies(), t)
-
+	ExpectTrue(sut.Has(expectedDep.GetName()), t)
+	ExpectTrue(sut.HasAllRequiredDependencies(), t)
 
 	ExpectNonNil(actualDepInst, t)
 	_, ok := actualDepInst.(DependenciesIfc)
 	ExpectTrue(ok, t)
 }
 
-
+// HasAllRequiredDependencies() bool
 func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjected(
@@ -239,10 +271,9 @@ func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet
 	)
 
 	// Test
-	actual := sut.HasRequiredDependencies()
+	actual := sut.HasAllRequiredDependencies()
 
 	// Verify
 	ExpectTrue(actual, t)
 }
-*/
 

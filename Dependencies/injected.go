@@ -128,10 +128,15 @@ func (r *DependencyInjected) HasAllRequiredDependencies() bool {
 // -------------------------------------------------------------------------------------------------
 
 func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc) error {
-	for _, instance := range depinst {
+        for _, instance := range depinst {
 		if nil == instance { continue }
-		r.injected[instance.GetName()][instance.GetVariant()] = instance
-	}
+                name := instance.GetName()
+                if _, ok := r.injected[name]; ! ok {
+                        r.injected[name] = make(map[string]DependencyInstanceIfc)
+                }
+                r.injected[name][instance.GetVariant()] = instance
+        }
+
 	return nil
 }
 
