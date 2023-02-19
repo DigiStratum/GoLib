@@ -17,6 +17,11 @@ TODO:
 
 */
 
+import (
+	"fmt"
+	"strings"
+)
+
 // This interface may not be used, but helps for readability here nonetheless
 type DependencyInjectedIfc interface {
 	// This implementation supports all the Discovery functions (so embed the interface!)
@@ -28,6 +33,7 @@ type DependencyInjectedIfc interface {
 
 	GetInstance(name string) interface{}
 	GetInstanceVariant(name, variant string) interface{}
+	ValidateRequiredDependencies() error
 }
 
 type DependencyInjected struct {
@@ -175,5 +181,21 @@ func (r *DependencyInjected) GetInstance(name string) interface{} {
 func (r *DependencyInjected) GetInstanceVariant(name, variant string) interface{} {
 	if depinst, ok := r.injected[name][variant]; ok { return depinst.GetInstance() }
 	return nil
+}
+
+func (r *DependencyInjected) ValidateRequiredDependencies() error {
+	if r.HasAllRequiredDependencies() { return nil }
+
+	missingDeps := r.GetMissingDependencies()
+	var sb strings.Builder
+	delim := ""
+	for name, variants := range missingDeps.GetVariants() {
+		for _, variant := range variants {
+			sb.WriteString(fmt.Sprintf("%s%s:%s", delim, name, variant))
+			delim = ", "
+		}
+	}
+	missingList := sb.String()
+	return fmt.Errorf("Missing one or more required dependencies: %s", missingList)
 }
 

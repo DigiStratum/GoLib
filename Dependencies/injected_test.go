@@ -277,3 +277,33 @@ func TestThat_DependencyInjected_HasRequiredDependencies_ReturnsTrue_ForEmptySet
 	ExpectTrue(actual, t)
 }
 
+// ValidateRequiredDependencies() error
+func TestThat_DependencyInjected_ValidateRequiredDependencies_ReturnsNoError_ForNothingMissing(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(),
+	)
+
+	// Test
+	actual := sut.ValidateRequiredDependencies()
+
+	// Verify
+	ExpectNoError(actual, t)
+}
+
+func TestThat_DependencyInjected_ValidateRequiredDependencies_ReturnsError_ForMissingRequiredDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(
+			NewDependency(DEP_NAME).SetRequired(),
+		),
+	)
+
+	// Test
+	actual := sut.ValidateRequiredDependencies()
+
+	// Verify
+	ExpectError(actual, t)
+}
+
+
