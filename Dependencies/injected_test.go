@@ -306,4 +306,61 @@ func TestThat_DependencyInjected_ValidateRequiredDependencies_ReturnsError_ForMi
 	ExpectError(actual, t)
 }
 
+// GetInstance(name string) interface{}
+func TestThat_DependencyInjected_GetInstance_ReturnsNil(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(
+			NewDependency(DEP_NAME),
+		),
+	)
+
+	// Test
+	actual := sut.GetInstance(DEP_NAME)
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_DependencyInjected_GetInstance_ReturnsDefaultVariant(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(
+			NewDependency(DEP_NAME).SetRequired(),
+		),
+	)
+	sut.InjectDependencies(
+		NewDependencyInstance(
+			DEP_NAME,
+			NewDependencies(),		// Arbitrary interface that we already have
+		),
+	)
+
+	// Test
+	actual := sut.GetInstance(DEP_NAME)
+
+	// Verify
+	ExpectNonNil(actual, t)
+}
+
+func TestThat_DependencyInjected_GetInstance_ReturnsNonDefaultVariant(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjected(
+		NewDependencies(
+			NewDependency(DEP_NAME).SetRequired(),
+		),
+	)
+	sut.InjectDependencies(
+		NewDependencyInstance(
+			DEP_NAME,
+			NewDependencies(),		// Arbitrary interface that we already have
+		).SetVariant(DEP_VARIANT_DEFAULT),
+	)
+
+	// Test
+	actual := sut.GetInstance(DEP_NAME)
+
+	// Verify
+	ExpectNonNil(actual, t)
+}
 

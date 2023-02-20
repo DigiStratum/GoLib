@@ -175,7 +175,18 @@ func (r *DependencyInjected) GetVariants() map[string][]string {
 // -------------------------------------------------------------------------------------------------
 
 func (r *DependencyInjected) GetInstance(name string) interface{} {
-	return r.GetInstanceVariant(name, DEP_VARIANT_DEFAULT)
+	// Try default variant first; if we find it, great...
+	if res := r.GetInstanceVariant(name, DEP_VARIANT_DEFAULT); nil != res { return res }
+
+	// No default variant - take the first match (if there are any); correlates to "the" variant for this name
+	if variants, ok := r.injected[name]; ok {
+		for _, variant := range variants {
+			if res := r.GetInstanceVariant(name, variant.GetVariant()); nil != res { return res }
+		}
+	}
+
+	// We got nothing
+	return nil
 }
 
 func (r *DependencyInjected) GetInstanceVariant(name, variant string) interface{} {
