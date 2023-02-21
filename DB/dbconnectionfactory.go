@@ -9,6 +9,10 @@ import(
 	"database/sql"
 )
 
+type DBConnectionFactoryIfc interface {
+	NewConnection(dsn DSNIfc) (*sql.DB, error)
+}
+
 type DBConnectionFactory struct {
 	driver		string
 }
