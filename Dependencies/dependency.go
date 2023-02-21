@@ -10,6 +10,10 @@ DependencyInstances) can ensure that the Dependency requirements are met.
 
 */
 
+import (
+	"fmt"
+)
+
 const DEP_VARIANT_DEFAULT = "default"
 
 type DependencyIfc interface {
@@ -20,11 +24,16 @@ type DependencyIfc interface {
 
 	SetRequired() *dependency
 	IsRequired() bool
+
+	CanCapture() bool
+	CaptureWith(captureFunc func (instance interface{}) error) *dependency
+	Capture(instance interface{}) error
 }
 
 type dependency struct {
 	name, variant		string
 	isRequired		bool
+	captureFunc		func (instance interface{}) error
 }
 
 
@@ -64,5 +73,25 @@ func (r *dependency) SetRequired() *dependency {
 
 func (r *dependency) IsRequired() bool {
 	return r.isRequired
+}
+
+func (r *dependency) CanCapture() bool {
+	return nil != r.captureFunc
+}
+
+func (r *dependency) CaptureWith(captureFunc func (instance interface{}) error) *dependency {
+	r.captureFunc = captureFunc
+	return r
+}
+
+func (r *dependency) Capture(instance interface{}) error {
+	if ! r.CanCapture() {
+		return fmt.Errorf(
+			"No Capture function is set for dependency: %s:%s",
+			r.GetName(), r.GetVariant(),
+		)
+	}
+
+	return r.captureFunc(instance)
 }
 

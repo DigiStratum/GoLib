@@ -134,14 +134,26 @@ func (r *DependencyInjected) HasAllRequiredDependencies() bool {
 // -------------------------------------------------------------------------------------------------
 
 func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc) error {
-        for _, instance := range depinst {
+	for _, instance := range depinst {
 		if nil == instance { continue }
-                name := instance.GetName()
-                if _, ok := r.injected[name]; ! ok {
-                        r.injected[name] = make(map[string]DependencyInstanceIfc)
-                }
-                r.injected[name][instance.GetVariant()] = instance
-        }
+		name := instance.GetName()
+
+		// Only capture declared dependencies, ignore extras
+		if ! r.declared.Has(name) { continue }
+
+		// Capture into our map for basic access
+		if _, ok := r.injected[name]; ! ok {
+			r.injected[name] = make(map[string]DependencyInstanceIfc)
+		}
+		r.injected[name][instance.GetVariant()] = instance
+
+		// If this declared dependency defines Capture Func...
+		declaredDep := r.declared.Get(name)
+		if declaredDep.CanCapture() {
+			err := declaredDep.Capture(instance.GetInstance())
+			if nil != err { return err }
+		}
+	}
 
 	return nil
 }
@@ -149,6 +161,8 @@ func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc
 // -------------------------------------------------------------------------------------------------
 // readableDependenciesIfc
 // -------------------------------------------------------------------------------------------------
+
+// Note: Naming of these does not reflect that it inspects the INJECTED dependencies, not DECLARED
 
 func (r *DependencyInjected) Get(name string) *dependency {
 	return r.GetVariant(name, DEP_VARIANT_DEFAULT)

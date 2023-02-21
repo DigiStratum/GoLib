@@ -62,6 +62,7 @@ func (r *dependencies) Add(deps ...*dependency) {
 // -------------------------------------------------------------------------------------------------
 
 func (r *dependencies) Get(name string) *dependency {
+	// TODO: Update this to get default or any
 	return r.GetVariant(name, DEP_VARIANT_DEFAULT)
 }
 
@@ -71,6 +72,7 @@ func (r *dependencies) GetVariant(name, variant string) *dependency {
 }
 
 func (r *dependencies) Has(name string) bool {
+	// TODO: Update this to check default or any
 	return r.HasVariant(name, DEP_VARIANT_DEFAULT)
 }
 

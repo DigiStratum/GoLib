@@ -22,8 +22,8 @@ func NewApp() *app {
 	}
 }
 
-// If we override InjectDependencies() we can capture injected dependencies
-// locally instead of asking for them every time they are needed
+// DependencyInjectableIfc.InjectDependencies Override
+// Capture injected dependencies locally instead of fetching them each time needed
 func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
 
 	// If DI fails, return error

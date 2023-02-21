@@ -30,22 +30,22 @@ import (
 	"sync"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
 	"github.com/DigiStratum/GoLib/DB"
 )
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
+	dep.DependencyInjectedIfc
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
 	Close() error
 }
 
-// FIXME: this should not be exported
-type ConnectionPool struct {
-	di			*dependencies.DependencyInjected
+type connectionPool struct {
+	dep.DependencyInjected
 	configured		bool
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN
@@ -74,6 +74,12 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
+                // Declare Dependencies
+                DependencyInjected: dep.NewDependencyInjected(
+                        dep.NewDependencies(
+                                dep.NewDependency("ConnectionFactory").SetRequired(),
+                        ),
+                ),
 	}
 
 	return &cp
@@ -88,13 +94,39 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 // DependencyInjectableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+
+// DependencyInjectableIfc.InjectDependencies Override
+// Capture injected dependencies locally instead of fetching them each time needed
+func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
+
+// SMK @ HERE IMPLEMENT THIS, USE CAPTURE FUNC!
+
+	// If DI fails, return error
+	if err := r.DependencyInjected.InjectDependencies(depinst...); nil != err { return err }
+	// If DI missing requirements, return error
+	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
+
+	// Iterate over injected dependencies; use a switch-case to map
+	// them to the correct interface assertion and member value
+	for name, _ := range r.DependencyInjected.GetVariants() {
+		switch name {
+			case "ConnectionFactory":
+				svcdep := r.DependencyInjected.GetInstance(name)
+				if svc, ok := svcdep.(ServiceIfc); ok { r.svc = svc }
+		}
+	}
+
+	return nil
+}
+
+
 func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 
 	// Validate Dependencies
 	if nil == deps { return fmt.Errorf("No dependencies provided!") }
-	r.di = dependencies.NewDependencyInjected(deps)
-	requiredDeps := []string{ "connectionFactory" }
-	if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
+//	r.DependencyInjected = dep.NewDependencyInjected(deps)
+	//requiredDeps := []string{ "connectionFactory" }
+	//if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
 
 	// Iterate over dependencies and assign each to a local property
 	it := deps.GetIterator()
