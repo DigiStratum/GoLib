@@ -2,28 +2,24 @@ package init
 
 type InitializableIfc interface {
 	IsInitialized() bool
-	CheckWith(func() bool) *Initializable
 }
 
 // Exported to support embedding
 type Initializable struct {
-	initialized		bool
+	isInitialized		bool
 	initChecks		[]func() bool
 }
 
-func NewInitializable() *Initializable {
-	return &Initializable{}
+func NewInitializable(initChecks ...func() bool) *Initializable {
+	i := Initializable{ initChecks: []func() bool{} }
+	for _, initCheck := range initChecks { i.initChecks = append(i.initChecks, initCheck) }
+	return &i
 }
 
 func (r *Initializable) IsInitialized() bool {
-	if r.initialized { return true }
+	if r.isInitialized { return true }
 	for _, initCheck := range r.initChecks { if ! initCheck() { return false } }
-	r.initialized = true
+	r.isInitialized = true
 	return true
-}
-
-func (r *Initializable) CheckWith(initCheck func() bool) *Initializable {
-	r.initChecks = append(r.initChecks, initCheck)
-	return r
 }
 
