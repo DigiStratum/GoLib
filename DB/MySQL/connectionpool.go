@@ -29,6 +29,7 @@ import (
 	"errors"
 	"sync"
 
+	init "github.com/DigiStratum/GoLib/Init"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	dep "github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
@@ -37,6 +38,7 @@ import (
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
+	init.InitializableIfc
 	dep.DependencyInjectedIfc
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
@@ -45,7 +47,9 @@ type ConnectionPoolIfc interface {
 }
 
 type connectionPool struct {
+	init.Initializable
 	dep.DependencyInjected
+
 	configured		bool
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN
@@ -65,8 +69,8 @@ const DEFAULT_MAX_IDLE = 60
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewConnectionPool(dsn db.DSN) *ConnectionPool {
-	cp := ConnectionPool{
+func NewConnectionPool(dsn db.DSN) *connectionPool {
+	cp := connectionPool{
 		configured:		false,
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
@@ -74,13 +78,22 @@ func NewConnectionPool(dsn db.DSN) *ConnectionPool {
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
-                // Declare Dependencies
-                DependencyInjected: dep.NewDependencyInjected(
-                        dep.NewDependencies(
-                                dep.NewDependency("ConnectionFactory").SetRequired(),
-                        ),
-                ),
 	}
+
+	// Declare Dependencies
+	cp.DependencyInjected = *(dep.NewDependencyInjected(
+		dep.NewDependencies(
+			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+				cp.CaptureConnectionFactory,
+			),
+		),
+	))
+
+	// Declare Initialization Checkers
+	cp.Initializable = *(init.NewInitializable(
+		cp.DependencyInjected.HasAllRequiredDependencies(),
+		// TODO: Add checker for required configuration
+	))
 
 	return &cp
 }
@@ -94,14 +107,22 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 // DependencyInjectableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *connectionPool) CaptureConnectionFactory(instance interface{}) error {
+	if nil == instance {
+		var ok bool
+		if r.connectionFactory, ok = instance.(db.ConnectionFactoryIfc); ok { return nil }
+	}
+	return fmt.Errorf("ConnectionPool.CaptureConnectionFactory() - instance is not a ConnectionFactoryIfc")
+}
 
+/*
 // DependencyInjectableIfc.InjectDependencies Override
 // Capture injected dependencies locally instead of fetching them each time needed
 func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
 
 // SMK @ HERE IMPLEMENT THIS, USE CAPTURE FUNC!
 
-	// If DI fails, return error
+	// Call super; If DI fails, return error
 	if err := r.DependencyInjected.InjectDependencies(depinst...); nil != err { return err }
 	// If DI missing requirements, return error
 	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
@@ -120,7 +141,7 @@ func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
 }
 
 
-func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
+func (r *connectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
 
 	// Validate Dependencies
 	if nil == deps { return fmt.Errorf("No dependencies provided!") }
@@ -147,13 +168,14 @@ func (r *ConnectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 
 	return nil
 }
+*/
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
-func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
+func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
 	if (nil == r) || (! r.di.IsValid()) { return fmt.Errorf("Not ready") }
 
 	// If we have already been configured, do not accept a second configuration
@@ -201,21 +223,21 @@ func (r *ConnectionPool) Configure(config cfg.ConfigIfc) error {
 	return nil
 }
 
-func (r *ConnectionPool) configureMinConnections(value int) {
+func (r *connectionPool) configureMinConnections(value int) {
 	r.minConnections = value
 	if r.minConnections < 1 { r.minConnections = 1 }
 	// If Min pushed above Max, then push Max up
 	if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
 }
 
-func (r *ConnectionPool) configureMaxConnections(value int) {
+func (r *connectionPool) configureMaxConnections(value int) {
 	r.maxConnections = value
 	if r.maxConnections < 1 { r.maxConnections = 1 }
 	// If Max dropped below Min, then push Min down
 	if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
 }
 
-func (r *ConnectionPool) configureMaxIdle(value int) {
+func (r *connectionPool) configureMaxIdle(value int) {
 	r.maxIdle = value
 	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
 	if r.maxIdle < 1 { r.maxIdle = 1 }
@@ -226,7 +248,8 @@ func (r *ConnectionPool) configureMaxIdle(value int) {
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
-func (r *ConnectionPool) GetConnection() (*LeasedConnection, error) {
+func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
+	// TODO: Check initializable.IsInitialized() result before continuing (maybe we need init errors handed back so that we can communicate specific errors here?)
 	var connection *PooledConnection
 
 	r.mutex.Lock(); defer r.mutex.Unlock()
@@ -246,7 +269,7 @@ func (r *ConnectionPool) GetConnection() (*LeasedConnection, error) {
 	return r.leasedConnections.GetLeaseForConnection(connection), nil
 }
 
-func (r *ConnectionPool) Release(leaseKey int64) error {
+func (r *connectionPool) Release(leaseKey int64) error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	if ! r.leasedConnections.Release(leaseKey) {
 		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
@@ -256,7 +279,7 @@ func (r *ConnectionPool) Release(leaseKey int64) error {
 
 // Max Idle has a default, but may be overridden by configuration; this gets access to the current setting value
 // TODO: Denote who need to know this & why...
-func (r *ConnectionPool) GetMaxIdle() int {
+func (r *connectionPool) GetMaxIdle() int {
 	return r.maxIdle
 }
 
@@ -264,7 +287,7 @@ func (r *ConnectionPool) GetMaxIdle() int {
 // io.Closer Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r *ConnectionPool) Close() error {
+func (r *connectionPool) Close() error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
@@ -288,7 +311,7 @@ func (r *ConnectionPool) Close() error {
 // ConnectionPool (Package-Private) Implementation
 // -------------------------------------------------------------------------------------------------
 
-func (r *ConnectionPool) findAvailableConnection() *PooledConnection {
+func (r *connectionPool) findAvailableConnection() *PooledConnection {
 	for _, connection := range (*r).connections {
 		if ! connection.IsLeased() { return connection }
 	}
@@ -296,7 +319,7 @@ func (r *ConnectionPool) findAvailableConnection() *PooledConnection {
 }
 
 // TODO: Pass errors back to caller and on up the chain for visibility/logging
-func (r *ConnectionPool) createNewConnection() *PooledConnection {
+func (r *connectionPool) createNewConnection() *PooledConnection {
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
@@ -311,21 +334,21 @@ func (r *ConnectionPool) createNewConnection() *PooledConnection {
 	return newPooledConnection // nil if there was an error
 }
 
-func (r *ConnectionPool) findExpiredLeaseConnection() *PooledConnection {
+func (r *connectionPool) findExpiredLeaseConnection() *PooledConnection {
 	for _, connection := range r.connections {
 		if connection.IsLeased() && connection.IsExpired() { return connection }
 	}
 	return nil
 }
 
-func (r *ConnectionPool) establishMinConnections() {
+func (r *connectionPool) establishMinConnections() {
 	// If the minimum resource count has gone up, fill up the difference
 	for ci := len(r.connections); ci < r.minConnections; ci++ {
 		_ = r.createNewConnection()
 	}
 }
 
-func (r *ConnectionPool) closePooledConnection(pooledConnection PooledConnectionIfc) error {
+func (r *connectionPool) closePooledConnection(pooledConnection PooledConnectionIfc) error {
 	if closeableConnection, ok := pooledConnection.(io.Closer); ok {
 		return closeableConnection.Close()
 	}

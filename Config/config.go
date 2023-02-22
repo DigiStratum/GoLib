@@ -41,6 +41,9 @@ type ConfigIfc interface {
 	Dereference(referenceConfig ConfigIfc) int
 	DereferenceAll(referenceConfigs ...ConfigIfc) int
 	DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool
+
+	Validate(required, optional *[]string) *Config
+	IsValid() bool
 }
 
 // Config embeds a HashMap so that we can extend it
@@ -175,7 +178,8 @@ func (r *Config) Validate(required, optional *[]string) *Config {
 
 func (r *Config) IsValid() bool {
 	// Validity only requires that we have the required configuration keys...
-	return r.hasRequiredConfigs
+	 r.hasRequiredConfigs
+	 // TODO: Convert Config to model more like Dependencies for declarative required vs. optional
 }
 
 // -------------------------------------------------------------------------------------------------
