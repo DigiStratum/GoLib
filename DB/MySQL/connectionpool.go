@@ -176,7 +176,6 @@ func (r *connectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 
 // Optionally accept overrides for defaults in configuration
 func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
-	if (nil == r) || (! r.di.IsValid()) { return fmt.Errorf("Not ready") }
 
 	// If we have already been configured, do not accept a second configuration
 	if r.configured { return nil }
@@ -249,7 +248,7 @@ func (r *connectionPool) configureMaxIdle(value int) {
 
 // Request a connection from the pool using multiple approaches
 func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
-	// TODO: Check initializable.IsInitialized() result before continuing (maybe we need init errors handed back so that we can communicate specific errors here?)
+	if err := r.Initializable.Check(); nil != err { return nil, fmt.Errorf("ConnectionPool.GetConnection() : %s", err.Error()) }
 	var connection *PooledConnection
 
 	r.mutex.Lock(); defer r.mutex.Unlock()
