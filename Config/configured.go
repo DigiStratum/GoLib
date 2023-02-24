@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
+	"github.com/DigiStratum/GoLib/Starter"
 )
 
 type ConfiguredIfc interface {
 	ConfigIfc
-	InitializableIfc
+	starter.StartableIfc
 
 	Capture(config ConfigIfc) error
 }
@@ -14,7 +15,7 @@ type ConfiguredIfc interface {
 // Exported to support embedding
 type Configured struct {
 	Config
-	init		*Initialized
+	started		*starter.Started
 	declared	map[string]ConfigItemIfc	// Key is ConfigItem.name for fast lookups
 }
 
@@ -29,7 +30,7 @@ func NewConfigured(configItems ...ConfigItemIfc) *Configured {
 	}
 	return &Configured{
 		Config:		*(NewConfig()),
-		init:		NewInitialized(),
+		started:	starter.NewStarted(),
 		declared:	declared,
 	}
 }
@@ -45,10 +46,11 @@ func (r *Configured) Capture(config ConfigIfc) error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// InitializableIfc
+// StartableIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *Configured) Check() error {
+	if r.started.IsStarted() { return nil }
 	// Verify that all required Configs are captured
 	for name, declaredConfigItem := range r.declared {
 		if declaredConfigItem.IsRequired() {
@@ -57,6 +59,7 @@ func (r *Configured) Check() error {
 			}
 		}
 	}
+	r.started.SetStarted()
 	return nil
 }
 

@@ -1,37 +1,37 @@
-package init
+package starter
 
-// Interface to determine whether this one thing has been initialized
-type InitializedIfc interface {
+// Interface to determine whether this one thing has been startialized
+type StartedIfc interface {
 	// Embedder needs to implement this:
-	InitializableIfc
+	StartableIfc
 
 	// We implement this:
-	SetInitialized()
-	IsInitialized() bool
+	SetStarted()
+	IsStarted() bool
 }
 
 // Exported to support embedding
-type Initialized struct {
-	isInitialized		bool
+type Started struct {
+	isStarted		bool
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewInitialized() *Initialized {
-	return &Initialized{}
+func NewStarted() *Started {
+	return &Started{}
 }
 
 // -------------------------------------------------------------------------------------------------
-// InitializedIfc
+// StartedIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *Initialized) SetInitialized() {
-	r.isInitialized = true
+func (r *Started) SetStarted() {
+	r.isStarted = true
 }
 
-func (r *Initialized) IsInitialized() bool {
-	return r.isInitialized
+func (r *Started) IsStarted() bool {
+	return r.isStarted
 }
 
