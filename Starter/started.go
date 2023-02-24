@@ -1,6 +1,10 @@
 package starter
 
-// Interface to determine whether this one thing has been startialized
+/*
+Embed or include this into any construct that needs to be started once so that it can track its
+own state as well as make that state known to consumers.
+*/
+
 type StartedIfc interface {
 	// Embedder needs to implement this:
 	StartableIfc
