@@ -8,31 +8,40 @@ import (
 
 type ServiceIfc interface {
 	starter.StartedIfc
-	DoSomething()
+
+	DoSomething() error
 }
 
 type Service struct {
 	starter.Started
+	message			string
 }
 
 func NewService() *Service {
 	started := starter.NewStarted()
 	return &Service{
 		Started:	*started,
+		message:	"",
 	}
 }
 
-// StartedIfc
+// ------------------------------------------------------------------------------------------------
+// StartableIfc
+// ------------------------------------------------------------------------------------------------
+
 func (r *Service) Start() error {
+	r.message = "Service was started! :^)"
 	r.Started.SetStarted()
 	return nil
 }
 
-func (r *Service) DoSomething() {
-	if (! r.Started.IsStarted()) {
-		fmt.Printf("Service Not Started!\n");
-	} else {
-		fmt.Printf("Service Did Something!\n")
-	}
+// ------------------------------------------------------------------------------------------------
+// ServiceIfc
+// ------------------------------------------------------------------------------------------------
+
+func (r *Service) DoSomething() error {
+	if (! r.Started.IsStarted()) { return fmt.Errorf("Service not started! :^(\n") }
+	fmt.Printf("%s\n", r.message)
+	return nil
 }
 

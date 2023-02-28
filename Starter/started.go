@@ -6,11 +6,11 @@ own state as well as make that state known to consumers.
 */
 
 type StartedIfc interface {
-	// Embedder needs to implement this:
+	// Embedded construct must implement this
 	StartableIfc
 
-	// We implement this:
-	SetStarted()
+	// We implement this
+	SetStarted() *Started
 	IsStarted() bool
 }
 
@@ -31,8 +31,9 @@ func NewStarted() *Started {
 // StartedIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *Started) SetStarted() {
+func (r *Started) SetStarted() *Started {
 	r.isStarted = true
+	return r
 }
 
 func (r *Started) IsStarted() bool {
