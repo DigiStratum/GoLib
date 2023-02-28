@@ -20,6 +20,7 @@ TODO:
  * Look more closely at sql.DB which is a connection pool natively; would it give us enough control/visibility over state?
    * ref: https://pkg.go.dev/database/sql#DB
  * Why is this in the MySQL package? There doesn't seem to be anything MySQL-specific. Move up to DB package if possible!
+ * Refactor errors to use Logger.Error()
 
 */
 
@@ -29,7 +30,7 @@ import (
 	"errors"
 	"sync"
 
-	init "github.com/DigiStratum/GoLib/Init"
+	"github.com/DigiStratum/GoLib/Starter"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	dep "github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/Data/hashmap"
@@ -38,7 +39,7 @@ import (
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
-	init.InitializableIfc
+	starter.StartableIfc
 	dep.DependencyInjectedIfc
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
@@ -47,7 +48,7 @@ type ConnectionPoolIfc interface {
 }
 
 type connectionPool struct {
-	init.Initializable
+	*starter.Started
 	dep.DependencyInjected
 
 	configured		bool
@@ -78,6 +79,7 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
+		Started:		starter.NewStarted(),
 	}
 
 	// Declare Dependencies
@@ -89,12 +91,6 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 		),
 	))
 
-	// Declare Initialization Checkers
-	cp.Initializable = *(init.NewInitializable(
-		cp.DependencyInjected.HasAllRequiredDependencies(),
-		// TODO: Add checker for required configuration
-	))
-
 	return &cp
 }
 
@@ -104,7 +100,17 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// DependencyInjectableIfc Public Interface
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *connectionPool) Start() error {
+	// TODO: Check both configuration and dependencies for completeness, then Start!
+	r.Started.SetStarted()
+	return nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectableIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *connectionPool) CaptureConnectionFactory(instance interface{}) error {
@@ -171,7 +177,7 @@ func (r *connectionPool) InjectDependencies(deps dependencies.DependenciesIfc) e
 */
 
 // -------------------------------------------------------------------------------------------------
-// ConfigurableIfc Public Interface
+// ConfigurableIfc
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
@@ -243,12 +249,12 @@ func (r *connectionPool) configureMaxIdle(value int) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConnectionPoolIfc Public Interface
+// ConnectionPoolIfc
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
 func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
-	if err := r.Initializable.Check(); nil != err { return nil, fmt.Errorf("ConnectionPool.GetConnection() : %s", err.Error()) }
+	if ! r.Started.IsStarted() { return nil, fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	var connection *PooledConnection
 
 	r.mutex.Lock(); defer r.mutex.Unlock()
@@ -269,6 +275,7 @@ func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
 }
 
 func (r *connectionPool) Release(leaseKey int64) error {
+	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	if ! r.leasedConnections.Release(leaseKey) {
 		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
@@ -283,10 +290,12 @@ func (r *connectionPool) GetMaxIdle() int {
 }
 
 // -------------------------------------------------------------------------------------------------
-// io.Closer Public Interface
+// io.Closer
 // -------------------------------------------------------------------------------------------------
 
+// TODO: Tie this into some new StoppableIfc
 func (r *connectionPool) Close() error {
+	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
@@ -307,7 +316,7 @@ func (r *connectionPool) Close() error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConnectionPool (Package-Private) Implementation
+// ConnectionPool
 // -------------------------------------------------------------------------------------------------
 
 func (r *connectionPool) findAvailableConnection() *PooledConnection {
@@ -348,6 +357,7 @@ func (r *connectionPool) establishMinConnections() {
 }
 
 func (r *connectionPool) closePooledConnection(pooledConnection PooledConnectionIfc) error {
+	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	if closeableConnection, ok := pooledConnection.(io.Closer); ok {
 		return closeableConnection.Close()
 	}
