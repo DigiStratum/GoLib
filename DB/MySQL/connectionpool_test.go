@@ -16,7 +16,7 @@ func TestThat_NewConnectionPool_ReturnsSomething(t *testing.T) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 
 	// Test
-	var sut *ConnectionPool = NewConnectionPool(*dsn)
+	sut := NewConnectionPool(*dsn)
 
 	// Verify
 	ExpectNonNil(sut, t)
@@ -38,14 +38,15 @@ func TestThat_ConnectionPool_InjectDependencies_ReturnsError_ForWrongDependencie
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps1 := dependencies.NewDependencies()
-	deps1.Set("bogusdep", "bogusstring")
-	deps2 := dependencies.NewDependencies()
-	deps2.Set("connectionFactory", "bogusstring")
 
 	// Test
-	err1 := sut.InjectDependencies(deps1)
-	err2 := sut.InjectDependencies(deps2)
+	err1 := sut.InjectDependencies(
+		dependencies.NewDependencyInstance("bogusdep", "bogusstring"),
+	)
+
+	err2 := sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", "bogusstring"),
+	)
 
 	// Verify
 	ExpectError(err1, t)
@@ -56,12 +57,14 @@ func TestThat_ConnectionPool_InjectDependencies_ReturnsNoError_ForGoodDependenci
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
+	connectionFactory := NewMockDBConnectionFactory()
+	//deps := dependencies.NewDependencies()
+	//deps.Set("connectionFactory", connectionFactory)
 
 	// Test
-	err := sut.InjectDependencies(deps)
+	err := sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	// Verify
 	ExpectNoError(err, t)
@@ -71,10 +74,10 @@ func TestThat_ConnectionPool_Configure_ReturnsNoError_ForEmptyConfig(t *testing.
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 
@@ -89,10 +92,10 @@ func TestThat_ConnectionPool_Configure_ReturnsError_ForUnknownConfigKeys(t *test
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("boguskey", "bogusvalue")
@@ -108,10 +111,10 @@ func TestThat_ConnectionPool_Configure_ReturnsNoError_ForKnownConfigKeys(t *test
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -129,10 +132,10 @@ func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenOneAvaila
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -152,10 +155,10 @@ func TestThat_ConnectionPool_GetConnection_ReturnsError_WhenNoConnectionsAvailab
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -177,10 +180,10 @@ func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenPreviousl
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -203,10 +206,10 @@ func TestThat_ConnectionPool_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	expected := 33
@@ -224,10 +227,10 @@ func TestThat_ConnectionPool_Close_ClosesConnectionPool_WithoutError(t *testing.
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
-	connecitonFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connecitonFactory)
-	sut.InjectDependencies(deps)
+	connectionFactory := NewMockDBConnectionFactory()
+	sut.InjectDependencies(
+		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	// Test
 	err := sut.Close()
@@ -235,3 +238,4 @@ func TestThat_ConnectionPool_Close_ClosesConnectionPool_WithoutError(t *testing.
 	// Verify
 	ExpectNoError(err, t)
 }
+

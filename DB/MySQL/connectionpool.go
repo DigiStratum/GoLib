@@ -39,8 +39,11 @@ import (
 
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
+	// Embedded interface(s)
 	starter.StartableIfc
 	dep.DependencyInjectedIfc
+
+	// Our interface
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
@@ -71,27 +74,16 @@ const DEFAULT_MAX_IDLE = 60
 // -------------------------------------------------------------------------------------------------
 
 func NewConnectionPool(dsn db.DSN) *connectionPool {
-	cp := connectionPool{
-		configured:		false,
+	cp := &connectionPool{
+		Started:		starter.NewStarted(),
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
 		maxIdle:		DEFAULT_MAX_IDLE,
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
-		Started:		starter.NewStarted(),
 	}
-
-	// Declare Dependencies
-	cp.DependencyInjected = *(dep.NewDependencyInjected(
-		dep.NewDependencies(
-			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
-				cp.CaptureConnectionFactory,
-			),
-		),
-	))
-
-	return &cp
+	return cp.init()
 }
 
 func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
@@ -100,81 +92,32 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// StartableIfc
+// ConnectionPoolIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *connectionPool) Start() error {
-	// TODO: Check both configuration and dependencies for completeness, then Start!
-	r.Started.SetStarted()
-	return nil
+func (r *connectionPool) init() *connectionPool {
+	// Declare Dependencies
+	r.DependencyInjected = *(dep.NewDependencyInjected(
+		dep.NewDependencies(
+			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+				r.captureConnectionFactory,
+			),
+		),
+	))
+	return r
 }
 
 // -------------------------------------------------------------------------------------------------
-// DependencyInjectableIfc
+// DependencyInjectedIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *connectionPool) CaptureConnectionFactory(instance interface{}) error {
-	if nil == instance {
+func (r *connectionPool) captureConnectionFactory(instance interface{}) error {
+	if nil != instance {
 		var ok bool
 		if r.connectionFactory, ok = instance.(db.ConnectionFactoryIfc); ok { return nil }
 	}
 	return fmt.Errorf("ConnectionPool.CaptureConnectionFactory() - instance is not a ConnectionFactoryIfc")
 }
-
-/*
-// DependencyInjectableIfc.InjectDependencies Override
-// Capture injected dependencies locally instead of fetching them each time needed
-func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
-
-// SMK @ HERE IMPLEMENT THIS, USE CAPTURE FUNC!
-
-	// Call super; If DI fails, return error
-	if err := r.DependencyInjected.InjectDependencies(depinst...); nil != err { return err }
-	// If DI missing requirements, return error
-	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
-
-	// Iterate over injected dependencies; use a switch-case to map
-	// them to the correct interface assertion and member value
-	for name, _ := range r.DependencyInjected.GetVariants() {
-		switch name {
-			case "ConnectionFactory":
-				svcdep := r.DependencyInjected.GetInstance(name)
-				if svc, ok := svcdep.(ServiceIfc); ok { r.svc = svc }
-		}
-	}
-
-	return nil
-}
-
-
-func (r *connectionPool) InjectDependencies(deps dependencies.DependenciesIfc) error {
-
-	// Validate Dependencies
-	if nil == deps { return fmt.Errorf("No dependencies provided!") }
-//	r.DependencyInjected = dep.NewDependencyInjected(deps)
-	//requiredDeps := []string{ "connectionFactory" }
-	//if ! r.di.SetRequired(&requiredDeps).IsValid() { return r.di.GetValidationError() }
-
-	// Iterate over dependencies and assign each to a local property
-	it := deps.GetIterator()
-	for dd := it(); nil != dd; dd = it() {
-		name, dep := dd.GetDep()
-		var ok bool
-		switch name {
-			case "connectionFactory":
-				if r.connectionFactory, ok = dep.(db.ConnectionFactoryIfc); ok { continue }
-			default:
-				// Ignore extra dependencies - not a fatal error
-		}
-		return fmt.Errorf("Dependency was wrong type: %s", name )
-	}
-
-	// Set up the first resource
-	r.establishMinConnections()
-
-	return nil
-}
-*/
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc
@@ -246,6 +189,16 @@ func (r *connectionPool) configureMaxIdle(value int) {
 	r.maxIdle = value
 	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
 	if r.maxIdle < 1 { r.maxIdle = 1 }
+}
+
+// -------------------------------------------------------------------------------------------------
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *connectionPool) Start() error {
+	// TODO: Check both configuration and dependencies for completeness, then Start!
+	r.Started.SetStarted()
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
