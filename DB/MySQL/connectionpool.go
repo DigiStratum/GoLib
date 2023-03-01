@@ -197,6 +197,9 @@ func (r *connectionPool) configureMaxIdle(value int) {
 
 func (r *connectionPool) Start() error {
 	// TODO: Check both configuration and dependencies for completeness, then Start!
+	// Check Dependencies
+	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
+
 	r.Started.SetStarted()
 	return nil
 }
