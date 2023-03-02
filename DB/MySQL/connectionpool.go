@@ -42,6 +42,7 @@ type ConnectionPoolIfc interface {
 	// Embedded interface(s)
 	starter.StartableIfc
 	dep.DependencyInjectedIfc
+	cfg.ConfiguredIfc
 
 	// Our interface
 	GetConnection() (*LeasedConnection, error)
@@ -53,8 +54,8 @@ type ConnectionPoolIfc interface {
 type connectionPool struct {
 	*starter.Started
 	dep.DependencyInjected
+	*cfg.Configured
 
-	configured		bool
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN
 	minConnections		int
@@ -76,6 +77,7 @@ const DEFAULT_MAX_IDLE = 60
 func NewConnectionPool(dsn db.DSN) *connectionPool {
 	cp := &connectionPool{
 		Started:		starter.NewStarted(),
+		Configured:		cfg.NewConfigured(),
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
@@ -198,7 +200,10 @@ func (r *connectionPool) configureMaxIdle(value int) {
 func (r *connectionPool) Start() error {
 	// TODO: Check both configuration and dependencies for completeness, then Start!
 	// Check Dependencies
-	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
+	if err := r.DependencyInjected.Start(); nil != err { return err }
+
+	// Check Configuration
+	if err := r.Configured.Start(); nil != err { return err }
 
 	r.Started.SetStarted()
 	return nil
