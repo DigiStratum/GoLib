@@ -6,10 +6,9 @@ import (
 )
 
 type ConfiguredIfc interface {
+	ConfigurableIfc
 	ConfigIfc
-	starter.StartableIfc
-
-	Capture(config ConfigIfc) error
+	starter.StartedIfc
 }
 
 // Exported to support embedding
@@ -40,7 +39,7 @@ func NewConfigured(configItems ...ConfigItemIfc) *Configured {
 // -------------------------------------------------------------------------------------------------
 
 // Just capture the provided configuration by default
-func (r *Configured) Capture(config ConfigIfc) error {
+func (r *Configured) Configure(config ConfigIfc) error {
 	r.Config.MergeConfig(config)
 	return nil
 }
@@ -49,7 +48,7 @@ func (r *Configured) Capture(config ConfigIfc) error {
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *Configured) Check() error {
+func (r *Configured) Start() error {
 	if r.started.IsStarted() { return nil }
 	// Verify that all required Configs are captured
 	for name, declaredConfigItem := range r.declared {
