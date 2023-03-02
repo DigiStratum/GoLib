@@ -20,23 +20,23 @@ TODO:
 import (
 	"fmt"
 	"strings"
+
+	"github.com/DigiStratum/GoLib/Starter"
 )
 
 // This interface may not be used, but helps for readability here nonetheless
 type DependencyInjectedIfc interface {
-	// This implementation supports all the Discovery functions (so embed the interface!)
 	DependencyDiscoveryIfc
-	// This implementation is injectable (so embed the interface!)
 	DependencyInjectableIfc
-	// Embed all the readableDependenciesIfc requirements
 	readableDependenciesIfc
+	starter.StartedIfc
 
 	GetInstance(name string) interface{}
 	GetInstanceVariant(name, variant string) interface{}
-	ValidateRequiredDependencies() error
 }
 
 type DependencyInjected struct {
+	*starter.Started
 	declared	DependenciesIfc
 	injected	map[string]map[string]DependencyInstanceIfc
 }
@@ -47,6 +47,7 @@ type DependencyInjected struct {
 
 func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInjected {
 	return &DependencyInjected{
+		Started:	starter.NewStarted(),
 		declared:	declaredDependencies,
 		injected:	make(map[string]map[string]DependencyInstanceIfc),
 	}
@@ -125,8 +126,7 @@ func (r *DependencyInjected) GetInjectedDependencies() readableDependenciesIfc {
 }
 
 func (r *DependencyInjected) HasAllRequiredDependencies() bool {
-	missing := r.GetMissingDependencies()
-	return len(missing.GetVariants()) == 0
+	return 0 == len(r.GetMissingDependencies().GetVariants())
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -208,19 +208,23 @@ func (r *DependencyInjected) GetInstanceVariant(name, variant string) interface{
 	return nil
 }
 
-func (r *DependencyInjected) ValidateRequiredDependencies() error {
-	if r.HasAllRequiredDependencies() { return nil }
+// -------------------------------------------------------------------------------------------------
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
 
-	missingDeps := r.GetMissingDependencies()
-	var sb strings.Builder
-	delim := ""
-	for name, variants := range missingDeps.GetVariants() {
+func (r *DependencyInjected) Start() error {
+	if r.Started.IsStarted() { return nil }
+	missingDepVariants := r.GetMissingDependencies().GetVariants()
+	if 0 == len(missingDepVariants) {
+		r.Started.SetStarted()
+		return nil
+	}
+	mdvs := []string{}
+	for name, variants := range missingDepVariants {
 		for _, variant := range variants {
-			sb.WriteString(fmt.Sprintf("%s%s:%s", delim, name, variant))
-			delim = ", "
+			mdvs = append(mdvs, fmt.Sprintf("%s:%s", name, variant))
 		}
 	}
-	missingList := sb.String()
-	return fmt.Errorf("Missing one or more required dependencies: %s", missingList)
+	return fmt.Errorf("Missing one or more required dependencies: %s", strings.Join(mdvs, ","))
 }
 
