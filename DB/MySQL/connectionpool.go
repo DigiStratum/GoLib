@@ -52,7 +52,7 @@ type ConnectionPoolIfc interface {
 }
 
 type connectionPool struct {
-	*starter.Started
+	*starter.Startable
 	dep.DependencyInjected
 	*cfg.Configured
 
@@ -75,8 +75,8 @@ const DEFAULT_MAX_IDLE = 60
 // -------------------------------------------------------------------------------------------------
 
 func NewConnectionPool(dsn db.DSN) *connectionPool {
-	cp := &connectionPool{
-		Started:		starter.NewStarted(),
+	cp := connectionPool{
+		Startable:		starter.NewStartable(),
 		Configured:		cfg.NewConfigured(),
 		dsn:			dsn,
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
@@ -85,28 +85,13 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
 	}
+
 	return cp.init()
 }
 
 func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 	if ii, ok := i.(ConnectionPoolIfc); ok { return ii, nil }
 	return nil, fmt.Errorf("Does not implement ConnectionPoolIfc")
-}
-
-// -------------------------------------------------------------------------------------------------
-// ConnectionPoolIfc
-// -------------------------------------------------------------------------------------------------
-
-func (r *connectionPool) init() *connectionPool {
-	// Declare Dependencies
-	r.DependencyInjected = *(dep.NewDependencyInjected(
-		dep.NewDependencies(
-			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
-				r.captureConnectionFactory,
-			),
-		),
-	))
-	return r
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -197,7 +182,7 @@ func (r *connectionPool) configureMaxIdle(value int) {
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *connectionPool) Start() error {
+func (r *connectionPool) start() error {
 	// TODO: Check both configuration and dependencies for completeness, then Start!
 	// Check Dependencies
 	if err := r.DependencyInjected.Start(); nil != err { return err }
@@ -206,6 +191,24 @@ func (r *connectionPool) Start() error {
 	if err := r.Configured.Start(); nil != err { return err }
 
 	r.Started.SetStarted()
+	return nil
+}
+
+func (r *connectionPool) init() error {
+	// Declare Dependencies
+	r.DependencyInjected = *(dep.NewDependencyInjected(
+		dep.NewDependencies(
+			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+				r.captureConnectionFactory,
+			),
+		),
+	))
+
+	// Starters
+	cp.Startable = starter.NewStartable(
+		r.DependencyInjected,
+		r.Config
+	)
 	return nil
 }
 

@@ -33,7 +33,7 @@ const MAX_REFERENCE_DEPTH = 100
 type ConfigIfc interface {
 	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
 	hashmap.HashMapIfc
-	MergeConfig(mergeCfg ConfigIfc)
+	MergeConfig(mergeCfg ConfigIfc) *Config
 	GetSubsetConfig(prefix string) *Config
 	GetSubsetKeys(keys *[]string) *Config
 	GetInverseSubsetConfig(prefix string) *Config
@@ -69,8 +69,9 @@ func NewConfig() *Config {
 // -------------------------------------------------------------------------------------------------
 
 // Merge configuration data
-func (r *Config) MergeConfig(mergeCfg ConfigIfc) {
+func (r *Config) MergeConfig(mergeCfg ConfigIfc) *Config {
 	r.HashMap.Merge(mergeCfg)
+	return r
 }
 
 // Get configuration datum whose keys begin with the prefix...

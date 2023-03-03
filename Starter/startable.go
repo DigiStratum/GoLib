@@ -12,12 +12,14 @@ TODO:
 
 type StartableIfc interface {
 	Start() error
+        IsStarted() bool
 }
 
 // Exported to support embedding
 type Startable struct {
 	isStarted		bool
 	startables		[]StartableIfc
+	startablesStarted	[]bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -40,11 +42,29 @@ func NewStartable(startables ...StartableIfc) *Startable {
 
 // Start everything; nil error indicates success
 func (r *Startable) Start() error {
+	// If we already started successfully, yay!
 	if r.isStarted { return nil }
-	for _, startable := range r.startables {
+
+	// Prepare to capture start states for each of our startables
+	r.startablesStarted = make([]bool, len(r.startables))
+
+	// For each startable...
+	for i, startable := range r.startables {
+		// If it's already started, yay!
+		if r.startablesStarted[i] { continue }
+
+		// Try to start it, return error on failure
 		if err := startable.Start(); nil != err { return err }
+
+		// It started, yay! Make a mental note
+		r.startablesStarted[i] = true
 	}
+
 	r.isStarted = true
 	return nil
+}
+
+func (r *Startable) IsStarted() bool {
+        return r.isStarted
 }
 
