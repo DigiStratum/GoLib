@@ -8,7 +8,7 @@ import (
 // Any type that implements ConfigurableIfc should be ready to receive configuration data one time as so:
 type ConfigurableIfc interface {
 	// Embedded interface(s)
-	starter.StartedIfc
+	starter.StartableIfc
 
 	// Our own interface
 	Configure(config ConfigIfc) error
@@ -16,8 +16,8 @@ type ConfigurableIfc interface {
 
 // Exported to support embedding
 type Configurable struct {
+	*starter.Startable
 	config		*Config
-	startable	*starter.Startable
 	declared	map[string]ConfigItemIfc	// Key is ConfigItem.name for fast lookups
 }
 
@@ -30,14 +30,17 @@ func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 	for _, configItem := range configItems {
 		declared[configItem.GetName()] = configItem
 	}
-	configurable := Configurable{
+	c := Configurable{
 		declared:	declared,
 		config:		NewConfig(),
 	}
-	configurable.startable = starter.NewStartable(
-		starter.MakeStartable(configurable.start),
+	return c.init()
+}
+
+func (r *Configurable) init() *configurable {
+	r.Startable = starter.NewStartable(
+		starter.MakeStartable(r.start),
 	)
-	return &configurable
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -54,7 +57,7 @@ func (r *Configurable) Configure(config ConfigIfc) error {
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *Configurable) start() error {
+func (r *Configurable) Start() error {
 	// Verify that all required Configs are captured
 	for name, declaredConfigItem := range r.declared {
 		if declaredConfigItem.IsRequired() {

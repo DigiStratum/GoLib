@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"errors"
 	"sync"
+	"strconv"
 
 	"github.com/DigiStratum/GoLib/Starter"
 	cfg "github.com/DigiStratum/GoLib/Config"
@@ -42,7 +43,7 @@ type ConnectionPoolIfc interface {
 	// Embedded interface(s)
 	starter.StartableIfc
 	dep.DependencyInjectedIfc
-	cfg.ConfiguredIfc
+	cfg.ConfigurableIfc
 
 	// Our interface
 	GetConnection() (*LeasedConnection, error)
@@ -54,7 +55,7 @@ type ConnectionPoolIfc interface {
 type connectionPool struct {
 	*starter.Startable
 	dep.DependencyInjected
-	*cfg.Configured
+	*cfg.Configurable
 
 	connectionFactory	db.ConnectionFactoryIfc
 	dsn			db.DSN
@@ -77,11 +78,13 @@ const DEFAULT_MAX_IDLE = 60
 func NewConnectionPool(dsn db.DSN) *connectionPool {
 	cp := connectionPool{
 		Startable:		starter.NewStartable(),
-		Configured:		cfg.NewConfigured(),
-		dsn:			dsn,
+
+		// Config Defaults
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
 		maxIdle:		DEFAULT_MAX_IDLE,
+
+		dsn:			dsn,
 		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
 	}
@@ -94,17 +97,6 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 	return nil, fmt.Errorf("Does not implement ConnectionPoolIfc")
 }
 
-// -------------------------------------------------------------------------------------------------
-// DependencyInjectedIfc
-// -------------------------------------------------------------------------------------------------
-
-func (r *connectionPool) captureConnectionFactory(instance interface{}) error {
-	if nil != instance {
-		var ok bool
-		if r.connectionFactory, ok = instance.(db.ConnectionFactoryIfc); ok { return nil }
-	}
-	return fmt.Errorf("ConnectionPool.CaptureConnectionFactory() - instance is not a ConnectionFactoryIfc")
-}
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc
@@ -123,17 +115,17 @@ func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
 		if ! ok { continue }
 		switch kvp.Key {
 			case "min_connections":
-				if value := config.GetInt64(kvp.Key); nil != value {
+				if value := config.GetInt64(kvp.Value); nil != value {
 					r.configureMinConnections(int(*value))
 				}
 
 			case "max_connections":
-				if value := config.GetInt64(kvp.Key); nil != value {
+				if value := config.GetInt64(kvp.Value); nil != value {
 					r.configureMaxConnections(int(*value))
 				}
 
 			case "max_idle":
-				if value := config.GetInt64(kvp.Key); nil != value {
+				if value := config.GetInt64(kvp.Value); nil != value {
 					r.configureMaxIdle(int(*value))
 				}
 
@@ -191,24 +183,6 @@ func (r *connectionPool) start() error {
 	if err := r.Configured.Start(); nil != err { return err }
 
 	r.Started.SetStarted()
-	return nil
-}
-
-func (r *connectionPool) init() error {
-	// Declare Dependencies
-	r.DependencyInjected = *(dep.NewDependencyInjected(
-		dep.NewDependencies(
-			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
-				r.captureConnectionFactory,
-			),
-		),
-	))
-
-	// Starters
-	cp.Startable = starter.NewStartable(
-		r.DependencyInjected,
-		r.Config
-	)
 	return nil
 }
 
@@ -283,11 +257,68 @@ func (r *connectionPool) Close() error {
 // ConnectionPool
 // -------------------------------------------------------------------------------------------------
 
+func (r *connectionPool) init() error {
+	// Declare Dependencies
+	r.DependencyInjected = *(dep.NewDependencyInjected(
+		dep.NewDependencies(
+			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+				r.captureDepConnectionFactory,
+			),
+		),
+	))
+
+	// Declare Configuration
+	r.Configurable = cfg.NewConfigurable(
+		cfg.NewConfigItem("min_connections").SetCaptureFunc(r.captureConfigMinConnections),
+		cfg.NewConfigItem("max_connections"),.SetCaptureFunc(r.captureConfigMaxConnections)
+		cfg.NewConfigItem("max_idle").SetCaptureFunc(r.captureConfigMaxIdle),
+	)
+
+	// Starters
+	cp.Startable = starter.NewStartable(
+		r.DependencyInjected,
+		r.Config
+	)
+	return nil
+}
+
+// Config Capture Funcs
+// -----------------------------------------------
+
+func (r *connectionPool) captureConfigMinConnections(value string) error {
+	v, err := strconv.Atoi(value)
+	if nil == err { r.configureMinConnections(v) }
+	return err
+}
+
+func (r *connectionPool) captureConfigMaxConnections(value string) error {
+	v, err := strconv.Atoi(value)
+	if nil == err { r.configureMaxConnections(v) }
+	return err
+}
+
+func (r *connectionPool) captureConfigMaxIdle(value string) error {
+	v, err := strconv.Atoi(value)
+	if nil == err { r.configureMaxIdle(v) }
+	return err
+}
+
 func (r *connectionPool) findAvailableConnection() *PooledConnection {
 	for _, connection := range (*r).connections {
 		if ! connection.IsLeased() { return connection }
 	}
 	return nil
+}
+
+// Dependency Capture Funcs
+// -----------------------------------------------
+
+func (r *connectionPool) captureDepConnectionFactory(instance interface{}) error {
+	if nil != instance {
+		var ok bool
+		if r.connectionFactory, ok = instance.(db.ConnectionFactoryIfc); ok { return nil }
+	}
+	return fmt.Errorf("ConnectionPool.captureConnectionFactory() - instance is not a ConnectionFactoryIfc")
 }
 
 // TODO: Pass errors back to caller and on up the chain for visibility/logging

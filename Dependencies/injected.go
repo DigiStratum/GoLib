@@ -29,16 +29,16 @@ type DependencyInjectedIfc interface {
 	DependencyDiscoveryIfc
 	DependencyInjectableIfc
 	readableDependenciesIfc
-	starter.StartedIfc
+	starter.StartableIfc
 
 	GetInstance(name string) interface{}
 	GetInstanceVariant(name, variant string) interface{}
 }
 
 type DependencyInjected struct {
-	*starter.Started
-	declared	DependenciesIfc
-	injected	map[string]map[string]DependencyInstanceIfc
+	*starter.Startable
+	declared		DependenciesIfc
+	injected		map[string]map[string]DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ type DependencyInjected struct {
 
 func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInjected {
 	return &DependencyInjected{
-		Started:	starter.NewStarted(),
+		Startable:	starter.NewStartable(),
 		declared:	declaredDependencies,
 		injected:	make(map[string]map[string]DependencyInstanceIfc),
 	}
@@ -212,19 +212,18 @@ func (r *DependencyInjected) GetInstanceVariant(name, variant string) interface{
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
 
+// Starter func; ensure that all required dependencies are injected
 func (r *DependencyInjected) Start() error {
-	if r.Started.IsStarted() { return nil }
-	missingDepVariants := r.GetMissingDependencies().GetVariants()
-	if 0 == len(missingDepVariants) {
-		r.Started.SetStarted()
-		return nil
-	}
-	mdvs := []string{}
-	for name, variants := range missingDepVariants {
-		for _, variant := range variants {
-			mdvs = append(mdvs, fmt.Sprintf("%s:%s", name, variant))
+	if r.Startable.IsStarted() { return nil }
+	if missingDeps := r.GetMissingDependencies().GetVariants(); 0 < len(missingDeps) {
+		mdvs := []string{}
+		for name, variants := range missingDeps {
+			for _, variant := range variants {
+				mdvs = append(mdvs, fmt.Sprintf("%s:%s", name, variant))
+			}
 		}
+		return fmt.Errorf("Missing one or more required dependencies: %s", strings.Join(mdvs, ","))
 	}
-	return fmt.Errorf("Missing one or more required dependencies: %s", strings.Join(mdvs, ","))
+	return r.Startable.Start()
 }
 
