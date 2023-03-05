@@ -26,9 +26,9 @@ import (
 
 // This interface may not be used, but helps for readability here nonetheless
 type DependencyInjectedIfc interface {
-	DependencyDiscoveryIfc
+	//DependencyDiscoveryIfc
 	DependencyInjectableIfc
-	readableDependenciesIfc
+	//DependenciesIfc
 	starter.StartableIfc
 
 	GetInstance(name string) interface{}
@@ -57,7 +57,7 @@ func NewDependencyInjected(declaredDependencies DependenciesIfc) *DependencyInje
 // DependencyDiscoveryIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *DependencyInjected) GetDeclaredDependencies() readableDependenciesIfc {
+func (r *DependencyInjected) GetDeclaredDependencies() DependenciesIfc {
 	declared := NewDependencies()
 	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
 	for name, variants := range r.declared.GetVariants() {
@@ -70,7 +70,7 @@ func (r *DependencyInjected) GetDeclaredDependencies() readableDependenciesIfc {
 	return declared
 }
 
-func (r *DependencyInjected) GetRequiredDependencies() readableDependenciesIfc {
+func (r *DependencyInjected) GetRequiredDependencies() DependenciesIfc {
 	required := NewDependencies()
 	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
 	for name, variants := range r.declared.GetVariants() {
@@ -83,7 +83,7 @@ func (r *DependencyInjected) GetRequiredDependencies() readableDependenciesIfc {
 	return required
 }
 
-func (r *DependencyInjected) GetOptionalDependencies() readableDependenciesIfc {
+func (r *DependencyInjected) GetOptionalDependencies() DependenciesIfc {
 	optional := NewDependencies()
 	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
 	for name, variants := range r.declared.GetVariants() {
@@ -96,7 +96,7 @@ func (r *DependencyInjected) GetOptionalDependencies() readableDependenciesIfc {
 	return optional
 }
 
-func (r *DependencyInjected) GetMissingDependencies() readableDependenciesIfc {
+func (r *DependencyInjected) GetMissingDependencies() DependenciesIfc {
 	missing := NewDependencies()
 	injected := r.GetInjectedDependencies()
 	required := r.GetRequiredDependencies()
@@ -111,7 +111,7 @@ func (r *DependencyInjected) GetMissingDependencies() readableDependenciesIfc {
 	return missing
 }
 
-func (r *DependencyInjected) GetInjectedDependencies() readableDependenciesIfc {
+func (r *DependencyInjected) GetInjectedDependencies() DependenciesIfc {
 	injected := NewDependencies()
 	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
 	for name, variants := range r.injected {
@@ -159,7 +159,7 @@ func (r *DependencyInjected) InjectDependencies(depinst ...DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
-// readableDependenciesIfc
+// DependenciesIfc
 // -------------------------------------------------------------------------------------------------
 
 // Note: Naming of these does not reflect that it inspects the INJECTED dependencies, not DECLARED

@@ -19,11 +19,29 @@ type DependencyInjectableIfc interface {
 
 	// Our own interface
         InjectDependencies(depinst ...DependencyInstanceIfc) error
+
+	// Discovery
+	// What are all the declared Dependecies?
+	GetDeclaredDependencies() DependenciesIfc
+	// What are just the required Dependencies?
+	GetRequiredDependencies() DependenciesIfc
+	// What Dependencies are Required that have not yet been injected?
+	GetMissingDependencies() DependenciesIfc
+	// What are just the optional Dependencies?
+	GetOptionalDependencies() DependenciesIfc
+	// What are the injected DependencyInstances?
+	GetInjectedDependencies() DependenciesIfc
+	// Have all the required Dependencies been injected?
+	HasAllRequiredDependencies() bool
+
 }
 
 // Exported to support embedding
 type DependencyInjectable struct {
 	*starter.Startable
+
+	declared		*dependencies
+	injected		map[string]map[string]DependencyInstanceIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -31,10 +49,10 @@ type DependencyInjectable struct {
 // -------------------------------------------------------------------------------------------------
 
 // FIXME: @HERE We are going to structure this more similarly to Configurable and Startable
-func NewDependencyInjectable(declared ...DependencyIfc) *DependencyInjectable {
-	return &DependencyInjected{
+func NewDependencyInjectable(deps ...DependencyIfc) *DependencyInjectable {
+	return &DependencyInjectable{
 		Startable:	starter.NewStartable(),
-		declared:	declaredDependencies,
+		declared:	NewDependencies(deps...),
 		injected:	make(map[string]map[string]DependencyInstanceIfc),
 	}
 }
