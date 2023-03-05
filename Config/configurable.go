@@ -1,7 +1,15 @@
 package config
 
+/*
+
+Configurable is an interface with base implementation that allows any construct to embed the data
+and behaviors associated with being provided with Config data and ensuring that it is complete.
+
+*/
+
 import (
 	"fmt"
+
 	"github.com/DigiStratum/GoLib/Starter"
 )
 
@@ -30,17 +38,11 @@ func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 	for _, configItem := range configItems {
 		declared[configItem.GetName()] = configItem
 	}
-	c := Configurable{
+	return &Configurable{
+		Startable:	starter.NewStartable(),
 		declared:	declared,
 		config:		NewConfig(),
 	}
-	return c.init()
-}
-
-func (r *Configurable) init() *configurable {
-	r.Startable = starter.NewStartable(
-		starter.MakeStartable(r.start),
-	)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -66,6 +68,6 @@ func (r *Configurable) Start() error {
 			}
 		}
 	}
-	return nil
+	return r.Startable.Start()
 }
 

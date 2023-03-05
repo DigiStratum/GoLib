@@ -13,6 +13,10 @@ type ConfigItemIfc interface {
 	CaptureWith(captureFunc func (value string) error) *configItem
 	Capture(value string) error
 
+	CanValidate() bool
+	ValidateWith(validateFunc func (value string) bool) *configItem
+	Validate(value string) bool
+
 	// TODO: Are there any useful type-conversion helpers for capture funcs?
 }
 
@@ -21,6 +25,7 @@ type configItem struct {
 	name		string
 	isRequired	bool
 	captureFunc	func (value string) error
+	validateFunc	func (value string) bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -50,6 +55,9 @@ func (r *configItem) IsRequired() bool {
 	return r.isRequired
 }
 
+// Capture
+// -----------------------------------------------
+
 func (r *configItem) CanCapture() bool {
 	return nil != r.captureFunc
 }
@@ -68,5 +76,23 @@ func (r *configItem) Capture(value string) error {
 	}
 
 	return r.captureFunc(value)
+}
+
+// Validation
+// -----------------------------------------------
+
+func (r *configItem) CanValidate() bool {
+	return nil != r.validateFunc
+}
+
+func (r *configItem) ValidateWith(validateFunc func (value string) bool) *configItem {
+	r.validateFunc = validateFunc
+	return r
+}
+
+func (r *configItem) Validate(value string) bool {
+	// You're calling Validate on a ConfigItem that can't be validated? Fail.
+	if ! r.CanValidate() { return false }
+	return r.validateFunc(value)
 }
 
