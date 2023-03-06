@@ -13,19 +13,24 @@ import (
 	"strings"
 
 	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Data/maps"
 )
 
 // Implementation can consume injected DependencyInstanceIfc's
 type DependencyInjectableIfc interface {
-	// Embedded interfaces
+	// Embedded interface(s)
 	starter.StartableIfc
 
 	// Our own interface
 
 	// Injection & Retrieval
+	// Receive dependency injection from external source
 	InjectDependencies(depinst ...DependencyInstanceIfc) error
+	// Get the injected dependency matching name (default or any variant)
 	GetInstance(name string) interface{}
+	// Get the injected dependency matching name and specific variant
 	GetInstanceVariant(name, variant string) interface{}
+	// Have all required dependencies have been injected?
 	HasAllRequiredDependencies() bool
 
 	// Discovery (Declared)
@@ -57,7 +62,7 @@ type DependencyInjectable struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-// FIXME: @HERE We are going to structure this more similarly to Configurable and Startable
+// Make a new one of these
 func NewDependencyInjectable(deps ...DependencyIfc) *DependencyInjectable {
 	return &DependencyInjectable{
 		Startable:	starter.NewStartable(),
@@ -73,7 +78,9 @@ func NewDependencyInjectable(deps ...DependencyIfc) *DependencyInjectable {
 // Starter func; ensure that all required dependencies are injected
 func (r *DependencyInjectable) Start() error {
 	if r.Startable.IsStarted() { return nil }
+	// If there are any missing required dependencies...
 	if missingDeps := r.GetMissingDependencies().GetAllVariants(); 0 < len(missingDeps) {
+		// Make a comprehensive list of them and return that as the error
 		mdvs := []string{}
 		for name, variants := range missingDeps {
 			for _, variant := range variants {
@@ -82,56 +89,54 @@ func (r *DependencyInjectable) Start() error {
 		}
 		return fmt.Errorf("Missing one or more required dependencies: %s", strings.Join(mdvs, ","))
 	}
+	// Nothing missing, let's start!
 	return r.Startable.Start()
 }
 
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectableIfc
+// -------------------------------------------------------------------------------------------------
+
+// What are all the declared Dependecies?
 func (r *DependencyInjectable) GetDeclaredDependencies() DependenciesIfc {
-	declared := NewDependencies()
-	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
-	for name, variants := range r.declared.GetAllVariants() {
-		for _, variant := range variants {
-			dep := NewDependency(name).SetVariant(variant)
-			if r.declared.GetVariant(name, variant).IsRequired() { dep.SetRequired() }
-			declared.Add(dep)
-		}
-	}
-	return declared
+	return r.declared
 }
 
+// What are just the required Dependencies?
 func (r *DependencyInjectable) GetRequiredDependencies() DependenciesIfc {
-	required := NewDependencies()
-	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
-	for name, variants := range r.declared.GetAllVariants() {
-		for _, variant := range variants {
-			// We're only interested in the required ones - skip others
-			if ! r.declared.GetVariant(name, variant).IsRequired() { continue }
-			required.Add(NewDependency(name).SetVariant(variant).SetRequired())
-		}
-	}
-	return required
+	return r.getFilteredDependencies(true)
 }
 
+// What are just the optional Dependencies?
 func (r *DependencyInjectable) GetOptionalDependencies() DependenciesIfc {
-	optional := NewDependencies()
-	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
-	for name, variants := range r.declared.GetAllVariants() {
-		for _, variant := range variants {
-			// We're only interested in the optional (non-required) ones - skip others
-			if r.declared.GetVariant(name, variant).IsRequired() { continue }
-			optional.Add(NewDependency(name).SetVariant(variant))
-		}
-	}
-	return optional
+	return r.getFilteredDependencies(false)
 }
 
+func (r *DependencyInjectable) getFilteredDependencies(matchRequired bool) DependenciesIfc {
+	matches := NewDependencies()
+	// For each of the declared dependency names...
+	for name, variants := range r.declared.GetAllVariants() {
+		// For each of the variants...
+		for _, variant := range variants {
+			// Note the ones matching matchRequired
+			if matchRequired == r.declared.GetVariant(name, variant).IsRequired() {
+				matches.Add(NewDependency(name).SetVariant(variant))
+			}
+		}
+	}
+	return matches
+}
+
+// What Dependencies are Required that have not yet been injected?
 func (r *DependencyInjectable) GetMissingDependencies() DependenciesIfc {
 	missing := NewDependencies()
 	injected := r.GetInjectedDependencies()
 	required := r.GetRequiredDependencies()
-	// Iterate over required Dependencies' names and variants (map[(name)][]string(variant)
+	// For each of the required dependency names...
 	for name, variants := range required.GetAllVariants() {
+		// For each of the variants...
 		for _, variant := range variants {
-			// We're only interested in the missing ones - skip others
+			// Note the ones not yet injected as missing, skip others
 			if injected.HasVariant(name, variant) { continue }
 			missing.Add(NewDependency(name).SetVariant(variant).SetRequired())
 		}
@@ -139,12 +144,16 @@ func (r *DependencyInjectable) GetMissingDependencies() DependenciesIfc {
 	return missing
 }
 
+// What are the injected DependencyInstances?
 func (r *DependencyInjectable) GetInjectedDependencies() DependenciesIfc {
 	injected := NewDependencies()
-	// Iterate over Dependencies' names and variants for each (map[(name)][]string(variant)
+	// For each of the injected DependencyInstance names...
 	for name, variants := range r.injected {
+		// For each of the variants...
 		for variant, _:= range variants {
+			// Make Dependency matching name and vairant
 			dep := NewDependency(name).SetVariant(variant)
+			// If it's a declared Dependency, match required state
 			decl := r.declared.GetVariant(name, variant)
 			if (nil != decl) && decl.IsRequired() { dep.SetRequired() }
 			injected.Add(dep)
@@ -153,21 +162,30 @@ func (r *DependencyInjectable) GetInjectedDependencies() DependenciesIfc {
 	return injected
 }
 
-func (r *DependencyInjectable) HasAllRequiredDependencies() bool {
-	return 0 == len(r.GetMissingDependencies().GetAllVariants())
+// What Dependencies are injected, but unknown (undeclared) to us?
+func (r *DependencyInjectable) GetUnknownDependencies() DependenciesIfc {
+	unknown := NewDependencies()
+	injected := r.GetInjectedDependencies()
+	declared := r.GetDeclaredDependencies()
+	// For each of the injected dependency names...
+	for name, variants := range r.injected {
+		// For each of the variants...
+		for variant, _:= range variants {
+			// If it is declared, skip it
+			if declared.HasVariant(name, variant) { continue }
+			// Otherwise, it is unknown!
+			unknown.Add(injected.GetVariant(name, variant))
+		}
+	}
+	return unknown
 }
 
-// -------------------------------------------------------------------------------------------------
-// DependencyInjectableIfc
-// -------------------------------------------------------------------------------------------------
-
+// Receive dependency injection from external source
 func (r *DependencyInjectable) InjectDependencies(depinst ...DependencyInstanceIfc) error {
+	// For each of the injected DependencyInstances...
 	for _, instance := range depinst {
 		if nil == instance { continue }
 		name := instance.GetName()
-
-		// Only capture declared dependencies, ignore extras
-		if ! r.declared.Has(name) { continue }
 
 		// Capture into our map for basic access
 		if _, ok := r.injected[name]; ! ok {
@@ -186,23 +204,23 @@ func (r *DependencyInjectable) InjectDependencies(depinst ...DependencyInstanceI
 	return nil
 }
 
+// Get the injected dependency matching name (default or any variant)
 func (r *DependencyInjectable) GetInstance(name string) interface{} {
-	// Try default variant first; if we find it, great...
-	if res := r.GetInstanceVariant(name, DEP_VARIANT_DEFAULT); nil != res { return res }
-
-	// No default variant - take the first match (if there are any); correlates to "the" variant for this name
-	if variants, ok := r.injected[name]; ok {
-		for _, variant := range variants {
-			if res := r.GetInstanceVariant(name, variant.GetVariant()); nil != res { return res }
-		}
-	}
-
-	// We got nothing
-	return nil
+        variant := ""
+	if _, ok := r.injected[name][DEP_VARIANT_DEFAULT]; ok { variant = DEP_VARIANT_DEFAULT }
+        if vars, ok := r.injected[name]; ok && (len(vars) > 0) { variant = maps.Strkeys(vars)[0] }
+        return r.GetInstanceVariant(name, variant)
 }
 
+// Get the injected dependency matching name and specific variant
 func (r *DependencyInjectable) GetInstanceVariant(name, variant string) interface{} {
 	if depinst, ok := r.injected[name][variant]; ok { return depinst.GetInstance() }
 	return nil
+}
+
+// Have all required dependencies have been injected?
+// TODO: Do we need this, or is StartableIfc.IsStarted() sufficient?
+func (r *DependencyInjectable) HasAllRequiredDependencies() bool {
+	return 0 == len(r.GetMissingDependencies().GetAllVariants())
 }
 
