@@ -70,19 +70,19 @@ func TestThat_Dependencies_GetVariant_ReturnsNil_ForMissingVariant(t *testing.T)
 }
 
 
-// GetVariants() map[string][]string
-func TestThat_Dependencies_GetVariants_ReturnsEmptySet_ForNewDependencies(t *testing.T) {
+// GetAllVariants() map[string][]string
+func TestThat_Dependencies_GetAllVariants_ReturnsEmptySet_ForNewDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencies()
 
 	// Test
-	actual := sut.GetVariants()
+	actual := sut.GetAllVariants()
 
 	// Verify
 	ExpectInt(0, len(actual), t)
 }
 
-func TestThat_Dependencies_GetVariants_Returns4_For2Names2Variants(t *testing.T) {
+func TestThat_Dependencies_GetAllVariants_Returns4_For2Names2Variants(t *testing.T) {
 	// Setup
 	sut := NewDependencies()
 
@@ -93,7 +93,7 @@ func TestThat_Dependencies_GetVariants_Returns4_For2Names2Variants(t *testing.T)
 		NewDependency("sampledepB"),
 		NewDependency("sampledepB").SetVariant("alternateB"),
 	)
-	actual := sut.GetVariants()
+	actual := sut.GetAllVariants()
 	actualA, okA := actual["sampledepA"]
 	actualAVariants := strings.Join(actualA[:], ":")
 	actualB, okB := actual["sampledepB"]
