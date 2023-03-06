@@ -5,7 +5,8 @@ Functions and constructs for handling map objects
 
 */
 
-func strkeys(m map[string]interface{}) []string {
+// Get the set of keys for maps keyed with string
+func Strkeys(m map[string]interface{}) []string {
 	mkeys := []string{}
 	for key, _ := range m { mkeys = append(mkeys, key) }
 	return mkeys
