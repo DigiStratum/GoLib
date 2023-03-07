@@ -1,6 +1,7 @@
 package dependencies
 
 import(
+	"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -92,4 +93,80 @@ func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenRequiredDepsInjec
 	ExpectNoError(err, t)
 	ExpectTrue(actual, t)
 }
+
+// InjectDependencies(depinst ...DependencyInstanceIfc) error
+func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFuncReturnsError(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjectable(
+		NewDependency("requireddep").SetRequired().CaptureWith(
+			func (v interface{}) error { return fmt.Errorf("capture error!") },
+		),
+	)
+	var ifc interface{}
+
+	// Test
+	err := sut.InjectDependencies(
+		NewDependencyInstance("requireddep", ifc),
+	)
+
+	// Verify
+	ExpectError(err, t)
+}
+
+func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncReturnsNoError(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjectable(
+		NewDependency("requireddep").SetRequired().CaptureWith(
+			func (v interface{}) error { return nil },
+		),
+	)
+	var ifc interface{}
+
+	// Test
+	err := sut.InjectDependencies(
+		NewDependencyInstance("requireddep", ifc),
+	)
+
+	// Verify
+	ExpectNoError(err, t)
+}
+
+// GetInstance(name string) interface{}
+func TestThat_NewDependencyInjectable_GetInstance_ReturnsNil_ForInvalidDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjectable()
+
+	// Test
+	actual := sut.GetInstance("bogusdep")
+
+	// Verify
+	ExpectNil(actual, t)
+}
+
+func TestThat_NewDependencyInjectable_GetInstance_ReturnsNonNil_ForValidDependency(t *testing.T) {
+	// Setup
+	sut := NewDependencyInjectable(
+		NewDependency("requireddep").SetRequired(),
+	)
+
+	// Test
+	sut.InjectDependencies(
+		NewDependencyInstance("requireddep", sut), // sut is as good as any other interface to use here
+	)
+	actual := sut.GetInstance("requireddep")
+
+	// Verify
+	ExpectNonNil(actual, t)
+}
+
+// TODO: Test more of these things:
+
+// GetInstanceVariant(name, variant string) interface{}
+// HasAllRequiredDependencies() bool
+// GetDeclaredDependencies() DependenciesIfc
+// GetRequiredDependencies() DependenciesIfc
+// GetOptionalDependencies() DependenciesIfc
+// GetInjectedDependencies() DependenciesIfc
+// GetMissingDependencies() DependenciesIfc
+// GetUnknownDependencies() DependenciesIfc
 
