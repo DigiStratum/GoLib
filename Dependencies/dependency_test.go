@@ -6,6 +6,9 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
+const DEP_NAME = "depnamegood"
+const DEP_VARIANT = "depvariant"
+
 // NewDependency()
 func TestThat_NewDependency_ReturnsSomething(t *testing.T) {
 	// Setup
