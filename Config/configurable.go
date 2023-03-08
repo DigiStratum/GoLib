@@ -9,6 +9,7 @@ and behaviors associated with being provided with Config data and ensuring that 
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/DigiStratum/GoLib/Starter"
 )
@@ -20,6 +21,7 @@ type ConfigurableIfc interface {
 
 	// Our own interface
 	Configure(config ConfigIfc) error
+	GetMissingConfigs() []string
 }
 
 // Exported to support embedding
@@ -55,18 +57,28 @@ func (r *Configurable) Configure(config ConfigIfc) error {
 	return nil
 }
 
+// Verify that all required Configs are captured
+func (r *Configurable) GetMissingConfigs() []string {
+	missingConfigs := []string{}
+	for name, declaredConfigItem := range r.declared {
+		if ! declaredConfigItem.IsRequired() { continue }
+		if ! r.config.Has(name) { continue }
+		missingConfigs = append(missingConfigs, name)
+	}
+	return missingConfigs
+}
+
 // -------------------------------------------------------------------------------------------------
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *Configurable) Start() error {
-	// Verify that all required Configs are captured
-	for name, declaredConfigItem := range r.declared {
-		if declaredConfigItem.IsRequired() {
-			if ! r.config.Has(name) {
-				return fmt.Errorf("Missing required config with name '%s'", name)
-			}
-		}
+	if r.Startable.IsStarted() { return nil }
+	if missingConfigs := r.GetMissingConfigs(); len(missingConfigs) > 0 {
+		return fmt.Errorf(
+			"Missing required config(s) with name(s): %s",
+			strings.Join(missingConfigs, ","),
+		)
 	}
 	return r.Startable.Start()
 }
