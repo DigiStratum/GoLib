@@ -193,9 +193,9 @@ func (r *DependencyInjectable) InjectDependencies(depinst ...DependencyInstanceI
 		}
 		r.injected[name][instance.GetVariant()] = instance
 
-		// If this declared dependency defines Capture Func...
+		// If this dependency is declared and defines Capture Func...
 		declaredDep := r.declared.Get(name)
-		if declaredDep.CanCapture() {
+		if (nil != declaredDep) && declaredDep.CanCapture() {
 			err := declaredDep.Capture(instance.GetInstance())
 			if nil != err { return err }
 		}
