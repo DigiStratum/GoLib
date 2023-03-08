@@ -42,7 +42,7 @@ import (
 type ConnectionPoolIfc interface {
 	// Embedded interface(s)
 	starter.StartableIfc
-	dep.DependencyInjectedIfc
+	dep.DependencyInjectableIfc
 	cfg.ConfigurableIfc
 
 	// Our interface
@@ -54,17 +54,17 @@ type ConnectionPoolIfc interface {
 
 type connectionPool struct {
 	*starter.Startable
-	dep.DependencyInjected
+	*dep.DependencyInjectable
 	*cfg.Configurable
 
-	connectionFactory	db.ConnectionFactoryIfc
-	dsn			db.DSN
-	minConnections		int
-	maxConnections		int
-	maxIdle			int
-	connections		[]*PooledConnection
-	leasedConnections	*LeasedConnections
-	mutex			sync.Mutex
+	connectionFactory		db.ConnectionFactoryIfc
+	dsn				db.DSN
+	minConnections			int
+	maxConnections			int
+	maxIdle				int
+	connections			[]*PooledConnection
+	leasedConnections		*LeasedConnections
+	mutex				sync.Mutex
 }
 
 const DEFAULT_MIN_CONNECTIONS = 1
@@ -76,9 +76,7 @@ const DEFAULT_MAX_IDLE = 60
 // -------------------------------------------------------------------------------------------------
 
 func NewConnectionPool(dsn db.DSN) *connectionPool {
-	cp := connectionPool{
-		Startable:		starter.NewStartable(),
-
+	cp := &connectionPool{
 		// Config Defaults
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
@@ -103,10 +101,11 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 // -------------------------------------------------------------------------------------------------
 
 // Optionally accept overrides for defaults in configuration
+// TODO: Use CaptureWith() replacements for this method...
 func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
 
 	// If we have already been configured, do not accept a second configuration
-	if r.configured { return nil }
+	if r.Startable.IsStarted() { return nil }
 
 	// Capture optional configs
 	it := config.GetIterator()
@@ -133,7 +132,6 @@ func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
 				return fmt.Errorf("Unknown configuration key: '%s'", kvp.Key)
 		}
 	}
-	r.configured = true
 
 	// If the new Max increases from default...
 	if cap(r.connections) < r.maxConnections {
@@ -171,28 +169,12 @@ func (r *connectionPool) configureMaxIdle(value int) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// StartableIfc
-// -------------------------------------------------------------------------------------------------
-
-func (r *connectionPool) start() error {
-	// TODO: Check both configuration and dependencies for completeness, then Start!
-	// Check Dependencies
-	if err := r.DependencyInjected.Start(); nil != err { return err }
-
-	// Check Configuration
-	if err := r.Configured.Start(); nil != err { return err }
-
-	r.Started.SetStarted()
-	return nil
-}
-
-// -------------------------------------------------------------------------------------------------
 // ConnectionPoolIfc
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
 func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
-	if ! r.Started.IsStarted() { return nil, fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
+	if ! r.Startable.IsStarted() { return nil, fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	var connection *PooledConnection
 
 	r.mutex.Lock(); defer r.mutex.Unlock()
@@ -213,7 +195,7 @@ func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
 }
 
 func (r *connectionPool) Release(leaseKey int64) error {
-	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
+	if ! r.Startable.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	if ! r.leasedConnections.Release(leaseKey) {
 		return errors.New(fmt.Sprintf("Pool contains no lease key = '%d'", leaseKey))
@@ -233,7 +215,7 @@ func (r *connectionPool) GetMaxIdle() int {
 
 // TODO: Tie this into some new StoppableIfc
 func (r *connectionPool) Close() error {
-	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
+	if ! r.Startable.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Wipe the DSN to prevent new connections from being established
@@ -257,29 +239,28 @@ func (r *connectionPool) Close() error {
 // ConnectionPool
 // -------------------------------------------------------------------------------------------------
 
-func (r *connectionPool) init() error {
+func (r *connectionPool) init() *connectionPool {
 	// Declare Dependencies
-	r.DependencyInjected = *(dep.NewDependencyInjected(
-		dep.NewDependencies(
-			dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
-				r.captureDepConnectionFactory,
-			),
+	r.DependencyInjectable = *(dep.NewDependencyInjectable(
+		dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+			r.captureDepConnectionFactory,
 		),
 	))
 
 	// Declare Configuration
 	r.Configurable = cfg.NewConfigurable(
-		cfg.NewConfigItem("min_connections").SetCaptureFunc(r.captureConfigMinConnections),
-		cfg.NewConfigItem("max_connections"),.SetCaptureFunc(r.captureConfigMaxConnections)
-		cfg.NewConfigItem("max_idle").SetCaptureFunc(r.captureConfigMaxIdle),
+		cfg.NewConfigItem("min_connections").CaptureWith(r.captureConfigMinConnections),
+		cfg.NewConfigItem("max_connections").CaptureWith(r.captureConfigMaxConnections),
+		cfg.NewConfigItem("max_idle").CaptureWith(r.captureConfigMaxIdle),
 	)
 
 	// Starters
-	cp.Startable = starter.NewStartable(
-		r.DependencyInjected,
-		r.Config
+	r.Startable = starter.NewStartable(
+		r.DependencyInjectable,
+		r.Config,
 	)
-	return nil
+
+	return r
 }
 
 // Config Capture Funcs
@@ -352,7 +333,7 @@ func (r *connectionPool) establishMinConnections() {
 }
 
 func (r *connectionPool) closePooledConnection(pooledConnection PooledConnectionIfc) error {
-	if ! r.Started.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
+	if ! r.Startable.IsStarted() { return fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	if closeableConnection, ok := pooledConnection.(io.Closer); ok {
 		return closeableConnection.Close()
 	}
