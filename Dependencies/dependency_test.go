@@ -19,8 +19,8 @@ func TestThat_NewDependency_ReturnsSomething(t *testing.T) {
 	_, interfaceAssertionOk := sut.(DependencyIfc)
 
 	// Verify
-	ExpectNonNil(sut, t)
-	ExpectTrue(interfaceAssertionOk, t)
+	if ! ExpectNonNil(sut, t) { return }
+	if ! ExpectTrue(interfaceAssertionOk, t) { return }
 }
 
 // GetName() string
@@ -36,9 +36,9 @@ func TestThat_Dependency_DefaultProperties_MatcheExpectations(t *testing.T) {
 	actualIsRequired := sut.IsRequired()
 
 	// Verify
-	ExpectString(DEP_NAME, actualName, t)
-	ExpectString(DEP_VARIANT_DEFAULT, actualVariant, t)
-	ExpectFalse(actualIsRequired, t)
+	if ! ExpectString(DEP_NAME, actualName, t) { return }
+	if ! ExpectString(DEP_VARIANT_DEFAULT, actualVariant, t) { return }
+	if ! ExpectFalse(actualIsRequired, t) { return }
 }
 
 // SetVariant(variant string) *dependency
@@ -51,7 +51,7 @@ func TestThat_Dependency_SetVariant_ChangesVariantValue(t *testing.T) {
 	actualVariant := sut.GetVariant()
 
 	// Verify
-	ExpectString(DEP_VARIANT, actualVariant, t)
+	if ! ExpectString(DEP_VARIANT, actualVariant, t) { return }
 }
 
 // SetRequired() *dependency
@@ -64,6 +64,6 @@ func TestThat_Dependency_SetRequired_ChangesRequiredValue(t *testing.T) {
 	actualIsRequired := sut.IsRequired()
 
 	// Verify
-	ExpectTrue(actualIsRequired, t)
+	if ! ExpectTrue(actualIsRequired, t) { return }
 }
 

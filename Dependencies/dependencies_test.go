@@ -17,8 +17,8 @@ func TestThat_NewDependencies_ReturnsSomething(t *testing.T) {
 	_, interfaceAssertionOk := sut.(DependenciesIfc)
 
 	// Verify
-	ExpectNonNil(sut, t)
-	ExpectTrue(interfaceAssertionOk, t)
+	if ! ExpectNonNil(sut, t) { return }
+	if ! ExpectTrue(interfaceAssertionOk, t) { return }
 }
 
 // Get(name string) *dependency
@@ -30,7 +30,7 @@ func TestThat_Dependencies_Get_ReturnsNil_ForMissingDependency(t *testing.T) {
 	actual := sut.Get("bogusdep")
 
 	// Verify
-	ExpectNil(actual, t)
+	if ! ExpectNil(actual, t) { return }
 }
 
 // Add(deps ...*dependency)
@@ -46,9 +46,9 @@ func TestThat_Dependencies_Get_ReturnsDependency_From_Add(t *testing.T) {
 	actualHasNot := sut.Has("bogusdep")
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectTrue(actualHas, t)
-	ExpectFalse(actualHasNot, t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actualHas, t) { return }
+	if ! ExpectFalse(actualHasNot, t) { return }
 }
 
 // GetVariant(name, variant string) *dependency
@@ -64,9 +64,36 @@ func TestThat_Dependencies_GetVariant_ReturnsNil_ForMissingVariant(t *testing.T)
 	actualHasNot := sut.HasVariant("sampledep", "bogusvariant")
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectTrue(actualHas, t)
-	ExpectFalse(actualHasNot, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectTrue(actualHas, t) { return }
+	if ! ExpectFalse(actualHasNot, t) { return }
+}
+
+
+// GetVariants(name string) []string
+func TestThat_Dependencies_GetVariants_ReturnsEmptySet_ForNewDependencies(t *testing.T) {
+	// Setup
+	sut := NewDependencies()
+
+	// Test
+	actual := sut.GetVariants("bogusdep")
+
+	// Verify
+	if ! ExpectInt(0, len(actual), t) { return }
+}
+
+func TestThat_Dependencies_GetVariants_ReturnsExpectedSet(t *testing.T) {
+	// Setup
+	sut := NewDependencies(
+		NewDependency("depname"),
+	)
+
+	// Test
+	actual := sut.GetVariants("depname")
+
+	// Verify
+	if ! ExpectInt(1, len(actual), t) { return }
+	if ! ExpectString(DEP_VARIANT_DEFAULT, actual[0], t) { return }
 }
 
 
@@ -79,7 +106,7 @@ func TestThat_Dependencies_GetAllVariants_ReturnsEmptySet_ForNewDependencies(t *
 	actual := sut.GetAllVariants()
 
 	// Verify
-	ExpectInt(0, len(actual), t)
+	if ! ExpectInt(0, len(actual), t) { return }
 }
 
 func TestThat_Dependencies_GetAllVariants_Returns4_For2Names2Variants(t *testing.T) {
@@ -100,11 +127,11 @@ func TestThat_Dependencies_GetAllVariants_Returns4_For2Names2Variants(t *testing
 	actualBVariants := strings.Join(actualB[:], ":")
 
 	// Verify
-	ExpectInt(2, len(actual), t)
-	ExpectTrue(okA && okB, t)
-	ExpectInt(2, len(actualA), t)
-	ExpectInt(2, len(actualB), t)
-	ExpectTrue(((actualAVariants == "default:alternateA") || (actualAVariants == "alternateA:default")), t)
-	ExpectTrue(((actualBVariants == "default:alternateB") || (actualBVariants == "alternateB:default")), t)
+	if ! ExpectInt(2, len(actual), t) { return }
+	if ! ExpectTrue(okA && okB, t) { return }
+	if ! ExpectInt(2, len(actualA), t) { return }
+	if ! ExpectInt(2, len(actualB), t) { return }
+	if ! ExpectTrue(((actualAVariants == "default:alternateA") || (actualAVariants == "alternateA:default")), t) { return }
+	if ! ExpectTrue(((actualBVariants == "default:alternateB") || (actualBVariants == "alternateB:default")), t) { return }
 }
 

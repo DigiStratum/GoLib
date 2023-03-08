@@ -21,7 +21,7 @@ func TestThat_NewDependencyInjectable_ReturnsSomething_WithoutArguments(t *testi
 }
 
 // IsStarted()
-func TestThat_NewDependencyInjectable_IsStarted_ReturnsFalse_BeforeStarted(t *testing.T) {
+func TestThat_DependencyInjectable_IsStarted_ReturnsFalse_BeforeStarted(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -33,7 +33,7 @@ func TestThat_NewDependencyInjectable_IsStarted_ReturnsFalse_BeforeStarted(t *te
 }
 
 // Start()
-func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenNoRequiredDeps(t *testing.T) {
+func TestThat_DependencyInjectable_Start_ReturnsNoError_WhenNoRequiredDeps(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -46,7 +46,7 @@ func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenNoRequiredDeps(t 
 	if ! ExpectTrue(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenDepsOptional(t *testing.T) {
+func TestThat_DependencyInjectable_Start_ReturnsNoError_WhenDepsOptional(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -61,7 +61,7 @@ func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenDepsOptional(t *t
 	if ! ExpectTrue(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_Start_ReturnsError_WhenMissingRequiredDeps(t *testing.T) {
+func TestThat_DependencyInjectable_Start_ReturnsError_WhenMissingRequiredDeps(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired(),
@@ -76,7 +76,7 @@ func TestThat_NewDependencyInjectable_Start_ReturnsError_WhenMissingRequiredDeps
 	if ! ExpectFalse(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenRequiredDepsInjected(t *testing.T) {
+func TestThat_DependencyInjectable_Start_ReturnsNoError_WhenRequiredDepsInjected(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired(),
@@ -96,7 +96,7 @@ func TestThat_NewDependencyInjectable_Start_ReturnsNoError_WhenRequiredDepsInjec
 }
 
 // InjectDependencies(depinst ...DependencyInstanceIfc) error
-func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFuncReturnsError(t *testing.T) {
+func TestThat_DependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFuncReturnsError(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired().CaptureWith(
@@ -114,7 +114,7 @@ func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsError_WhenCaptur
 	if ! ExpectError(err, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncReturnsNoError(t *testing.T) {
+func TestThat_DependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncReturnsNoError(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired().CaptureWith(
@@ -133,7 +133,7 @@ func TestThat_NewDependencyInjectable_InjectDependencies_ReturnsNoError_WhenCapt
 }
 
 // GetInstance(name string) interface{}
-func TestThat_NewDependencyInjectable_GetInstance_ReturnsNil_ForInvalidDependencyName(t *testing.T) {
+func TestThat_DependencyInjectable_GetInstance_ReturnsNil_ForInvalidDependencyName(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -144,7 +144,7 @@ func TestThat_NewDependencyInjectable_GetInstance_ReturnsNil_ForInvalidDependenc
 	if ! ExpectNil(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetInstance_ReturnsNonNil_ForValidDependencyName(t *testing.T) {
+func TestThat_DependencyInjectable_GetInstance_ReturnsNonNil_ForValidDependencyName(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -158,7 +158,7 @@ func TestThat_NewDependencyInjectable_GetInstance_ReturnsNonNil_ForValidDependen
 	if ! ExpectNonNil(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetInstance_ReturnsNonNil_ForAnyVariant(t *testing.T) {
+func TestThat_DependencyInjectable_GetInstance_ReturnsNonNil_ForAnyVariant(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -173,7 +173,7 @@ func TestThat_NewDependencyInjectable_GetInstance_ReturnsNonNil_ForAnyVariant(t 
 }
 
 // GetInstanceVariant(name, variant string) interface{}
-func TestThat_NewDependencyInjectable_GetInstanceVariant_ReturnsNil_ForInvalidVariant(t *testing.T) {
+func TestThat_DependencyInjectable_GetInstanceVariant_ReturnsNil_ForInvalidVariant(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -187,7 +187,7 @@ func TestThat_NewDependencyInjectable_GetInstanceVariant_ReturnsNil_ForInvalidVa
 	if ! ExpectNil(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetInstanceVariant_ReturnsNonNil_ForValidVariant(t *testing.T) {
+func TestThat_DependencyInjectable_GetInstanceVariant_ReturnsNonNil_ForValidVariant(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -203,7 +203,7 @@ func TestThat_NewDependencyInjectable_GetInstanceVariant_ReturnsNonNil_ForValidV
 
 
 // HasAllRequiredDependencies() bool
-func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -214,7 +214,7 @@ func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_For
 	if ! ExpectTrue(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForOptionalDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForOptionalDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -227,7 +227,7 @@ func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_For
 	if ! ExpectTrue(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsFalse_ForMissingRequiredDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_HasAllRequiredDependencies_ReturnsFalse_ForMissingRequiredDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired(),
@@ -240,7 +240,7 @@ func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsFalse_Fo
 	if ! ExpectFalse(actual, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForInjectedRequiredDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_ForInjectedRequiredDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired(),
@@ -257,7 +257,7 @@ func TestThat_NewDependencyInjectable_HasAllRequiredDependencies_ReturnsTrue_For
 }
 
 // GetDeclaredDependencies() DependenciesIfc
-func TestThat_NewDependencyInjectable_GetDeclaredDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetDeclaredDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -269,7 +269,7 @@ func TestThat_NewDependencyInjectable_GetDeclaredDependencies_ReturnsEmpty_ForNo
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetDeclaredDependencies_ReturnsExpectedSet_ForDeclaredDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetDeclaredDependencies_ReturnsExpectedSet_ForDeclaredDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -301,7 +301,7 @@ func TestThat_NewDependencyInjectable_GetDeclaredDependencies_ReturnsExpectedSet
 }
 
 // GetRequiredDependencies() DependenciesIfc
-func TestThat_NewDependencyInjectable_GetRequiredDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetRequiredDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -313,7 +313,7 @@ func TestThat_NewDependencyInjectable_GetRequiredDependencies_ReturnsEmpty_ForNo
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetReuiredDependencies_ReturnsExpectedSet_ForRequiredDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetReuiredDependencies_ReturnsExpectedSet_ForRequiredDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -339,7 +339,7 @@ func TestThat_NewDependencyInjectable_GetReuiredDependencies_ReturnsExpectedSet_
 
 
 // GetOptionalDependencies() DependenciesIfc
-func TestThat_NewDependencyInjectable_GetOptionalDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetOptionalDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -351,7 +351,7 @@ func TestThat_NewDependencyInjectable_GetOptionalDependencies_ReturnsEmpty_ForNo
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetOptionalDependencies_ReturnsExpectedSet_ForOptionalDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetOptionalDependencies_ReturnsExpectedSet_ForOptionalDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -377,7 +377,7 @@ func TestThat_NewDependencyInjectable_GetOptionalDependencies_ReturnsExpectedSet
 
 // GetInjectedDependencies() DependenciesIfc
 
-func TestThat_NewDependencyInjectable_GetInjectedDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetInjectedDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -389,7 +389,7 @@ func TestThat_NewDependencyInjectable_GetInjectedDependencies_ReturnsEmpty_ForNo
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetInjectedDependencies_ReturnsExpectedSet_ForInjectedDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetInjectedDependencies_ReturnsExpectedSet_ForInjectedDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 	sut.InjectDependencies(
@@ -415,7 +415,7 @@ func TestThat_NewDependencyInjectable_GetInjectedDependencies_ReturnsExpectedSet
 
 
 // GetMissingDependencies() DependenciesIfc
-func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetMissingDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -427,7 +427,7 @@ func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmpty_ForNoD
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmptySet_ForOptionalDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetMissingDependencies_ReturnsEmptySet_ForOptionalDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -443,7 +443,7 @@ func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmptySet_For
 	if ! ExpectInt(0, len(actualVariants), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsExpectedSet_ForRequiredDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetMissingDependencies_ReturnsExpectedSet_ForRequiredDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -468,7 +468,7 @@ func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsExpectedSet_
 	if ! ExpectTrue(missingVariantsOk, t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmptySet_ForInjectedDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetMissingDependencies_ReturnsEmptySet_ForInjectedDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
@@ -491,7 +491,7 @@ func TestThat_NewDependencyInjectable_GetMissingDependencies_ReturnsEmptySet_For
 }
 
 // GetUnknownDependencies() DependenciesIfc
-func TestThat_NewDependencyInjectable_GetUnknownDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetUnknownDependencies_ReturnsEmpty_ForNoDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable()
 
@@ -503,7 +503,7 @@ func TestThat_NewDependencyInjectable_GetUnknownDependencies_ReturnsEmpty_ForNoD
 	if ! ExpectInt(0, len(actual.GetAllVariants()), t) { return }
 }
 
-func TestThat_NewDependencyInjectable_GetUnknownDependencies_ReturnsExpectedSet_ForUnknownDependencies(t *testing.T) {
+func TestThat_DependencyInjectable_GetUnknownDependencies_ReturnsExpectedSet_ForUnknownDependencies(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("optionaldep"),
