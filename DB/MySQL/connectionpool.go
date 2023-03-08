@@ -45,7 +45,7 @@ type ConnectionPoolIfc interface {
 	dep.DependencyInjectableIfc
 	cfg.ConfigurableIfc
 
-	// Our interface
+	// Our own interface
 	GetConnection() (*LeasedConnection, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
@@ -53,10 +53,12 @@ type ConnectionPoolIfc interface {
 }
 
 type connectionPool struct {
+	// Embedded struct(s)
 	*starter.Startable
 	*dep.DependencyInjectable
 	*cfg.Configurable
 
+	// Our own properties
 	connectionFactory		db.ConnectionFactoryIfc
 	dsn				db.DSN
 	minConnections			int
@@ -236,16 +238,24 @@ func (r *connectionPool) Close() error {
 }
 
 // -------------------------------------------------------------------------------------------------
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *connectionPool) Start() error {
+	return r.Startable.Start()
+}
+
+// -------------------------------------------------------------------------------------------------
 // ConnectionPool
 // -------------------------------------------------------------------------------------------------
 
 func (r *connectionPool) init() *connectionPool {
 	// Declare Dependencies
-	r.DependencyInjectable = *(dep.NewDependencyInjectable(
+	r.DependencyInjectable = dep.NewDependencyInjectable(
 		dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
 			r.captureDepConnectionFactory,
 		),
-	))
+	)
 
 	// Declare Configuration
 	r.Configurable = cfg.NewConfigurable(
@@ -257,7 +267,7 @@ func (r *connectionPool) init() *connectionPool {
 	// Starters
 	r.Startable = starter.NewStartable(
 		r.DependencyInjectable,
-		r.Config,
+		r.Configurable,
 	)
 
 	return r
