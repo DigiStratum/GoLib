@@ -7,44 +7,31 @@ import (
 )
 
 type app struct {
-	*dep.DependencyInjected
+	*dep.DependencyInjectable
 	svc				ServiceIfc
 }
 
 func NewApp() *app {
-	return  &app{
-		// Declare Dependencies
-		DependencyInjected: dep.NewDependencyInjected(
-			dep.NewDependencies(
-				dep.NewDependency("Service").SetRequired(),
-			),
-		),
-	}
+	a := &app{}
+
+	// Declare Dependencies
+	a.DependencyInjectable = dep.NewDependencyInjectable(
+		dep.NewDependency("Service").SetRequired().CaptureWith(a.captureService),
+	)
+
+	return a
 }
 
-// DependencyInjectableIfc.InjectDependencies Override
-// Capture injected dependencies locally instead of fetching them each time needed
-func (r *app) InjectDependencies(depinst ...dep.DependencyInstanceIfc) error {
-
-	// If DI fails, return error
-	if err := r.DependencyInjected.InjectDependencies(depinst...); nil != err { return err }
-	// If DI missing requirements, return error
-	if err := r.DependencyInjected.ValidateRequiredDependencies(); nil != err { return err }
-
-	// Iterate over injected dependencies; use a switch-case to map
-	// them to the correct interface assertion and member value
-	for name, _ := range r.DependencyInjected.GetVariants() {
-		switch name {
-			case "Service":
-				svcdep := r.DependencyInjected.GetInstance(name)
-				if svc, ok := svcdep.(ServiceIfc); ok { r.svc = svc }
-		}
+func (r *app) captureService(instance interface{}) error {
+	if nil != instance {
+		var ok bool
+		if r.svc, ok = instance.(ServiceIfc); ok { return nil }
 	}
-
-	return nil
+	return fmt.Errorf("captureService() - Instance is not a ServiceIfc")
 }
 
 func (r *app) Run() {
+	if ! r.DependencyInjectable.IsStarted() { fmt.Println("Not Started Yet...") }
 	if nil == r.svc { fmt.Println("No Service from DI!") }
 	r.svc.Activity()
 }
