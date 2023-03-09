@@ -4,20 +4,21 @@ import(
 	"testing"
 
 	"github.com/DigiStratum/GoLib/DB"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
+	cfg "github.com/DigiStratum/GoLib/Config"
+
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
-	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 func TestThat_NewLeasedConnection_ReturnsSomething(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
 	connectionFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connectionFactory)
-	connectionPool.InjectDependencies(deps)
+	connectionPool.InjectDependencies(
+		dep.NewDependencyInstance("connectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -235,10 +236,10 @@ func TestThat_LeasedConnection_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLea
 func getGoodLeasedConnection() (*LeasedConnection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
 	connectionFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connectionFactory)
-	connectionPool.InjectDependencies(deps)
+	connectionPool.InjectDependencies(
+		dep.NewDependencyInstance("connectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
