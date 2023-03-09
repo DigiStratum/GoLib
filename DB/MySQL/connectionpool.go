@@ -34,7 +34,6 @@ import (
 	"github.com/DigiStratum/GoLib/Starter"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	dep "github.com/DigiStratum/GoLib/Dependencies"
-	"github.com/DigiStratum/GoLib/Data/hashmap"
 	"github.com/DigiStratum/GoLib/DB"
 )
 
@@ -97,78 +96,6 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 	return nil, fmt.Errorf("Does not implement ConnectionPoolIfc")
 }
 
-
-// -------------------------------------------------------------------------------------------------
-// ConfigurableIfc
-// -------------------------------------------------------------------------------------------------
-
-// Optionally accept overrides for defaults in configuration
-// TODO: Use CaptureWith() replacements for this method...
-func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
-
-	// If we have already been configured, do not accept a second configuration
-	if r.Startable.IsStarted() { return nil }
-
-	// Capture optional configs
-	it := config.GetIterator()
-	for kvpi := it(); nil != kvpi; kvpi = it() {
-		kvp, ok := kvpi.(*hashmap.KeyValuePair)
-		if ! ok { continue }
-		switch kvp.Key {
-			case "min_connections":
-				if value := config.GetInt64(kvp.Value); nil != value {
-					r.configureMinConnections(int(*value))
-				}
-
-			case "max_connections":
-				if value := config.GetInt64(kvp.Value); nil != value {
-					r.configureMaxConnections(int(*value))
-				}
-
-			case "max_idle":
-				if value := config.GetInt64(kvp.Value); nil != value {
-					r.configureMaxIdle(int(*value))
-				}
-
-			default:
-				return fmt.Errorf("Unknown configuration key: '%s'", kvp.Key)
-		}
-	}
-
-	// If the new Max increases from default...
-	if cap(r.connections) < r.maxConnections {
-		// Increase connection pool capacity from default to the new max_connections
-		// ref: https://blog.golang.org/slices-intro
-		nc := make([]*PooledConnection, len(r.connections), r.maxConnections)
-		copy(nc, r.connections)
-		r.connections = nc
-	}
-
-	// If the minimum resource count has gone up, fill up the difference
-	r.establishMinConnections()
-
-	return nil
-}
-
-func (r *connectionPool) configureMinConnections(value int) {
-	r.minConnections = value
-	if r.minConnections < 1 { r.minConnections = 1 }
-	// If Min pushed above Max, then push Max up
-	if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
-}
-
-func (r *connectionPool) configureMaxConnections(value int) {
-	r.maxConnections = value
-	if r.maxConnections < 1 { r.maxConnections = 1 }
-	// If Max dropped below Min, then push Min down
-	if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
-}
-
-func (r *connectionPool) configureMaxIdle(value int) {
-	r.maxIdle = value
-	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
-	if r.maxIdle < 1 { r.maxIdle = 1 }
-}
 
 // -------------------------------------------------------------------------------------------------
 // ConnectionPoolIfc
@@ -242,7 +169,31 @@ func (r *connectionPool) Close() error {
 // -------------------------------------------------------------------------------------------------
 
 func (r *connectionPool) Start() error {
+	// If the configured Max increases from default...
+	if cap(r.connections) < r.maxConnections {
+		// Increase connection pool capacity from default to the new max_connections
+		// ref: https://blog.golang.org/slices-intro
+		nc := make([]*PooledConnection, len(r.connections), r.maxConnections)
+		copy(nc, r.connections)
+		r.connections = nc
+	}
+
+	// If the minimum resource count has gone up, fill up the difference
+	r.establishMinConnections()
+
 	return r.Startable.Start()
+}
+
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc
+// -------------------------------------------------------------------------------------------------
+
+// Optionally accept overrides for defaults in configuration
+func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
+	// If we have already been configured, do not accept a second configuration
+	if r.Startable.IsStarted() { return nil }
+
+	return r.Configurable.Configure(config)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -278,26 +229,30 @@ func (r *connectionPool) init() *connectionPool {
 
 func (r *connectionPool) captureConfigMinConnections(value string) error {
 	v, err := strconv.Atoi(value)
-	if nil == err { r.configureMinConnections(v) }
-	return err
+	if nil != err { return err }
+	r.minConnections = v
+	if r.minConnections < 1 { r.minConnections = 1 }
+	// If Min pushed above Max, then push Max up
+	if r.maxConnections < r.minConnections { r.maxConnections = r.minConnections }
+	return nil
 }
 
 func (r *connectionPool) captureConfigMaxConnections(value string) error {
 	v, err := strconv.Atoi(value)
-	if nil == err { r.configureMaxConnections(v) }
-	return err
+	if nil != err { return err }
+	r.maxConnections = v
+	if r.maxConnections < 1 { r.maxConnections = 1 }
+	// If Max dropped below Min, then push Min down
+	if r.maxConnections < r.minConnections { r.minConnections = r.maxConnections }
+	return nil
 }
 
 func (r *connectionPool) captureConfigMaxIdle(value string) error {
 	v, err := strconv.Atoi(value)
-	if nil == err { r.configureMaxIdle(v) }
-	return err
-}
-
-func (r *connectionPool) findAvailableConnection() *PooledConnection {
-	for _, connection := range (*r).connections {
-		if ! connection.IsLeased() { return connection }
-	}
+	if nil != err { return err }
+	r.maxIdle = v
+	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
+	if r.maxIdle < 1 { r.maxIdle = 1 }
 	return nil
 }
 
@@ -311,6 +266,9 @@ func (r *connectionPool) captureDepConnectionFactory(instance interface{}) error
 	}
 	return fmt.Errorf("ConnectionPool.captureConnectionFactory() - instance is not a ConnectionFactoryIfc")
 }
+
+// Supporting funcs
+// -----------------------------------------------
 
 // TODO: Pass errors back to caller and on up the chain for visibility/logging
 func (r *connectionPool) createNewConnection() *PooledConnection {
@@ -349,3 +307,11 @@ func (r *connectionPool) closePooledConnection(pooledConnection PooledConnection
 	}
 	return fmt.Errorf("PooledConnection not closable")
 }
+
+func (r *connectionPool) findAvailableConnection() *PooledConnection {
+	for _, connection := range (*r).connections {
+		if ! connection.IsLeased() { return connection }
+	}
+	return nil
+}
+

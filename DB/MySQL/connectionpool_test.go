@@ -5,10 +5,11 @@ import(
 	"testing"
 
 	"github.com/DigiStratum/GoLib/DB"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
+	cfg "github.com/DigiStratum/GoLib/Config"
+
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
-	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 func TestThat_NewConnectionPool_ReturnsSomething(t *testing.T) {
@@ -22,35 +23,23 @@ func TestThat_NewConnectionPool_ReturnsSomething(t *testing.T) {
 	ExpectNonNil(sut, t)
 }
 
-func TestThat_ConnectionPool_InjectDependencies_ReturnsError_ForNilDependencies(t *testing.T) {
+// StartableIfc, DependencyInjectableIfc
+func TestThat_ConnectionPool_Start_ReturnsError_ForMissingDependencies(t *testing.T) {
 	// Setup
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 
 	// Test
-	err := sut.InjectDependencies(nil)
-
-	// Verify
-	ExpectError(err, t)
-}
-
-func TestThat_ConnectionPool_InjectDependencies_ReturnsError_ForWrongDependencies(t *testing.T) {
-	// Setup
-	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
-	sut := NewConnectionPool(*dsn)
-
-	// Test
-	err1 := sut.InjectDependencies(
-		dependencies.NewDependencyInstance("bogusdep", "bogusstring"),
+	err := sut.InjectDependencies(
+		dep.NewDependencyInstance("bogusdep", "bogusstring"),
+		dep.NewDependencyInstance("ConnectionFactory", "bogusstring"),
 	)
 
-	err2 := sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", "bogusstring"),
-	)
+	actual := sut.Start()
 
 	// Verify
-	ExpectError(err1, t)
-	ExpectError(err2, t)
+	if ! ExpectError(err, t) { return }
+	if ! ExpectError(actual, t) { return }
 }
 
 func TestThat_ConnectionPool_InjectDependencies_ReturnsNoError_ForGoodDependencies(t *testing.T) {
@@ -58,12 +47,10 @@ func TestThat_ConnectionPool_InjectDependencies_ReturnsNoError_ForGoodDependenci
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
-	//deps := dependencies.NewDependencies()
-	//deps.Set("connectionFactory", connectionFactory)
 
 	// Test
 	err := sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	// Verify
@@ -76,7 +63,7 @@ func TestThat_ConnectionPool_Configure_ReturnsNoError_ForEmptyConfig(t *testing.
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -94,7 +81,7 @@ func TestThat_ConnectionPool_Configure_ReturnsError_ForUnknownConfigKeys(t *test
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -113,7 +100,7 @@ func TestThat_ConnectionPool_Configure_ReturnsNoError_ForKnownConfigKeys(t *test
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -134,7 +121,7 @@ func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenOneAvaila
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -142,6 +129,7 @@ func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenOneAvaila
 	config.Set("max_connections", "1")
 	config.Set("max_idle", "1")
 	sut.Configure(config)
+	if ! ExpectNoError(sut.Start(), t) { return }
 
 	// Test
 	conn, err := sut.GetConnection()
@@ -157,7 +145,7 @@ func TestThat_ConnectionPool_GetConnection_ReturnsError_WhenNoConnectionsAvailab
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -182,7 +170,7 @@ func TestThat_ConnectionPool_GetConnection_ReturnsLeasedConnection_WhenPreviousl
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -208,7 +196,7 @@ func TestThat_ConnectionPool_GetMaxIdle_ReturnsConfiguredValue(t *testing.T) {
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	config := cfg.NewConfig()
@@ -229,7 +217,7 @@ func TestThat_ConnectionPool_Close_ClosesConnectionPool_WithoutError(t *testing.
 	sut := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()
 	sut.InjectDependencies(
-		dependencies.NewDependencyInstance("ConnectionFactory", connectionFactory),
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
 	)
 
 	// Test
