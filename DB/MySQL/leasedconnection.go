@@ -38,6 +38,8 @@ func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *
 // -------------------------------------------------------------------------------------------------
 
 func (r *LeasedConnection) Release() error {
+	if nil == r { return fmt.Errorf("LeasedConnection is nil") }
+	if nil == r.pooledConnection { return fmt.Errorf("LeasedConnection.pooledCOnnection is nil") }
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	if err := r.pooledConnection.Release(); nil != err { return err }
 	r.leaseKey = 0

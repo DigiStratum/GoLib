@@ -169,6 +169,8 @@ func (r *connectionPool) Close() error {
 // -------------------------------------------------------------------------------------------------
 
 func (r *connectionPool) Start() error {
+	if r.Startable.IsStarted() { return nil }
+
 	// If the configured Max increases from default...
 	if cap(r.connections) < r.maxConnections {
 		// Increase connection pool capacity from default to the new max_connections
@@ -272,6 +274,7 @@ func (r *connectionPool) captureDepConnectionFactory(instance interface{}) error
 
 // TODO: Pass errors back to caller and on up the chain for visibility/logging
 func (r *connectionPool) createNewConnection() *PooledConnection {
+	if ! r.Startable.IsStarted() { return nil }
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
 	// We're under capacity so should be able to add a new connection
