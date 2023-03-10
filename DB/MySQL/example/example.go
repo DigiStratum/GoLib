@@ -28,7 +28,7 @@ import (
 	"database/sql"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
 	db "github.com/DigiStratum/GoLib/DB"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
 )
@@ -74,12 +74,11 @@ func connectionPool_example(dsn db.DSN) {
 
 	// Get the connection from a MySQL connection pool
 	connFactory := mysql.NewMySQLConnectionFactory()
-	deps := dependencies.NewDependencies()
-	deps.Set("connectionFactory", connFactory)
 	connPool := mysql.NewConnectionPool(dsn)
 	defer connPool.Close()
-	err := connPool.InjectDependencies(deps)
+	err := connPool.InjectDependencies(dep.NewDependencyInstance("ConnectionFactory", connFactory))
 	if nil != err { dief("Error injecting dependencies: %s\n", err) }
+	if err = connPool.Start(); nil != err { dief("Error starting ConnectionPool(): %s", err.Error()) }
 
 	// Lease a connection from the pool
 	conn, err := connPool.GetConnection()
