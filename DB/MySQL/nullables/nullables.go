@@ -191,6 +191,9 @@ func (r *Nullable) Scan(value interface{}) error {
 // encoding/json.Marshaler Public Interface
 // -------------------------------------------------------------------------------------------------
 
+// Note: the pointer receiver vs. struct receiver must match the thing being Marshaled... and you can only have one or the other; consistency is critical here!
+
+
 func (r *Nullable) MarshalJSON() ([]byte, error) {
 	if (r.value == nil) || (r.value.GetType() == NULLABLE_NIL) { return []byte("null"), nil }
 	return r.value.MarshalJSON()
