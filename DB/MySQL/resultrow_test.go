@@ -103,6 +103,7 @@ func TestThat_ResultRow_ToJson_ReturnsPopulatedObject_WhenFieldsSet(t *testing.T
 	actualJson, err := sut.ToJson()
 
 	// Verify
+	ExpectString("", *actualJson, t)
 	ExpectNonNil(actualJson, t)
 	ExpectNoError(err, t)
 	// We cannot expect JSON-serialized fields in a specific order, so we deserialize and check for expected results
