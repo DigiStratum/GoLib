@@ -187,18 +187,19 @@ func (r *DependencyInjectable) InjectDependencies(depinst ...DependencyInstanceI
 		if nil == instance { continue }
 		name := instance.GetName()
 
-		// Capture into our map for basic access
-		if _, ok := r.injected[name]; ! ok {
-			r.injected[name] = make(map[string]DependencyInstanceIfc)
-		}
-		r.injected[name][instance.GetVariant()] = instance
-
 		// If this dependency is declared and defines Capture Func...
 		declaredDep := r.declared.Get(name)
 		if (nil != declaredDep) && declaredDep.CanCapture() {
 			err := declaredDep.Capture(instance.GetInstance())
 			if nil != err { return err }
 		}
+
+		//  If we survived capture, then add into our map for basic access
+		if _, ok := r.injected[name]; ! ok {
+			r.injected[name] = make(map[string]DependencyInstanceIfc)
+		}
+		r.injected[name][instance.GetVariant()] = instance
+
 	}
 
 	return nil

@@ -109,9 +109,12 @@ func TestThat_DependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFu
 	err := sut.InjectDependencies(
 		NewDependencyInstance("requireddep", ifc),
 	)
+	// Also, when the required dependency injection fails, we expect start to fail as well
+	startErr := sut.Start()
 
 	// Verify
 	if ! ExpectError(err, t) { return }
+	if ! ExpectError(startErr, t) { return }
 }
 
 func TestThat_DependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncReturnsNoError(t *testing.T) {
