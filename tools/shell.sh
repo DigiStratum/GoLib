@@ -101,7 +101,7 @@ runtests() {
 
 	# Run tests
 	#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt $RUN_TEST *.go
-	go test -v -count=1 -covermode=atomic $RUN_TEST *.go
+	go test -v -count=1 -covermode=atomic $RUN_TEST *.go | grep -v "^--- PASS:" | grep -v "^--- FAIL:"
 	die_on_error $? "ERROR!"
 
 	say "\nDONE: $TESTRUNNER_DIR"
