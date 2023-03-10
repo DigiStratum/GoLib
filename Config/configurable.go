@@ -74,12 +74,22 @@ func (r *Configurable) GetMissingConfigs() []string {
 
 func (r *Configurable) Start() error {
 	if r.Startable.IsStarted() { return nil }
+	// Make sure nothing required is missing
 	if missingConfigs := r.GetMissingConfigs(); len(missingConfigs) > 0 {
 		return fmt.Errorf(
 			"Missing required config(s) with name(s): %s",
 			strings.Join(missingConfigs, ","),
 		)
 	}
+
+	// Run capture funcs for all the declared configs
+	for name, configItem := range r.declared {
+		// If this dependency is declared and defines Capture Func...
+		if ! configItem.CanCapture() { continue }
+		if ! r.config.Has(name) { continue }
+		if err := configItem.Capture(*r.config.Get(name)); nil != err { return err }
+	}
+
 	return r.Startable.Start()
 }
 
