@@ -7,20 +7,24 @@ import (
 )
 
 type ServiceIfc interface {
-	starter.StartedIfc
+	// Embedded interface(s)
+	starter.StartableIfc
 
+	// Our own interface
 	DoSomething() error
 }
 
 type Service struct {
-	starter.Started
+	// Embedded properties
+	*starter.Startable
+
+	// Our own properties
 	message			string
 }
 
 func NewService() *Service {
-	started := starter.NewStarted()
 	return &Service{
-		Started:	*started,
+		Startable:	starter.NewStartable(),
 		message:	"",
 	}
 }
@@ -31,8 +35,7 @@ func NewService() *Service {
 
 func (r *Service) Start() error {
 	r.message = "Service was started! :^)"
-	r.Started.SetStarted()
-	return nil
+	return r.Startable.Start()
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -40,7 +43,7 @@ func (r *Service) Start() error {
 // ------------------------------------------------------------------------------------------------
 
 func (r *Service) DoSomething() error {
-	if (! r.Started.IsStarted()) { return fmt.Errorf("Service not started! :^(\n") }
+	if ! r.Startable.IsStarted() { return fmt.Errorf("Service not started! :^(\n") }
 	fmt.Printf("%s\n", r.message)
 	return nil
 }
