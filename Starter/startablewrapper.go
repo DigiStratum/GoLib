@@ -1,5 +1,13 @@
 package starter
 
+/*
+
+This sneaky little wrapper allows us to pass a non-exported initializtion func as a StartableIfc so
+that we can enjoy the benefits of Startability without having to publicly Exported so that everyone
+who has us can access these properties. Check out the example(s) below this package.
+
+*/
+
 import (
 	"fmt"
 )

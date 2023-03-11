@@ -25,7 +25,7 @@ type Service struct {
 func NewService() *Service {
 	return &Service{
 		Startable:	starter.NewStartable(),
-		message:	"",
+		message:	"Service Not Started",
 	}
 }
 
