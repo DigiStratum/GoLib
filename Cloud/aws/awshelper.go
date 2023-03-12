@@ -23,10 +23,12 @@ import (
 )
 
 type AWSHelperIfc interface {
+	cfg.ConfigurableIfc
 	GetSession() (*awssdksession.Session, error)
 }
 
 type AWSHelper struct {
+	*cfg.Configurable
 	awsSession		*awssdksession.Session
 	awsRegion		string
 	awsAccessKeyId		string
@@ -36,8 +38,52 @@ type AWSHelper struct {
 
 // Make a new one of these
 func NewAWSHelper() *AWSHelper {
-	return &AWSHelper{}
+	awsh := AWSHelper{ }
+
+	// Declare Configuration
+	awsh.Configurable = cfg.NewConfigurable(
+		cfg.NewConfigItem("awsRegion").CaptureWith(awsh.captureConfigAwsRegion),
+		cfg.NewConfigItem("awsAccessKeyId").CaptureWith(awsh.captureConfigAwsAccessKeyId),
+		cfg.NewConfigItem("awsSecretAccessKeyId").CaptureWith(awsh.captureConfigAwsSecretAccessKeyId),
+		cfg.NewConfigItem("awsSessionToken").CaptureWith(awsh.captureConfigAwsSessionToken),
+	)
+
+	return &awsh
 }
+
+func (r *AWSHelper) captureConfigAwsRegion(value string) error {
+	r.awsRegion = value
+	return nil
+}
+
+func (r *AWSHelper) captureConfigAwsAccessKeyId(value string) error {
+	r.awsAccessKeyId = value
+	return nil
+}
+
+func (r *AWSHelper) captureConfigAwsSecretAccessKeyId(value string) error {
+	r.awsSecretAccessKeyId = value
+	return nil
+}
+
+func (r *AWSHelper) captureConfigAwsSessionToken(value string) error {
+	r.awsSessionToken = value
+	return nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc
+// -------------------------------------------------------------------------------------------------
+
+// Optionally accept overrides for defaults in configuration
+func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
+	// If we have already been configured, do not accept a second configuration
+	if r.Startable.IsStarted() { return nil }
+
+	return r.Configurable.Configure(config)
+}
+
+
 
 // -------------------------------------------------------------------------------------------------
 // cfg.ConfigurableIfc Public Interface

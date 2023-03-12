@@ -22,6 +22,9 @@ TODO:
  * Why is this in the MySQL package? There doesn't seem to be anything MySQL-specific. Move up to DB package if possible!
  * Refactor errors to use Logger.Error()
 
+ FIXME:
+  * Double check that this does not return a connection from GetConnection() if not IsStarted(); there were indicators of
+    this in at least one unit test that was missing a Start() operation, but the error was buried when we added Start()
 */
 
 import (
