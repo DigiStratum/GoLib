@@ -43,7 +43,7 @@ func (r *Service) Start() error {
 // ------------------------------------------------------------------------------------------------
 
 func (r *Service) DoSomething() error {
-	if ! r.Startable.IsStarted() { return fmt.Errorf("Service not started! :^(\n") }
+	if ! r.Startable.IsStarted() { return fmt.Errorf("%s", r.message) }
 	fmt.Printf("%s\n", r.message)
 	return nil
 }

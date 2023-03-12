@@ -39,7 +39,7 @@ func (r *WrappableService) Init() bool {
 // ------------------------------------------------------------------------------------------------
 
 func (r *WrappableService) DoSomething() error {
-	if ! r.initialized { return fmt.Errorf("WrappableService not initialized! :^(") }
+	if ! r.initialized { return fmt.Errorf("%s", r.message) }
 	fmt.Printf("%s\n", r.message)
 	return nil
 }
