@@ -87,7 +87,10 @@ func (r *Configurable) Start() error {
 		// If this dependency is declared and defines Capture Func...
 		if ! configItem.CanCapture() { continue }
 		if ! r.config.Has(name) { continue }
-		if err := configItem.Capture(*r.config.Get(name)); nil != err { return err }
+		// We only capture non-nil config value; TODO: is there a real scenario where we want to capture nil
+		value := r.config.Get(name)
+		if nil == value { continue }
+		if err := configItem.Capture(*value); nil != err { return err }
 	}
 
 	return r.Startable.Start()
