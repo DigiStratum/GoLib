@@ -10,6 +10,8 @@ broadly applicable which we will capture here.
 ref: https://docs.awssdk.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
 ref: https://github.com/aws/aws-sdk-go/tree/main/aws
 
+TODO:
+ * Validate config values however we can; awsRegion, for example, can only be so many things
 */
 
 import (
@@ -20,14 +22,20 @@ import (
         awssdkcredentials "github.com/aws/aws-sdk-go/aws/credentials"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Starter"
 )
 
 type AWSHelperIfc interface {
+	// Embedded Interface(s)
+	starter.StartableIfc
 	cfg.ConfigurableIfc
+
+	// Out own interface
 	GetSession() (*awssdksession.Session, error)
 }
 
 type AWSHelper struct {
+	*starter.Startable
 	*cfg.Configurable
 	awsSession		*awssdksession.Session
 	awsRegion		string
@@ -48,7 +56,31 @@ func NewAWSHelper() *AWSHelper {
 		cfg.NewConfigItem("awsSessionToken").CaptureWith(awsh.captureConfigAwsSessionToken),
 	)
 
+	awsh.Startable = starter.NewStartable(
+		awsh.Configurable,
+	)
+
 	return &awsh
+}
+
+// -------------------------------------------------------------------------------------------------
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *AWSHelper) Start() error {
+	return r.Startable.Start()
+}
+
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc
+// -------------------------------------------------------------------------------------------------
+
+// Optionally accept overrides for defaults in configuration
+func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
+	// If we have already been configured, do not accept a second configuration
+	if r.Startable.IsStarted() { return nil }
+
+	return r.Configurable.Configure(config)
 }
 
 func (r *AWSHelper) captureConfigAwsRegion(value string) error {
@@ -72,51 +104,7 @@ func (r *AWSHelper) captureConfigAwsSessionToken(value string) error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConfigurableIfc
-// -------------------------------------------------------------------------------------------------
-
-// Optionally accept overrides for defaults in configuration
-func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
-	// If we have already been configured, do not accept a second configuration
-	if r.Startable.IsStarted() { return nil }
-
-	return r.Configurable.Configure(config)
-}
-
-
-
-// -------------------------------------------------------------------------------------------------
-// cfg.ConfigurableIfc Public Interface
-// -------------------------------------------------------------------------------------------------
-
-func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
-	if nil == config { return fmt.Errorf("AWSHelper.Configure() - Configuration was nil") }
-
-	if config.Has("awsRegion") {
-		awsRegion := config.Get("awsRegion")
-		if nil != awsRegion { r.awsRegion = *awsRegion }
-	}
-
-	if config.Has("awsAccessKeyId") {
-		awsAccessKeyId := config.Get("awsAccessKeyId")
-		if nil != awsAccessKeyId { r.awsAccessKeyId = *awsAccessKeyId }
-	}
-
-	if config.Has("awsSecretAccessKeyId") {
-		awsSecretAccessKeyId := config.Get("awsSecretAccessKeyId")
-		if nil != awsSecretAccessKeyId { r.awsSecretAccessKeyId = *awsSecretAccessKeyId }
-	}
-
-	if config.Has("awsSessionToken") {
-		awsSessionToken := config.Get("awsSessionToken")
-		if nil != awsSessionToken { r.awsSessionToken = *awsSessionToken }
-	}
-
-	return nil
-}
-
-// -------------------------------------------------------------------------------------------------
-// AWSHelperIfc Public Interface
+// AWSHelperIfc
 // -------------------------------------------------------------------------------------------------
 
 // Get our AWS session
