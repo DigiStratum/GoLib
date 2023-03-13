@@ -42,7 +42,7 @@ import (
 type ObjectStoreDynamo struct {
 	storeConfig	cfg.ConfigIfc
 	readCache	objs.MutableObjectStoreIfc
-	awsHelper	*cloud.AWSHelper		// TODO: change to IFC
+	awsHelper	cloud.AWSHelperIfc
 	awsDynamoDB	*dynamodb.DynamoDB		// TODO: change to IFC
 }
 

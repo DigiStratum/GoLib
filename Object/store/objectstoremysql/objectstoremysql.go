@@ -52,7 +52,7 @@ type objectSpec struct {
 type ObjectStoreMySQL struct {
 	storeConfig		cfg.ConfigIfc
 	readCache		*objs.MutableObjectStore
-	awsHelper		*cloud.AWSHelper
+	awsHelper		cloud.AWSHelperIfc
 	objectSpecs		map[string]objectSpec	// Object spec names must be part of object "path"
 }
 
