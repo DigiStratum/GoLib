@@ -38,38 +38,21 @@ func main() {
 	config := cfg.NewConfig()
 	err := config.LoadFromJsonFile("example.config.json")
 	if nil != err { dief("Error loading config JSON: %s", err) }
+
 	dsn, err := getDSNFromConfig(config.GetSubsetConfig("db.dsn."))
-	if nil != err {
-		dief("DSN Build error: %s", err)
-	}
+	if nil != err { dief("DSN Build error: %s", err) }
 
-	connection_example(*dsn)
-	connectionFactory_example(*dsn)
-	connectionPool_example(*dsn)
+	example_Connection(*dsn)
+	example_ConnectionFactory(*dsn)
+	example_ConnectionPool(*dsn)
 }
 
-func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
-	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
-	keys := config.GetKeys()
-	if ! config.HasAll(&requiredConfigKeys) {
-		for _, key := range keys { fmt.Printf("config key: %s\n", key) }
-		return nil, fmt.Errorf("Missing one or more required configuration keys")
-	}
-	dsnBuilder := db.BuildDSN()
-	dsnBuilder.Configure(config)
-	dsn, err := dsnBuilder.Build()
-	if nil != err {
-		return nil, fmt.Errorf("DSN Build error: %s", err)
-	}
-	fmt.Printf("MySQL DSN is: %s\n\n", dsn.ToString())
-	return dsn, nil
-}
+// Examples
+// -----------------------------------------------
 
-/*
-For long-running processes, use a ConnectionPool when you want a pool of persistent connections with
-all the conveniences.
-*/
-func connectionPool_example(dsn db.DSN) {
+// For long-running processes, use ConnectionPool when you want a pool of persistent connections with
+// all the conveniences.
+func example_ConnectionPool(dsn db.DSN) {
 	fmt.Println("ConnectionPool Example")
 
 	// Get the connection from a MySQL connection pool
@@ -91,10 +74,8 @@ func connectionPool_example(dsn db.DSN) {
 	runQueryDumpAll(query)
 }
 
-/*
-Use a ConnectionFactory to get a Connection which can be replaced with a mock for unit test coverage
-*/
-func connectionFactory_example(dsn db.DSN) {
+// Use ConnectionFactory to get Connection which can be replaced with a mock for unit test coverage
+func example_ConnectionFactory(dsn db.DSN) {
 	fmt.Println("ConnectionFactory Example")
 
 	// Get the connection from a MySQL connection factory
@@ -113,11 +94,9 @@ func connectionFactory_example(dsn db.DSN) {
 	runQueryDumpAll(query)
 }
 
-/*
-Use a Connection to wrap the sql/driver primitives with intrinsic handling for transactions and
-prepared statements.
-*/
-func connection_example(dsn db.DSN) {
+// Use a Connection to wrap the sql/driver primitives with intrinsic handling for transactions and
+// prepared statements.
+func example_Connection(dsn db.DSN) {
 	fmt.Println("Connection Example")
 
 	// Get the connection directly from SQL driver
@@ -132,7 +111,41 @@ func connection_example(dsn db.DSN) {
 	// Run a query through
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
-	runQueryDumpAll(query)
+	//runQueryDumpAll(query)
+
+	fmt.Printf("%s\n\n", runQueryReturnJson(query))
+}
+
+// func example_JsonResource(dsn db.DSN) { }
+
+// Supporting Functions
+// -----------------------------------------------
+
+func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
+	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
+	keys := config.GetKeys()
+	if ! config.HasAll(&requiredConfigKeys) {
+		for _, key := range keys { fmt.Printf("config key: %s\n", key) }
+		return nil, fmt.Errorf("Missing one or more required configuration keys")
+	}
+	dsnBuilder := db.BuildDSN()
+	dsnBuilder.Configure(config)
+	dsn, err := dsnBuilder.Build()
+	if nil != err {
+		return nil, fmt.Errorf("DSN Build error: %s", err)
+	}
+	fmt.Printf("MySQL DSN is: %s\n\n", dsn.ToString())
+	return dsn, nil
+}
+
+func runQueryReturnJson(query mysql.QueryIfc) string {
+	results, err := query.RunReturnAll() // No args for this example
+	if nil != err { dief(fmt.Sprintf("Query Error: %s\n", err.Error())) }
+
+	json, err := results.ToJson()
+	if nil != err { dief(fmt.Sprintf("JSON Marshaler Error: %s\n", err.Error())) }
+
+	return *json
 }
 
 func runQueryDumpAll(query mysql.QueryIfc) {
