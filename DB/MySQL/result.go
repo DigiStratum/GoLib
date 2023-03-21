@@ -14,7 +14,7 @@ type ResultIfc interface {
 	GetRowsAffected() (*int64, error)
 }
 
-type Result struct {
+type result struct {
 	res		db.Result
 	lastInsertId	*int64
 	rowsAffected	*int64
@@ -24,19 +24,19 @@ type Result struct {
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewResult(res db.Result) *Result {
+func NewResult(res db.Result) *result {
 	if nil == res { return nil }
-	return &Result{
+	return &result{
 		res:	res,
 	}
 }
 
 // -------------------------------------------------------------------------------------------------
-// ResultIfc Public Interface
+// ResultIfc
 // -------------------------------------------------------------------------------------------------
 
 // Get the last insert id from our query result, if available
-func (r *Result) GetLastInsertId() (*int64, error) {
+func (r *result) GetLastInsertId() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
 	if nil == r.lastInsertId {
 		v, err := r.res.LastInsertId()
@@ -47,7 +47,7 @@ func (r *Result) GetLastInsertId() (*int64, error) {
 }
 
 // Get the affected row count from our query result, if available
-func (r *Result) GetRowsAffected() (*int64, error) {
+func (r *result) GetRowsAffected() (*int64, error) {
 	// If we don't have this cached yet, pull it from the result
 	if nil == r.rowsAffected {
 		v, err := r.res.RowsAffected()
@@ -56,3 +56,4 @@ func (r *Result) GetRowsAffected() (*int64, error) {
 	}
 	return r.rowsAffected, nil
 }
+

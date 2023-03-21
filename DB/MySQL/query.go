@@ -32,7 +32,7 @@ import (
 )
 
 type QueryIfc interface {
-	Run(args ...interface{}) (*Result, error)
+	Run(args ...interface{}) (*result, error)
 	RunReturnValue(receiver interface{}, args ...interface{}) error
 	RunReturnInt(args ...interface{}) (*int, error)
 	RunReturnString(args ...interface{}) (*string, error)
@@ -62,7 +62,7 @@ func NewQuery(connection ConnectionIfc, query SQLQueryIfc) (*Query, error) {
 // -------------------------------------------------------------------------------------------------
 
 // Run this query against the supplied database Connection with the provided query arguments
-func (r Query) Run(args ...interface{}) (*Result, error) {
+func (r Query) Run(args ...interface{}) (*result, error) {
 	result, err := r.connection.Exec(r.query, args...)
 	return NewResult(result), err
 }
