@@ -48,7 +48,7 @@ func TestThat_Connection_IsConnected_ReturnsTrue_WhenConnected(t *testing.T) {
 
 func TestThat_Connection_IsConnected_ReturnsFalse_WhenNotConnected(t *testing.T) {
 	// Setup
-	sut := Connection{}
+	sut := connection{}
 
 	// Test
 	res := sut.IsConnected()

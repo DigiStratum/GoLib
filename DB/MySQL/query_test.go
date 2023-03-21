@@ -331,7 +331,7 @@ func TestThat_Query_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-func getGoodNewConnection() (*Connection, error) {
+func getGoodNewConnection() (*connection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	return NewConnection(mockDBConnection)

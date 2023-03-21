@@ -2,7 +2,7 @@ package mysql
 
 /*
 
-DB Connection - All the low-level nitty-gritty interacting with the sql driver
+DB Connection - sql driver abstraction
 
 ref: https://github.com/go-sql-driver/mysql#interpolateparams
 ref: https://pkg.go.dev/database/sql#Tx.Stmt
@@ -34,7 +34,7 @@ type ConnectionIfc interface {
 	ConnectionCommonIfc
 }
 
-type Connection struct {
+type connection struct {
 	conn			*sql.DB			// Read-Write Connection
 	transaction		*sql.Tx			// Our transaction, if we're in the middle of one
 	// Local Cache structures, keyed on resolved SQL query text
@@ -42,10 +42,14 @@ type Connection struct {
 	statements		map[string]*sql.Stmt	// retains non-transaction prepared statements
 }
 
-// Make a new one of these and connect!
-func NewConnection(conn *sql.DB) (*Connection, error) {
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+// Make a new one of these
+func NewConnection(conn *sql.DB) (*connection, error) {
 	if nil == conn { return nil, fmt.Errorf("Cannot wrap nil connection") }
-	connection := Connection{
+	connection := connection{
 		conn:			conn,
 		statements:		make(map[string]*sql.Stmt),
 	}
@@ -53,11 +57,11 @@ func NewConnection(conn *sql.DB) (*Connection, error) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// io.Closer Public Interface
+// io.Closer
 // -------------------------------------------------------------------------------------------------
 
 // Drop this connection
-func (r *Connection) Close() error {
+func (r *connection) Close() error {
 	// If we're not connected, nothing to do
 	if ! r.IsConnected() { return nil }
 	r.conn.Close()
@@ -66,20 +70,20 @@ func (r *Connection) Close() error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConnectionIfc Public Interface
+// ConnectionIfc
 // -------------------------------------------------------------------------------------------------
 
 // Check whether this connection is established
-func (r Connection) IsConnected() bool {
+func (r connection) IsConnected() bool {
 	if nil == r.conn { return false }
 	return nil == r.conn.Ping()
 }
 
-func (r Connection) InTransaction() bool {
+func (r connection) InTransaction() bool {
 	return nil != r.transaction
 }
 
-func (r *Connection) Begin() error {
+func (r *connection) Begin() error {
 	// If we're already in a Transaction...
 	if r.InTransaction() {
 		// Assume that the app has lost track of the Transaction, maybe lost the connection lease: reset!
@@ -93,18 +97,18 @@ func (r *Connection) Begin() error {
 	return err
 }
 
-func (r *Connection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
+func (r *connection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
 	return NewQuery(r, query)
 }
 
-func (r *Connection) Commit() error {
+func (r *connection) Commit() error {
 	if ! r.InTransaction() { return fmt.Errorf("No active transaction!") }
 	err := r.transaction.Commit()
 	r.transaction = nil
 	return err
 }
 
-func (r *Connection) Rollback() error {
+func (r *connection) Rollback() error {
 	// Not in the middle of a Transaction? no-op, no-error!
 	if ! r.InTransaction() { return nil }
 	err := r.transaction.Rollback()
@@ -112,30 +116,30 @@ func (r *Connection) Rollback() error {
 	return err
 }
 
-func (r Connection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) {
+func (r connection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil, err }
 	return stmt.Exec(args...)
 }
 
-func (r Connection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) {
+func (r connection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil, err }
 	return stmt.Query(args...)
 }
 
 // Note: DB.(Stmt.)QueryRow always returns a non-nil value.
-func (r Connection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row {
+func (r connection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row {
 	stmt, err := r.prepare(query)
 	if nil != err { return nil }
 	return stmt.QueryRow(args...)
 }
 
 // -------------------------------------------------------------------------------------------------
-// Connection Private Implementation
+// connection
 // -------------------------------------------------------------------------------------------------
 
-func (r Connection) prepare(query SQLQueryIfc) (*sql.Stmt, error) {
+func (r connection) prepare(query SQLQueryIfc) (*sql.Stmt, error) {
 	// Resolve the query
 	sql, err := query.Resolve()
 	if nil != err { return nil, err }
