@@ -15,7 +15,7 @@ func TestThat_NewLeasedConnections_ReturnsSomething(t *testing.T) {
 	// Setup
 
 	// Test
-	var actual *LeasedConnections = NewLeasedConnections()
+	var actual LeasedConnectionsIfc = NewLeasedConnections()	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNonNil(actual, t)

@@ -33,7 +33,7 @@ func TestThat_NewLeasedConnection_ReturnsSomething(t *testing.T) {
 	leaseKey := int64(333)
 
 	// Test
-	var actual *LeasedConnection = NewLeasedConnection(newPooledConnection, leaseKey)
+	var actual LeasedConnectionIfc = NewLeasedConnection(newPooledConnection, leaseKey)	// <- Ensures that we satisfy our interface
 
 	// Verify
 	if ! ExpectNonNil(actual, t) { return }
@@ -233,7 +233,7 @@ func TestThat_LeasedConnection_ConnectionIfc_QueryRow_ReturnsError_ForInvalidLea
 	if ! ExpectNil(res, t) { return }
 }
 
-func getGoodLeasedConnection(t *testing.T) (*LeasedConnection, error) {
+func getGoodLeasedConnection(t *testing.T) (*leasedConnection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()

@@ -48,7 +48,7 @@ type ConnectionPoolIfc interface {
 	cfg.ConfigurableIfc
 
 	// Our own interface
-	GetConnection() (*LeasedConnection, error)
+	GetConnection() (*leasedConnection, error)
 	Release(leaseKey int64) error
 	GetMaxIdle() int
 	Close() error
@@ -67,7 +67,7 @@ type connectionPool struct {
 	maxConnections			int
 	maxIdle				int
 	connections			[]*PooledConnection
-	leasedConnections		*LeasedConnections
+	leasedConnections		LeasedConnectionsIfc
 	mutex				sync.Mutex
 }
 
@@ -105,7 +105,7 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 // -------------------------------------------------------------------------------------------------
 
 // Request a connection from the pool using multiple approaches
-func (r *connectionPool) GetConnection() (*LeasedConnection, error) {
+func (r *connectionPool) GetConnection() (*leasedConnection, error) {
 	if ! r.Startable.IsStarted() { return nil, fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
 	var connection *PooledConnection
 
