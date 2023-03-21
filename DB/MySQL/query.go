@@ -13,12 +13,12 @@ Prepared statements are a good idea for even single statements for security (mak
 impossible):
 ref: https://stackoverflow.com/questions/1849803/are-prepared-statements-a-waste-for-normal-queries-php
 
-FIXME: we attach query to a connection upon creation... but a leased connection could go away,
-leaving the query and any prepared statement attached to nothing. We should have a way to deal with
+FIXME: we attach sqlQuery to a connection upon creation... but a leased connection could go away,
+leaving the sqlQuery and any prepared statement attached to nothing. We should have a way to deal with
 this, either self-destruct, or recover a leased connection from the pool, or cause the consumer to
 do the same, etc. Probably best left to the consumer so that they can connect their own connection
-link to the same one... Refactored the factory function to separate attachment of the query to a
-given ConnectionIfc so that the consumer can reattach a query as needed... but it still needs to
+link to the same one... Refactored the factory function to separate attachment of the sqlQuery to a
+given ConnectionIfc so that the consumer can reattach a sqlQuery as needed... but it still needs to
 receive some indicator that this is needed.
 
 */
@@ -41,37 +41,41 @@ type QueryIfc interface {
 	RunReturnSome(max int, args ...interface{}) (*resultSet, error)
 }
 
-type Query struct {
+type query struct {
 	connection	ConnectionIfc
-	query		SQLQueryIfc
+	sqlQuery		SQLQueryIfc
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 // Make a new one of these!
-// Returns nil+error if there is any problem setting up the query...!
-func NewQuery(connection ConnectionIfc, query SQLQueryIfc) (*Query, error) {
+// Returns nil+error if there is any problem setting up the sqlQuery...!
+func NewQuery(connection ConnectionIfc, sqlQuery SQLQueryIfc) (*query, error) {
 	if nil == connection { return nil, fmt.Errorf("Supplied connection was nil") }
-	if nil == query { return nil, fmt.Errorf("Supplied query was nil") }
-	return &Query{
+	if nil == sqlQuery { return nil, fmt.Errorf("Supplied sqlQuery was nil") }
+	return &query{
 		connection:	connection,
-		query:		query,
+		sqlQuery:		sqlQuery,
 	}, nil
 }
 
 // -------------------------------------------------------------------------------------------------
-// QueryIfc Public Interface
+// QueryIfc
 // -------------------------------------------------------------------------------------------------
 
-// Run this query against the supplied database Connection with the provided query arguments
-func (r Query) Run(args ...interface{}) (*result, error) {
-	result, err := r.connection.Exec(r.query, args...)
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
+func (r query) Run(args ...interface{}) (*result, error) {
+	result, err := r.connection.Exec(r.sqlQuery, args...)
 	return NewResult(result), err
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns only a single value (any type pointed at by receiver) as the only column
 // of the only row of the result
-func (r Query) RunReturnValue(receiver interface{}, args ...interface{}) error {
-	if row := r.connection.QueryRow(r.query, args...); nil != row {
+func (r query) RunReturnValue(receiver interface{}, args ...interface{}) error {
+	if row := r.connection.QueryRow(r.sqlQuery, args...); nil != row {
 		err := row.Scan(receiver)
 		if db.ErrNoRows == err { return nil }
 		return err
@@ -79,46 +83,46 @@ func (r Query) RunReturnValue(receiver interface{}, args ...interface{}) error {
 	return nil
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns only a single int value as the only column of the only row of the result
-func (r Query) RunReturnInt(args ...interface{}) (*int, error) {
+func (r query) RunReturnInt(args ...interface{}) (*int, error) {
 	var value int
 	err := r.RunReturnValue(&value, args...)
 	if nil == err { return &value, nil }
 	return nil, err
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns only a single string value as the only column of the only row of the result
-func (r Query) RunReturnString(args ...interface{}) (*string, error) {
+func (r query) RunReturnString(args ...interface{}) (*string, error) {
 	var value string
 	err := r.RunReturnValue(&value, args...)
 	if nil == err { return &value, nil }
 	return nil, err
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns only a single ResultRowIfc value as the only row of the result
-func (r Query) RunReturnOne(args ...interface{}) (*ResultRow, error) {
+func (r query) RunReturnOne(args ...interface{}) (*ResultRow, error) {
 	results, err := r.RunReturnSome(1, args...)
 	if nil != err { return nil, err }
 	if (nil == results) || (0 == results.Len()) { return nil, nil }
 	return results.Get(0), nil
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns all result rows as a set
-func (r Query) RunReturnAll(args ...interface{}) (*resultSet, error) {
+func (r query) RunReturnAll(args ...interface{}) (*resultSet, error) {
 	return r.RunReturnSome(0, args...)
 }
 
-// Run this query against the supplied database Connection with the provided query arguments
+// Run this sqlQuery against the supplied database Connection with the provided sqlQuery arguments
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
-// ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func (r Query) RunReturnSome(max int, args ...interface{}) (*resultSet, error) {
+// ref: https://kylewbanks.com/blog/sqlQuery-result-to-map-in-golang
+func (r query) RunReturnSome(max int, args ...interface{}) (*resultSet, error) {
 	// Even if max == 1 we use Query() instead of QueryRow() to leverage the same Scan converter(s)
-	rows, err := r.connection.Query(r.query, args...)
-	// If the query returned no results, handle it specifically...
+	rows, err := r.connection.Query(r.sqlQuery, args...)
+	// If the sqlQuery returned no results, handle it specifically...
 	if db.ErrNoRows == err { return nil, nil }
 	if nil != err { return nil, err }
 	if nil != rows { defer rows.Close() }
@@ -143,7 +147,7 @@ func (r Query) RunReturnSome(max int, args ...interface{}) (*resultSet, error) {
 		return result
 	}
 
-	// Process all the rows of the query result
+	// Process all the rows of the sqlQuery result
 	results := NewResultSet()
 	cols, _ := rows.Columns()
 	num := 0

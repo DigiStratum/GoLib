@@ -13,10 +13,10 @@ import(
 
 func TestThat_NewQuery_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Setup
-	var sut *Query
+	var sut QueryIfc
 	var err error
 	// Test
-	sut, err = NewQuery(nil, nil)
+	sut, err = NewQuery(nil, nil)	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNil(sut, t)
