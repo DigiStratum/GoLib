@@ -37,8 +37,8 @@ type QueryIfc interface {
 	RunReturnInt(args ...interface{}) (*int, error)
 	RunReturnString(args ...interface{}) (*string, error)
 	RunReturnOne(args ...interface{}) (*ResultRow, error)
-	RunReturnAll(args ...interface{}) (*ResultSet, error)
-	RunReturnSome(max int, args ...interface{}) (*ResultSet, error)
+	RunReturnAll(args ...interface{}) (*resultSet, error)
+	RunReturnSome(max int, args ...interface{}) (*resultSet, error)
 }
 
 type Query struct {
@@ -108,14 +108,14 @@ func (r Query) RunReturnOne(args ...interface{}) (*ResultRow, error) {
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns all result rows as a set
-func (r Query) RunReturnAll(args ...interface{}) (*ResultSet, error) {
+func (r Query) RunReturnAll(args ...interface{}) (*resultSet, error) {
 	return r.RunReturnSome(0, args...)
 }
 
 // Run this query against the supplied database Connection with the provided query arguments
 // This variant returns a set of result rows up to the max count specified where 0=unlimited (all)
 // ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func (r Query) RunReturnSome(max int, args ...interface{}) (*ResultSet, error) {
+func (r Query) RunReturnSome(max int, args ...interface{}) (*resultSet, error) {
 	// Even if max == 1 we use Query() instead of QueryRow() to leverage the same Scan converter(s)
 	rows, err := r.connection.Query(r.query, args...)
 	// If the query returned no results, handle it specifically...

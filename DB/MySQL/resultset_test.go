@@ -9,7 +9,7 @@ import(
 
 func TestThat_NewResultSet_ReturnsEmptyResultSet(t *testing.T) {
 	// Test
-	var sut *ResultSet = NewResultSet()
+	var sut ResultSetIfc = NewResultSet() // <- ensures that we satisfy our interface
 
 	// Verify
 	ExpectNonNil(sut, t)
@@ -92,7 +92,7 @@ func TestThat_ResultSet_ToJson_ReturnsEmptyStateObject_WhenNoRowsSet(t *testing.
 	// Verify
 	ExpectNonNil(actualJson, t)
 	ExpectNoError(err, t)
-	ExpectString("{\"Results\":[],\"IsFinalized\":false}", *actualJson, t)
+	ExpectString("[]", *actualJson, t)
 }
 
 func TestThat_ResultSet_ToJson_ReturnsFinalizedEmptyStateObject_WhenNoRowsSetAndFinalized(t *testing.T) {
@@ -106,14 +106,14 @@ func TestThat_ResultSet_ToJson_ReturnsFinalizedEmptyStateObject_WhenNoRowsSetAnd
 	// Verify
 	ExpectNonNil(actualJson, t)
 	ExpectNoError(err, t)
-	ExpectString("{\"Results\":[],\"IsFinalized\":true}", *actualJson, t)
+	ExpectString("[]", *actualJson, t)
 }
 
 func TestThat_ResultSet_ToJson_ReturnsPopulatedStateObject_WhenRowsSet(t *testing.T) {
 	// Setup
 	sut := NewResultSet()
 	resultRow := NewResultRow()
-	resultRow.Set("row", *nullables.NewNullable(111))
+	resultRow.Set("id", *nullables.NewNullable(111))
 	sut.Add(resultRow)
 
 	// Test
@@ -122,5 +122,5 @@ func TestThat_ResultSet_ToJson_ReturnsPopulatedStateObject_WhenRowsSet(t *testin
 	// Verify
 	ExpectNonNil(actualJson, t)
 	ExpectNoError(err, t)
-	ExpectString("{\"Results\":[{\"row\":111}],\"IsFinalized\":false}", *actualJson, t)
+	ExpectString("[{\"id\":111}]", *actualJson, t)
 }
