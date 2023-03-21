@@ -66,7 +66,7 @@ type connectionPool struct {
 	minConnections			int
 	maxConnections			int
 	maxIdle				int
-	connections			[]*PooledConnection
+	connections			[]*pooledConnection
 	leasedConnections		LeasedConnectionsIfc
 	mutex				sync.Mutex
 }
@@ -87,7 +87,7 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 		maxIdle:		DEFAULT_MAX_IDLE,
 
 		dsn:			dsn,
-		connections:		make([]*PooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
+		connections:		make([]*pooledConnection, 0, DEFAULT_MAX_CONNECTIONS),
 		leasedConnections:	NewLeasedConnections(),
 	}
 
@@ -107,7 +107,7 @@ func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
 // Request a connection from the pool using multiple approaches
 func (r *connectionPool) GetConnection() (*leasedConnection, error) {
 	if ! r.Startable.IsStarted() { return nil, fmt.Errorf("ConnectionPool.GetConnection() : Not Started") }
-	var connection *PooledConnection
+	var connection *pooledConnection
 
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
@@ -178,7 +178,7 @@ func (r *connectionPool) Start() error {
 	if cap(r.connections) < r.maxConnections {
 		// Increase connection pool capacity from default to the new max_connections
 		// ref: https://blog.golang.org/slices-intro
-		nc := make([]*PooledConnection, len(r.connections), r.maxConnections)
+		nc := make([]*pooledConnection, len(r.connections), r.maxConnections)
 		copy(nc, r.connections)
 		r.connections = nc
 	}
@@ -276,7 +276,7 @@ func (r *connectionPool) captureDepConnectionFactory(instance interface{}) error
 // -----------------------------------------------
 
 // TODO: Pass errors back to caller and on up the chain for visibility/logging
-func (r *connectionPool) createNewConnection() *PooledConnection {
+func (r *connectionPool) createNewConnection() *pooledConnection {
 	if ! r.Startable.IsStarted() { return nil }
 	// if we are at capacity, then we can't create a new connection
 	if len(r.connections) >= cap(r.connections) { return nil }
@@ -292,7 +292,7 @@ func (r *connectionPool) createNewConnection() *PooledConnection {
 	return newPooledConnection // nil if there was an error
 }
 
-func (r *connectionPool) findExpiredLeaseConnection() *PooledConnection {
+func (r *connectionPool) findExpiredLeaseConnection() *pooledConnection {
 	for _, connection := range r.connections {
 		if connection.IsLeased() && connection.IsExpired() { return connection }
 	}
@@ -314,7 +314,7 @@ func (r *connectionPool) closePooledConnection(pooledConnection PooledConnection
 	return fmt.Errorf("PooledConnection not closable")
 }
 
-func (r *connectionPool) findAvailableConnection() *PooledConnection {
+func (r *connectionPool) findAvailableConnection() *pooledConnection {
 	for _, connection := range (*r).connections {
 		if ! connection.IsLeased() { return connection }
 	}

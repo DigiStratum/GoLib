@@ -34,7 +34,7 @@ type PooledConnectionIfc interface {
 	ConnectionCommonIfc
 }
 
-type PooledConnection struct {
+type pooledConnection struct {
 	pool			ConnectionPoolIfc	// The pool that this pooled connection lives in
 	connection		ConnectionIfc		// Our underlying database connection
 	establishedAt		int64			// Time that this connection was established to the DB
@@ -45,11 +45,15 @@ type PooledConnection struct {
 	mutex			sync.Mutex
 }
 
-func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (*PooledConnection, error) {
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (*pooledConnection, error) {
 	if nil == connection { return nil, fmt.Errorf("Supplied connection was nil!") }
 	if nil == connPool { return nil, fmt.Errorf("Supplied connection pool was nil!") }
 	now := time.Now().Unix()
-	pc := PooledConnection{
+	return &pooledConnection{
 		pool:			connPool,
 		connection:		connection,
 		establishedAt:		now,
@@ -57,8 +61,7 @@ func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (
 		lastLeasedAt:		0,
 		isLeased:		false,
 		leaseKey:		0,
-	}
-	return &pc, nil
+	}, nil
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -66,33 +69,33 @@ func NewPooledConnection(connection ConnectionIfc, connPool ConnectionPoolIfc) (
 // -------------------------------------------------------------------------------------------------
 
 // Drop this connection
-func (r *PooledConnection) Close() error {
+func (r *pooledConnection) Close() error {
 	if nil == r.connection { return fmt.Errorf("Underlying connection is nil") }
 	if closeableConnection, ok := r.connection.(io.Closer); ok {
 		return closeableConnection.Close()
 	}
-	return fmt.Errorf("PooledConnection is not Closeable")
+	return fmt.Errorf("pooledConnection is not Closeable")
 }
 
 // -------------------------------------------------------------------------------------------------
-// PooledConnectionIfc Public Interface
+// pooledConnectionIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
 // Connections
-func (r *PooledConnection) IsConnected() bool {
+func (r *pooledConnection) IsConnected() bool {
 	if nil == r.connection { return false }
 	return r.connection.IsConnected()
 }
 
 // Leasing
-func (r *PooledConnection) IsLeased() bool { return r.isLeased }
+func (r *pooledConnection) IsLeased() bool { return r.isLeased }
 
-func (r *PooledConnection) MatchesLeaseKey(leaseKey int64) bool {
+func (r *pooledConnection) MatchesLeaseKey(leaseKey int64) bool {
 	if ! r.IsLeased() { return false }
 	return r.leaseKey == leaseKey
 }
 
-func (r *PooledConnection) Lease(leaseKey int64) {
+func (r *pooledConnection) Lease(leaseKey int64) {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 
 	// Set up the lease to guarantee nobody else comes and steals this from us
@@ -105,7 +108,7 @@ func (r *PooledConnection) Lease(leaseKey int64) {
 	if r.InTransaction() { r.Rollback() }
 }
 
-func (r *PooledConnection) Release() error {
+func (r *pooledConnection) Release() error {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	err := r.pool.Release(r.leaseKey)
 	if nil != err { return err }
@@ -114,11 +117,11 @@ func (r *PooledConnection) Release() error {
 	return nil
 }
 
-func (r *PooledConnection) Touch() {
+func (r *pooledConnection) Touch() {
 	r.lastActiveAt = time.Now().Unix()
 }
 
-func (r *PooledConnection) IsExpired() bool {
+func (r *pooledConnection) IsExpired() bool {
 	maxIdle := int64(r.pool.GetMaxIdle())
 	now := time.Now().Unix()
 	// If the last time this connection was Touch()ed, plus the max idle period is in the past, lease expired!
@@ -126,13 +129,13 @@ func (r *PooledConnection) IsExpired() bool {
 }
 
 // Transactions
-func (r *PooledConnection) InTransaction() bool { return r.connection.InTransaction() }
-func (r *PooledConnection) Rollback() error { return r.connection.Rollback() }
-func (r *PooledConnection) Begin() error { return r.connection.Begin() }
-func (r *PooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
+func (r *pooledConnection) InTransaction() bool { return r.connection.InTransaction() }
+func (r *pooledConnection) Rollback() error { return r.connection.Rollback() }
+func (r *pooledConnection) Begin() error { return r.connection.Begin() }
+func (r *pooledConnection) Commit() error { r.Touch(); return r.connection.Commit() }
 
 // Operations
-func (r *PooledConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) { r.Touch(); return r.connection.NewQuery(query) }
-func (r *PooledConnection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
-func (r *PooledConnection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
-func (r *PooledConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }
+func (r *pooledConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) { r.Touch(); return r.connection.NewQuery(query) }
+func (r *pooledConnection) Exec(query SQLQueryIfc, args ...interface{}) (sql.Result, error) { r.Touch(); return r.connection.Exec(query, args...) }
+func (r *pooledConnection) Query(query SQLQueryIfc, args ...interface{}) (*sql.Rows, error) { r.Touch(); return r.connection.Query(query, args...) }
+func (r *pooledConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *sql.Row { r.Touch(); return r.connection.QueryRow(query, args...) }

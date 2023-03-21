@@ -70,7 +70,7 @@ func TestThat_LeasedConnections_Release_ReturnsFalse_ForBadLeaseKey(t *testing.T
 	ExpectFalse(result, t)
 }
 
-func getPooledConnection() *PooledConnection {
+func getPooledConnection() *pooledConnection {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
 	connectionFactory := NewMockDBConnectionFactory()

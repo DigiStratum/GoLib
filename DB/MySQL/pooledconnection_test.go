@@ -12,11 +12,11 @@ import(
 
 func TestThat_NewPooledConnection_ReturnsSomething_WithoutError(t *testing.T) {
 	// Setup
-	var actual *PooledConnection
+	var actual PooledConnectionIfc
 	var err error
 
 	// Test
-	actual, err = getGoodNewPooledConnection()
+	actual, err = getGoodNewPooledConnection()	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNonNil(actual, t)
@@ -67,7 +67,7 @@ func TestThat_PooledConnection_IsConnected_ReturnsFalse_ForBadConnection(t *test
 	ExpectFalse(actual, t)
 }
 
-func getGoodNewPooledConnection() (*PooledConnection, error) {
+func getGoodNewPooledConnection() (*pooledConnection, error) {
 	// Make a new ConnectionPool
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
@@ -90,7 +90,7 @@ func getGoodNewPooledConnection() (*PooledConnection, error) {
 	return NewPooledConnection(newConnection, connectionPool)
 }
 
-func getNilNewPooledConnection() (*PooledConnection, error) {
-	return &PooledConnection{}, nil
+func getNilNewPooledConnection() (*pooledConnection, error) {
+	return &pooledConnection{}, nil
 }
 
