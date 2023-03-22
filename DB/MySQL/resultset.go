@@ -8,9 +8,15 @@ TODO:
 
 import (
 	"encoding/json"
+
+	it "github.com/DigiStratum/GoLib/Data/iterable"
 )
 
 type ResultSetIfc interface {
+	// Embedded interface(s)
+	it.IterableIfc
+
+	// Our own interface
 	Get(rowNum int) *ResultRow
 	Len() int
 	IsEmpty() bool
@@ -81,3 +87,20 @@ func (r resultSet) ToJson() (*string, error) {
 func (r resultSet) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.results)
 }
+
+// -------------------------------------------------------------------------------------------------
+// IterableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r resultSet) GetIterator() func () interface{} {
+	idx := 0
+	var data_len = r.Len()
+	return func () interface{} {
+		// If we're done iterating, return do nothing
+		if idx >= data_len { return nil }
+		prev_idx := idx
+		idx++
+		return &r.results[prev_idx]
+	}
+}
+
