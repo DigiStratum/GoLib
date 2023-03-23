@@ -78,6 +78,8 @@ func example_ConnectionPool(dsn db.DSN) {
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
 }
 
+// -----------------------------------------------
+
 // Use ConnectionFactory to get Connection which can be replaced with a mock for unit test coverage
 func example_ConnectionFactory(dsn db.DSN) {
 	fmt.Println("ConnectionFactory Example")
@@ -99,6 +101,8 @@ func example_ConnectionFactory(dsn db.DSN) {
 	// Dump results
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
 }
+
+// -----------------------------------------------
 
 // Use a Connection to wrap the sql/driver primitives with intrinsic handling for transactions and
 // prepared statements.
@@ -122,6 +126,8 @@ func example_Connection(dsn db.DSN) {
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
 }
 
+// -----------------------------------------------
+
 type ResourceTask struct {
 	Id			int	`json:"id"`
 	Task			string	`json:"task"`
@@ -133,7 +139,7 @@ type resourceTask struct {
 	connPool		mysql.ConnectionPoolIfc
 }
 
-func (r resourceTask) GetAllTasks() []resourceTask {
+func (r resourceTask) GetAll() []resourceTask {
 	conn, err := r.connPool.GetConnection()
 	if nil != err { dief(fmt.Sprintf("GetConnection Error: %s\n", err.Error())) }
 	defer conn.Release()
@@ -160,6 +166,10 @@ func (r resourceTask) GetAllTasks() []resourceTask {
 	return resourceTasks
 }
 
+func (r resourceTask) MarshalJSON() ([]byte, error) {
+        return gojson.Marshal(r.resource)
+}
+
 func example_ResourceObject(dsn db.DSN) {
 	fmt.Println("Resource Object Example")
 
@@ -176,7 +186,7 @@ func example_ResourceObject(dsn db.DSN) {
 		resource:	ResourceTask{},
 		connPool:	connPool,
 	}
-	resourceTasks := rt.GetAllTasks()
+	resourceTasks := rt.GetAll()
 
 	// Convert to JSON
 	jsonBytes, err := gojson.Marshal(resourceTasks)
