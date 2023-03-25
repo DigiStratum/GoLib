@@ -31,10 +31,6 @@ func NewApp() *app {
 	return &a
 }
 
-func (r *app) Start() error {
-	return r.Startable.Start()
-}
-
 func (r *app) DoSomething() error {
 	if ! r.Startable.IsStarted() { return fmt.Errorf("App not Started!") }
 	if err := r.svc.DoSomething(); nil != err { return err }
