@@ -16,6 +16,8 @@ import (
 
 const DEP_VARIANT_DEFAULT = "default"
 
+type DependencyCaptureFunc func (instance interface{}) error
+
 type DependencyIfc interface {
 	GetName() string
 
@@ -26,14 +28,14 @@ type DependencyIfc interface {
 	IsRequired() bool
 
 	CanCapture() bool
-	CaptureWith(captureFunc func (instance interface{}) error) *dependency
+	CaptureWith(captureFunc DependencyCaptureFunc) *dependency
 	Capture(instance interface{}) error
 }
 
 type dependency struct {
 	name, variant		string
 	isRequired		bool
-	captureFunc		func (instance interface{}) error
+	captureFunc		DependencyCaptureFunc
 }
 
 
@@ -79,7 +81,7 @@ func (r *dependency) CanCapture() bool {
 	return nil != r.captureFunc
 }
 
-func (r *dependency) CaptureWith(captureFunc func (instance interface{}) error) *dependency {
+func (r *dependency) CaptureWith(captureFunc DependencyCaptureFunc) *dependency {
 	r.captureFunc = captureFunc
 	return r
 }
