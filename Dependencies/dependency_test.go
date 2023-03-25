@@ -67,3 +67,55 @@ func TestThat_Dependency_SetRequired_ChangesRequiredValue(t *testing.T) {
 	if ! ExpectTrue(actualIsRequired, t) { return }
 }
 
+// Capture()
+func TestThat_Dependency_Capture_ReturnsError_WithoutCaptureFunc(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+	var ifc = NewDependencies() // Arbitrary interface to pass in
+
+	// Test
+	actual := sut.Capture(ifc)
+
+	// Verify
+	if ! ExpectError(actual, t) { return }
+}
+
+func TestThat_Dependency_Capture_ReturnsError_ForNilInterface(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+	var ifc interface{}
+
+	// Test
+	actual := sut.Capture(ifc)
+
+	// Verify
+	if ! ExpectError(actual, t) { return }
+}
+
+// CaptureWith()
+func TestThat_Dependency_Capture_ReturnsError_WithCaptureFuncForNilInterface(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+	sut.CaptureWith(func (instance interface{}) error { return nil })
+	var ifc interface{}
+
+	// Test
+	actual := sut.Capture(ifc)
+
+	// Verify
+	if ! ExpectError(actual, t) { return }
+}
+
+func TestThat_Dependency_Capture_ReturnsNoError_WithCaptureFuncForInterface(t *testing.T) {
+	// Setup
+	sut := NewDependency(DEP_NAME)
+	sut.CaptureWith(func (instance interface{}) error { return nil })
+	var ifc = NewDependencies() // Arbitrary interface
+
+	// Test
+	actual := sut.Capture(ifc)
+
+	// Verify
+	if ! ExpectNoError(actual, t) { return }
+}
+

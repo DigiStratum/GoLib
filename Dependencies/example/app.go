@@ -16,18 +16,16 @@ func NewApp() *app {
 
 	// Declare Dependencies
 	a.DependencyInjectable = dep.NewDependencyInjectable(
-		dep.NewDependency("Service").SetRequired().CaptureWith(a.captureService),
+		dep.NewDependency("Service").SetRequired().CaptureWith(
+			func (instance interface{}) error {
+				var ok bool
+				if a.svc, ok = instance.(ServiceIfc); ok { return nil }
+				return fmt.Errorf("captureService() - Instance is not a ServiceIfc")
+			},
+		),
 	)
 
 	return a
-}
-
-func (r *app) captureService(instance interface{}) error {
-	if nil != instance {
-		var ok bool
-		if r.svc, ok = instance.(ServiceIfc); ok { return nil }
-	}
-	return fmt.Errorf("captureService() - Instance is not a ServiceIfc")
 }
 
 func (r *app) Run() {

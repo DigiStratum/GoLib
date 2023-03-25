@@ -124,7 +124,7 @@ func TestThat_DependencyInjectable_InjectDependencies_ReturnsNoError_WhenCapture
 			func (v interface{}) error { return nil },
 		),
 	)
-	var ifc interface{}
+	var ifc = NewDependencies() // Arbitrary interface to inject, could be anything non-nil
 
 	// Test
 	err := sut.InjectDependencies(

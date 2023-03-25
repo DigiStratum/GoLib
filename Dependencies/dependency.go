@@ -93,7 +93,12 @@ func (r *dependency) Capture(instance interface{}) error {
 			r.GetName(), r.GetVariant(),
 		)
 	}
-
+	if nil == instance {
+		return fmt.Errorf(
+			"Attempt to capture nil for dependency: %s:%s",
+			r.GetName(), r.GetVariant(),
+		)
+	}
 	return r.captureFunc(instance)
 }
 
