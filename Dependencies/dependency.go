@@ -16,7 +16,8 @@ import (
 
 const DEP_VARIANT_DEFAULT = "default"
 
-type DependencyCaptureFunc func (instance interface{}) error
+// return true on success, false on error (i.e. interface assertion failure)
+type DependencyCaptureFunc func (instance interface{}) bool
 
 type DependencyIfc interface {
 	GetName() string
@@ -99,6 +100,12 @@ func (r *dependency) Capture(instance interface{}) error {
 			r.GetName(), r.GetVariant(),
 		)
 	}
-	return r.captureFunc(instance)
+	if ! r.captureFunc(instance) {
+		return fmt.Errorf(
+			"Dependency Capture error for dependency: %s:%s",
+			r.GetName(), r.GetVariant(),
+		)
+	}
+	return nil
 }
 

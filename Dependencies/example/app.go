@@ -17,10 +17,10 @@ func NewApp() *app {
 	// Declare Dependencies
 	a.DependencyInjectable = dep.NewDependencyInjectable(
 		dep.NewDependency("Service").SetRequired().CaptureWith(
-			func (instance interface{}) error {
+			func (instance interface{}) bool {
 				var ok bool
-				if a.svc, ok = instance.(ServiceIfc); ok { return nil }
-				return fmt.Errorf("captureService() - Instance is not a ServiceIfc")
+				a.svc, ok = instance.(ServiceIfc)
+				return ok
 			},
 		),
 	)

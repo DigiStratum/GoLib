@@ -96,7 +96,7 @@ func TestThat_Dependency_Capture_ReturnsError_ForNilInterface(t *testing.T) {
 func TestThat_Dependency_Capture_ReturnsError_WithCaptureFuncForNilInterface(t *testing.T) {
 	// Setup
 	sut := NewDependency(DEP_NAME)
-	sut.CaptureWith(func (instance interface{}) error { return nil })
+	sut.CaptureWith(func (instance interface{}) bool { return false })
 	var ifc interface{}
 
 	// Test
@@ -109,7 +109,7 @@ func TestThat_Dependency_Capture_ReturnsError_WithCaptureFuncForNilInterface(t *
 func TestThat_Dependency_Capture_ReturnsNoError_WithCaptureFuncForInterface(t *testing.T) {
 	// Setup
 	sut := NewDependency(DEP_NAME)
-	sut.CaptureWith(func (instance interface{}) error { return nil })
+	sut.CaptureWith(func (instance interface{}) bool { return true })
 	var ifc = NewDependencies() // Arbitrary interface
 
 	// Test

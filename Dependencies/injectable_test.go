@@ -1,7 +1,6 @@
 package dependencies
 
 import(
-	"fmt"
 	"strings"
 	"testing"
 
@@ -96,11 +95,11 @@ func TestThat_DependencyInjectable_Start_ReturnsNoError_WhenRequiredDepsInjected
 }
 
 // InjectDependencies(depinst ...DependencyInstanceIfc) error
-func TestThat_DependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFuncReturnsError(t *testing.T) {
+func TestThat_DependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFuncFails(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired().CaptureWith(
-			func (v interface{}) error { return fmt.Errorf("capture error!") },
+			func (v interface{}) bool { return false },
 		),
 	)
 	var ifc interface{}
@@ -117,11 +116,11 @@ func TestThat_DependencyInjectable_InjectDependencies_ReturnsError_WhenCaptureFu
 	if ! ExpectError(startErr, t) { return }
 }
 
-func TestThat_DependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncReturnsNoError(t *testing.T) {
+func TestThat_DependencyInjectable_InjectDependencies_ReturnsNoError_WhenCaptureFuncWorks(t *testing.T) {
 	// Setup
 	sut := NewDependencyInjectable(
 		NewDependency("requireddep").SetRequired().CaptureWith(
-			func (v interface{}) error { return nil },
+			func (v interface{}) bool { return true },
 		),
 	)
 	var ifc = NewDependencies() // Arbitrary interface to inject, could be anything non-nil
