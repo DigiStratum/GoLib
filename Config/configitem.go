@@ -1,8 +1,21 @@
 package config
 
+/*
+A support structure for Configuration Item declaration/handling
+
+We can supply ConfigItem's to NewConfigurable so that Configure() can be passed the custom handlers needed.
+
+TODO:
+ * Need test coverage for this mess
+
+*/
+
 import (
 	"fmt"
 )
+
+type CaptureFunc func (value string) error
+type ValidateFunc func (value string) bool
 
 type ConfigItemIfc interface {
 	GetName() string
@@ -10,11 +23,11 @@ type ConfigItemIfc interface {
 	IsRequired() bool
 
 	CanCapture() bool
-	CaptureWith(captureFunc func (value string) error) *configItem
+	CaptureWith(captureFunc CaptureFunc) *configItem
 	Capture(value string) error
 
 	CanValidate() bool
-	ValidateWith(validateFunc func (value string) bool) *configItem
+	ValidateWith(validateFunc ValidateFunc) *configItem
 	Validate(value string) bool
 
 	// TODO: Are there any useful type-conversion helpers for capture funcs?
@@ -24,8 +37,8 @@ type ConfigItemIfc interface {
 type configItem struct {
 	name		string
 	isRequired	bool
-	captureFunc	func (value string) error
-	validateFunc	func (value string) bool
+	captureFunc	CaptureFunc
+	validateFunc	ValidateFunc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -62,7 +75,7 @@ func (r *configItem) CanCapture() bool {
 	return nil != r.captureFunc
 }
 
-func (r *configItem) CaptureWith(captureFunc func (value string) error) *configItem {
+func (r *configItem) CaptureWith(captureFunc CaptureFunc) *configItem {
 	r.captureFunc = captureFunc
 	return r
 }
@@ -85,7 +98,7 @@ func (r *configItem) CanValidate() bool {
 	return nil != r.validateFunc
 }
 
-func (r *configItem) ValidateWith(validateFunc func (value string) bool) *configItem {
+func (r *configItem) ValidateWith(validateFunc ValidateFunc) *configItem {
 	r.validateFunc = validateFunc
 	return r
 }
