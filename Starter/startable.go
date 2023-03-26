@@ -11,6 +11,7 @@ TODO:
 */
 
 type StartableIfc interface {
+	AddStartables(startables ...StartableIfc) *Startable
 	Start() error
         IsStarted() bool
 }
@@ -27,18 +28,22 @@ type Startable struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewStartable(startables ...StartableIfc) *Startable {
-	subStartables := []StartableIfc{}
-	for _, startable := range startables {
-		subStartables = append(subStartables, startable)
+	s := Startable{
+		startables:		make([]StartableIfc, 0),
 	}
-	return &Startable{
-		startables:		subStartables,
-	}
+	return s.AddStartables(startables...)
 }
 
 // -------------------------------------------------------------------------------------------------
 // StartableIfc
 // -------------------------------------------------------------------------------------------------
+
+func (r *Startable) AddStartables(startables ...StartableIfc) *Startable {
+	for _, startable := range startables {
+		r.startables = append(r.startables, startable)
+	}
+	return r
+}
 
 // Start everything; nil error indicates success
 func (r *Startable) Start() error {

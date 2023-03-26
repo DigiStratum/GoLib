@@ -40,3 +40,8 @@ func (r *startableWrapper) IsStarted() bool {
 	return r.isStarted
 }
 
+// This is a no-op for startableWrapper which need not support nested sub-startables
+func (r *startableWrapper) AddStartables(startables ...StartableIfc) *Startable {
+	return nil
+}
+
