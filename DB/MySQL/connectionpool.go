@@ -80,7 +80,7 @@ const DEFAULT_MAX_IDLE = 60
 // -------------------------------------------------------------------------------------------------
 
 func NewConnectionPool(dsn db.DSN) *connectionPool {
-	cp := &connectionPool{
+	cp := connectionPool{
 		// Config Defaults
 		minConnections:		DEFAULT_MIN_CONNECTIONS,
 		maxConnections:		DEFAULT_MAX_CONNECTIONS,
@@ -91,7 +91,31 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 		leasedConnections:	NewLeasedConnections(),
 	}
 
-	return cp.init()
+	// Declare Dependencies
+	cp.DependencyInjectable = dep.NewDependencyInjectable(
+		dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
+			func (instance interface{}) bool {
+				var ok bool
+				cp.connectionFactory, ok = instance.(db.ConnectionFactoryIfc)
+				return ok
+			},
+		),
+	)
+
+	// Declare Configuration
+	cp.Configurable = cfg.NewConfigurable(
+		cfg.NewConfigItem("min_connections").CaptureWith(cp.captureConfigMinConnections),
+		cfg.NewConfigItem("max_connections").CaptureWith(cp.captureConfigMaxConnections),
+		cfg.NewConfigItem("max_idle").CaptureWith(cp.captureConfigMaxIdle),
+	)
+
+	// Starters
+	cp.Startable = starter.NewStartable(
+		cp.DependencyInjectable,
+		cp.Configurable,
+	)
+
+	return &cp
 }
 
 func ConnectionPoolFromIfc(i interface{}) (ConnectionPoolIfc, error) {
@@ -205,30 +229,6 @@ func (r *connectionPool) Configure(config cfg.ConfigIfc) error {
 // ConnectionPool
 // -------------------------------------------------------------------------------------------------
 
-func (r *connectionPool) init() *connectionPool {
-	// Declare Dependencies
-	r.DependencyInjectable = dep.NewDependencyInjectable(
-		dep.NewDependency("ConnectionFactory").SetRequired().CaptureWith(
-			r.captureDepConnectionFactory,
-		),
-	)
-
-	// Declare Configuration
-	r.Configurable = cfg.NewConfigurable(
-		cfg.NewConfigItem("min_connections").CaptureWith(r.captureConfigMinConnections),
-		cfg.NewConfigItem("max_connections").CaptureWith(r.captureConfigMaxConnections),
-		cfg.NewConfigItem("max_idle").CaptureWith(r.captureConfigMaxIdle),
-	)
-
-	// Starters
-	r.Startable = starter.NewStartable(
-		r.DependencyInjectable,
-		r.Configurable,
-	)
-
-	return r
-}
-
 // Config Capture Funcs
 // -----------------------------------------------
 
@@ -259,17 +259,6 @@ func (r *connectionPool) captureConfigMaxIdle(value string) error {
 	// Max seconds since lastActiveAt for leased connections: 1 <= max_idle
 	if r.maxIdle < 1 { r.maxIdle = 1 }
 	return nil
-}
-
-// Dependency Capture Funcs
-// -----------------------------------------------
-
-func (r *connectionPool) captureDepConnectionFactory(instance interface{}) error {
-	if nil != instance {
-		var ok bool
-		if r.connectionFactory, ok = instance.(db.ConnectionFactoryIfc); ok { return nil }
-	}
-	return fmt.Errorf("ConnectionPool.captureConnectionFactory() - instance is not a ConnectionFactoryIfc")
 }
 
 // Supporting funcs
