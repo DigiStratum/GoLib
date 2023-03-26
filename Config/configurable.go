@@ -22,6 +22,7 @@ type ConfigurableIfc interface {
 	// Our own interface
 	Configure(config ConfigIfc) error
 	GetMissingConfigs() []string
+	GetConfig() *Config
 }
 
 // Exported to support embedding
@@ -53,6 +54,8 @@ func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 
 // Just capture the provided configuration by default
 func (r *Configurable) Configure(config ConfigIfc) error {
+	// Disallow Configure() after we've already Started
+	if r.Startable.IsStarted() { return fmt.Errorf("Already started; Config is immutable now") }
 	r.config = NewConfig().MergeConfig(config)
 	return nil
 }
@@ -66,6 +69,12 @@ func (r *Configurable) GetMissingConfigs() []string {
 		missingConfigs = append(missingConfigs, name)
 	}
 	return missingConfigs
+}
+
+func (r *Configurable) GetConfig() *Config {
+	// Require Start() first to finalize Config
+	if ! r.Startable.IsStarted() { return nil }
+	return r.config
 }
 
 // -------------------------------------------------------------------------------------------------
