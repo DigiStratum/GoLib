@@ -21,6 +21,7 @@ type ConfigurableIfc interface {
 
 	// Our own interface
 	Configure(config ConfigIfc) error
+	HasMissingConfigs() bool
 	GetMissingConfigs() []string
 	GetConfig() *Config
 }
@@ -58,6 +59,11 @@ func (r *Configurable) Configure(config ConfigIfc) error {
 	if r.Startable.IsStarted() { return fmt.Errorf("Already started; Config is immutable now") }
 	r.config = NewConfig().MergeConfig(config)
 	return nil
+}
+
+// MissingConfigs as a bool!
+func (r *Configurable) HasMissingConfigs() bool {
+	return len(r.GetMissingConfigs()) > 0
 }
 
 // Verify that all required Configs are captured
