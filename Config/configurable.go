@@ -20,6 +20,7 @@ type ConfigurableIfc interface {
 	starter.StartableIfc
 
 	// Our own interface
+	AddConfigItems(configItems ...ConfigItemIfc) *Configurable
 	Configure(config ConfigIfc) error
 	HasMissingConfigs() bool
 	GetMissingConfigs() []string
@@ -38,20 +39,22 @@ type Configurable struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
-	declared := make(map[string]ConfigItemIfc)
-	for _, configItem := range configItems {
-		declared[configItem.GetName()] = configItem
-	}
-	return &Configurable{
+	c := Configurable{
 		Startable:	starter.NewStartable(),
-		declared:	declared,
+		declared:	make(map[string]ConfigItemIfc),
 		config:		NewConfig(),
 	}
+	return c.AddConfigItems(configItems...)
 }
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc
 // -------------------------------------------------------------------------------------------------
+
+func (r *Configurable) AddConfigItems(configItems ...ConfigItemIfc) *Configurable {
+	for _, configItem := range configItems { r.declared[configItem.GetName()] = configItem }
+	return r
+}
 
 // Just capture the provided configuration by default
 func (r *Configurable) Configure(config ConfigIfc) error {
