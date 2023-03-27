@@ -2,10 +2,13 @@ package dependencies
 
 /*
 
-DependencyInjectable is an interface with base implementation that allows any construct to embed the data
-and behaviors associated with being able to declare, receive, inspect, validate, discover, and utilize
-injected Dependencies.
+DependencyInjectable is an interface with base implementation that allows any construct to embed the
+data and behaviors associated with being able to declare, receive, inspect, validate, discover, and
+utilize injected Dependencies.
 
+TODO:
+ * Many methods are returning interfaces instead of structs. Is there a real need here? (there was a
+   little bit of circular thinking/handling on this during implementation)
 */
 
 import (
@@ -22,6 +25,7 @@ type DependencyInjectableIfc interface {
 	starter.StartableIfc
 
 	// Our own interface
+	AddDeclaredDependencies(deps ...DependencyIfc) *DependencyInjectable
 
 	// Injection & Retrieval
 	// Receive dependency injection from external source
@@ -96,6 +100,12 @@ func (r *DependencyInjectable) Start() error {
 // -------------------------------------------------------------------------------------------------
 // DependencyInjectableIfc
 // -------------------------------------------------------------------------------------------------
+
+// Add more Dependency declarations
+func (r *DependencyInjectable) AddDeclaredDependencies(deps ...DependencyIfc) *DependencyInjectable {
+	r.declared.Add(deps...)
+	return r
+}
 
 // What are all the declared Dependecies?
 func (r *DependencyInjectable) GetDeclaredDependencies() DependenciesIfc {
