@@ -9,6 +9,9 @@ utilize injected Dependencies.
 TODO:
  * Many methods are returning interfaces instead of structs. Is there a real need here? (there was a
    little bit of circular thinking/handling on this during implementation)
+ * Export a method to generate the error for missing required dependencies, call it from Start();
+   Currently Start() is doing this itself, but a client has to reimplement this if it wants to check
+   our state without Start()ing and still return a useful error.
 */
 
 import (
