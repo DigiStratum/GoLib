@@ -57,6 +57,7 @@ func (r *Configurable) AddConfigItems(configItems ...ConfigItemIfc) *Configurabl
 }
 
 // Just capture the provided configuration by default
+// Overrides should call this parent, and return error if this fails or for any validation problems
 func (r *Configurable) Configure(config ConfigIfc) error {
 	// Disallow Configure() after we've already Started
 	if r.Startable.IsStarted() { return fmt.Errorf("Already started; Config is immutable now") }
