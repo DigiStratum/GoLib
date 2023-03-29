@@ -101,15 +101,28 @@ func (r *Configurable) Start() error {
 		)
 	}
 
-	// Run capture funcs for all the declared configs
+	// For all the declared Config Items...
 	for name, configItem := range r.declared {
-		// If this dependency is declared and defines Capture Func...
-		if ! configItem.CanCapture() { continue }
+		// If this ConfigItem was not provided then move on
 		if ! r.config.Has(name) { continue }
-		// We only capture non-nil config value; TODO: is there a real scenario where we want to capture nil
+		// We only process non-nil config values; seemingly no use case to handle nil?
 		value := r.config.Get(name)
 		if nil == value { continue }
-		if err := configItem.Capture(*value); nil != err { return err }
+
+		// If this ConfigItem has a Validation Func...
+		if configItem.CanValidate() {
+			if ! configItem.Validate(*value) {
+				return fmt.Errorf(
+					"Configuration Item '%s' failed validation with value: '%s'",
+					name, *value,
+				)
+			}
+		}
+
+		// If this ConfigItem has a Capture Func...
+		if configItem.CanCapture() {
+			if err := configItem.Capture(*value); nil != err { return err }
+		}
 	}
 
 	return r.Startable.Start()
