@@ -33,10 +33,6 @@ type DependencyInjectableIfc interface {
 	// Injection & Retrieval
 	// Receive dependency injection from external source
 	InjectDependencies(depinst ...DependencyInstanceIfc) error
-	// Get the injected dependency matching name (default or any variant)
-	GetInstance(name string) interface{}
-	// Get the injected dependency matching name and specific variant
-	GetInstanceVariant(name, variant string) interface{}
 	// Have all required dependencies have been injected?
 	HasAllRequiredDependencies() bool
 
@@ -55,6 +51,18 @@ type DependencyInjectableIfc interface {
 	GetMissingDependencies() DependenciesIfc
 	// What Dependencies are injected, but unknown (undeclared) to us?
 	GetUnknownDependencies() DependenciesIfc
+
+	// Retrieval (Injected)
+	// Get the injected dependency matching name (default or any variant)
+	GetInstance(name string) interface{}
+	// Get the injected dependency matching name and specific variant
+	GetInstanceVariant(name, variant string) interface{}
+	// Get the injected, required Dependency Instances
+	GetRequiredDependencyInstances() *dependencyInstance[]
+	// Get the injected, optional Dependency Instances
+	GetOptionalDependencyInstances() *dependencyInstance[]
+	// Get the injected, unknown Dependency Instances
+	GetUnknownDependencyInstances() *dependencyInstance[]
 }
 
 // Exported to support embedding
@@ -233,8 +241,36 @@ func (r *DependencyInjectable) GetInstanceVariant(name, variant string) interfac
 }
 
 // Have all required dependencies have been injected?
-// TODO: Do we need this, or is StartableIfc.IsStarted() sufficient?
 func (r *DependencyInjectable) HasAllRequiredDependencies() bool {
 	return 0 == len(r.GetMissingDependencies().GetAllVariants())
+}
+
+// Get the injected, required Dependency Instances
+func (r *DependencyInjectable) GetrequiredDependencyInstances() *dependencyInstance[] {
+        return r.getDependencyInstances(r.GetRequiredDependencies())
+}
+
+// Get the injected, optional Dependency Instances
+func (r *DependencyInjectable) GetOptionalDependencyInstances() *dependencyInstance[] {
+        return r.getDependencyInstances(r.GetOptionalDependencies())
+}
+
+// Get the injected, unknown Dependency Instances
+func (r *DependencyInjectable) GetUnknownDependencyInstances() *dependencyInstance[] {
+        return r.getDependencyInstances(r.GetUnknownDependencies())
+}
+
+// Get the Dependency Instances for the given set of Dependencies
+func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) *dependencyInstance[] {
+        depInstances := make(*dependencyInstance[], 0)
+        for name, variants := range deps.GetAllVariants() {
+                for _, variant := range variants {
+                        depInstances = append(depInstances, NewDependencyInstance(
+				name,
+				r.GetInstanceVariant(name, variant).SetVariant(variant),
+                        )
+                }
+        }
+        return depInstances
 }
 
