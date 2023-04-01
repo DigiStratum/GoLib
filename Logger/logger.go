@@ -27,9 +27,9 @@ import (
 )
 
 type LoggerIfc interface {
-	SetMinLogLevel(minLogLevel LogLevel)
-	SetLogWriter(logWriter lw.LogWriterIfc)
-	LogTimestamp(logTimestamp bool)
+	SetMinLogLevel(minLogLevel LogLevel) *Logger
+	SetLogWriter(logWriter lw.LogWriterIfc) *Logger
+	LogTimestamp(logTimestamp bool) *Logger
 	Any(level LogLevel, format string, a ...interface{}) error
 	Crazy(format string, a ...interface{}) error
 	Trace(format string, a ...interface{}) error
@@ -45,6 +45,7 @@ type Logger struct {
 	minLogLevel	LogLevel		// The minimum logging level
 	logWriter	lw.LogWriterIfc		// The LogWriter we are going to use
 	logTimestamp	bool			// Add timestamps on the log output (default=true)
+	prefix		string			// Some prefix to contextualize these log messages
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -69,7 +70,7 @@ func GetLogger() *Logger {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-// Get a new (non-singleton)instance with a streamId meaningful to the caller (such as its runtime thread id)
+// Get a new (non-singleton) instance with a streamId meaningful to the caller (such as its runtime thread id)
 func NewLogger(streamId string) *Logger {
 	newLogger := Logger{
 		streamId:	streamId,
@@ -84,25 +85,41 @@ func NewLogger(streamId string) *Logger {
 // LoggerIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
+func (r *Logger) GetNewPrefixedLogger(prefix string) *Logger {
+	// Clone the state of the singleton to a new Logger with the prefix set
+	prefixedLogger := NewLogger(r.streamId).SetMinLogLevel(
+		r.minLogLevel,
+	).SetLogWriter(
+		r.logWriter,
+	).LogTimestamp(
+		r.logTimestamp,
+	)
+	prefixedLogger.prefix = prefix
+	return prefixedLogger
+}
+
 // Set the minimum log level
-func (r *Logger) SetMinLogLevel(minLogLevel LogLevel) {
+func (r *Logger) SetMinLogLevel(minLogLevel LogLevel) *Logger {
 	r.minLogLevel = minLogLevel
+	return r
 }
 
 // Replace the current LogWriter with something more to our liking
-func (r *Logger) SetLogWriter(logWriter lw.LogWriterIfc) {
+func (r *Logger) SetLogWriter(logWriter lw.LogWriterIfc) *Logger {
 	r.logWriter = logWriter
+	return r
 }
 
 // Set the logTimestamp state (defaults to true to enable timestamps in logger output)
-func (r *Logger) LogTimestamp(logTimestamp bool) {
+func (r *Logger) LogTimestamp(logTimestamp bool) *Logger {
 	r.logTimestamp = logTimestamp
+	return r
 }
 
 // Log some output; return a matching error for WARN|ERROR|FATAL, else nil
 func (r Logger) Any(level LogLevel, format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
-	logMsg := fmt.Sprintf("%5s %s", level.ToString(), msg)
+	logMsg := fmt.Sprintf("%5s %s%s", level.ToString(), r.prefix, msg)
 	if level >= r.minLogLevel {
 		// Send the log message to our LogWriter
 		timestamp := ""
