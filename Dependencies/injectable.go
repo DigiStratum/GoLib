@@ -58,11 +58,11 @@ type DependencyInjectableIfc interface {
 	// Get the injected dependency matching name and specific variant
 	GetInstanceVariant(name, variant string) interface{}
 	// Get the injected, required Dependency Instances
-	GetRequiredDependencyInstances() *dependencyInstance[]
+	GetRequiredDependencyInstances() *[]dependencyInstance
 	// Get the injected, optional Dependency Instances
-	GetOptionalDependencyInstances() *dependencyInstance[]
+	GetOptionalDependencyInstances() *[]dependencyInstance
 	// Get the injected, unknown Dependency Instances
-	GetUnknownDependencyInstances() *dependencyInstance[]
+	GetUnknownDependencyInstances() *[]dependencyInstance
 }
 
 // Exported to support embedding
@@ -131,21 +131,6 @@ func (r *DependencyInjectable) GetRequiredDependencies() DependenciesIfc {
 // What are just the optional Dependencies?
 func (r *DependencyInjectable) GetOptionalDependencies() DependenciesIfc {
 	return r.getFilteredDependencies(false)
-}
-
-func (r *DependencyInjectable) getFilteredDependencies(matchRequired bool) DependenciesIfc {
-	matches := NewDependencies()
-	// For each of the declared dependency names...
-	for name, variants := range r.declared.GetAllVariants() {
-		// For each of the variants...
-		for _, variant := range variants {
-			// Note the ones matching matchRequired
-			if matchRequired == r.declared.GetVariant(name, variant).IsRequired() {
-				matches.Add(NewDependency(name).SetVariant(variant))
-			}
-		}
-	}
-	return matches
 }
 
 // What Dependencies are Required that have not yet been injected?
@@ -246,31 +231,51 @@ func (r *DependencyInjectable) HasAllRequiredDependencies() bool {
 }
 
 // Get the injected, required Dependency Instances
-func (r *DependencyInjectable) GetrequiredDependencyInstances() *dependencyInstance[] {
+func (r *DependencyInjectable) GetRequiredDependencyInstances() *[]dependencyInstance {
         return r.getDependencyInstances(r.GetRequiredDependencies())
 }
 
 // Get the injected, optional Dependency Instances
-func (r *DependencyInjectable) GetOptionalDependencyInstances() *dependencyInstance[] {
+func (r *DependencyInjectable) GetOptionalDependencyInstances() *[]dependencyInstance {
         return r.getDependencyInstances(r.GetOptionalDependencies())
 }
 
 // Get the injected, unknown Dependency Instances
-func (r *DependencyInjectable) GetUnknownDependencyInstances() *dependencyInstance[] {
+func (r *DependencyInjectable) GetUnknownDependencyInstances() *[]dependencyInstance {
         return r.getDependencyInstances(r.GetUnknownDependencies())
 }
 
+// -------------------------------------------------------------------------------------------------
+// DependencyInjectable
+// -------------------------------------------------------------------------------------------------
+
+func (r *DependencyInjectable) getFilteredDependencies(matchRequired bool) DependenciesIfc {
+	matches := NewDependencies()
+	// For each of the declared dependency names...
+	for name, variants := range r.declared.GetAllVariants() {
+		// For each of the variants...
+		for _, variant := range variants {
+			// Note the ones matching matchRequired
+			if matchRequired == r.declared.GetVariant(name, variant).IsRequired() {
+				matches.Add(NewDependency(name).SetVariant(variant))
+			}
+		}
+	}
+	return matches
+}
+
 // Get the Dependency Instances for the given set of Dependencies
-func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) *dependencyInstance[] {
-        depInstances := make(*dependencyInstance[], 0)
+func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) *[]dependencyInstance {
+        depInstances := make([]dependencyInstance, 0)
         for name, variants := range deps.GetAllVariants() {
                 for _, variant := range variants {
-                        depInstances = append(depInstances, NewDependencyInstance(
+			depinst := NewDependencyInstance(
 				name,
-				r.GetInstanceVariant(name, variant).SetVariant(variant),
-                        )
+				r.GetInstanceVariant(name, variant),
+			).SetVariant(variant)
+                        depInstances = append(depInstances, *depinst)
                 }
         }
-        return depInstances
+        return &depInstances
 }
 
