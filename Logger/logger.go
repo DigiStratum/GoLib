@@ -27,6 +27,7 @@ import (
 )
 
 type LoggerIfc interface {
+	GetNewPrefixedLogger(prefix string) *Logger
 	SetMinLogLevel(minLogLevel LogLevel) *Logger
 	SetLogWriter(logWriter lw.LogWriterIfc) *Logger
 	LogTimestamp(logTimestamp bool) *Logger
