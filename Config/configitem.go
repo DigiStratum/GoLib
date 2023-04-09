@@ -7,7 +7,9 @@ We can supply ConfigItem's to NewConfigurable so that Configure() can be passed 
 
 TODO:
  * Need test coverage for this mess
-
+ * Add support for ConfigItem structures that are more than just a single name-value pair (as with a
+   Config.SubsetConfig("name")) to allow us to capture chunks of grouped configuration without
+   needing explicit mappings for each child element (the Validate/Capture func can deal with that!)
 */
 
 import (
