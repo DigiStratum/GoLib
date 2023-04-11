@@ -112,7 +112,9 @@ func (r Config) DereferenceString(str string) *string {
 // Dereference any values we have that %reference% keys in the referenceConfig
 // returns count of references substituted
 func (r *Config) Dereference(referenceConfig ConfigIfc) int {
-	if nil == referenceConfig { return 0 }
+	if nil == r { return 0 }
+	// If no referenceConfig is specified, just dereference against ourselves
+	if nil == referenceConfig { return r.Dereference(r) }
 	subs := 0
 	// For each of our key/value pairs...
 	it := r.GetIterator()
@@ -130,6 +132,8 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 
 // Dereference against a list of other referenceConfigs
 func (r *Config) DereferenceAll(referenceConfigs ...ConfigIfc) int {
+	// If no reference Configs provided, just self-Dereference
+	if 0 == len(referenceConfigs) { return r.Dereference(r) }
 	subs := 0
 	for _, referenceConfig := range referenceConfigs {
 		res := r.Dereference(referenceConfig)
