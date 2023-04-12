@@ -9,7 +9,7 @@ import(
 	"net/url"
 
 	log "github.com/DigiStratum/GoLib/Logger"
-	"github.com/DigiStratum/GoLib/Data/hashmap"
+	"github.com/DigiStratum/GoLib/Data/metadata"
 )
 
 // Http Request public interface
@@ -39,8 +39,8 @@ type HttpRequestIfc interface {
 	GetAcceptableLanguages() *[]string
 	getWeightedHeaderList(headerName string) *[]string
 	IsIdempotentMethod() bool
-	SetPathParameters(params *hashmap.HashMap)
-	GetPathParameters() *hashmap.HashMap
+	SetPathParameters(params metadata.MetadataIfc)
+	GetPathParameters() metadata.MetadataIfc
 }
 
 type httpRequest struct {
@@ -56,7 +56,7 @@ type httpRequest struct {
 	body		*string
 	bodyData	*HttpBodyData
 	context		HttpRequestContextIfc
-	pathParams	*hashmap.HashMap
+	pathParams	metadata.MetadataIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -196,12 +196,12 @@ func (r *httpRequest) IsIdempotentMethod() bool {
 }
 
 // Set the path parameters (should be endpointwrapper)
-func (r *httpRequest) SetPathParameters(params *hashmap.HashMap) {
+func (r *httpRequest) SetPathParameters(params metadata.MetadataIfc) {
 	r.pathParams = params
 }
 
 // Get the path parameters (should be endpoint implementation)
-func (r *httpRequest) GetPathParameters() *hashmap.HashMap {
+func (r *httpRequest) GetPathParameters() metadata.MetadataIfc {
 	return r.pathParams
 }
 
