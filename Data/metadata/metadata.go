@@ -8,7 +8,14 @@ Metadata is a mini-hashmap with a builder to support passing of an immutable DTO
 
 // Immutable Metadata DTO
 type MetadataIfc interface {
+	Has(name string) bool
 	Get(name string) string
+	GetNames() []string
+}
+
+type MetadataBuilderIfc interface {
+	Set(name, value string) *MetadataBuilder
+	Build() *metadata
 }
 
 type metadata struct {
@@ -38,7 +45,7 @@ func NewMetadataBuilder() *MetadataBuilder {
 }
 
 // -------------------------------------------------------------------------------------------------
-// MetadataBuilder
+// MetadataBuilderIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *MetadataBuilder) Set(name, value string) *MetadataBuilder {
@@ -56,8 +63,19 @@ func (r *MetadataBuilder) Build() *metadata {
 // MetadataIfc
 // -------------------------------------------------------------------------------------------------
 
+func (r *metadata) Has(name string) bool {
+	_, ok := r.data[name]
+	return ok
+}
+
 func (r *metadata) Get(name string) string {
 	if value, ok := r.data[name]; ok { return value }
 	return ""
+}
+
+func (r *metadata) GetNames() []string {
+	names := make([]string, 0)
+	for name, _ := range r.data { names = append(names, name) }
+	return names
 }
 
