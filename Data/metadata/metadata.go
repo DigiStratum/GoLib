@@ -4,6 +4,9 @@ package metadata
 
 Metadata is a mini-hashmap with a builder to support passing of an immutable DTO of name-value pairs
 
+TODO:
+ * Add support for JSON un|marshal to de|serialze
+
 */
 
 // Immutable Metadata DTO
@@ -11,53 +14,24 @@ type MetadataIfc interface {
 	// Return true if the Metadata has ALL of the named values, else false
 	Has(name ...string) bool
 	Get(name string) string
-	GetNames() []string
-}
+	List() []string
 
-type MetadataBuilderIfc interface {
-	Set(name, value string) *MetadataBuilder
-	Build() *metadata
+	// Package private
+	getMetadata() *metadata
 }
 
 type metadata struct {
 	data	map[string]string
 }
 
-// Metadata builder
-type MetadataBuilder struct {
-	built		bool
-	md		*metadata
-}
-
 // -------------------------------------------------------------------------------------------------
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func newMetadata() *metadata {
+func NewMetadata() *metadata {
 	return &metadata{
 		data:		make(map[string]string),
 	}
-}
-
-func NewMetadataBuilder() *MetadataBuilder {
-	return &MetadataBuilder{
-		md:	newMetadata(),
-	}
-}
-
-// -------------------------------------------------------------------------------------------------
-// MetadataBuilderIfc
-// -------------------------------------------------------------------------------------------------
-
-func (r *MetadataBuilder) Set(name, value string) *MetadataBuilder {
-	if r.built { return nil }
-	r.md.data[name] = value
-	return r
-}
-
-func (r *MetadataBuilder) Build() *metadata {
-	r.built = true
-	return r.md
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -77,9 +51,12 @@ func (r *metadata) Get(name string) string {
 	return ""
 }
 
-func (r *metadata) GetNames() []string {
+func (r *metadata) List() []string {
 	names := make([]string, 0)
 	for name, _ := range r.data { names = append(names, name) }
 	return names
 }
 
+func (r *metadata) getMetadata() *metadata {
+	return r
+}
