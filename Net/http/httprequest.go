@@ -1,8 +1,16 @@
 package http
 
-// TODO: Add support for builder pattern, or chaining, or "functional options":
-// ref: https://www.calhoun.io/using-functional-options-instead-of-method-chaining-in-go/
-// ref: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+/*
+An HTTP Request structure and programmatic interface to it.
+
+TODO:
+ * Add support for builder pattern, or chaining, or "functional options":
+ * Split setters off into a builder so that the Request becomes immutable, getters-only
+
+ref: https://www.calhoun.io/using-functional-options-instead-of-method-chaining-in-go/
+ref: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+
+*/
 
 import(
 	"strings"
@@ -16,29 +24,47 @@ import(
 type HttpRequestIfc interface {
 	GetProtocol() string
 	SetProtocol(protocol string)
+
 	GetHost() string
 	SetHost(host string)
+
 	GetRemoteAddr() string
 	SetRemoteAddr(remoteAddr string)
+
 	GetScheme() string
+	IsIdempotentMethod() bool
+
 	GetURL() string
 	SetURL(urlStr string)
+
 	GetMethod() string
 	SetMethod(method string)
+
 	GetURI() string
 	SetURI(uri string)
+
 	GetQueryString() string
 	SetQueryString(queryString string)
+
+	SetQueryParameters(params metadata.MetadataIfc)
+	GetQueryParameters() metadata.MetadataIfc
+
 	GetBody() *string
 	SetBody(body *string)
+
 	GetBodyData() *HttpBodyData
 	SetBodyData(bodyData *HttpBodyData)
+
 	GetContext() HttpRequestContextIfc
 	SetContext(context HttpRequestContextIfc)
+
 	GetHeaders() HttpHeadersIfc
+	SetHeaders(headers HttpHeadersIfc)
+
 	GetAcceptableLanguages() *[]string
+
 	getWeightedHeaderList(headerName string) *[]string
-	IsIdempotentMethod() bool
+
 	SetPathParameters(params metadata.MetadataIfc)
 	GetPathParameters() metadata.MetadataIfc
 }
@@ -52,6 +78,7 @@ type httpRequest struct {
 	method		string
 	uri		string
 	queryString	string
+	queryParams	metadata.MetadataIfc
 	headers		HttpHeadersIfc
 	body		*string
 	bodyData	*HttpBodyData
@@ -179,6 +206,11 @@ func (r *httpRequest) GetHeaders() HttpHeadersIfc {
 	return r.headers
 }
 
+// Set the Request Headers
+func (r *httpRequest) SetHeaders(headers HttpHeadersIfc) {
+	r.headers = headers
+}
+
 // Extract a list of languages from the Accept-Language header (if any)
 // ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
 func (r *httpRequest) GetAcceptableLanguages() *[]string {
@@ -203,6 +235,16 @@ func (r *httpRequest) SetPathParameters(params metadata.MetadataIfc) {
 // Get the path parameters (should be endpoint implementation)
 func (r *httpRequest) GetPathParameters() metadata.MetadataIfc {
 	return r.pathParams
+}
+
+// Set the query parameters
+func (r *httpRequest) SetQueryParameters(params metadata.MetadataIfc) {
+	r.queryParams = params
+}
+
+// Get the query parameters
+func (r *httpRequest) GetQueryParameters() metadata.MetadataIfc {
+	return r.queryParams
 }
 
 // -------------------------------------------------------------------------------------------------
