@@ -7,9 +7,7 @@ We can supply ConfigItem's to NewConfigurable so that Configure() can be passed 
 
 TODO:
  * Need test coverage for this mess
- * Add support for ConfigItem structures that are more than just a single name-value pair (as with a
-   Config.SubsetConfig("name")) to allow us to capture chunks of grouped configuration without
-   needing explicit mappings for each child element (the Validate/Capture func can deal with that!)
+ * Add support for type? All incoming config values are arbitrary strings, no type enforcement
 */
 
 import (
@@ -17,6 +15,7 @@ import (
 )
 
 type CaptureFunc func (value string) error
+type SubsetFunc func (config ConfigIfc) error
 type ValidateFunc func (value string) bool
 
 type ConfigItemIfc interface {
@@ -28,6 +27,10 @@ type ConfigItemIfc interface {
 	CaptureWith(captureFunc CaptureFunc) *configItem
 	Capture(value string) error
 
+	CanCaptureSubset() bool
+	CaptureSubsetWith(subsetFunc SubsetFunc) *configItem
+	CaptureSubset(config ConfigIfc) error
+
 	CanValidate() bool
 	ValidateWith(validateFunc ValidateFunc) *configItem
 	Validate(value string) bool
@@ -35,12 +38,12 @@ type ConfigItemIfc interface {
 	// TODO: Are there any useful type-conversion helpers for capture funcs?
 }
 
-// TODO: Add support for type? Everything is a string coming in...
 type configItem struct {
 	name		string
 	isRequired	bool
 	captureFunc	CaptureFunc
 	validateFunc	ValidateFunc
+	subsetFunc	SubsetFunc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -91,6 +94,29 @@ func (r *configItem) Capture(value string) error {
 	}
 
 	return r.captureFunc(value)
+}
+
+// Subsets
+// -----------------------------------------------
+
+func (r *configItem) CanCaptureSubset() bool {
+	return nil != r.subsetFunc
+}
+
+func (r *configItem) CaptureSubsetWith(subsetFunc SubsetFunc) *configItem {
+	r.subsetFunc = subsetFunc
+	return r
+}
+
+func (r *configItem) CaptureSubset(config ConfigIfc) error {
+	if ! r.CanCaptureSubset() {
+		return fmt.Errorf(
+			"No Subset Capture function is set for configItem: %s",
+			r.GetName(),
+		)
+	}
+
+	return r.subsetFunc(config)
 }
 
 // Validation

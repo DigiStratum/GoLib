@@ -123,6 +123,10 @@ func (r *Configurable) Start() error {
 		if configItem.CanCapture() {
 			if err := configItem.Capture(*value); nil != err { return err }
 		}
+		if configItem.CanCaptureSubset() {
+			subset := r.config.GetSubsetConfig(name)
+			if err := configItem.CaptureSubset(subset); nil != err { return err }
+		}
 	}
 
 	return r.Startable.Start()
