@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Process/startable"
 	"github.com/DigiStratum/GoLib/Data/maps"
 )
 
 // Implementation can consume injected DependencyInstanceIfc's
 type DependencyInjectableIfc interface {
 	// Embedded interface(s)
-	starter.StartableIfc
+	startable.StartableIfc
 
 	// Our own interface
 	AddDeclaredDependencies(deps ...DependencyIfc) *DependencyInjectable
@@ -67,7 +67,7 @@ type DependencyInjectableIfc interface {
 
 // Exported to support embedding
 type DependencyInjectable struct {
-	*starter.Startable
+	*startable.Startable
 
 	declared		*dependencies
 	injected		map[string]map[string]DependencyInstanceIfc
@@ -80,7 +80,7 @@ type DependencyInjectable struct {
 // Make a new one of these
 func NewDependencyInjectable(deps ...DependencyIfc) *DependencyInjectable {
 	return &DependencyInjectable{
-		Startable:	starter.NewStartable(),
+		Startable:	startable.NewStartable(),
 		declared:	NewDependencies(deps...),
 		injected:	make(map[string]map[string]DependencyInstanceIfc),
 	}

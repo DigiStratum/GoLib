@@ -11,13 +11,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 // Any type that implements ConfigurableIfc should be ready to receive configuration data one time as so:
 type ConfigurableIfc interface {
 	// Embedded interface(s)
-	starter.StartableIfc
+	startable.StartableIfc
 
 	// Our own interface
 	AddConfigItems(configItems ...ConfigItemIfc) *Configurable
@@ -29,7 +29,7 @@ type ConfigurableIfc interface {
 
 // Exported to support embedding
 type Configurable struct {
-	*starter.Startable
+	*startable.Startable
 	config		*Config
 	declared	map[string]ConfigItemIfc	// Key is ConfigItem.name for fast lookups
 }
@@ -40,7 +40,7 @@ type Configurable struct {
 
 func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 	c := Configurable{
-		Startable:	starter.NewStartable(),
+		Startable:	startable.NewStartable(),
 		declared:	make(map[string]ConfigItemIfc),
 		config:		NewConfig(),
 	}

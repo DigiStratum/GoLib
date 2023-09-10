@@ -22,12 +22,12 @@ import (
         awssdkcredentials "github.com/aws/aws-sdk-go/aws/credentials"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 type AWSHelperIfc interface {
 	// Embedded Interface(s)
-	starter.StartableIfc
+	startable.StartableIfc
 	cfg.ConfigurableIfc
 
 	// Out own interface
@@ -35,7 +35,7 @@ type AWSHelperIfc interface {
 }
 
 type aWSHelper struct {
-	*starter.Startable
+	*startable.Startable
 	*cfg.Configurable
 	awsSession		*awssdksession.Session
 	awsRegion		string
@@ -57,7 +57,7 @@ func NewAWSHelper() *aWSHelper {
 	)
 
 	// Make Startable
-	awsh.Startable = starter.NewStartable(
+	awsh.Startable = startable.NewStartable(
 		awsh.Configurable,
 	)
 

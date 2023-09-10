@@ -34,7 +34,7 @@ import (
 	"sync"
 	"strconv"
 
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Process/startable"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	dep "github.com/DigiStratum/GoLib/Dependencies"
 	"github.com/DigiStratum/GoLib/DB"
@@ -43,7 +43,7 @@ import (
 // A Connection Pool to maintain a set of one or more persistent connections to a MySQL database
 type ConnectionPoolIfc interface {
 	// Embedded interface(s)
-	starter.StartableIfc
+	startable.StartableIfc
 	dep.DependencyInjectableIfc
 	cfg.ConfigurableIfc
 
@@ -56,7 +56,7 @@ type ConnectionPoolIfc interface {
 
 type connectionPool struct {
 	// Embedded struct(s)
-	*starter.Startable
+	*startable.Startable
 	*dep.DependencyInjectable
 	*cfg.Configurable
 
@@ -110,7 +110,7 @@ func NewConnectionPool(dsn db.DSN) *connectionPool {
 	)
 
 	// Starters
-	cp.Startable = starter.NewStartable(
+	cp.Startable = startable.NewStartable(
 		cp.DependencyInjectable,
 		cp.Configurable,
 	)

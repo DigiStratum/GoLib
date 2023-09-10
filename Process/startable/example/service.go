@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 type ServiceIfc interface {
 	// Embedded interface(s)
-	starter.StartableIfc
+	startable.StartableIfc
 
 	// Our own interface
 	DoSomething() error
@@ -16,7 +16,7 @@ type ServiceIfc interface {
 
 type Service struct {
 	// Embedded properties
-	*starter.Startable
+	*startable.Startable
 
 	// Our own properties
 	message			string
@@ -24,7 +24,7 @@ type Service struct {
 
 func NewService() *Service {
 	return &Service{
-		Startable:	starter.NewStartable(),
+		Startable:	startable.NewStartable(),
 		message:	"Service Not Started",
 	}
 }

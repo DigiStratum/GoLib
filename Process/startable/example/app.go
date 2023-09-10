@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/DigiStratum/GoLib/Starter"
+	"github.com/DigiStratum/GoLib/Proces/startable"
 )
 
 type app struct {
-	*starter.Startable
+	*startable.Startable
 	svc		ServiceIfc
 	wsvc		*WrappableService
 }
@@ -19,9 +19,9 @@ func NewApp() *app {
 	}
 
 	// Declare Startables
-	a.Startable = starter.NewStartable(
+	a.Startable = startable.NewStartable(
 		a.svc,
-		starter.MakeStartable(
+		startable.MakeStartable(
 			func () error {
 				if a.wsvc.Init() { return nil }
 				return fmt.Errorf("Failed to Init() WrappableService")
