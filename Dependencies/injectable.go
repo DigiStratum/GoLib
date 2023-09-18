@@ -58,11 +58,11 @@ type DependencyInjectableIfc interface {
 	// Get the injected dependency matching name and specific variant
 	GetInstanceVariant(name, variant string) interface{}
 	// Get the injected, required Dependency Instances
-	GetRequiredDependencyInstances() *[]dependencyInstance
+	GetRequiredDependencyInstances() []dependencyInstance
 	// Get the injected, optional Dependency Instances
-	GetOptionalDependencyInstances() *[]dependencyInstance
+	GetOptionalDependencyInstances() []dependencyInstance
 	// Get the injected, unknown Dependency Instances
-	GetUnknownDependencyInstances() *[]dependencyInstance
+	GetUnknownDependencyInstances() []dependencyInstance
 }
 
 // Exported to support embedding
@@ -231,17 +231,17 @@ func (r *DependencyInjectable) HasAllRequiredDependencies() bool {
 }
 
 // Get the injected, required Dependency Instances
-func (r *DependencyInjectable) GetRequiredDependencyInstances() *[]dependencyInstance {
+func (r *DependencyInjectable) GetRequiredDependencyInstances() []dependencyInstance {
         return r.getDependencyInstances(r.GetRequiredDependencies())
 }
 
 // Get the injected, optional Dependency Instances
-func (r *DependencyInjectable) GetOptionalDependencyInstances() *[]dependencyInstance {
+func (r *DependencyInjectable) GetOptionalDependencyInstances() []dependencyInstance {
         return r.getDependencyInstances(r.GetOptionalDependencies())
 }
 
 // Get the injected, unknown Dependency Instances
-func (r *DependencyInjectable) GetUnknownDependencyInstances() *[]dependencyInstance {
+func (r *DependencyInjectable) GetUnknownDependencyInstances() []dependencyInstance {
         return r.getDependencyInstances(r.GetUnknownDependencies())
 }
 
@@ -265,7 +265,7 @@ func (r *DependencyInjectable) getFilteredDependencies(matchRequired bool) Depen
 }
 
 // Get the Dependency Instances for the given set of Dependencies
-func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) *[]dependencyInstance {
+func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) []dependencyInstance {
         depInstances := make([]dependencyInstance, 0)
         for name, variants := range deps.GetAllVariants() {
                 for _, variant := range variants {
@@ -276,6 +276,6 @@ func (r *DependencyInjectable) getDependencyInstances(deps DependenciesIfc) *[]d
                         depInstances = append(depInstances, *depinst)
                 }
         }
-        return &depInstances
+        return depInstances
 }
 
