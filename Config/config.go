@@ -18,6 +18,10 @@ In addition to the explicit imports below, we use the following classes from thi
  * HashMap
  * Json
 
+TODO:
+ * Add support for non-string values, including nested objects, to break name=value pair limits
+ * Add "configurator" Interface/boilerplate implementation(s) to fetch Config from various sources
+
 */
 
 import(
