@@ -35,6 +35,10 @@ type HelperIfc interface {
 	IsStatus5xx(httpStatus HttpStatus) bool
 	GetHttpStatusCode(httpStatus HttpStatus) int
 	GetHttpStatusText(httpStatus HttpStatus) string
+
+	// Request Method Helpers
+	GetHttpRequestMethodText(httpRequestMethod HttpRequestMethod) string
+	GetHttpRequestMethod(httpRequestMethod string) HttpRequestMethod
 }
 
 type helper struct { }
@@ -327,5 +331,44 @@ func (hlpr *helper) GetHttpStatusText(httpStatus HttpStatus) string {
 		case STATUS_HTTP_VERSION_NOT_SUPPORTED:		return "HTTP VERSION NOT SUPPORTED"
 	}
 	return "UNKNOWN STATUS CODE"
+}
+
+type HttpRequestMethod int
+
+const (
+	METHOD_UNKNOWN HttpRequestMethod = iota
+	METHOD_GET
+	METHOD_POST
+	METHOD_DELETE
+	METHOD_PATCH
+	METHOD_PUT
+	METHOD_HEAD
+	METHOD_OPTIONS
+)
+
+func (hlpr *helper) GetHttpRequestMethodText(httpRequestMethod HttpRequestMethod) string {
+        switch (httpRequestMethod) {
+                case METHOD_GET:	return "GET"
+                case METHOD_POST:	return "POST"
+                case METHOD_DELETE:	return "DELETE"
+                case METHOD_PATCH:	return "PATCH"
+                case METHOD_PUT:	return "PUT"
+                case METHOD_HEAD:	return "HEAD"
+                case METHOD_OPTIONS:	return "OPTIONS"
+	}
+	return "UNKNOWN REQUEST METHOD"
+}
+
+func (hlpr *helper) GetHttpRequestMethod(httpRequestMethod string) HttpRequestMethod {
+        switch (strings.ToUpper(httpRequestMethod)) {
+		case "GET":		return METHOD_GET
+		case "POST":		return METHOD_POST
+		case "DELETE":		return METHOD_DELETE
+		case "PATCH":		return METHOD_PATCH
+		case "PUT":		return METHOD_PUT
+		case "HEAD":		return METHOD_HEAD
+		case "OPTIONS":		return METHOD_OPTIONS
+	}
+	return METHOD_UNKNOWN
 }
 

@@ -37,8 +37,10 @@ type HttpRequestIfc interface {
 	GetURL() string
 	SetURL(urlStr string)
 
-	GetMethod() string
-	SetMethod(method string)
+	//GetMethod() string
+	//SetMethod(method string)
+	GetMethod() HttpRequestMethod
+	SetMethod(method HttpRequestMethod)
 
 	GetURI() string
 	SetURI(uri string)
@@ -75,7 +77,8 @@ type httpRequest struct {
 	remoteAddr	string
 	scheme		string
 	url		*url.URL
-	method		string
+	//method		string
+	method		HttpRequestMethod
 	uri		string
 	queryString	string
 	queryParams	metadata.MetadataIfc
@@ -149,12 +152,16 @@ func (r *httpRequest) SetURL(urlStr string) {
 	r.url = u
 }
 
-func (r *httpRequest) GetMethod() string {
-	return r.method
+func (r *httpRequest) GetMethod() HttpRequestMethod {
+	// Force result to be one of the enumerated set
+	hlpr := GetHelper()
+	return hlpr.GetHttpRequestMethod(hlpr.GetHttpRequestMethodText(r.method))
 }
 
-func (r *httpRequest) SetMethod(method string) {
-	r.method = method
+func (r *httpRequest) SetMethod(method HttpRequestMethod) {
+	// Force value to be one of the enumerated set
+	hlpr := GetHelper()
+	r.method = hlpr.GetHttpRequestMethod(hlpr.GetHttpRequestMethodText(method))
 }
 
 func (r *httpRequest) GetURI() string {
@@ -223,7 +230,7 @@ func (r *httpRequest) GetAcceptableLanguages() *[]string {
 
 // Quick check if the current request is expected to be idempotent in implementation
 func (r *httpRequest) IsIdempotentMethod() bool {
-	if "post" == r.method { return false }
+	if METHOD_POST == r.method { return false }
 	return true
 }
 
