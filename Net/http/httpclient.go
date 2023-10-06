@@ -4,7 +4,10 @@ package http
 
 Configurable, reusable client for making HTTP Requests
 
-TODO:
+REF:
+ * https://pkg.go.dev/net/http
+
+ TODO:
  * Can we use Go Routines to set up an async pool of sorts so that we can have multiple requests in
    flight?
 */
@@ -22,38 +25,42 @@ type HttpClientIfc interface {
 }
 
 type httpClient struct {
+	client			*gohttp.Client
 }
 
 func NewHttpClient() *httpClient {
-	r := httpClient{}
+	r := httpClient{
+		client:		&gohttp.Client{
+			transport:	&gohttp.Transport{
+				IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
+				DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
+			},
+		},
+	}
 	return &r
 }
 
+// Initialize a request/client, fire it off, get the response, and transform it back to httpResponse
 func (r *httpClient) GetRequestResponse(request HttpRequestIfc) (*httpResponse, error) {
-	// FIXME: Take the request details, populate net/http, fire off the request, get the response, and transform it back to httpResponse.
 
-	// TODO: Accept any sort of config details from receiver such as timeout settings and override defaults
+	// Transform the Request structure
+	request, err := r.fromHttpRequest(httpRequest)
+	if nil != err { return nil, err }
 
-	// TODO: Transport & Client should be created once and reused; this means that either
-	// HttpClient itself should be a singleton, or at least have an extended lifecycle with
-	// these bits configured during the initialization phase.
+	// Make the request and capture the response
+	response, err := client.Do(req)
+	if nil != err { return nil, err }
 
-	// ref: https://pkg.go.dev/net/http
-	transport := &gohttp.Transport{
-		//MaxIdleConns:       10,
-		//IdleConnTimeout:    30 * time.Second,
-		//DisableCompression: true,
-		IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
-		DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
-	}
+	// Transform the Response structure
+	httpResponse, err := r.toHttpResponse(response)
 
+	returun httpResponse, err
+}
 
-	client := &gohttp.Client{
-		//CheckRedirect: redirectPolicyFunc,
-		Transport: transport,
-	}
+// Data transform from our own HttpRequestIfc to Go net/http::Request
+func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Request, error) {
 	hlpr := GetHelper()
-	clientReq, err := http.NewRequest(
+	request, err := http.NewRequest(
 		hlpr.GetHttpRequestMethodText(request.GetMethod()),
 		request.GetURL(),
 		nil,
@@ -63,21 +70,16 @@ func (r *httpClient) GetRequestResponse(request HttpRequestIfc) (*httpResponse, 
 	headers := request.GetHeaders()
 	headerNames := headers.GetHeaderNames()
 	for _, headerName := range *headerNames {
-		//req.Header.Add("If-None-Match", `W/"wyzzy"`)
-		req.Header.Add(headerName, headers.Get(headerName))
+		request.Header.Add(headerName, headers.Get(headerName))
 	}
 
-	resp, err := client.Do(req)
-	/*
-	switch (request.GetMethod()) {
-		// Return an internal error instead of 400 response as if from server to clarify error origin
-		case METHOD_GET:
-			// FIXME - bring in all the other juicy details from the request structure as well
-			// TODO: Capture the response
-			result, err := http.Get(request.GetURL())
-	}
-
-	*/
-	return nil, fmt.Errorf("Unknown Request Method")
+	return &request, nil
 }
+
+// Data transform to our own HttpResponseIfc from Go net/http::Response
+func (r *httpClient) toHttpResponse(response gohttp.Response) (*httpResponse, error) {
+	// FIXME: transform resp into an HttpResponseIfc
+	return nil, nil
+}
+
 
