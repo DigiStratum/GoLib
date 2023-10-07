@@ -35,6 +35,7 @@ type HelperIfc interface {
 	IsStatus5xx(httpStatus HttpStatus) bool
 	GetHttpStatusCode(httpStatus HttpStatus) int
 	GetHttpStatusText(httpStatus HttpStatus) string
+	GetHttpStatus(httpStatusCode int) HttpStatus
 
 	// Request Method Helpers
 	GetHttpRequestMethodText(httpRequestMethod HttpRequestMethod) string
@@ -202,7 +203,8 @@ func (hlpr *helper) IsStatus5xx(httpStatus HttpStatus) bool {
 }
 
 const (
-	STATUS_CONTINUE	HttpStatus = iota
+	STATUS_UNKNOWN HttpStatus = iota
+	STATUS_CONTINUE
 	STATUS_SWITCHING_PROTOCOLS
 	STATUS_OK
 	STATUS_CREATED
@@ -331,6 +333,51 @@ func (hlpr *helper) GetHttpStatusText(httpStatus HttpStatus) string {
 		case STATUS_HTTP_VERSION_NOT_SUPPORTED:		return "HTTP VERSION NOT SUPPORTED"
 	}
 	return "UNKNOWN STATUS CODE"
+}
+
+func (hlpr *helper) GetHttpStatus(httpStatusCode int) HttpStatus {
+	switch (httpStatusCode) {
+		case 100: return STATUS_CONTINUE
+		case 101: return STATUS_SWITCHING_PROTOCOLS
+		case 200: return STATUS_OK
+		case 201: return STATUS_CREATED
+		case 202: return STATUS_ACCEPTED
+		case 203: return STATUS_NON_AUTHORITATIVE_INFORMATION
+		case 204: return STATUS_NO_CONTENT
+		case 205: return STATUS_RESET_CONTENT
+		case 206: return STATUS_PARTIAL_CONTENT
+		case 300: return STATUS_MULTIPLE_CHOICES
+		case 301: return STATUS_MOVED_PERMANENTLY
+		case 302: return STATUS_FOUND
+		case 303: return STATUS_SEE_OTHER
+		case 304: return STATUS_NOT_MODIFIED
+		case 305: return STATUS_USE_PROXY
+		case 307: return STATUS_TEMPORARY_REDIRECT
+		case 400: return STATUS_BAD_REQUEST
+		case 401: return STATUS_UNAUTHORIZED
+		case 403: return STATUS_FORBIDDEN
+		case 404: return STATUS_NOT_FOUND
+		case 405: return STATUS_METHOD_NOT_ALLOWED
+		case 406: return STATUS_NOT_ACCEPTABLE
+		case 407: return STATUS_PROXY_AUTHENTICATION_REQUIRED
+		case 408: return STATUS_REQUEST_TIMEOUT
+		case 409: return STATUS_CONFLICT
+		case 410: return STATUS_GONE
+		case 411: return STATUS_LENGTH_REQUIRED
+		case 412: return STATUS_PRECONDITION_FAILED
+		case 413: return STATUS_REQUEST_ENTITY_TOO_LARGE
+		case 414: return STATUS_REQUEST_URI_TOO_LONG
+		case 415: return STATUS_UNSUPPORTED_MEDIA_TYPE
+		case 416: return STATUS_REQUESTED_RANGE_NOT_SATISFIABLE
+		case 417: return STATUS_EXPECTATION_FAILED
+		case 500: return STATUS_INTERNAL_SERVER_ERROR
+		case 501: return STATUS_NOT_IMPLEMENTED
+		case 502: return STATUS_BAD_GATEWAY
+		case 503: return STATUS_SERVICE_UNAVAILABLE
+		case 504: return STATUS_GATEWAY_TIMEOUT
+		case 505: return STATUS_HTTP_VERSION_NOT_SUPPORTED
+	}
+	return STATUS_UNKNOWN
 }
 
 type HttpRequestMethod int
