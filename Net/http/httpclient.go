@@ -13,12 +13,13 @@ REF:
 */
 
 import(
-	"fmt"
+	//"fmt"
+	"time"
 	gohttp "net/http"
 )
 
-const CLIENT_DEFAULT_TIMEOUT_IDLE		30
-const CLIENT_DEFAULT_COMPRESSION_DISABLE	false
+const CLIENT_DEFAULT_TIMEOUT_IDLE =		30
+const CLIENT_DEFAULT_COMPRESSION_DISABLE =	false
 
 type HttpClientIfc interface {
 	GetRequestResponse(request HttpRequestIfc) (*httpResponse, error)
@@ -31,7 +32,7 @@ type httpClient struct {
 func NewHttpClient() *httpClient {
 	r := httpClient{
 		client:		&gohttp.Client{
-			transport:	&gohttp.Transport{
+			Transport:	&gohttp.Transport{
 				IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
 				DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
 			},
@@ -41,45 +42,49 @@ func NewHttpClient() *httpClient {
 }
 
 // Initialize a request/client, fire it off, get the response, and transform it back to httpResponse
-func (r *httpClient) GetRequestResponse(request HttpRequestIfc) (*httpResponse, error) {
+func (r *httpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpResponse, error) {
 
 	// Transform the Request structure
 	request, err := r.fromHttpRequest(httpRequest)
 	if nil != err { return nil, err }
 
 	// Make the request and capture the response
-	response, err := client.Do(req)
+	response, err := r.client.Do(request)
 	if nil != err { return nil, err }
 
 	// Transform the Response structure
 	httpResponse, err := r.toHttpResponse(response)
 
-	returun httpResponse, err
+	return httpResponse, err
 }
 
 // Data transform from our own HttpRequestIfc to Go net/http::Request
 func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Request, error) {
 	hlpr := GetHelper()
-	request, err := http.NewRequest(
-		hlpr.GetHttpRequestMethodText(request.GetMethod()),
-		request.GetURL(),
+	request, err := gohttp.NewRequest(
+		hlpr.GetHttpRequestMethodText(httpRequest.GetMethod()),
+		httpRequest.GetURL(),
 		nil,
 	)
+	if nil != err { return nil, err }
 
 	// Set up request headers
-	headers := request.GetHeaders()
+	headers := httpRequest.GetHeaders()
 	headerNames := headers.GetHeaderNames()
 	for _, headerName := range *headerNames {
 		request.Header.Add(headerName, headers.Get(headerName))
 	}
 
-	return &request, nil
+	return request, nil
 }
 
 // Data transform to our own HttpResponseIfc from Go net/http::Response
-func (r *httpClient) toHttpResponse(response gohttp.Response) (*httpResponse, error) {
+func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
 	// FIXME: transform resp into an HttpResponseIfc
-	return nil, nil
+	hlpr := GetHelper()
+	httpResponse := NewHttpResponse()
+	httpResponse.SetStatus(hlpr.GetHttpStatus(response.StatusCode))
+	return httpResponse, nil
 }
 
 
