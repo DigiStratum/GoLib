@@ -81,6 +81,7 @@ func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 // Data transform to our own HttpResponseIfc from Go net/http::Response
 func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
 	hlpr := GetHelper()
+
 	httpResponse := NewHttpResponse()
 	httpResponse.SetStatus(hlpr.GetHttpStatus(response.StatusCode))
 
@@ -94,6 +95,8 @@ func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 	httpResponse.SetHeaders(httpResponseHeaders)
 
 	// TODO: Transform response body
+	if response.ContentLength > 0 {
+	}
 
 	return httpResponse, nil
 }

@@ -12,6 +12,7 @@ type HttpResponseIfc interface {
 
 type httpResponse struct {
 	status		HttpStatus
+	// TODO:	add protocol version which is part of the server response, NOT in headers!
 	headers		HttpHeadersIfc
 	body		*string
 }
