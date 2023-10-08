@@ -7,6 +7,7 @@ type HttpResponseIfc interface {
 	GetStatus() HttpStatus
 	SetStatus(status HttpStatus)
 	GetHeaders() HttpHeadersIfc
+	SetHeaders(headers HttpHeadersIfc)
 }
 
 type httpResponse struct {
@@ -47,5 +48,9 @@ func (r *httpResponse) SetStatus(status HttpStatus) {
 
 func (r *httpResponse) GetHeaders() HttpHeadersIfc {
 	return r.headers
+}
+
+func (r *httpResponse) SetHeaders(headers HttpHeadersIfc) {
+	r.headers = headers
 }
 

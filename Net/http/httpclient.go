@@ -80,10 +80,21 @@ func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 
 // Data transform to our own HttpResponseIfc from Go net/http::Response
 func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
-	// FIXME: transform resp into an HttpResponseIfc
 	hlpr := GetHelper()
 	httpResponse := NewHttpResponse()
 	httpResponse.SetStatus(hlpr.GetHttpStatus(response.StatusCode))
+
+	// Transform response headers
+	httpResponseHeaders := NewHttpHeaders()
+	for name, values := range response.Header {
+		for _, value := range values {
+			httpResponseHeaders.Add(name, value)
+		}
+	}
+	httpResponse.SetHeaders(httpResponseHeaders)
+
+	// TODO: Transform response body
+
 	return httpResponse, nil
 }
 
