@@ -2,73 +2,112 @@ package version
 
 /*
 
-Semantic Versioning (AKA SEMVER) representation with compararison methods.
+Semantic Versioning (AKA SEMVER) representation
 
-We strictly support major.minor.patch version scheme in accordance with accepted norms around
-SEMVER. In theory, we could also support any number of sub-version nodes, however this complicates
-the semantics of the versioning scheme unnecessarily for purposes of SEMVER; a different versioning
-scheme should be a different interface altogether.
-
-Our comparison methods offer a couple different coverages. The main Compare() compares the entire
-version string for <=>. However we also have support for CompareMajor() which just checks <=> for
-two versions being within the same major version (i.e. minor & patch do not matter), or
-CompareMajorMinor() to check <=> for two within the same major.minor version. This is important to
-be clear, in accordance with SEMVER, that a versioned interface is compatible (or not) for example,
-with version N.* or version N+, or that an update is needed for version N-, etc. The same applies to
-major.minor comparisons where we want to check N.M.*, N.M+, or N.M-. Use the Compare() function for
-exact versio (major.minor.patch) comparisons.
-
-TODO:
- * Consider options to standardize the interface of comparison function(s) for different versioning
-   schemes. If we can come up with some sort of scheme where, say, the comparison version is
-   specified as some sort of matcher string (e.g. "1.2.*") instead of some version scheme specific
-   calling notation, then we can standardize a VersionIfc interface such that SemVer is but one of
-   many possible versioning scheme implementations that we can implement. Note that the interface
-   would also need to indicate which scheme is in use so that comparability is determinable.
+We support major.minor.patch version scheme in accordance with accepted norms around SEMVER.
 
 */
 
 import (
 	"fmt"
 	"strings"
+	"strconv"
 )
 
 type SemVerIfc interface {
-	ToString() string
+	// Embeded Interface(s)
+	VersionIfc
 
-	// TODO
-	// Compare our version to another; return -1 if ours < other, 0 if ours ==, 1 if ours >
-	// Compare(semver SemVerIfc) int
-	// Compare our version MAJOR to another; return -1 if ours < other, 0 if ours ==, 1 if ours >
-	// CompareMajor(semver SemVerIfc) int
-	// Compare our version MAJOR.MINOR to another; return -1 if ours < other, 0 if ours ==, 1 if ours >
-	// CompareMajorMinor(semver SemVerIfc) int
+	// Our own interface
+	GetVersionMajor() int
+	GetVersionMinor() int
+	GetVersionPatch() int
 }
 
 type semver struct {
-	major		*int
-	minor		*int
-	patch		*int
+	version		string
+	major		int
+	minor		int
+	patch		int
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory functions
+// -------------------------------------------------------------------------------------------------
+
 func NewSemVer(version string) *semver {
-	// TODO: Parse the version string into major.minor.patch parts
-	r := semver{}
+	r := semver{
+		version:	version,
+	}
+
+	// Parse the version string into major.minor.patch parts
+	versionParts := strings.Split(version, ".")
+	if (len(versionParts) == 0) || (len(versionParts) > 3) { return nil }
+	var err error
+	r.major, err = strconv.Atoi(versionParts[0]);
+	if nil != err { return nil }
+	if len(versionParts) > 1 {
+		r.minor, err = strconv.Atoi(versionParts[1]);
+		if nil != err { return nil }
+		if len(versionParts) > 2 {
+			r.patch, err = strconv.Atoi(versionParts[2]);
+			if nil != err { return nil }
+		}
+	}
+
 	return &r
 }
 
-func (r *semver) ToString() string {
+// -------------------------------------------------------------------------------------------------
+// VersionIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *semver) GetVersion() string {
 	if nil == r { return "" }
-	var sb strings.Builder
-	if nil != r.major {
-		sb.WriteString(fmt.Sprintf("%d", *r.major))
-		if nil != r.minor {
-			sb.WriteString(fmt.Sprintf(".%d", *r.minor))
-			if nil != r.patch{
-				sb.WriteString(fmt.Sprintf(".%d", *r.patch))
-			}
-		}
+	return r.version
+}
+
+func (r *semver) GetScheme() string {
+	return "SEMVER"
+}
+
+// Compare our version to another; return -1 if ours < other, 0 if ours ==, 1 if ours >;
+// If versions are not comparable (i.e. mismatched Scheme), then return 0 + non-nil error
+func (r *semver) Compare(version VersionIfc) (int, error) {
+	if version.GetScheme() != r.GetScheme() {
+		return 0, fmt.Errorf("Version scheme mismatch, cannot compare!")
 	}
-	return sb.String()
+
+	v, ok := version.(SemVerIfc)
+	if ! ok {
+		return 0, fmt.Errorf("Version does not implement SemVerIfc")
+	}
+
+	// If Major.Minor.Patch are == for both, then 0!
+	if r.GetVersionMajor() == v.GetVersionMajor() {
+		if r.GetVersionMinor() == v.GetVersionMinor() {
+			if r.GetVersionPatch() == v.GetVersionPatch() {
+				return 0, nil
+			} else if r.GetVersionPatch() < v.GetVersionPatch() { return -1, nil }
+		} else if r.GetVersionMinor() < v.GetVersionMinor() { return -1, nil }
+	} else if r.GetVersionMajor() < v.GetVersionMajor() { return -1, nil }
+
+	return 1, nil
+}
+
+// -------------------------------------------------------------------------------------------------
+// SemVerIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *semver) GetVersionMajor() int {
+	return r.major
+}
+
+func (r *semver) GetVersionMinor() int {
+	return r.minor
+}
+
+func (r *semver) GetVersionPatch() int {
+	return r.patch
 }
 
