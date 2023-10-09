@@ -1,5 +1,9 @@
 package http
 
+import (
+	ver "github.com/DigiStratum/GoLib/Version"
+)
+
 // HTTP Response public interface
 type HttpResponseIfc interface {
 	GetBody() *string
@@ -11,10 +15,10 @@ type HttpResponseIfc interface {
 }
 
 type httpResponse struct {
-	status		HttpStatus
-	// TODO:	add protocol version which is part of the server response, NOT in headers!
-	headers		HttpHeadersIfc
-	body		*string
+	status			HttpStatus
+	protocolVersion		ver.VersionIfc
+	headers			HttpHeadersIfc
+	body			*string
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -47,6 +51,14 @@ func (r *httpResponse) SetStatus(status HttpStatus) {
 	r.status = status
 }
 
+func (r *httpResponse) GetProtocolVersion() ver.VersionIfc{
+	return r.protocolVersion
+}
+
+func (r *httpResponse) SetProtocolVersion(version string) {
+	if v := ver.NewMajorMinor(version); nil != v { r.protocolVersion = v }
+}
+
 func (r *httpResponse) GetHeaders() HttpHeadersIfc {
 	return r.headers
 }
@@ -54,4 +66,5 @@ func (r *httpResponse) GetHeaders() HttpHeadersIfc {
 func (r *httpResponse) SetHeaders(headers HttpHeadersIfc) {
 	r.headers = headers
 }
+
 

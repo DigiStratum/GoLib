@@ -13,7 +13,7 @@ REF:
 */
 
 import(
-	//"fmt"
+	"fmt"
 	"time"
 	gohttp "net/http"
 )
@@ -84,6 +84,12 @@ func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 
 	httpResponse := NewHttpResponse()
 	httpResponse.SetStatus(hlpr.GetHttpStatus(response.StatusCode))
+
+	// Capture the protocol version from the server response
+	httpResponse.SetProtocolVersion(
+		fmt.Sprintf("%d.%d", response.ProtoMajor, response.ProtoMinor),
+	)
+	// TODO: capture HTTP vs. HTTPS protocol from response.Proto as well
 
 	// Transform response headers
 	httpResponseHeaders := NewHttpHeaders()
