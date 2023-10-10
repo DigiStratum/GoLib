@@ -89,7 +89,6 @@ func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 	httpResponse.SetProtocolVersion(
 		fmt.Sprintf("%d.%d", response.ProtoMajor, response.ProtoMinor),
 	)
-	// TODO: capture HTTP vs. HTTPS protocol from response.Proto as well
 
 	// Transform response headers
 	httpResponseHeaders := NewHttpHeaders()
