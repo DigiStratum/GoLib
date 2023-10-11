@@ -6,6 +6,9 @@ import (
 
 // HTTP Response public interface
 type HttpResponseIfc interface {
+	GetRequest() HttpRequestIfc
+	SetRequest(httpRequest HttpRequestIfc)
+
 	// Body supports any media type, text or binary, so []byte is the common storage structure
 	GetBinBody() *[]byte
 	SetBinBody(body *[]byte)
@@ -17,6 +20,9 @@ type HttpResponseIfc interface {
 	// Status is a code, but only specific, standards based statuses are supported
 	GetStatus() HttpStatus
 	SetStatus(status HttpStatus)
+
+	GetProtocolVersion() ver.VersionIfc
+	SetProtocolVersion(version string)
 
 	GetHeaders() HttpHeadersIfc
 	SetHeaders(headers HttpHeadersIfc)
@@ -98,7 +104,7 @@ func (r *httpResponse) SetStatus(status HttpStatus) {
 	r.status = status
 }
 
-func (r *httpResponse) GetProtocolVersion() ver.VersionIfc{
+func (r *httpResponse) GetProtocolVersion() ver.VersionIfc {
 	return r.protocolVersion
 }
 

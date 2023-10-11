@@ -13,6 +13,7 @@ REF:
 */
 
 import(
+	"io"
 	"fmt"
 	"time"
 	gohttp "net/http"
@@ -101,6 +102,23 @@ func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 
 	// TODO: Transform response body
 	if response.ContentLength > 0 {
+		readbuf := make([]byte, 65536)
+		// TODO: We should protect ourselves here with a reasonable default max, and allow
+		// consumer to override; don't just allow whatever response size to consume all
+		// available memory!
+		bodybuf := make([]byte, response.ContentLength)
+		var err error
+		var readlen int
+		var pos int64
+		for ; pos < response.ContentLength; pos += int64(readlen) {
+			readlen, err = response.Body.Read(bodybuf)
+			// EOF means we're done. readlen *should* never be
+			// 0, but trap just in case to prevent perpetual loop
+			if (io.EOF == err) || (0 == readlen) { break }
+			if nil != err { return nil, err }
+			copy(bodybuf[pos:], readbuf[0:readlen - 1])
+		}
+		httpResponse.SetBinBody(&bodybuf)
 	}
 
 	return httpResponse, nil
