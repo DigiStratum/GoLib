@@ -10,6 +10,8 @@ REF:
  TODO:
  * Can we use Go Routines to set up an async pool of sorts so that we can have multiple requests in
    flight?
+ * Make Configurable to override defaults
+
 */
 
 import(
@@ -21,6 +23,7 @@ import(
 
 const CLIENT_DEFAULT_TIMEOUT_IDLE =		30
 const CLIENT_DEFAULT_COMPRESSION_DISABLE =	false
+const CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB =	10240
 
 type HttpClientIfc interface {
 	GetRequestResponse(request HttpRequestIfc) (*httpResponse, error)
@@ -28,7 +31,12 @@ type HttpClientIfc interface {
 
 type httpClient struct {
 	client			*gohttp.Client
+	maxbody			int64
 }
+
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
 
 func NewHttpClient() *httpClient {
 	r := httpClient{
@@ -38,9 +46,14 @@ func NewHttpClient() *httpClient {
 				DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
 			},
 		},
+		maxbody:	int64(CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB * 1024),
 	}
 	return &r
 }
+
+// -------------------------------------------------------------------------------------------------
+// HttpClientIfc
+// -------------------------------------------------------------------------------------------------
 
 // Initialize a request/client, fire it off, get the response, and transform it back to httpResponse
 func (r *httpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpResponse, error) {
@@ -100,12 +113,18 @@ func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 	}
 	httpResponse.SetHeaders(httpResponseHeaders)
 
-	// TODO: Transform response body
+	// Transform response body
 	if response.ContentLength > 0 {
+		// Don't just allow any response size to consume all available memory!
+		if response.ContentLength > r.maxbody {
+			return nil, fmt.Errorf(
+				"Response body length (%d) > max (%d)",
+				response.ContentLength,
+				r.maxbody,
+			)
+		}
+
 		readbuf := make([]byte, 65536)
-		// TODO: We should protect ourselves here with a reasonable default max, and allow
-		// consumer to override; don't just allow whatever response size to consume all
-		// available memory!
 		bodybuf := make([]byte, response.ContentLength)
 		var err error
 		var readlen int
