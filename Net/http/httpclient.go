@@ -19,6 +19,9 @@ import(
 	"fmt"
 	"time"
 	gohttp "net/http"
+
+	"github.com/DigiStratum/GoLib/Process/startable"
+	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 const CLIENT_DEFAULT_TIMEOUT_IDLE =		30
@@ -26,10 +29,21 @@ const CLIENT_DEFAULT_COMPRESSION_DISABLE =	false
 const CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB =	10240
 
 type HttpClientIfc interface {
+	// Embedded interface(s)
+	cfg.ConfigurableIfc
+	startable.StartableIfc
+
+	// Our own interface
 	GetRequestResponse(request HttpRequestIfc) (*httpResponse, error)
 }
 
-type httpClient struct {
+// Exported to support embedding
+type HttpClient struct {
+	// Embedded struct(s)
+	*cfg.Configurable
+	*startable.Startable
+
+	// Our own properties
 	client			*gohttp.Client
 	maxbody			int64
 }
@@ -38,8 +52,8 @@ type httpClient struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewHttpClient() *httpClient {
-	r := httpClient{
+func NewHttpClient() *HttpClient {
+	r := HttpClient{
 		client:		&gohttp.Client{
 			Transport:	&gohttp.Transport{
 				IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
@@ -48,6 +62,17 @@ func NewHttpClient() *httpClient {
 		},
 		maxbody:	int64(CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB * 1024),
 	}
+
+	// TODO: Some way for default values in ConfigurableIfc to avoid
+	// the organizational split defaults above and overrides below
+	r.Configurable = cfg.NewConfigurable(
+	)
+
+	// Declare Starter funcs
+	r.Startable = startable.NewStartable(
+		r.Configurable,
+	)
+
 	return &r
 }
 
@@ -56,7 +81,7 @@ func NewHttpClient() *httpClient {
 // -------------------------------------------------------------------------------------------------
 
 // Initialize a request/client, fire it off, get the response, and transform it back to httpResponse
-func (r *httpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpResponse, error) {
+func (r *HttpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpResponse, error) {
 
 	// Transform the Request structure
 	request, err := r.fromHttpRequest(httpRequest)
@@ -73,7 +98,7 @@ func (r *httpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpRespon
 }
 
 // Data transform from our own HttpRequestIfc to Go net/http::Request
-func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Request, error) {
+func (r *HttpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Request, error) {
 	hlpr := GetHelper()
 	request, err := gohttp.NewRequest(
 		hlpr.GetHttpRequestMethodText(httpRequest.GetMethod()),
@@ -93,7 +118,7 @@ func (r *httpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 }
 
 // Data transform to our own HttpResponseIfc from Go net/http::Response
-func (r *httpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
+func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
 	hlpr := GetHelper()
 
 	httpResponse := NewHttpResponse()
