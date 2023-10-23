@@ -8,6 +8,7 @@ We can supply ConfigItem's to NewConfigurable so that Configure() can be passed 
 TODO:
  * Need test coverage for this mess
  * Add support for type? All incoming config values are arbitrary strings, no type enforcement
+ * Are there any useful type-conversion helpers for capture funcs?
 */
 
 import (
@@ -25,7 +26,7 @@ type ConfigItemIfc interface {
 
 	CanCapture() bool
 	CaptureWith(captureFunc CaptureFunc) *configItem
-	Capture(value string) error
+	Capture(value *string) error
 
 	CanCaptureSubset() bool
 	CaptureSubsetWith(subsetFunc SubsetFunc) *configItem
@@ -35,11 +36,13 @@ type ConfigItemIfc interface {
 	ValidateWith(validateFunc ValidateFunc) *configItem
 	Validate(value string) bool
 
-	// TODO: Are there any useful type-conversion helpers for capture funcs?
+	SetDefault(value string) *configItem
 }
 
 type configItem struct {
 	name		string
+	defaultValue	string
+	hasDefault	bool
 	isRequired	bool
 	captureFunc	CaptureFunc
 	validateFunc	ValidateFunc
@@ -73,6 +76,12 @@ func (r *configItem) IsRequired() bool {
 	return r.isRequired
 }
 
+func (r *configItem) SetDefault(value string) *configItem {
+	r.defaultValue = value
+	r.hasDefault = true
+	return r
+}
+
 // Capture
 // -----------------------------------------------
 
@@ -85,7 +94,7 @@ func (r *configItem) CaptureWith(captureFunc CaptureFunc) *configItem {
 	return r
 }
 
-func (r *configItem) Capture(value string) error {
+func (r *configItem) Capture(value *string) error {
 	if ! r.CanCapture() {
 		return fmt.Errorf(
 			"No Capture function is set for configItem: %s",
@@ -93,7 +102,28 @@ func (r *configItem) Capture(value string) error {
 		)
 	}
 
-	return r.captureFunc(value)
+	// If the value is nil...
+	if nil == value {
+		// ... and we have a default...
+		if r.hasDefault {
+			// ... use it!
+			return r.captureFunc(r.defaultValue)
+		}
+
+		// ... no default, yet a value is required...
+		if r.isRequired {
+			// ... reject it!
+			return fmt.Errorf(
+				"Nil value with no Default for required configItem: %s",
+				r.GetName(),
+			)
+		}
+
+		// ... not required, so ignore it.
+		return nil
+	}
+
+	return r.captureFunc(*value)
 }
 
 // Subsets

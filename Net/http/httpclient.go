@@ -24,10 +24,6 @@ import(
 	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
-const CLIENT_DEFAULT_TIMEOUT_IDLE =		30
-const CLIENT_DEFAULT_COMPRESSION_DISABLE =	false
-const CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB =	10240
-
 type HttpClientIfc interface {
 	// Embedded interface(s)
 	cfg.ConfigurableIfc
@@ -45,7 +41,6 @@ type HttpClient struct {
 
 	// Our own properties
 	client			*gohttp.Client
-	maxbody			int64
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -53,19 +48,13 @@ type HttpClient struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewHttpClient() *HttpClient {
-	r := HttpClient{
-		client:		&gohttp.Client{
-			Transport:	&gohttp.Transport{
-				IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
-				DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
-			},
-		},
-		maxbody:	int64(CLIENT_DEFAULT_MAX_RESPONSE_BODY_KB * 1024),
-	}
+	r := HttpClient{}
 
-	// TODO: Some way for default values in ConfigurableIfc to avoid
-	// the organizational split defaults above and overrides below
+	// TODO: This int/bool-as-string madness caused by Config only supporting string values; add multi-type support!
 	r.Configurable = cfg.NewConfigurable(
+		cfg.NewConfigItem("maxBodyLenKb").SetDefault("10240"),
+		cfg.NewConfigItem("idleTimeoutMSec").SetDefault("30000"),
+		cfg.NewConfigItem("disableCompression").SetDefault("false"),
 	)
 
 	// Declare Starter funcs
@@ -74,6 +63,30 @@ func NewHttpClient() *HttpClient {
 	)
 
 	return &r
+}
+
+// -------------------------------------------------------------------------------------------------
+// StartableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *HttpClient) Start() error {
+	// Call super
+	if err := r.Startable.Start(); nil != err { return err }
+
+	// Set up our net/http client
+	// ref: https://pkg.go.dev/net/http#Client
+	r.client = &gohttp.Client{
+		Transport:	&gohttp.Transport{
+			// FIXME: Read these properties from ConfigItem values
+			IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
+			DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
+		},
+		// TODO: Support for CheckRedirect
+		// TODO: Support for CookieJar
+		Timeout: 0, // nonoseconds for request timeout; 0 = no timeout
+	}
+
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------

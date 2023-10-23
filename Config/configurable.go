@@ -103,14 +103,12 @@ func (r *Configurable) Start() error {
 
 	// For all the declared Config Items...
 	for name, configItem := range r.declared {
-		// If this ConfigItem was not provided then move on
-		if ! r.config.Has(name) { continue }
-		// We only process non-nil config values; seemingly no use case to handle nil?
+
+		// Get the value for this named ConfigItem
 		value := r.config.Get(name)
-		if nil == value { continue }
 
 		// If this ConfigItem has a Validation Func...
-		if configItem.CanValidate() {
+		if (nil != value) && configItem.CanValidate() {
 			if ! configItem.Validate(*value) {
 				return fmt.Errorf(
 					"Configuration Item '%s' failed validation with value: '%s'",
@@ -121,7 +119,7 @@ func (r *Configurable) Start() error {
 
 		// If this ConfigItem has a Capture Func...
 		if configItem.CanCapture() {
-			if err := configItem.Capture(*value); nil != err { return err }
+			if err := configItem.Capture(value); nil != err { return err }
 		}
 		if configItem.CanCaptureSubset() {
 			subset := r.config.GetSubsetConfig(name)
