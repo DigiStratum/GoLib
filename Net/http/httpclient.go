@@ -18,6 +18,7 @@ import(
 	"io"
 	"fmt"
 	"time"
+	"strconv"
 	gohttp "net/http"
 
 	"github.com/DigiStratum/GoLib/Process/startable"
@@ -41,6 +42,12 @@ type HttpClient struct {
 
 	// Our own properties
 	client			*gohttp.Client
+
+	// Config
+	maxBodyLenKb		int
+	requestTimeout		time.Duration
+	idleTimeout		time.Duration
+	disableCompression	bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -52,9 +59,34 @@ func NewHttpClient() *HttpClient {
 
 	// TODO: This int/bool-as-string madness caused by Config only supporting string values; add multi-type support!
 	r.Configurable = cfg.NewConfigurable(
-		cfg.NewConfigItem("maxBodyLenKb").SetDefault("10240"),
-		cfg.NewConfigItem("idleTimeoutMSec").SetDefault("30000"),
-		cfg.NewConfigItem("disableCompression").SetDefault("false"),
+		cfg.NewConfigItem("maxBodyLenKb").SetDefault("10240").CaptureWith(
+			func (value string) error {
+				v, err := strconv.Atoi(value)
+				if nil != err { return err }
+				r.maxBodyLenKb = v
+				return nil
+			},
+		),
+		cfg.NewConfigItem("requestTimeout").SetDefault("60s").CaptureWith(
+			func (value string) error {
+				var err error
+				r.requestTimeout, err = time.ParseDuration(value)
+				return err
+			},
+		),
+		cfg.NewConfigItem("idleTimeout").SetDefault("30").CaptureWith(
+			func (value string) error {
+				var err error
+				r.idleTimeout, err = time.ParseDuration(value)
+				return err
+			},
+		),
+		cfg.NewConfigItem("disableCompression").SetDefault("false").CaptureWith(
+			func (value string) error {
+				r.disableCompression = (value == "true")
+				return nil
+			},
+		),
 	)
 
 	// Declare Starter funcs
@@ -77,13 +109,13 @@ func (r *HttpClient) Start() error {
 	// ref: https://pkg.go.dev/net/http#Client
 	r.client = &gohttp.Client{
 		Transport:	&gohttp.Transport{
-			// FIXME: Read these properties from ConfigItem values
-			IdleConnTimeout:    CLIENT_DEFAULT_TIMEOUT_IDLE * time.Second,
-			DisableCompression: CLIENT_DEFAULT_COMPRESSION_DISABLE,
+			IdleConnTimeout:    r.idleTimeout,
+			DisableCompression: r.disableCompression,
 		},
 		// TODO: Support for CheckRedirect
 		// TODO: Support for CookieJar
-		Timeout: 0, // nonoseconds for request timeout; 0 = no timeout
+		// nonoseconds for request timeout; 0 = no timeout
+		Timeout: r.requestTimeout,
 	}
 
 	return nil
@@ -154,11 +186,11 @@ func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 	// Transform response body
 	if response.ContentLength > 0 {
 		// Don't just allow any response size to consume all available memory!
-		if response.ContentLength > r.maxbody {
+		if response.ContentLength > (int64(r.maxBodyLenKb) * 1024) {
 			return nil, fmt.Errorf(
-				"Response body length (%d) > max (%d)",
+				"Response body length (%d) > max (%dKB)",
 				response.ContentLength,
-				r.maxbody,
+				r.maxBodyLenKb,
 			)
 		}
 
