@@ -14,6 +14,14 @@ JSON strings unnecessarily. As long as we are in a trusted code/library scope, t
 we get into an untrusted code/library scope, we must revert to pass by value as needed to prevent
 unauthorized tampering.
 
+Note that there is support for "dereferencing" values lurking within. If a value has a special
+notation "%key%" and we call one of the Dereference member functions, if there is a matching key
+within the available Config data, then the value of that matching key will replace the "%key%"
+reference. This is recursive up to a depth of MAX_REFERENCE_DEPTH defined below. If there is no
+match on the key, then no substitution is performed. There are some neat tricks with composition
+of Config collections that can DereferenceConfig() against eachother so that we can make
+references across Configs.
+
 In addition to the explicit imports below, we use the following classes from this same package:
  * HashMap
  * Json
@@ -21,6 +29,7 @@ In addition to the explicit imports below, we use the following classes from thi
 TODO:
  * Add support for non-string values, including nested objects, to break name=value pair limits
  * Add "configurator" Interface/boilerplate implementation(s) to fetch Config from various sources
+ * Allow override for MAX_REFERENCE_DEPTH and reduce the default. By a lot.
 
 */
 
