@@ -65,20 +65,27 @@ func NewJsonTree(jsonString *string) *JsonTree {
 // JsonTreeIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *JsonTree) GetString(jtpath string) (*string, error) {
+func (r *JsonTree) GetString(selector string) (*string, error) {
 	node, err := r.getNode(jtpath)
 	if nil != err { return nil, err }
 	if nil == node { return nil, nil }
 	if v, ok := node.(string); ok { return &v, nil }
-	return nil, fmt.Errorf("Failed type assertiong to string");
+	return nil, fmt.Errorf("Failed type assertion to string");
 }
 
 // -------------------------------------------------------------------------------------------------
 // JsonTree
 // -------------------------------------------------------------------------------------------------
 
-func (r *JsonTree) getNode(jtpath string) (interface{}, error) {
+func (r *JsonTree) getNode(selector string) (interface{}, error) {
 	// TODO: Tokenize the JavaTree Path and traverse the tree until the node is found or error
+	// "$"
+	// "$.prop1"
+	// "$.prop1.prop2"
+	// "$[index]"
+	// "$[index].prop1"
+	// "$.prop1[index1][index2].prop2"
+
 	return nil, fmt.Errorf("Not Implemented Yet!")
 }
 
