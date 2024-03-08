@@ -36,6 +36,7 @@ TODO:
 
 import(
 	"fmt"
+	"strings"
 	gojson "encoding/json"
 )
 
@@ -66,7 +67,7 @@ func NewJsonTree(jsonString *string) *JsonTree {
 // -------------------------------------------------------------------------------------------------
 
 func (r *JsonTree) GetString(selector string) (*string, error) {
-	node, err := r.getNode(jtpath)
+	node, err := r.getNode(selector)
 	if nil != err { return nil, err }
 	if nil == node { return nil, nil }
 	if v, ok := node.(string); ok { return &v, nil }
@@ -78,14 +79,47 @@ func (r *JsonTree) GetString(selector string) (*string, error) {
 // -------------------------------------------------------------------------------------------------
 
 func (r *JsonTree) getNode(selector string) (interface{}, error) {
-	// TODO: Tokenize the JavaTree Path and traverse the tree until the node is found or error
+
+	// We start walking nodes from the base
+	node := r.data
+
+	// Tokenize the JavaTree selector and validate the base before recursively walking the tree
 	// "$"
 	// "$.prop1"
 	// "$.prop1.prop2"
 	// "$[index]"
 	// "$[index].prop1"
 	// "$.prop1[index1][index2].prop2"
+	tokens := strings.Split(selector, ".")
 
-	return nil, fmt.Errorf("Not Implemented Yet!")
+	// A blank selector is unacceptable
+	if len(tokens) == 0 { return nil, fmt.Errorf("Invalid selector (blank)") }
+
+	// The first token must begin with '$' for the base
+	if tokens[0][0] != '$' { return nil, fmt.Errorf("Invalid selector (base)") }
+
+	// Consume the the base '$'
+	basetoken := tokens[0][1:len(tokens[0])-1]
+	newselector := strings.Join(tokens[1:], ",")
+	if len(basetoken) > 0 { newselector = basetoken + "." + newselector; }
+
+	return r.walkNode(newselector, node)
+}
+
+// Recursive function to walk the selector tree until the end or error
+func (r *JsonTree) walkNode(selector string, node interface{}) (interface{}, error) {
+	// Tokenize the JavaTree selector and walk the tree of indexes and properties until we reach the final or fail
+	// ""
+	// "prop1"
+	// "prop1.prop2"
+	// "prop1[index1].prop2"
+	// "prop1[index1][index2].prop2"
+	// "[index]"
+	// "[index].prop1"
+
+	// If the selector is empty, then the node is the final
+	if selector == "" { return node, nil }
+
+	return nil, fmt.Errorf("Not Implemented")
 }
 
