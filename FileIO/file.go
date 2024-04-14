@@ -3,11 +3,18 @@ package fileio
 import (
 	"os"
 	"io/fs"
+	"path/filepath"
 	"time"
+	"errors"
 )
 
 type FileIfc interface {
-	// FileInfo properties
+	// Our own accessors
+	GetPath() string
+	GetAbsPath() (*string, error)
+	Exists() bool
+
+	// FileInfo accessors
 	GetName() (*string, error)
 	GetSize() (*int64, error)
 	GetMode() (*fs.FileMode, error)
@@ -35,6 +42,21 @@ func NewFile(path string) *file {
 // -------------------------------------------------------------------------------------------------
 // FileIfc
 // -------------------------------------------------------------------------------------------------
+
+func (r *file) GetPath() string {
+	return r.path
+}
+
+func (r *file) GetAbsPath() (*string, error) {
+	absPath, err := filepath.Abs(r.path)
+	if nil != err { return nil, err }
+	return &absPath, nil
+}
+
+func (r *file) Exists() bool {
+	_, err := r.getFileInfo()
+	return (nil == err) || ! errors.Is(err, os.ErrNotExist)
+}
 
 func (r *file) GetName() (*string, error) {
 	fi, err := r.getFileInfo()
