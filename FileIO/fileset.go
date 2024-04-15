@@ -44,7 +44,7 @@ func (r *fileSet) GetIterator() func () interface{} {
                 if idx >= data_len { return nil }
                 prev_idx := idx
                 idx++
-                return &r.files[prev_idx]
+                return r.files[prev_idx]
         }
 }
 

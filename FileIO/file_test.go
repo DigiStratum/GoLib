@@ -8,9 +8,9 @@ import(
 	. "github.com/DigiStratum/GoLib/Testing"
 )
 
-func TestThat_NewFile_ReturnsSomething(t *testing.T) {
+func TestThat_NewFile_Returns_FileIfc(t *testing.T) {
 	// Test
-	sut := NewFile("missingfile.txt")
+	var sut FileIfc = NewFile("missingfile.txt")
 
 	// Verify
 	ExpectNonNil(sut, t)
