@@ -2,25 +2,32 @@ package fileio
 
 import (
 	"os"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"time"
 	"errors"
+	"fmt"
 )
 
 type FileIfc interface {
 	// Our own accessors
-	GetPath() string
-	GetAbsPath() (*string, error)
-	Exists() bool
+	GetPath() string			// Original path as supplied
+	GetAbsPath() (*string, error)		// Absolute path, eliminates relative and more
+	GetBasename() string			// Path without file name
+	GetAbsBasename() (*string, error)	// Absolute path without file name
+
+	Exists() bool				// Check if this file already exists on disk
+	IsFile() (bool, error)			// Check if this is a regular file (vs. Dir, etc)
+	CopyTo(path string) error		// Copy this file to another location
 
 	// FileInfo accessors
-	GetName() (*string, error)
-	GetSize() (*int64, error)
-	GetMode() (*fs.FileMode, error)
-	GetModTime() (*time.Time, error)
-	IsDir() (bool, error)
-	GetSys() (any, error)
+	GetName() (*string, error)		// Name of the file without the path
+	GetSize() (*int64, error)		// Size of the file as a count of bytes
+	GetMode() (*fs.FileMode, error)		// File system "mode" (attributes)
+	GetModTime() (*time.Time, error)	// Get the last modified timestamp
+	IsDir() (bool, error)			// Check if this is a Dir (vs. regular File, etc)
+	GetSys() (any, error)			// Get representation of data source (maybe nil!)
 }
 
 type file struct {
@@ -33,6 +40,7 @@ type file struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewFile(path string) *file {
+	// TODO: verify that path specifies a file, not a dir; reject dirs (use a different class for that!)
 	r := file{
 		path:		path,
 	}
@@ -53,9 +61,69 @@ func (r *file) GetAbsPath() (*string, error) {
 	return &absPath, nil
 }
 
+func (r *file) GetBasename() string {
+	return filepath.Base(r.path)
+}
+
+func (r *file) GetAbsBasename() (*string, error) {
+	// First get the absolute path
+	absPath, err := filepath.Abs(r.path)
+	if nil != err { return nil, err }
+	// Then get the base of that
+	basename := filepath.Base(absPath)
+	return &basename, nil
+}
+
 func (r *file) Exists() bool {
 	_, err := r.getFileInfo()
 	return (nil == err) || ! errors.Is(err, os.ErrNotExist)
+}
+
+func (r *file) IsFile() (bool, error) {
+	fi, err := r.getFileInfo()
+	if (nil != err) || (nil == fi) { return false, err }
+	v := (*fi).Mode()
+	return v.IsRegular(), nil
+}
+
+func (r *file) CopyTo(path string) error {
+	// Source must be a file
+	if isFile, err := r.IsFile(); (! isFile) || (nil != err) {
+		return fmt.Errorf("File.CopyTo(): src (%s) is not a file", r.path)
+	}
+
+	// Destination must either be a file (to be replaced) or a dir (to drop the file into)
+	var destPath string
+	destFile := NewFile(path)
+	if ok, err := destFile.IsFile(); ok && (nil == err) {
+		destPath = path
+	} else if ok, err := destFile.IsDir(); ok && (nil == err) {
+		// Keep the source filename, just send it to a new destination dir
+		srcFile, err := r.GetName()
+		if (nil != err) || (nil == srcFile) {
+			return fmt.Errorf("File.CopyTo(): can't get filename from source path (%s)", r.path)
+		}
+		// TODO: only add PathSeparator if it's not already tacked onto path
+		destPath = path + string(os.PathSeparator) + *srcFile
+	} else {
+		return fmt.Errorf(
+			"File.CopyTo(): destination path (%s) is neither a file, nor a dir", destPath,
+		)
+	}
+
+	// Do the actual file copying bits
+	fin, err := os.Open(r.path)
+	if err != nil { return err }
+	defer fin.Close()
+	fout, err := os.Create(destPath)
+	if err != nil { return err }
+	defer func() {
+		cerr := fout.Close()
+		if err == nil { err = cerr }
+	}()
+	if _, err = io.Copy(fout, fin); err != nil { return err }
+	err = fout.Sync()
+	return err
 }
 
 func (r *file) GetName() (*string, error) {
