@@ -4,6 +4,7 @@ import (
 	"os"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"path/filepath"
 	"time"
 	"errors"
@@ -19,7 +20,13 @@ type FileIfc interface {
 
 	Exists() bool				// Check if this file already exists on disk
 	IsFile() (bool, error)			// Check if this is a regular file (vs. Dir, etc)
+
 	CopyTo(path string) error		// Copy this file to another location
+
+	ReadString() (*string, error)		// Read the file, return content as a *string
+	ReadBytes() (*[]byte, error)		// Read the file, return contents as a *[]byte
+	WriteString(content *string) error	// Write the contents of a string to a file
+	WriteBytes(content *[]byte) error	// Write the contents of a []byte to a file
 
 	// FileInfo accessors
 	GetName() (*string, error)		// Name of the file without the path
@@ -123,6 +130,36 @@ func (r *file) CopyTo(path string) error {
 	}()
 	if _, err = io.Copy(fout, fin); err != nil { return err }
 	err = fout.Sync()
+	return err
+}
+
+// Read the file located at the specified path and return the contents as a *string
+func (r *file) ReadString() (*string, error) {
+	tbuf, err := r.ReadBytes()
+	if nil != err { return nil, err }
+	s := string(*tbuf)
+	return &s, nil
+}
+
+// Read the file located at the specified path and return the contents as a *[]byte
+func (r *file) ReadBytes() (*[]byte, error) {
+	tbuf, err := ioutil.ReadFile(r.path)
+	if nil != err {
+		return nil, fmt.Errorf("Error reading '%s': %s", r.path, err.Error())
+	}
+	return &tbuf, nil
+}
+
+func (r *file) WriteString(content *string) error {
+        c := []byte(*content)
+	err := ioutil.WriteFile(r.path, c, 0644)
+	if nil == err { r.fileInfo = nil }
+	return err
+}
+
+func (r *file) WriteBytes(content *[]byte) error {
+	err := ioutil.WriteFile(r.path, *content, 0644)
+	if nil == err { r.fileInfo = nil }
 	return err
 }
 
