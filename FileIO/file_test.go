@@ -28,7 +28,22 @@ func TestThat_File_GetPath_Returns_OriginalPath(t *testing.T) {
 	ExpectString(expected, actual, t)
 }
 
-// TODO: Figure out some incantation that throws an error instead of resolved path
+/*
+// There does not appear to be a code path to inject an error in to system libraries that causes this to fail
+// ref: https://stackoverflow.com/questions/16742331/how-to-mock-abstract-filesystem-in-go
+func TestThat_File_GetAbsPath_Returns_Error_ForBadFilepath(t *testing.T) {
+	// Setup
+	sut := NewFile("")
+
+	// Test
+	actual, err := sut.GetAbsPath()
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(err, t)
+}
+*/
+
 func TestThat_File_GetAbsPath_Returns_GoodPath(t *testing.T) {
 	// Setup
 	_, filename, _, _ := runtime.Caller(0)
@@ -36,10 +51,11 @@ func TestThat_File_GetAbsPath_Returns_GoodPath(t *testing.T) {
 	sut := NewFile("./missingfile.txt")
 
 	// Test
-	actual, _ := sut.GetAbsPath()
+	actual, err := sut.GetAbsPath()
 
 	// Verify
 	ExpectNonNil(actual, t)
+	ExpectNoError(err, t)
 	ExpectString(expected, *actual, t)
 }
 
