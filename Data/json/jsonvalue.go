@@ -69,11 +69,9 @@ type JsonValue struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewJsonValue(jsonString *string) *JsonValue {
-	r := JsonValue{
-		valueType:	VALUE_TYPE_INVALID,
-	}
-	r.unmarshal(jsonString)
-	return &r
+	r, _ := unmarshal(jsonString)
+	// TODO: pass error along to DI Logger
+	return r
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -223,10 +221,51 @@ Tokenizer notes:
      ARRAY	-> [ValueToken] collection, non-regex
 */
 
-func (r *JsonValue) unmarshal(jsonString *string) error {
-	if nil == jsonString { return fmt.Errorf("JSON string was nil, nothing to unmarshal") }
+// -------------------------------------------------------------------------------------------------
+// private implementation
+// -------------------------------------------------------------------------------------------------
 
-	// TODO: Time for some lexing!
+// JSON Lexer
+const (
+	_LEXER_STATE_NEXT_VALUE int = iota
+	_LEXER_STATE_DONE
+)
+
+func unmarshal(jsonString *string) (*JsonValue, error) {
+	if nil == jsonString { return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal") }
+
+	// Fetch the first (root) value token starting at position 0
+	return unmarshalNextToken(jsonString, 0)
+
+/*
+	r := JsonValue{
+		valueType:	VALUE_TYPE_INVALID,
+	}
+	// Make the root value token our own
+	r.valueType = jv.valueType
+	r.valueBoolean = jv.valueBoolean
+	r.valueInteger = jv.valueInteger
+	r.valueFloat = jv.valueFloat
+	r.valueString = jv.valueString
+	if VALUE_TYPE_ARRAY == jv.valueType {
+		r.valueArr = make([]*JsonValue, 0)
+		r.valueArr = append(r.valueArr, jv.valueArr...)
+	}
+	if VALUE_TYPE_OBJECT == jv.valueType {
+		r.valueMap = make(map[string]*JsonValue)
+	}
 	return nil
+*/
+}
+
+
+func unmarshalNextToken(jsonString *string, position int) (*JsonValue, error) {
+	// TODO: Time for some lexing!
+	/*
+	state := _LEXER_STATE_NEXT_VALUE
+	while (_LEXER_STATE_DONE != state) {
+	}
+	*/
+	return nil, nil
 }
 
