@@ -41,7 +41,7 @@ type JsonValueIfc interface {
 	GetBoolean() bool
 	GetInteger() int64
 	GetFloat() float64
-	GetString() string
+	GetString() []rune
 
 	GetArraySize() int
 	GetArrayElement(index int) *JsonValue
@@ -55,21 +55,22 @@ type JsonValueIfc interface {
 }
 
 type JsonValue struct {
-	valueType	ValueType
-	valueBoolean	bool
-	valueInteger	int64
-	valueFloat	float64
-	valueString	string
-	valueArr	[]*JsonValue
-	valueMap	map[string]*JsonValue
+	startPos, stopPos	int
+	valueType		ValueType
+	valueBoolean		bool
+	valueInteger		int64
+	valueFloat		float64
+	valueString		[]rune
+	valueArr		[]*JsonValue
+	valueMap		map[string]*JsonValue
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewJsonValue(jsonString *string) *JsonValue {
-	r, _ := unmarshal(jsonString)
+func NewJsonValue(json *[]rune) *JsonValue {
+	r, _ := unmarshal(json)
 	// TODO: pass error along to DI Logger
 	return r
 }
@@ -124,8 +125,8 @@ func (r *JsonValue) GetFloat() float64 {
 	return r.valueFloat
 }
 
-func (r *JsonValue) GetString() string {
-	if ! r.IsString() { return "" }
+func (r *JsonValue) GetString() []rune {
+	if ! r.IsString() { return []rune("") }
 	return r.valueString
 }
 
@@ -227,15 +228,14 @@ Tokenizer notes:
 
 // JSON Lexer
 const (
-	_LEXER_STATE_NEXT_VALUE int = iota
+	_LEXER_STATE_SEEK_NEXT_VALUE int = iota
 	_LEXER_STATE_DONE
 )
 
-func unmarshal(jsonString *string) (*JsonValue, error) {
-	if nil == jsonString { return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal") }
-
+func unmarshal(json *[]rune) (*JsonValue, error) {
 	// Fetch the first (root) value token starting at position 0
-	return unmarshalNextToken(jsonString, 0)
+	return unmarshalFromPosition(json, 0)
+}
 
 /*
 	r := JsonValue{
@@ -256,16 +256,35 @@ func unmarshal(jsonString *string) (*JsonValue, error) {
 	}
 	return nil
 */
+
+
+func unmarshalFromPosition(json *[]rune, position int) (*JsonValue, error) {
+	if nil == json { return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal") }
+	jsonLen := len(*json)
+
+	// Boilerplate JsonValue to set up
+	jsonValue := JsonValue{
+		valueType:	VALUE_TYPE_INVALID,
+		startPos:	position,
+	}
+
+	// TODO: Time for some lexing!
+	for state := _LEXER_STATE_SEEK_NEXT_VALUE; _LEXER_STATE_DONE != state; {
+		switch state {
+			case _LEXER_STATE_SEEK_NEXT_VALUE:
+				// Consume any white-space until we get to something juicy
+				for ; (position < jsonLen) && isWhiteSpace((*json)[position]); position++ {
+					// ref: https://stackoverflow.com/questions/18130859/how-can-i-iterate-over-a-string-by-runes-in-go
+				}
+				state = _LEXER_STATE_DONE
+		}
+	}
+	jsonValue.stopPos = position - 1
+	return &jsonValue, nil
 }
 
-
-func unmarshalNextToken(jsonString *string, position int) (*JsonValue, error) {
-	// TODO: Time for some lexing!
-	/*
-	state := _LEXER_STATE_NEXT_VALUE
-	while (_LEXER_STATE_DONE != state) {
-	}
-	*/
-	return nil, nil
+func isWhiteSpace(r rune) bool {
+	// FIXME: use regex to detect whitespace match
+	return false
 }
 
