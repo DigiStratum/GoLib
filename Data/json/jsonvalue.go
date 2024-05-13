@@ -70,7 +70,7 @@ type JsonValue struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewJsonValue(json *[]rune) *JsonValue {
-	r, _ := unmarshal(json)
+	r, _ := lex(json)
 	// TODO: pass error along to DI Logger
 	return r
 }
@@ -232,9 +232,9 @@ const (
 	_LEXER_STATE_DONE
 )
 
-func unmarshal(json *[]rune) (*JsonValue, error) {
+func lex(json *[]rune) (*JsonValue, error) {
 	// Fetch the first (root) value token starting at position 0
-	return unmarshalFromPosition(json, 0)
+	return lexFrom(json, 0)
 }
 
 /*
@@ -258,7 +258,7 @@ func unmarshal(json *[]rune) (*JsonValue, error) {
 */
 
 
-func unmarshalFromPosition(json *[]rune, position int) (*JsonValue, error) {
+func lexFrom(json *[]rune, position int) (*JsonValue, error) {
 	if nil == json { return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal") }
 	jsonLen := len(*json)
 
@@ -268,12 +268,14 @@ func unmarshalFromPosition(json *[]rune, position int) (*JsonValue, error) {
 		startPos:	position,
 	}
 
-	// TODO: Time for some lexing!
+	// Time for some lexing!
 	for state := _LEXER_STATE_SEEK_NEXT_VALUE; _LEXER_STATE_DONE != state; {
 		switch state {
+			// Look for a JSON value
 			case _LEXER_STATE_SEEK_NEXT_VALUE:
-				// Consume any white-space until we get to something juicy
+				// 1) Consume any white-space until we get to something juicy
 				for ; (position < jsonLen) && isWhiteSpace((*json)[position]); position++ {
+					// TODO: Validate json as UTF-8 with unicode/utf8.ValidRune() 
 					// ref: https://stackoverflow.com/questions/18130859/how-can-i-iterate-over-a-string-by-runes-in-go
 				}
 				state = _LEXER_STATE_DONE
@@ -285,6 +287,9 @@ func unmarshalFromPosition(json *[]rune, position int) (*JsonValue, error) {
 
 func isWhiteSpace(r rune) bool {
 	// FIXME: use regex to detect whitespace match
+	// ref: https://go.dev/blog/strings
+	// ref: https://pkg.go.dev/unicode/utf8
+	// ref: https://www.reddit.com/r/learnprogramming/comments/sqa4p5/why_does_multibyte_utf8_characters_start_with_a/
 	return false
 }
 
