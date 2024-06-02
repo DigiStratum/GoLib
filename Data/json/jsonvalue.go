@@ -13,6 +13,7 @@ TODO:
 
 import (
 	"fmt"
+	"unicode/utf8"
 )
 
 type ValueType int
@@ -257,16 +258,27 @@ func lex(json *[]rune) (*JsonValue, error) {
 	return nil
 */
 
-
+// TODO: Consider JIT lexing: only lex what's requested; leave remainder as raw JSON for later processing
 func lexFrom(json *[]rune, position int) (*JsonValue, error) {
-	if nil == json { return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal") }
-	jsonLen := len(*json)
+	// No JSON is a coding mistake!
+	if nil == json {
+		return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal")
+	}
 
-	// Boilerplate JsonValue to set up
+	// Require UTF-8 
+	if ! utf8.ValidString(string(*json)) {
+		return nil, fmt.Errorf("JSON has invalid UTF-8 multibyte sequences")
+	}
+
+	// Scaffold a JsonValue to return
 	jsonValue := JsonValue{
 		valueType:	VALUE_TYPE_INVALID,
 		startPos:	position,
 	}
+
+	// Empty JSON is invalid
+	jsonLen := len(*json)
+	if 0 == jsonLen { return &jsonValue, nil }
 
 	// Time for some lexing!
 	for state := _LEXER_STATE_SEEK_NEXT_VALUE; _LEXER_STATE_DONE != state; {
@@ -274,15 +286,22 @@ func lexFrom(json *[]rune, position int) (*JsonValue, error) {
 			// Look for a JSON value
 			case _LEXER_STATE_SEEK_NEXT_VALUE:
 				// 1) Consume any white-space until we get to something juicy
-				for ; (position < jsonLen) && isWhiteSpace((*json)[position]); position++ {
-					// TODO: Validate json as UTF-8 with unicode/utf8.ValidRune() 
-					// ref: https://stackoverflow.com/questions/18130859/how-can-i-iterate-over-a-string-by-runes-in-go
-				}
+				position = lexSkipJsonWhitespace(position, json)
+
+				// 2) TODO: Use the next character to determine data type for the value
+
 				state = _LEXER_STATE_DONE
 		}
 	}
 	jsonValue.stopPos = position - 1
 	return &jsonValue, nil
+}
+
+func lexSkipJsonWhitespace(position int, json *[]rune) int {
+	for ; (position < jsonLen) && isWhiteSpace((*json)[position]); position++ {
+		// TODO: Validate json as UTF-8 with unicode/utf8.ValidRune() 
+		// ref: https://stackoverflow.com/questions/18130859/how-can-i-iterate-over-a-string-by-runes-in-go
+	}
 }
 
 func isWhiteSpace(r rune) bool {
