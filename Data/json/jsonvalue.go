@@ -289,12 +289,40 @@ func lexFrom(json *[]rune, position int) (*JsonValue, error) {
 				position = lexSkipJsonWhitespace(position, json)
 
 				// 2) TODO: Use the next character to determine data type for the value
+				switch json[position] {
+					case '"':
+						// String value
+						value, err := lexConsumeValueString(position, json)
 
+					case '{':
+						// Object value
+
+					case '[':
+						// Array value
+
+					case 't':
+						fallthrough
+					case 'T':
+						fallthrough
+					case 'f':
+						fallthrough
+					case 'F':
+						// Boolean value
+
+					case 'n':
+						// Null value
+				}
 				state = _LEXER_STATE_DONE
 		}
 	}
 	jsonValue.stopPos = position - 1
 	return &jsonValue, nil
+}
+
+func lexConsumeValueString(position int, json*[]rune) (*string, error) {
+	value := ""
+
+	return value, nil
 }
 
 func lexSkipJsonWhitespace(position int, json *[]rune) int {
