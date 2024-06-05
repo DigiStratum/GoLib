@@ -14,63 +14,8 @@ TODO:
    replacement, empty string if it doesn't exist. Introduce "RJSON" envelope to encode json metadata
    to describe the JSON encoding within, versioning, etc. to help with future-proofing, versioning,
    etc.
-*/
+ * Consider JIT lexing: only lex what's requested; leave remainder as raw JSON for later processing
 
-import (
-	"fmt"
-	"unicode/utf8"
-)
-
-type ValueType int
-
-const (
-	VALUE_TYPE_INVALID ValueType = iota
-	VALUE_TYPE_NULL
-	VALUE_TYPE_BOOLEAN
-	VALUE_TYPE_INTEGER
-	VALUE_TYPE_FLOAT
-	VALUE_TYPE_STRING
-	VALUE_TYPE_OBJECT
-	VALUE_TYPE_ARRAY
-)
-
-type JsonLexerIfc interface {
-}
-
-type JsonLexer struct {
-	lexerJson		*[]rune
-	lexerPosition		int
-	lexerErr		error
-}
-
-// -------------------------------------------------------------------------------------------------
-// Factory Functions
-// -------------------------------------------------------------------------------------------------
-
-// Make a new one of these!
-func NewJsonLexer(json *[]rune) *JsonLexer {
-	r := JsonLexer{
-		lexerJson:	json,
-		lexerPosition:	0,
-	}
-	return &r
-}
-
-// Lexically parse one of these out of existing JSON
-func LexJsonValue(json *[]rune) *JsonValue {
-	r.lexValueFrom(0)
-	if nil != r.lexerErr {
-		// TODO: pass r.lexerErr along to DI Logger
-		return nil
-	}
-	return r
-}
-
-// -------------------------------------------------------------------------------------------------
-// JsonLexerIfc
-// -------------------------------------------------------------------------------------------------
-
-/*
 Structures under consideration:
 
 NULL:
@@ -126,20 +71,47 @@ Tokenizer notes:
      ARRAY	-> [ValueToken] collection, non-regex
 */
 
+import (
+	"fmt"
+	"unicode/utf8"
+)
+
+type JsonLexerIfc interface {
+	LexJsonValue(json *[]rune) (*JsonValue, error)
+}
+
+type JsonLexer struct {
+	lexerJson		*[]rune
+	lexerPosition		int
+	lexerErr		error
+}
+
 // -------------------------------------------------------------------------------------------------
-// private implementation
+// Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-// JSON Lexer
+// Make a new one of these!
+func NewJsonLexer() *JsonLexer {
+	r := JsonLexer{ }
+	return &r
+}
+
+// -------------------------------------------------------------------------------------------------
+// JsonLexerIfc
+// -------------------------------------------------------------------------------------------------
+
+// Lexically parse one of these out of existing JSON
+func (r *JsonLexer) LexJsonValue(json *[]rune) (*JsonValue, error) {
+	r.lexerJson = json
+	r.lexerPosition = 0
+	return r.lexNextValue()
+}
+
 const (
 	_LEXER_STATE_SEEK_NEXT_VALUE int = iota
 	_LEXER_STATE_DONE
 )
 
-func lex(json *[]rune) (*JsonValue, error) {
-	// Fetch the first (root) value token starting at position 0
-	return lexNextValue(json, 0)
-}
 
 /*
 	r := JsonValue{
@@ -161,8 +133,7 @@ func lex(json *[]rune) (*JsonValue, error) {
 	return nil
 */
 
-// TODO: Consider JIT lexing: only lex what's requested; leave remainder as raw JSON for later processing
-func lexNextValue(json *[]rune, position int) (*JsonValue, error) {
+func (r *JsonLexer) lexNextValue(json *[]rune) (*JsonValue, error) {
 	// No JSON is a coding mistake!
 	if nil == json {
 		return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal")
