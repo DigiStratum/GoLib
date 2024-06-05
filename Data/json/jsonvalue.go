@@ -38,9 +38,13 @@ type JsonValueIfc interface {
 	IsObject() bool
 
 	GetBoolean() bool
+
 	GetInteger() int64
+
 	GetFloat() float64
+
 	GetString() []rune
+	SetString(value []rune)
 
 	GetArraySize() int
 	GetArrayElement(index int) *JsonValue
@@ -48,6 +52,7 @@ type JsonValueIfc interface {
 	HasObjectProperty(name string) bool
 	GetObjectPropertyNames() []string
 	GetObjectProperty(name string) *JsonValue
+
 
 	// TODO: Implement this bad boy!
 	//Select(selector string) (*JsonValue, error)
@@ -128,6 +133,11 @@ func (r *JsonValue) GetFloat() float64 {
 func (r *JsonValue) GetString() []rune {
 	if ! r.IsString() { return []rune("") }
 	return r.valueString
+}
+
+func (r *JsonValue) SetString(value []rune) {
+	r.valueType = VALUE_TYPE_STRING
+	r.valureString = value
 }
 
 func (r *JsonValue) GetArraySize() int {

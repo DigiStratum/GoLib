@@ -73,6 +73,7 @@ Tokenizer notes:
 
 import (
 	"fmt"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -82,8 +83,13 @@ type JsonLexerIfc interface {
 
 type JsonLexer struct {
 	lexerJson		*[]rune
+	lexerJsonLen		int
 	lexerPosition		int
 	lexerErr		error
+
+	// Human-readable position within the JSON for error messaging
+	humanLine		int
+	humanPosition		int
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -100,18 +106,23 @@ func NewJsonLexer() *JsonLexer {
 // JsonLexerIfc
 // -------------------------------------------------------------------------------------------------
 
-// Lexically parse one of these out of existing JSON
+// Lexically parse a JsonValue out of existing JSON
 func (r *JsonLexer) LexJsonValue(json *[]rune) (*JsonValue, error) {
+	// Require UTF-8 
+	if ! utf8.ValidString(string(r.json)) {
+		return nil, fmt.Errorf("JSON has invalid UTF-8 multibyte sequences")
+	}
+
 	r.lexerJson = json
 	r.lexerPosition = 0
+	r.lexerJsonLen = len(*json)
+	r.humanLine = r.humanPostion = 1
 	return r.lexNextValue()
 }
 
-const (
-	_LEXER_STATE_SEEK_NEXT_VALUE int = iota
-	_LEXER_STATE_DONE
-)
-
+// -------------------------------------------------------------------------------------------------
+// Private implementation
+// -------------------------------------------------------------------------------------------------
 
 /*
 	r := JsonValue{
@@ -133,88 +144,128 @@ const (
 	return nil
 */
 
-func (r *JsonLexer) lexNextValue(json *[]rune) (*JsonValue, error) {
+func (r *JsonLexer) lexNextValue() (*JsonValue, error) {
 	// No JSON is a coding mistake!
-	if nil == json {
+	if nil == r.lexerJson {
 		return nil, fmt.Errorf("JSON string was nil, nothing to unmarshal")
 	}
 
-	// Require UTF-8 
-	if ! utf8.ValidString(string(*json)) {
-		return nil, fmt.Errorf("JSON has invalid UTF-8 multibyte sequences")
-	}
-
 	// Scaffold a JsonValue to return
-	jsonValue := JsonValue{
-		valueType:	VALUE_TYPE_INVALID,
-		startPos:	position,
-	}
+	jsonValue := NewJsonValue()
 
-	// Empty JSON is invalid
-	jsonLen := len(*json)
-	if 0 == jsonLen { return &jsonValue, nil }
+	// 1) Consume any white-space, if any, between useful bits
+	r.lexConsumeWhitespace()
+	if r.lexAtEOF() { return jsonValue, nil }
 
-	// Time for some lexing!
-	for state := _LEXER_STATE_SEEK_NEXT_VALUE; _LEXER_STATE_DONE != state; {
-		switch state {
-			// Look for a JSON value
-			case _LEXER_STATE_SEEK_NEXT_VALUE:
-				// 1) Consume any white-space until we get to something juicy
-				position = lexSkipJsonWhitespace(position, json)
-				jsonValue.startPos = position
+	// 2) Use the next character to determine data type for the value
+	switch r.(* lexerJson)[r.lexerPosition] {
+		// String value
+		case '"': return lexNextValueString()
 
-				// 2) TODO: Use the next character to determine data type for the value
-				switch json[position] {
-					case '"':
-						// String value
-						value, err := lexConsumeValueString(position, json)
-						if nil != err { return nil, err }
-						jsonValue.valueType = VALUE_TYPE_STRING
-						jsonValue.
+		// Object value
+		case '{': return lexNextValueObject()
 
-					case '{':
-						// Object value
+		// Array value
+		case '[':
 
-					case '[':
-						// Array value
+		// Boolean value
+		case 't': fallthrough
+		case 'T': fallthrough
+		case 'f': fallthrough
+		case 'F':
+			// TODO: Consume true|false value
 
-					case 't':
-						fallthrough
-					case 'T':
-						fallthrough
-					case 'f':
-						fallthrough
-					case 'F':
-						// Boolean value
+		// Null value
+		case 'n':
+			// TODO: Consume null value
 
-					case 'n':
-						// Null value
-				}
-				state = _LEXER_STATE_DONE
-		}
+		// Number value
+		default:
+			// TODO: Consume numeric value [-]*[0-9+](\.[0-9+])*
 	}
 	jsonValue.stopPos = position - 1
 	return &jsonValue, nil
 }
 
-func lexConsumeValueString(position int, json*[]rune) (*string, error) {
-	value := ""
-
-	return value, nil
+// Is this the end?
+func (r *JsonLexer) lexAtEOF() bool {
+	return r.lexerPosition >= (r.lexerJsonLen - 1)
 }
 
-func lexSkipJsonWhitespace(position int, json *[]rune) int {
-	for ; (position < jsonLen) && isWhiteSpace((*json)[position]); position++ {
-		// TODO: Validate json as UTF-8 with unicode/utf8.ValidRune() 
-		// ref: https://stackoverflow.com/questions/18130859/how-can-i-iterate-over-a-string-by-runes-in-go
+// Peek at the character for lexer's current position without consuming it
+func (r *JsonLexer) lexPeekCharacter() rune {
+	return (*r).(*lexerJson)[r.lexerPosition]
+}
+
+// Every character must be consumed one at a time to track position
+func (r *JsonLexer) lexConsumeCharacter() rune {
+	char := r.lexPeekCharacter(()
+	r.lexerPosition++
+	if '\n' == char {
+		r.humanLine++
+		r.humanPosition = 1
+	}
+	r.humanPosition++
+	return char
+}
+
+// Consume sequential white space characters to get to the next useful thing
+func (r *JsonLexer) lexConsumeWhitespace() {
+	for ; ! lexAtEOF(); char := r.lexPeekCharacter() {
+		// ref: https://www.geeksforgeeks.org/check-if-the-rune-is-a-space-character-or-not-in-golang/
+		if ! unicode.IsSpace(char) { break }
+		r.lexConsumeCharacter()
 	}
 }
 
-func isWhiteSpace(r rune) bool {
-	// FIXME: use regex to detect whitespace match
-	// ref: https://go.dev/blog/strings
-	// ref: https://pkg.go.dev/unicode/utf8
-	// ref: https://www.reddit.com/r/learnprogramming/comments/sqa4p5/why_does_multibyte_utf8_characters_start_with_a/
-	return false
+// Extract a quoted string JsonValue one character at a time
+func lexNextValueString(position int, json*[]rune) (*JsonValue, error) {
+	// Expect first character is double-quote string opener
+	if char := r.lexConsumeCharacter(); char != '"' {
+		return nil, fmt.Errorf(
+			"Expected opening \" to start string at line %d, pos %d, but got %c instead",
+			r.humanLine,
+			r.humanPosition,
+			char,
+		)
+	}
+
+	// We opened a string value! Scaffold a JsonValue to return
+	jsonValue := NewJsonValue()
+	value := make([]rune, 0)
+
+	// Read characters into the string value until the terminating quote comes
+	escaped := false
+	for ; ! lexAtEOF(); char = r.lexConsumeCharacter() {
+		// if we're NOT escaped, then we care if this char is a '"' or an escape
+		if ! escaped {
+			// The closure! Return our value
+			if char == '"' {
+				jsonValue.SetString(value)
+				return jsonValue, nil
+			}
+			// New escape sequence!
+			if char == '\\' { escaped = true }
+		} else {
+			// Otherwise cancel the escape sequence and continue
+			escaped = false
+		}
+		// Add the character to the string value
+		value = append(value, char)
+	}
+
+	// If we got here then it's because we got to EOF before string closure
+	return nil, fmt.Errorf(
+		"String runs past EOF without closing quote at line %d, pos %d",
+		r.humanLine,
+		r.humanPosition,
+	)
+}
+
+// Extract an object JsonValue one name-value pair at a time
+func lexNextValueObject(position int, json*[]rune) (*JsonValue, error) {
+
+	// TODO: Read comma-separated name:value pairs until '}' token
+	// i. Get a string for object name
 }
 
