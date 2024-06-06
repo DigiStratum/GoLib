@@ -65,7 +65,7 @@ type JsonValue struct {
 	valueFloat		float64
 	valueString		[]rune
 	valueArr		[]*JsonValue
-	valueMap		map[string]*JsonValue
+	valueObject		map[string]*JsonValue
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -151,23 +151,29 @@ func (r *JsonValue) GetArrayElement(index int) *JsonValue {
 	return r.valueArr[index]
 }
 
-func (r *JsonValue) HasObjectProperty(name string) bool {
-	if ! r.IsObject() { return false }
-	_, ok := r.valueMap[name]
-	return ok
+func (r *JsonValue) PrepareObject() {
+	r.valueType = VALUE_TYPE_OBJECT
+	r.valueObject = make(map[string]*JsonValue)
+}
+
+func (r *JsonValue) SetObjectValue(name string, value *JsonValue) error {
+	if VALUE_TYPE_OBJECT !+ r.valueObject {
+		return fmt.Errorf("Not an object type, cannot set object value; use PrepareObject() first!")
+	}
+
 }
 
 func (r *JsonValue) GetObjectPropertyNames() []string {
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
 	names := make([]string, 0)
 	if r.IsObject() {
-		for name, _ := range r.valueMap { names = append(names, name) }
+		for name, _ := range r.valueObject { names = append(names, name) }
 	}
 	return names
 }
 
 func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 	if ! r.IsObject() { return nil }
-	value, _ := r.valueMap[name]
+	value, _ := r.valueObject[name]
 	return value
 }
