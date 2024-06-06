@@ -5,8 +5,9 @@ package json
 Represent a JSON structure as an object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Add support for DOM-like mutability and Marshal() to spit it back out as a JSON string again!
- * Make DependencyInjectable to accept a logger for errors, debug, etc
+ * Add support for DOM-like mutability
+ * Add support for Marshal() to spit it back out as a JSON string again!
+
 */
 
 import (
@@ -28,6 +29,7 @@ const (
 )
 
 type JsonValueIfc interface {
+	// Accessors
 	IsValid() bool
 	IsNull() bool
 	IsBoolean() bool
@@ -44,18 +46,22 @@ type JsonValueIfc interface {
 	GetFloat() float64
 
 	GetString() []rune
-	SetString(value []rune)
 
 	GetArraySize() int
 	GetArrayElement(index int) *JsonValue
 
-	HasObjectProperty(name string) bool
-	GetObjectPropertyNames() []string
-	GetObjectProperty(name string) *JsonValue
-
+	HasObjectProperty(name []rune) bool
+	GetObjectPropertyNames() [][]rune
+	GetObjectProperty(name []rune) *JsonValue
 
 	// TODO: Implement this bad boy!
 	//Select(selector string) (*JsonValue, error)
+
+	// Mutators
+	SetString(value []rune)
+	PrepareObject()
+	SetObjectProperty(name []rune, jsonValue *JsonValue) error
+	DropObjectProperty(name []rune) error
 }
 
 type JsonValue struct {
@@ -65,7 +71,7 @@ type JsonValue struct {
 	valueFloat		float64
 	valueString		[]rune
 	valueArr		[]*JsonValue
-	valueObject		map[string]*JsonValue
+	valueObject		map[[]rune]*JsonValue
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -153,27 +159,41 @@ func (r *JsonValue) GetArrayElement(index int) *JsonValue {
 
 func (r *JsonValue) PrepareObject() {
 	r.valueType = VALUE_TYPE_OBJECT
-	r.valueObject = make(map[string]*JsonValue)
+	r.valueObject = make(map[[]rune]*JsonValue)
 }
 
-func (r *JsonValue) SetObjectValue(name string, value *JsonValue) error {
+func (r *JsonValue) SetObjectProperty(name []rune, jsonValue *JsonValue) error {
 	if VALUE_TYPE_OBJECT !+ r.valueObject {
-		return fmt.Errorf("Not an object type, cannot set object value; use PrepareObject() first!")
+		return fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
 	}
 
+	// Don't add nil JsonValue into map; Use VALUE_TYPE_NULL JsonValue for JSON NULL value
+	if nil != value { r.valueObject[name] = jsonValue }
+	return nil
 }
 
-func (r *JsonValue) GetObjectPropertyNames() []string {
+func (r *JsonValue) DropObjectProperty(name []rune) error {
+	if VALUE_TYPE_OBJECT !+ r.valueObject {
+		return fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
+	}
+
+	// Delete property if exists; non-existent is non-error: caller already has desired result
+	if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
+	return nil
+}
+
+func (r *JsonValue) GetObjectPropertyNames() [][]rune {
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
-	names := make([]string, 0)
+	names := make([][]rune, 0)
 	if r.IsObject() {
 		for name, _ := range r.valueObject { names = append(names, name) }
 	}
 	return names
 }
 
-func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
+func (r *JsonValue) GetObjectProperty(name []rune) *JsonValue {
 	if ! r.IsObject() { return nil }
 	value, _ := r.valueObject[name]
 	return value
 }
+
