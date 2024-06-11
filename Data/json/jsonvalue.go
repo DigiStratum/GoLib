@@ -62,6 +62,12 @@ type JsonValueIfc interface {
 	PrepareObject()
 	SetObjectProperty(name string, jsonValue *JsonValue) error
 	DropObjectProperty(name string) error
+
+	SetBoolean(value bool)
+	SetNull()
+
+	PrepareArray()
+	AppendArrayValue(jsonValue *JsonValue) error
 }
 
 type JsonValue struct {
@@ -157,7 +163,7 @@ func (r *JsonValue) GetArrayElement(index int) *JsonValue {
 	return r.valueArr[index]
 }
 
-// Object Properties
+// Objects
 
 func (r *JsonValue) PrepareObject() {
 	r.valueType = VALUE_TYPE_OBJECT
@@ -203,5 +209,31 @@ func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 	if ! r.IsObject() { return nil }
 	value, _ := r.valueObject[name]
 	return value
+}
+
+// Booleans
+
+func (r *JsonValue) SetBoolean(value bool) {
+	r.valueType = VALUE_TYPE_BOOLEAN
+	r.valueBoolean = value
+}
+
+// Nulls
+
+func (r *JsonValue) SetNull() {
+	r.valueType = VALUE_TYPE_NULL
+}
+
+// Arrays
+
+func (r *JsonValue) PrepareArray() {
+	r.valueType = VALUE_TYPE_ARRAY
+	r.valueArr = make([]*JsonValue, 0)
+}
+
+func (r *JsonValue) AppendArrayValue(jsonValue *JsonValue) error {
+	if nil == jsonValue { return fmt.Errorf("nil JsonValue cannot be appended to Array value") }
+	r.valueArr = append(r.valueArr, jsonValue)
+	return nil
 }
 

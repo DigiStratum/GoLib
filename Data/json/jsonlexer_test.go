@@ -88,6 +88,19 @@ func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_empty_object_json(
 	ExpectTrue(actual.IsObject(), t)
 }
 
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_object_json(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := " {  "
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(actualErr, t)
+}
+
 func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_object_json(t *testing.T) {
 	// Setup
 	sut := NewJsonLexer()
@@ -104,5 +117,49 @@ func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_object_json(t *tes
 	ExpectTrue(actual.IsValid(), t)
 	ExpectTrue(actual.IsObject(), t)
 	ExpectTrue(actual.HasObjectProperty(expectedName), t)
+}
+
+func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_empty_array_json(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := " [ ] "
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(actualErr, t)
+	ExpectTrue(actual.IsValid(), t)
+	ExpectTrue(actual.IsArray(), t)
+}
+
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_array_json(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := " [  "
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(actualErr, t)
+}
+
+func TestThat_JsonLexer_LexJsonValue_Returns_arrar_array_json(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := "[\n\t\"A\",\n\t\"B\",\n\t\"C\",\n]"
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(actualErr, t)
+	ExpectTrue(actual.IsValid(), t)
+	ExpectTrue(actual.IsArray(), t)
+	ExpectInt(3, actual.GetArraySize(), t)
 }
 
