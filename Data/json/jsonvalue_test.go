@@ -10,7 +10,7 @@ import(
 func TestThat_JsonValue_NewJsonValue_ReturnsInstance(t *testing.T) {
 	// Setup
 	//json := []rune("{}")
-	sut := NewJsonValue()
+	var sut JsonValueIfc = NewJsonValue()
 
 	// Verify
 	ExpectNonNil(sut, t)

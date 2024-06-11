@@ -79,7 +79,7 @@ import (
 )
 
 type JsonLexerIfc interface {
-	LexJsonValue(json *[]rune) (*JsonValue, error)
+	LexJsonValue(json string) (*JsonValue, error)
 }
 
 type JsonLexer struct {
@@ -187,17 +187,19 @@ func (r *JsonLexer) lexNextValue() (*JsonValue, error) {
 
 // Is this the end?
 func (r *JsonLexer) lexAtEOF() bool {
-	return r.lexerPosition >= (r.lexerJsonLen - 1)
+	return r.lexerPosition >= r.lexerJsonLen
 }
 
 // Peek at the character for lexer's current position without consuming it
 func (r *JsonLexer) lexPeekCharacter() rune {
-	return r.lexerJson[r.lexerPosition]
+	char := r.lexerJson[r.lexerPosition]
+	return char
 }
 
 // Every character must be consumed one at a time to track position
 func (r *JsonLexer) lexConsumeCharacter() rune {
 	char := r.lexPeekCharacter()
+//fmt.Printf("[%c] %d", char, r.lexerPosition)
 	r.lexerPosition++
 	if '\n' == char {
 		r.humanLine++
@@ -209,26 +211,27 @@ func (r *JsonLexer) lexConsumeCharacter() rune {
 
 // Consume sequential white space characters to get to the next useful thing
 func (r *JsonLexer) lexConsumeWhitespace() {
-	var char rune
-	for ; ! r.lexAtEOF(); char = r.lexPeekCharacter() {
+	if r.lexAtEOF() { return }
+	for ; ; {
+		char := r.lexPeekCharacter()
 		// ref: https://www.geeksforgeeks.org/check-if-the-rune-is-a-space-character-or-not-in-golang/
 		if ! unicode.IsSpace(char) { break }
 		r.lexConsumeCharacter()
+
+		if r.lexAtEOF() { break }
 	}
 }
 
 // Extract a quoted string JsonValue one character at a time
 func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 	// Expect first character is double-quote string opener
-	var char rune
-	if char = r.lexConsumeCharacter(); char != '"' {
-		return nil, fmt.Errorf(
-			"Expected opening '\"' to start string at line %d, pos %d, but got '%c' instead",
-			r.humanLine,
-			r.humanPosition,
-			char,
-		)
+	char := r.lexPeekCharacter()
+	if '"' != char {
+		return nil, r.lexError(fmt.Sprintf(
+			"Expected string start with '\"' but got '%c' instead", char,
+		))
 	}
+	r.lexConsumeCharacter()
 
 	// We opened a string value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
@@ -236,7 +239,8 @@ func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 
 	// Read characters into the string value until the terminating quote comes
 	escaped := false
-	for ; ! r.lexAtEOF(); char = r.lexConsumeCharacter() {
+	for ; ; {
+		char = r.lexConsumeCharacter()
 		// if we're NOT escaped, then we care if this char is a '"' or an escape
 		if ! escaped {
 			// The closure! Return our value
@@ -252,39 +256,34 @@ func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 		}
 		// Add the character to the string value
 		stringValue = append(stringValue, char)
+
+		if r.lexAtEOF() { break }
 	}
 
 	// If we got here then it's because we got to EOF before string closure
-	return nil, fmt.Errorf(
-		"String runs past EOF without closing at line %d, pos %d",
-		r.humanLine,
-		r.humanPosition,
-	)
+	return nil, r.lexError("String runs past EOF without closing")
 }
 
 // Extract an object JsonValue one name-value pair at a time
 func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 	// Expect first character is double-quote string opener
 	if char := r.lexConsumeCharacter(); char != '{' {
-		return nil, fmt.Errorf(
-			"Expected opening '{' to start object at line %d, pos %d, but got '%c' instead",
-			r.humanLine,
-			r.humanPosition,
-			char,
-		)
+		return nil, r.lexError(fmt.Sprintf(
+			"Expected object start with '{' but got '%c' instead", char,
+		))
 	}
 
 	// We opened an Object value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
 	jsonValue.PrepareObject()
 
-	// Inside the object opener may be whitespace...
-	r.lexConsumeWhitespace()
-
 	// Read comma-separated name:value pairs until '}' token
-	var char rune
-	for ; ! r.lexAtEOF(); char = r.lexPeekCharacter() {
+	for ; ; {
+		r.lexConsumeWhitespace()
+		if r.lexAtEOF() { break }
+
 		// If the next character closes the object, then we're done!
+		char := r.lexPeekCharacter()
 		if '}' == char {
 			r.lexConsumeCharacter()
 			return jsonValue, nil
@@ -292,21 +291,13 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 
 		// Expect a non-empty, quoted name string value for a property name, then...
 		if '"' != char {
-			return nil, fmt.Errorf(
-				"Expected quoted object property name, but got something else instead at line %d, pos %d",
-				r.humanLine,
-				r.humanPosition,
-			)
+			return nil, r.lexError("Expected quoted object property name, but got something else instead")
 		}
 		nameValue, err := r.lexNextValueString()
 		if nil != err { return nil, err }
 		propertyName := nameValue.GetString()
 		if 0 == len(propertyName) {
-			return nil, fmt.Errorf(
-				"Expected non-empty object property name, but got empty string instead at line %d, pos %d",
-				r.humanLine,
-				r.humanPosition,
-			)
+			return nil, r.lexError("Expected non-empty object property name, but got empty string instead")
 		}
 
 		// After the name may be whitespace
@@ -314,14 +305,10 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		if r.lexAtEOF() { break }
 
 		// Expect a ':' separator between the name and value
-		char = r.lexPeekCharacter()
-		if ':' != char {
-			return nil, fmt.Errorf(
-				"Expected ':' object property name separator, but got '%c' instead at line %d, pos %d",
-				char,
-				r.humanLine,
-				r.humanPosition,
-			)
+		if ':' != r.lexPeekCharacter() {
+			return nil, r.lexError(fmt.Sprintf(
+				"Expected ':' object property name separator, but got '%c' instead", char,
+			))
 		}
 
 		// Consume the separator; After may be whitespace
@@ -330,15 +317,12 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		if r.lexAtEOF() { break }
 
 		// Receive any possible valid value that follows
-		propertyValue, err := r.lexNextValue()
+		propertyValue, err := r.lexNextValue() // <- BEWARE: Recursion!
 		if nil != err { return nil, err }
 		if ! propertyValue.IsValid() {
-			return nil, fmt.Errorf(
-				"Expected valid value for object property '%s', but got something else instead at line %d, pos %d",
-				propertyName,
-				r.humanLine,
-				r.humanPosition,
-			)
+			return nil, r.lexError(fmt.Sprintf(
+				"Expected valid value for object property '%s', but got something else instead", propertyName,
+			))
 		}
 		if err = jsonValue.SetObjectProperty(propertyName, propertyValue); nil != err { return nil, err }
 
@@ -348,25 +332,17 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 
 		// Expect a ',' separator between the name:value pairs or closing '}'
 		char = r.lexPeekCharacter()
-
 		if ',' == char {
 			r.lexConsumeCharacter()
-		} else if '}' != char {
-			return nil, fmt.Errorf(
-				"Expected ',' or '}' after object property '%s', but got '%c' instead at line %d, pos %d",
-				propertyName,
-				char,
-				r.humanLine,
-				r.humanPosition,
-			)
-		}
+		} else if '}' != char { break }
+
+		if r.lexAtEOF() { break }
 	}
 
 	// If we got here then it's because we got to EOF before object closure
-	return nil, fmt.Errorf(
-		"Object runs past EOF without closing at line %d, pos %d",
-		r.humanLine,
-		r.humanPosition,
-	)
+	return nil, r.lexError("Object runs past EOF without closing")
 }
 
+func (r *JsonLexer) lexError(msg string) error {
+	return fmt.Errorf( "%s at line %d, pos %d", msg, r.humanLine, r.humanPosition)
+}

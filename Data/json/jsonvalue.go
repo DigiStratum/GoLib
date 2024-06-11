@@ -45,7 +45,7 @@ type JsonValueIfc interface {
 
 	GetFloat() float64
 
-	GetString() []rune
+	GetString() string
 
 	GetArraySize() int
 	GetArrayElement(index int) *JsonValue
@@ -157,6 +157,8 @@ func (r *JsonValue) GetArrayElement(index int) *JsonValue {
 	return r.valueArr[index]
 }
 
+// Object Properties
+
 func (r *JsonValue) PrepareObject() {
 	r.valueType = VALUE_TYPE_OBJECT
 	r.valueObject = make(map[string]*JsonValue)
@@ -180,6 +182,12 @@ func (r *JsonValue) DropObjectProperty(name string) error {
 	// Delete property if exists; non-existent is non-error: caller already has desired result
 	if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
 	return nil
+}
+
+func (r *JsonValue) HasObjectProperty(name string) bool {
+	if ! r.IsObject() { return false }
+	_, ok := r.valueObject[name]
+	return ok
 }
 
 func (r *JsonValue) GetObjectPropertyNames() []string {
