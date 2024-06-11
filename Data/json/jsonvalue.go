@@ -12,7 +12,7 @@ TODO:
 
 import (
 	"fmt"
-	"unicode/utf8"
+	//"unicode/utf8"
 )
 
 type ValueType int
@@ -50,18 +50,18 @@ type JsonValueIfc interface {
 	GetArraySize() int
 	GetArrayElement(index int) *JsonValue
 
-	HasObjectProperty(name []rune) bool
-	GetObjectPropertyNames() [][]rune
-	GetObjectProperty(name []rune) *JsonValue
+	HasObjectProperty(name string) bool
+	GetObjectPropertyNames() []string
+	GetObjectProperty(name string) *JsonValue
 
 	// TODO: Implement this bad boy!
 	//Select(selector string) (*JsonValue, error)
 
 	// Mutators
-	SetString(value []rune)
+	SetString(value string)
 	PrepareObject()
-	SetObjectProperty(name []rune, jsonValue *JsonValue) error
-	DropObjectProperty(name []rune) error
+	SetObjectProperty(name string, jsonValue *JsonValue) error
+	DropObjectProperty(name string) error
 }
 
 type JsonValue struct {
@@ -69,9 +69,9 @@ type JsonValue struct {
 	valueBoolean		bool
 	valueInteger		int64
 	valueFloat		float64
-	valueString		[]rune
+	valueString		string
 	valueArr		[]*JsonValue
-	valueObject		map[[]rune]*JsonValue
+	valueObject		map[string]*JsonValue
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -136,14 +136,14 @@ func (r *JsonValue) GetFloat() float64 {
 	return r.valueFloat
 }
 
-func (r *JsonValue) GetString() []rune {
-	if ! r.IsString() { return []rune("") }
+func (r *JsonValue) GetString() string {
+	if ! r.IsString() { return "" }
 	return r.valueString
 }
 
-func (r *JsonValue) SetString(value []rune) {
+func (r *JsonValue) SetString(value string) {
 	r.valueType = VALUE_TYPE_STRING
-	r.valureString = value
+	r.valueString = value
 }
 
 func (r *JsonValue) GetArraySize() int {
@@ -159,21 +159,21 @@ func (r *JsonValue) GetArrayElement(index int) *JsonValue {
 
 func (r *JsonValue) PrepareObject() {
 	r.valueType = VALUE_TYPE_OBJECT
-	r.valueObject = make(map[[]rune]*JsonValue)
+	r.valueObject = make(map[string]*JsonValue)
 }
 
-func (r *JsonValue) SetObjectProperty(name []rune, jsonValue *JsonValue) error {
-	if VALUE_TYPE_OBJECT !+ r.valueObject {
+func (r *JsonValue) SetObjectProperty(name string, jsonValue *JsonValue) error {
+	if VALUE_TYPE_OBJECT != r.valueType {
 		return fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
 	}
 
 	// Don't add nil JsonValue into map; Use VALUE_TYPE_NULL JsonValue for JSON NULL value
-	if nil != value { r.valueObject[name] = jsonValue }
+	if nil != jsonValue { r.valueObject[name] = jsonValue }
 	return nil
 }
 
-func (r *JsonValue) DropObjectProperty(name []rune) error {
-	if VALUE_TYPE_OBJECT !+ r.valueObject {
+func (r *JsonValue) DropObjectProperty(name string) error {
+	if VALUE_TYPE_OBJECT != r.valueType {
 		return fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
 	}
 
@@ -182,16 +182,16 @@ func (r *JsonValue) DropObjectProperty(name []rune) error {
 	return nil
 }
 
-func (r *JsonValue) GetObjectPropertyNames() [][]rune {
+func (r *JsonValue) GetObjectPropertyNames() []string {
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
-	names := make([][]rune, 0)
+	names := make([]string, 0)
 	if r.IsObject() {
 		for name, _ := range r.valueObject { names = append(names, name) }
 	}
 	return names
 }
 
-func (r *JsonValue) GetObjectProperty(name []rune) *JsonValue {
+func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 	if ! r.IsObject() { return nil }
 	value, _ := r.valueObject[name]
 	return value

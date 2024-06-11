@@ -83,7 +83,7 @@ type JsonLexerIfc interface {
 }
 
 type JsonLexer struct {
-	lexerJson		*[]rune
+	lexerJson		[]rune
 	lexerJsonLen		int
 	lexerPosition		int
 	lexerErr		error
@@ -108,16 +108,17 @@ func NewJsonLexer() *JsonLexer {
 // -------------------------------------------------------------------------------------------------
 
 // Lexically parse a JsonValue out of existing JSON
-func (r *JsonLexer) LexJsonValue(json *[]rune) (*JsonValue, error) {
-	// Require UTF-8 
-	if ! utf8.ValidString(string(r.json)) {
+func (r *JsonLexer) LexJsonValue(json string) (*JsonValue, error) {
+	// Require UTF-8
+	if ! utf8.ValidString(json) {
 		return nil, fmt.Errorf("JSON has invalid UTF-8 multibyte sequences")
 	}
 
-	r.lexerJson = json
+	r.lexerJson = []rune(json)
 	r.lexerPosition = 0
-	r.lexerJsonLen = len(*json)
-	r.humanLine = r.humanPostion = 1
+	r.lexerJsonLen = len(r.lexerJson)
+	r.humanLine = 1
+	r.humanPosition = 1
 	return r.lexNextValue()
 }
 
@@ -158,10 +159,10 @@ func (r *JsonLexer) lexNextValue() (*JsonValue, error) {
 	// 2) Use the next character to determine data type for the value
 	switch r.lexPeekCharacter() {
 		// String value
-		case '"': return lexNextValueString()
+		case '"': return r.lexNextValueString()
 
 		// Object value
-		case '{': return lexNextValueObject()
+		case '{': return r.lexNextValueObject()
 
 		// Array value
 		case '[':
@@ -191,12 +192,12 @@ func (r *JsonLexer) lexAtEOF() bool {
 
 // Peek at the character for lexer's current position without consuming it
 func (r *JsonLexer) lexPeekCharacter() rune {
-	return (*r).(*lexerJson)[r.lexerPosition]
+	return r.lexerJson[r.lexerPosition]
 }
 
 // Every character must be consumed one at a time to track position
 func (r *JsonLexer) lexConsumeCharacter() rune {
-	char := r.lexPeekCharacter(()
+	char := r.lexPeekCharacter()
 	r.lexerPosition++
 	if '\n' == char {
 		r.humanLine++
@@ -208,7 +209,8 @@ func (r *JsonLexer) lexConsumeCharacter() rune {
 
 // Consume sequential white space characters to get to the next useful thing
 func (r *JsonLexer) lexConsumeWhitespace() {
-	for ; ! r.lexAtEOF(); char := r.lexPeekCharacter() {
+	var char rune
+	for ; ! r.lexAtEOF(); char = r.lexPeekCharacter() {
 		// ref: https://www.geeksforgeeks.org/check-if-the-rune-is-a-space-character-or-not-in-golang/
 		if ! unicode.IsSpace(char) { break }
 		r.lexConsumeCharacter()
@@ -218,7 +220,8 @@ func (r *JsonLexer) lexConsumeWhitespace() {
 // Extract a quoted string JsonValue one character at a time
 func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 	// Expect first character is double-quote string opener
-	if char := r.lexConsumeCharacter(); char != '"' {
+	var char rune
+	if char = r.lexConsumeCharacter(); char != '"' {
 		return nil, fmt.Errorf(
 			"Expected opening '\"' to start string at line %d, pos %d, but got '%c' instead",
 			r.humanLine,
@@ -238,7 +241,7 @@ func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 		if ! escaped {
 			// The closure! Return our value
 			if char == '"' {
-				jsonValue.SetString(stringValue)
+				jsonValue.SetString(string(stringValue))
 				return jsonValue, nil
 			}
 			// New escape sequence!
@@ -279,11 +282,12 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 	r.lexConsumeWhitespace()
 
 	// Read comma-separated name:value pairs until '}' token
-	for ; ! r.lexAtEOF(); char := r.lexPeekCharacter() {
+	var char rune
+	for ; ! r.lexAtEOF(); char = r.lexPeekCharacter() {
 		// If the next character closes the object, then we're done!
 		if '}' == char {
 			r.lexConsumeCharacter()
-			return nil, jsonValue
+			return jsonValue, nil
 		}
 
 		// Expect a non-empty, quoted name string value for a property name, then...
@@ -294,7 +298,7 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 				r.humanPosition,
 			)
 		}
-		nameValue, err := r.lexConsumeValueString()
+		nameValue, err := r.lexNextValueString()
 		if nil != err { return nil, err }
 		propertyName := nameValue.GetString()
 		if 0 == len(propertyName) {
@@ -345,8 +349,9 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		// Expect a ',' separator between the name:value pairs or closing '}'
 		char = r.lexPeekCharacter()
 
-		if ',' == char { r.lexConsumeCharacter() }
-		else if '}' != char {
+		if ',' == char {
+			r.lexConsumeCharacter()
+		} else if '}' != char {
 			return nil, fmt.Errorf(
 				"Expected ',' or '}' after object property '%s', but got '%c' instead at line %d, pos %d",
 				propertyName,
