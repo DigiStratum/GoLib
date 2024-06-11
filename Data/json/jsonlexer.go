@@ -432,11 +432,58 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 	return nil, r.lexError("Array runs past EOF without closing")
 }
 
-func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
-	// TODO: Consume numeric value [-]*[0-9+](\.[0-9+])*
+/*
+Note:
+ * int64 range is -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807; that's 20 chars, less the
+   commas, max readalbe
 
-	// If we got here then it's because we got to EOF before the number token parsed out completely
-	return nil, r.lexError("Array runs past EOF without closing")
+ * float64 numeric grammar is more elaborate; Ref: https://www.rfc-editor.org/rfc/rfc7159.html#section-6
+
+ 	number = [ minus ] int [ frac ] [ exp ]
+	decimal-point = %x2E       ; .
+	digit1-9 = %x31-39         ; 1-9
+	e = %x65 / %x45            ; e E
+	exp = e [ minus / plus ] 1*DIGIT
+	frac = decimal-point 1*DIGIT
+	int = zero / ( digit1-9 *DIGIT )
+	minus = %x2D               ; -
+	plus = %x2B                ; +
+	zero = %x30                ; 0
+
+* Some string representations of float appear to support up to 26 characters in various software
+   implementations. From RFC7159 above:
+
+	Note that when such software is used, numbers that are integers and are in the range
+	[-(2**53)+1, (2**53)-1] are interoperable in the sense that implementations will agree
+	exactly on their numeric values.
+
+ * Therefore, TODO: Implement a configurable precision/range limit that defaults to the above
+   interoperability standards, with optional override, and throw error as we parse and discover
+   values that are out of range.
+*/
+func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
+	valueStr := ""
+
+	// TODO: Consume numeric value [-]*([0]|[1-9][0-9]*)(\.[0-9]+)([eE](+-)[1-9][0-9]+)*
+
+	// Allow a single, optional negative sign
+	if '-' == r.lexPeekCharacter() {
+		r.lexConsumeCharacter()
+		valueStr = "-"
+	}
+
+	// We either accept zero or some non-zero digit sequence without leading zero as the integer component
+
+
+	// Read number chars until they run out or we break upper character count limit
+	for ; ; {
+		if r.lexConsumeWhitespace() { break }
+
+		// If the next character closes the array, then we're done!
+		char := r.lexPeekCharacter()
+
+		// If we got here then it's because we got to EOF before the number token parsed out completely
+	return nil, r.lexError("Number value runs past EOF without closing")
 }
 
 func (r *JsonLexer) lexError(msg string) error {
