@@ -76,6 +76,7 @@ import (
 	"fmt"
 	"unicode"
 	"unicode/utf8"
+	"strconv"
 )
 
 type JsonLexerIfc interface {
@@ -463,7 +464,6 @@ Note:
 */
 func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
 	isFloat := false
-	hasInt := false
 	valueStr := ""
 
 	// TODO: Consume numeric value [-]*([0]|[1-9][0-9]*)(\.[0-9]+)([eE](+-)[1-9][0-9]+)*
@@ -479,61 +479,75 @@ func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
 	if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [2]") }
 	char := r.lexPeekCharacter()
 	// Get the integer digits!
+	digits, err := r.lexNextDigits()
+	if (nil != err) || (len(*digits) == 0) { return nil, r.lexError("Number value runs past EOF without closing [3]") }
+	valueStr = valueStr + *digits
+
+	// 3) Optional decimal (but only if we have an integer part, doh!)
+	if ! r.lexAtEOF() {
+		if '.' == char {
+			r.lexConsumeCharacter()
+			valueStr = valueStr + "."
+			isFloat = true
+			// Get the decimal digits!
+			digits, err := r.lexNextDigits()
+			if nil != err { return nil, err }
+			valueStr = valueStr + *digits
+		}
+
+		// 4) Optional exponent
+		if 'E' == unicode.ToUpper(char) {
+			r.lexConsumeCharacter()
+			valueStr = valueStr + "e"
+			if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [4]") }
+			char = r.lexPeekCharacter()
+			if '-' == char {
+				valueStr = valueStr + string('-')
+				r.lexConsumeCharacter()
+				if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [5]") }
+				char = r.lexPeekCharacter()
+			} else if '+' == char {
+				r.lexConsumeCharacter()
+				if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [6]") }
+				char = r.lexPeekCharacter()
+			}
+			// Get the exponent digits!
+			digits, err := r.lexNextDigits()
+			if nil != err { return nil, err }
+			valueStr = valueStr + *digits
+		}
+	}
+
+	// Return the valueStr as an int64 or float64!
+	jsonValue := NewJsonValue()
+	if isFloat {
+		valueFloat, err := strconv.ParseFloat(valueStr, 64)
+		if nil != err {
+			return nil, r.lexError(fmt.Sprintf("Error converting parsed number '%s' to float64: %s", valueStr, err.Error()))
+		}
+		jsonValue.SetFloat(valueFloat)
+	} else {
+		valueInteger, err := strconv.ParseInt(valueStr, 10, 64)
+		if nil != err {
+			return nil, r.lexError(fmt.Sprintf("Error converting parsed number '%s' to int64: %s", valueStr, err.Error()))
+		}
+		jsonValue.SetInteger(valueInteger)
+	}
+
+	return jsonValue, nil
+}
+
+func (r *JsonLexer) lexNextDigits() (*string, error) {
+	// Gather digits!
+	valueStr := ""
+	if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [digits]") }
+	char := r.lexPeekCharacter()
 	for ; ('0' < char) && ('9' >= char) ; {
-		hasInt = true
-		char = r.lexConsumeCharacter()
-		valueStr = valueStr + r.lexConsumeCharacter()
+		valueStr = valueStr + string(r.lexConsumeCharacter())
 		if r.lexAtEOF() { break }
-	}
-
-	// 3) Optional decimal
-	if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [3]") }
-	if (hasInt) && ('.' == char) {
-		r.lexConsumeCharacter()
-		valueStr = valueStr + "."
-		hasFloat = true
-		// Get the decimal digits!
 		char = r.lexPeekCharacter()
-		if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [4]") }
-		for ; ('0' < char) && ('9' >= char) ; {
-			hasInt = true
-			char = r.lexConsumeCharacter()
-			valueStr = valueStr + r.lexConsumeCharacter()
-			if r.lexAtEOF() { break }
-		}
 	}
-
-	// 4) Optional exponent
-	if 'E' == unicode.ToUpper(char) {
-		r.lexConsumeCharacter()
-		valueStr = valueStr + "e"
-		hasExp = true
-		if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [5]") }
-		char = r.lexPeekCharacter()
-		if '-' == char {
-			valueStr = valueStr + '-'
-			r.lexConsumeCharacter()
-			if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [6]") }
-			char = r.lexPeekCharacter()
-		} else if '+' == char {
-			r.lexConsumeCharacter()
-			if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [7]") }
-			char = r.lexPeekCharacter()
-		}
-		// Get the exponent digits!
-		char = r.lexPeekCharacter()
-		if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [8]") }
-		for ; ('0' < char) && ('9' >= char) ; {
-			hasInt = true
-			char = r.lexConsumeCharacter()
-			valueStr = valueStr + r.lexConsumeCharacter()
-			if r.lexAtEOF() { break }
-		}
-	}
-
-	// TODO: capture the valueStr and return it as an integer or float!
-
-	return nil, nil
+	return &valueStr, nil
 }
 
 func (r *JsonLexer) lexError(msg string) error {

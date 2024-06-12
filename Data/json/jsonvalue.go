@@ -5,7 +5,6 @@ package json
 Represent a JSON structure as an object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Add support for DOM-like mutability
  * Add support for Marshal() to spit it back out as a JSON string again!
 
 */
@@ -29,45 +28,52 @@ const (
 )
 
 type JsonValueIfc interface {
-	// Accessors
+
+	// Validity
 	IsValid() bool
+
+	// Nulls
 	IsNull() bool
-	IsBoolean() bool
-	IsInteger() bool
-	IsFloat() bool
+	SetNull()
+
+	// Strings
 	IsString() bool
-	IsArray() bool
-	IsObject() bool
-
-	GetBoolean() bool
-
-	GetInteger() int64
-
-	GetFloat() float64
-
 	GetString() string
+	SetString(value string)
 
-	GetArraySize() int
-	GetArrayElement(index int) *JsonValue
-
+	// Objects
+	IsObject() bool
+	PrepareObject()
+	SetObjectProperty(name string, jsonValue *JsonValue) error
+	DropObjectProperty(name string) error
 	HasObjectProperty(name string) bool
 	GetObjectPropertyNames() []string
 	GetObjectProperty(name string) *JsonValue
 
-	// TODO: Implement this bad boy!
-	//Select(selector string) (*JsonValue, error)
-
-	// Mutators
-	SetString(value string)
-	PrepareObject()
-	SetObjectProperty(name string, jsonValue *JsonValue) error
-	DropObjectProperty(name string) error
-
+	// Booleans
+	IsBoolean() bool
+	GetBoolean() bool
 	SetBoolean(value bool)
-	SetNull()
 
+	// Arrays
+	IsArray() bool
+	GetArraySize() int
+	GetArrayElement(index int) *JsonValue
 	PrepareArray()
 	AppendArrayValue(jsonValue *JsonValue) error
+
+	// Floats
+	IsFloat() bool
+	GetFloat() float64
+	SetFloat(value float64)
+
+	// Integers
+	IsInteger() bool
+	GetInteger() int64
+	SetInteger(value int64)
+
+	// TODO: Implement this bad boy!
+	//Select(selector string) (*JsonValue, error)
 }
 
 type JsonValue struct {
@@ -96,50 +102,23 @@ func NewJsonValue() *JsonValue {
 // JsonValueIfc
 // -------------------------------------------------------------------------------------------------
 
+// Validity
 func (r *JsonValue) IsValid() bool {
 	return r.valueType > VALUE_TYPE_INVALID
 }
 
+// Nulls
 func (r *JsonValue) IsNull() bool {
 	return r.valueType == VALUE_TYPE_NULL
 }
 
-func (r *JsonValue) IsBoolean() bool {
-	return r.valueType == VALUE_TYPE_BOOLEAN
+func (r *JsonValue) SetNull() {
+	r.valueType = VALUE_TYPE_NULL
 }
 
-func (r *JsonValue) IsInteger() bool {
-	return r.valueType == VALUE_TYPE_INTEGER
-}
-
-func (r *JsonValue) IsFloat() bool {
-	return r.valueType == VALUE_TYPE_FLOAT
-}
-
+// Strings
 func (r *JsonValue) IsString() bool {
 	return r.valueType == VALUE_TYPE_STRING
-}
-
-func (r *JsonValue) IsArray() bool {
-	return r.valueType == VALUE_TYPE_ARRAY
-}
-
-func (r *JsonValue) IsObject() bool {
-	return r.valueType == VALUE_TYPE_OBJECT
-}
-
-func (r *JsonValue) GetBoolean() bool {
-	return r.IsBoolean() && r.valueBoolean
-}
-
-func (r *JsonValue) GetInteger() int64 {
-	if ! r.IsInteger() { return int64(0) }
-	return r.valueInteger
-}
-
-func (r *JsonValue) GetFloat() float64 {
-	if ! r.IsFloat() { return float64(0.0) }
-	return r.valueFloat
 }
 
 func (r *JsonValue) GetString() string {
@@ -152,18 +131,10 @@ func (r *JsonValue) SetString(value string) {
 	r.valueString = value
 }
 
-func (r *JsonValue) GetArraySize() int {
-	if ! r.IsArray() { return 0 }
-	return len(r.valueArr)
-}
-
-func (r *JsonValue) GetArrayElement(index int) *JsonValue {
-	if ! r.IsArray() { return nil }
-	if (index < 0) || (index >= len(r.valueArr)) { return nil }
-	return r.valueArr[index]
-}
-
 // Objects
+func (r *JsonValue) IsObject() bool {
+	return r.valueType == VALUE_TYPE_OBJECT
+}
 
 func (r *JsonValue) PrepareObject() {
 	r.valueType = VALUE_TYPE_OBJECT
@@ -212,19 +183,34 @@ func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 }
 
 // Booleans
+func (r *JsonValue) IsBoolean() bool {
+	return r.valueType == VALUE_TYPE_BOOLEAN
+}
+
+func (r *JsonValue) GetBoolean() bool {
+	return r.IsBoolean() && r.valueBoolean
+}
 
 func (r *JsonValue) SetBoolean(value bool) {
 	r.valueType = VALUE_TYPE_BOOLEAN
 	r.valueBoolean = value
 }
 
-// Nulls
-
-func (r *JsonValue) SetNull() {
-	r.valueType = VALUE_TYPE_NULL
+// Arrays
+func (r *JsonValue) IsArray() bool {
+	return r.valueType == VALUE_TYPE_ARRAY
 }
 
-// Arrays
+func (r *JsonValue) GetArraySize() int {
+	if ! r.IsArray() { return 0 }
+	return len(r.valueArr)
+}
+
+func (r *JsonValue) GetArrayElement(index int) *JsonValue {
+	if ! r.IsArray() { return nil }
+	if (index < 0) || (index >= len(r.valueArr)) { return nil }
+	return r.valueArr[index]
+}
 
 func (r *JsonValue) PrepareArray() {
 	r.valueType = VALUE_TYPE_ARRAY
@@ -235,5 +221,35 @@ func (r *JsonValue) AppendArrayValue(jsonValue *JsonValue) error {
 	if nil == jsonValue { return fmt.Errorf("nil JsonValue cannot be appended to Array value") }
 	r.valueArr = append(r.valueArr, jsonValue)
 	return nil
+}
+
+// Floats
+func (r *JsonValue) IsFloat() bool {
+	return r.valueType == VALUE_TYPE_FLOAT
+}
+
+func (r *JsonValue) GetFloat() float64 {
+	if ! r.IsFloat() { return float64(0.0) }
+	return r.valueFloat
+}
+
+func (r *JsonValue) SetFloat(value float64) {
+	r.valueType = VALUE_TYPE_FLOAT
+	r.valueFloat = value
+}
+
+// Integers
+func (r *JsonValue) IsInteger() bool {
+	return r.valueType == VALUE_TYPE_INTEGER
+}
+
+func (r *JsonValue) GetInteger() int64 {
+	if ! r.IsInteger() { return int64(0) }
+	return r.valueInteger
+}
+
+func (r *JsonValue) SetInteger(value int64) {
+	r.valueType = VALUE_TYPE_INTEGER
+	r.valueInteger = value
 }
 
