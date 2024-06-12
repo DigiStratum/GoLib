@@ -6,7 +6,7 @@ Represent a JSON structure as an object tree with JavaScript-like selectors and 
 
 TODO:
  * Add support for Marshal() to spit it back out as a JSON string again!
-
+ * Add support for array element and object property iterator
 */
 
 import (

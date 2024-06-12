@@ -542,11 +542,12 @@ func (r *JsonLexer) lexNextDigits() (*string, error) {
 	valueStr := ""
 	if r.lexAtEOF() { return nil, r.lexError("Number value runs past EOF without closing [digits]") }
 	char := r.lexPeekCharacter()
-	for ; ('0' < char) && ('9' >= char) ; {
+	for ; ('0' <= char) && ('9' >= char) ; {
 		valueStr = valueStr + string(r.lexConsumeCharacter())
 		if r.lexAtEOF() { break }
 		char = r.lexPeekCharacter()
 	}
+//fmt.Printf("Got digits [%s] at line %d, pos %d\n", valueStr, r.humanLine, r.humanPosition)
 	return &valueStr, nil
 }
 
