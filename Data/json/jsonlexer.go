@@ -163,12 +163,11 @@ func (r *JsonLexer) lexConsumeCharacter() rune {
 // Consume sequential white space characters to get to the next useful thing
 // Returns true if EOF reached, else false
 func (r *JsonLexer) lexConsumeWhitespace() bool {
-	for ; ; {
-		if r.lexAtEOF() { return true }
-		// ref: https://www.geeksforgeeks.org/check-if-the-rune-is-a-space-character-or-not-in-golang/
+	for ; (! r.lexAtEOF()) ; {
 		if ! unicode.IsSpace(r.lexPeekCharacter()) { return false}
 		r.lexConsumeCharacter()
 	}
+	return true
 }
 
 // Extract a quoted string JsonValue one character at a time
@@ -303,7 +302,9 @@ func (r *JsonLexer) lexNextValueNull() (*JsonValue, error) {
 	return nil, r.lexError("Expected valid value for null, but got '%s' instead", value)
 }
 
+// " [ ] "
 func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
+fmt.Printf("Handling Array at line %d, pos %d", r.humanLine, r.humanPosition)
 	// Expect first character is square bracket opener
 	if char := r.lexConsumeCharacter(); char != '[' {
 		return nil, r.lexError("Expected array start with '[' but got '%c' instead", char)
@@ -312,16 +313,22 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 	// We opened an Array value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
 	jsonValue.PrepareArray()
+	expectElement := false
 
 	// Read comma-separated values until ']' token
-	for ; ; {
-		if r.lexConsumeWhitespace() { break }
+	//for ; r.lexConsumeWhitespace() ; {
+	r.lexConsumeWhitespace()
+	for ; (! r.lexAtEOF()); {
+fmt.Printf("Seeking element at line %d, pos %d", r.humanLine, r.humanPosition)
 
-		// If the next character closes the array, then we're done!
-		char := r.lexPeekCharacter()
-		if ']' == char {
-			r.lexConsumeCharacter()
-			return jsonValue, nil
+		// If we're not expecting an element to follow, then it's OK to close
+		if (! expectElement) {
+			// If the next character closes the array, then we're done!
+			if ']' == r.lexPeekCharacter() {
+				r.lexConsumeCharacter()
+				return jsonValue, nil
+			}
+fmt.Printf("Found '%c'\n", r.lexPeekCharacter())
 		}
 
 		// Receive any possible valid value that follows
@@ -335,13 +342,13 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 		// After the value may be whitespace
 		if r.lexConsumeWhitespace() { break }
 
-		// Expect a ',' separator between values or closing ']'
-		char = r.lexPeekCharacter()
-		if ',' == char {
+		// Expect a ',' separator if another array element is coming at us...
+		if ',' == r.lexPeekCharacter() {
 			r.lexConsumeCharacter()
-		} else if ']' != char { break }
-
-		if r.lexAtEOF() { break }
+			expectElement = true
+			// After the value may be whitespace
+			if r.lexConsumeWhitespace() { break }
+		} else { expectElement = false }
 	}
 
 	// If we got here then it's because we got to EOF before array closure
@@ -454,6 +461,6 @@ func (r *JsonLexer) lexExpectConsumeAppendDigits(base string) (string, error) {
 
 func (r *JsonLexer) lexError(msg string, args ...interface{}) error {
 	m := fmt.Sprintf(msg, args...)
-	return fmt.Errorf( "%s at line %d, pos %d", m, r.humanLine, r.humanPosition)
+	return fmt.Errorf("%s at line %d, pos %d", m, r.humanLine, r.humanPosition)
 }
 

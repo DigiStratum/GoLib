@@ -173,6 +173,19 @@ func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_array_json(t *testi
 	ExpectInt(3, actual.GetArraySize(), t)
 }
 
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for__array_with_trailing_comma(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := " [ 1, ] "
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNil(actual, t)
+	ExpectError(actualErr, t)
+}
+
 // Nulls
 
 func TestThat_JsonLexer_LexJsonValue_Returns_null_value_for_null_json(t *testing.T) {
