@@ -160,7 +160,7 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_array_json(t *te
 func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_array_json(t *testing.T) {
 	// Setup
 	sut := NewJsonLexer()
-	json := "[\n\t\"A\",\n\t\"B\",\n\t\"C\",\n]"
+	json := "[\n\t\"A\",\n\t\"B\",\n\t\"C\"\n]"
 
 	// Test
 	actual, actualErr := sut.LexJsonValue(json)

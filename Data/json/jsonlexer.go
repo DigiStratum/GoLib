@@ -150,7 +150,7 @@ func (r *JsonLexer) lexPeekCharacter() rune {
 // Every character must be consumed one at a time to track position
 func (r *JsonLexer) lexConsumeCharacter() rune {
 	char := r.lexPeekCharacter()
-//fmt.Printf("[%c] %d", char, r.lexerPosition)
+//fmt.Printf("'%c'@%d\n", char, r.lexerPosition)
 	r.lexerPosition++
 	if '\n' == char {
 		r.humanLine++
@@ -302,24 +302,21 @@ func (r *JsonLexer) lexNextValueNull() (*JsonValue, error) {
 	return nil, r.lexError("Expected valid value for null, but got '%s' instead", value)
 }
 
-// " [ ] "
 func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
-fmt.Printf("Handling Array at line %d, pos %d", r.humanLine, r.humanPosition)
+//fmt.Printf("Handling Array at line %d, pos %d\n", r.humanLine, r.humanPosition)
 	// Expect first character is square bracket opener
 	if char := r.lexConsumeCharacter(); char != '[' {
 		return nil, r.lexError("Expected array start with '[' but got '%c' instead", char)
 	}
-
+//fmt.Printf("Here!\n")
 	// We opened an Array value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
 	jsonValue.PrepareArray()
 	expectElement := false
 
 	// Read comma-separated values until ']' token
-	//for ; r.lexConsumeWhitespace() ; {
-	r.lexConsumeWhitespace()
-	for ; (! r.lexAtEOF()); {
-fmt.Printf("Seeking element at line %d, pos %d", r.humanLine, r.humanPosition)
+	for ; ! r.lexConsumeWhitespace() ; {
+//fmt.Printf("Seeking element at line %d, pos %d\n", r.humanLine, r.humanPosition)
 
 		// If we're not expecting an element to follow, then it's OK to close
 		if (! expectElement) {
@@ -328,7 +325,7 @@ fmt.Printf("Seeking element at line %d, pos %d", r.humanLine, r.humanPosition)
 				r.lexConsumeCharacter()
 				return jsonValue, nil
 			}
-fmt.Printf("Found '%c'\n", r.lexPeekCharacter())
+//fmt.Printf("Found '%c'\n", r.lexPeekCharacter())
 		}
 
 		// Receive any possible valid value that follows
