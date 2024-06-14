@@ -14,7 +14,7 @@ func TestThat_JsonLexer_NewJsonLexer_ReturnsInstance(t *testing.T) {
 	var sut JsonLexerIfc = NewJsonLexer()
 
 	// Verify
-	ExpectNonNil(sut, t)
+	if ! ExpectNonNil(sut, t) { return }
 }
 
 // Validity
@@ -29,8 +29,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_broken_UTF8_encoding(t *t
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_invalid_value_for_blank_json(t *testing.T) {
@@ -41,9 +41,9 @@ func TestThat_JsonLexer_LexJsonValue_Returns_invalid_value_for_blank_json(t *tes
 	actual, actualErr := sut.LexJsonValue("")
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectFalse(actual.IsValid(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectFalse(actual.IsValid(), t) { return }
 }
 
 // Strings
@@ -58,11 +58,11 @@ func TestThat_JsonLexer_LexJsonValue_Returns_string_value_for_string_json(t *tes
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsString(), t)
-	ExpectString(expected, actual.GetString(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsString(), t) { return }
+	if ! ExpectString(expected, actual.GetString(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_string_json(t *testing.T) {
@@ -75,8 +75,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_string_json(t *t
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 // Objects
@@ -90,10 +90,10 @@ func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_empty_object_json(
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsObject(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_object_json(t *testing.T) {
@@ -105,8 +105,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_object_json(t *t
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_object_json(t *testing.T) {
@@ -120,11 +120,26 @@ func TestThat_JsonLexer_LexJsonValue_Returns_object_value_for_object_json(t *tes
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsObject(), t)
-	ExpectTrue(actual.HasObjectProperty(expectedName), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
+}
+
+func TestThat_JsonLexer_LexJsonValue_Returns_object_value_with_expected_property_names(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	expectedName := "prop2"
+	expectedValue := "value2"
+	json := "{\"" + expectedName + "\":\"" + expectedValue + "\"}"
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.HasObjectProperty(expectedName), t) { return }
 }
 
 // Arrays
@@ -138,10 +153,10 @@ func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_empty_array_json(t 
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsArray(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_array_json(t *testing.T) {
@@ -153,8 +168,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_unclosed_array_json(t *te
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_array_json(t *testing.T) {
@@ -166,11 +181,11 @@ func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_array_json(t *testi
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsArray(), t)
-	ExpectInt(3, actual.GetArraySize(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(3, actual.GetArraySize(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_array_with_hanging_comma(t *testing.T) {
@@ -182,8 +197,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_array_with_hanging_comma(
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 // Nulls
@@ -197,10 +212,10 @@ func TestThat_JsonLexer_LexJsonValue_Returns_null_value_for_null_json(t *testing
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsNull(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsNull(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_broken_null_json(t *testing.T) {
@@ -212,11 +227,12 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_broken_null_json(t *testi
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 // Booleans
+
 func TestThat_JsonLexer_LexJsonValue_Returns_boolean_values_for_various_booleans_json(t *testing.T) {
 	// Setup
 	sut := NewJsonLexer()
@@ -226,19 +242,19 @@ func TestThat_JsonLexer_LexJsonValue_Returns_boolean_values_for_various_booleans
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsArray(), t)
-	ExpectInt(6, actual.GetArraySize(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(6, actual.GetArraySize(), t) { return }
 	for i := 0; i < 6; i++ {
 		boolValue := actual.GetArrayElement(i)
-		ExpectNonNil(boolValue, t)
-		ExpectTrue(boolValue.IsBoolean(), t)
+		if ! ExpectNonNil(boolValue, t) { return }
+		if ! ExpectTrue(boolValue.IsBoolean(), t) { return }
 		if i < 3 {
-			ExpectTrue(boolValue.GetBoolean(), t)
+			if ! ExpectTrue(boolValue.GetBoolean(), t) { return }
 		} else {
-			ExpectFalse(boolValue.GetBoolean(), t)
+			if ! ExpectFalse(boolValue.GetBoolean(), t) { return }
 		}
 	}
 }
@@ -252,8 +268,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_broken_boolean_json(t *te
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNil(actual, t)
-	ExpectError(actualErr, t)
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 // Integers
@@ -267,26 +283,26 @@ func TestThat_JsonLexer_LexJsonValue_Returns_integer_values_for_various_integers
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsArray(), t)
-	ExpectInt(3, actual.GetArraySize(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(3, actual.GetArraySize(), t) { return }
 
 	intValue := actual.GetArrayElement(0)
-	ExpectNonNil(intValue, t)
-	ExpectTrue(intValue.IsInteger(), t)
-	ExpectInt64(-9223372036854775808, intValue.GetInteger(), t)
+	if ! ExpectNonNil(intValue, t) { return }
+	if ! ExpectTrue(intValue.IsInteger(), t) { return }
+	if ! ExpectInt64(-9223372036854775808, intValue.GetInteger(), t) { return }
 
 	intValue = actual.GetArrayElement(1)
-	ExpectNonNil(intValue, t)
-	ExpectTrue(intValue.IsInteger(), t)
-	ExpectInt64(0, intValue.GetInteger(), t)
+	if ! ExpectNonNil(intValue, t) { return }
+	if ! ExpectTrue(intValue.IsInteger(), t) { return }
+	if ! ExpectInt64(0, intValue.GetInteger(), t) { return }
 
 	intValue = actual.GetArrayElement(2)
-	ExpectNonNil(intValue, t)
-	ExpectTrue(intValue.IsInteger(), t)
-	ExpectInt64(9223372036854775807, intValue.GetInteger(), t)
+	if ! ExpectNonNil(intValue, t) { return }
+	if ! ExpectTrue(intValue.IsInteger(), t) { return }
+	if ! ExpectInt64(9223372036854775807, intValue.GetInteger(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_integer_overflow(t *testing.T) {
@@ -301,8 +317,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_integer_overflow(t *testi
 		actual, actualErr := sut.LexJsonValue(js)
 
 		// Verify
-		ExpectNil(actual, t)
-		ExpectError(actualErr, t)
+		if ! ExpectNil(actual, t) { return }
+		if ! ExpectError(actualErr, t) { return }
 	}
 }
 
@@ -317,35 +333,35 @@ func TestThat_JsonLexer_LexJsonValue_Returns_float_values_for_various_floats_jso
 	actual, actualErr := sut.LexJsonValue(json)
 
 	// Verify
-	ExpectNonNil(actual, t)
-	ExpectNoError(actualErr, t)
-	ExpectTrue(actual.IsValid(), t)
-	ExpectTrue(actual.IsArray(), t)
-	ExpectInt(4, actual.GetArraySize(), t)
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
+	if ! ExpectTrue(actual.IsValid(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(4, actual.GetArraySize(), t) { return }
 
 	// Precisely zero (... zero!)
 	floatValue := actual.GetArrayElement(0)
-	ExpectNonNil(floatValue, t)
-	ExpectTrue(floatValue.IsFloat(), t)
-	ExpectFloat64(float64(0.0), floatValue.GetFloat(), t)
+	if ! ExpectNonNil(floatValue, t) { return }
+	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
+	if ! ExpectFloat64(float64(0.0), floatValue.GetFloat(), t) { return }
 
 	// Negative PI (negative float)
 	floatValue = actual.GetArrayElement(1)
-	ExpectNonNil(floatValue, t)
-	ExpectTrue(floatValue.IsFloat(), t)
-	ExpectFloat64(float64(-3.14159), floatValue.GetFloat(), t)
+	if ! ExpectNonNil(floatValue, t) { return }
+	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
+	if ! ExpectFloat64(float64(-3.14159), floatValue.GetFloat(), t) { return }
 
 	// Speed of light (m/s) (positive exponent)
 	floatValue = actual.GetArrayElement(2)
-	ExpectNonNil(floatValue, t)
-	ExpectTrue(floatValue.IsFloat(), t)
-	ExpectFloat64(float64(2.9979E8), floatValue.GetFloat(), t)
+	if ! ExpectNonNil(floatValue, t) { return }
+	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
+	if ! ExpectFloat64(float64(2.9979E8), floatValue.GetFloat(), t) { return }
 
 	// Planck's Constant (negative exponent)
 	floatValue = actual.GetArrayElement(3)
-	ExpectNonNil(floatValue, t)
-	ExpectTrue(floatValue.IsFloat(), t)
-	ExpectFloat64(float64(6.62607015e-34), floatValue.GetFloat(), t)
+	if ! ExpectNonNil(floatValue, t) { return }
+	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
+	if ! ExpectFloat64(float64(6.62607015e-34), floatValue.GetFloat(), t) { return }
 }
 
 func TestThat_JsonLexer_LexJsonValue_Returns_error_for_float_overflow(t *testing.T) {
@@ -359,8 +375,8 @@ func TestThat_JsonLexer_LexJsonValue_Returns_error_for_float_overflow(t *testing
 		actual, actualErr := sut.LexJsonValue(js)
 
 		// Verify
-		ExpectNil(actual, t)
-		ExpectError(actualErr, t)
+		if ! ExpectNil(actual, t) { return }
+		if ! ExpectError(actualErr, t) { return }
 	}
 }
 
