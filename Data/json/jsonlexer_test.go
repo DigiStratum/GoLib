@@ -173,7 +173,7 @@ func TestThat_JsonLexer_LexJsonValue_Returns_array_value_for_array_json(t *testi
 	ExpectInt(3, actual.GetArraySize(), t)
 }
 
-func TestThat_JsonLexer_LexJsonValue_Returns_error_for__array_with_trailing_comma(t *testing.T) {
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for_array_with_hanging_comma(t *testing.T) {
 	// Setup
 	sut := NewJsonLexer()
 	json := " [ 1, ] "
@@ -288,3 +288,79 @@ func TestThat_JsonLexer_LexJsonValue_Returns_integer_values_for_various_integers
 	ExpectTrue(intValue.IsInteger(), t)
 	ExpectInt64(9223372036854775807, intValue.GetInteger(), t)
 }
+
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for_integer_overflow(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := make([]string, 2)
+	json[0] = "-92233720368547758080"
+	json[1] = "92233720368547758070"
+
+	for _, js := range json {
+		// Test
+		actual, actualErr := sut.LexJsonValue(js)
+
+		// Verify
+		ExpectNil(actual, t)
+		ExpectError(actualErr, t)
+	}
+}
+
+// Floats
+
+func TestThat_JsonLexer_LexJsonValue_Returns_float_values_for_various_floats_json(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := "[ 0.0, -3.14159, 2.9979E8, 6.62607015e-34]"
+
+	// Test
+	actual, actualErr := sut.LexJsonValue(json)
+
+	// Verify
+	ExpectNonNil(actual, t)
+	ExpectNoError(actualErr, t)
+	ExpectTrue(actual.IsValid(), t)
+	ExpectTrue(actual.IsArray(), t)
+	ExpectInt(4, actual.GetArraySize(), t)
+
+	// Precisely zero (... zero!)
+	floatValue := actual.GetArrayElement(0)
+	ExpectNonNil(floatValue, t)
+	ExpectTrue(floatValue.IsFloat(), t)
+	ExpectFloat64(float64(0.0), floatValue.GetFloat(), t)
+
+	// Negative PI (negative float)
+	floatValue = actual.GetArrayElement(1)
+	ExpectNonNil(floatValue, t)
+	ExpectTrue(floatValue.IsFloat(), t)
+	ExpectFloat64(float64(-3.14159), floatValue.GetFloat(), t)
+
+	// Speed of light (m/s) (positive exponent)
+	floatValue = actual.GetArrayElement(2)
+	ExpectNonNil(floatValue, t)
+	ExpectTrue(floatValue.IsFloat(), t)
+	ExpectFloat64(float64(2.9979E8), floatValue.GetFloat(), t)
+
+	// Planck's Constant (negative exponent)
+	floatValue = actual.GetArrayElement(3)
+	ExpectNonNil(floatValue, t)
+	ExpectTrue(floatValue.IsFloat(), t)
+	ExpectFloat64(float64(6.62607015e-34), floatValue.GetFloat(), t)
+}
+
+func TestThat_JsonLexer_LexJsonValue_Returns_error_for_float_overflow(t *testing.T) {
+	// Setup
+	sut := NewJsonLexer()
+	json := make([]string, 1)
+	json[0] = "1E400" // Borrowed from strconv's atof_test.go as an error case
+
+	for _, js := range json {
+		// Test
+		actual, actualErr := sut.LexJsonValue(js)
+
+		// Verify
+		ExpectNil(actual, t)
+		ExpectError(actualErr, t)
+	}
+}
+

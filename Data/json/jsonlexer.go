@@ -20,7 +20,10 @@ Additionally, there is support for programmatically building a tree from scratch
 uniformity of tooling for applications that need to either produce or consume variable JSON
 structures.
 
+Ref: https://www.rfc-editor.org/rfc/rfc7159.html
+
 TODO:
+ * Review ideas in https://github.com/valyala/fastjson/
  * Add support for de|referencing; make references an embeddable json string (like mustache), use
    configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
    convert the value type to that of the selected reference, null if it doesn't exist. For partial
@@ -172,6 +175,14 @@ func (r *JsonLexer) lexConsumeWhitespace() bool {
 
 // Extract a quoted string JsonValue one character at a time
 func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
+	str, err := r.lexConsumeQuotedString()
+	if nil != err { return nil, err }
+	jsonValue := NewJsonValue()
+	jsonValue.SetString(*str)
+	return jsonValue, nil
+}
+
+func (r *JsonLexer) lexConsumeQuotedString() (*string, error) {
 	// Expect first character is double-quote string opener
 	char := r.lexPeekCharacter()
 	if '"' != char { return nil, r.lexError("Expected '\"' for string but got '%c' instead", char) }
@@ -186,9 +197,8 @@ func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 		if ! escaped {
 			// The closure! Return our value
 			if char == '"' {
-				jsonValue := NewJsonValue()
-				jsonValue.SetString(string(stringValue))
-				return jsonValue, nil
+				str := string(stringValue)
+				return &str, nil
 			}
 			// New escape sequence!
 			if char == '\\' { escaped = true }
@@ -216,31 +226,25 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 	jsonValue.PrepareObject()
 
 	// Read comma-separated name:value pairs until '}' token
-	for ; (!  r.lexAtEOF()) ; {
-		if r.lexConsumeWhitespace() { break }
+	for ; (!  r.lexConsumeWhitespace()) ; {
 
 		// 1) If the next character closes the object, then we're done!
-		char := r.lexPeekCharacter()
-		if '}' == char {
+		if '}' == r.lexPeekCharacter() {
 			r.lexConsumeCharacter()
 			return jsonValue, nil
 		}
 
 		// 2) Expect a non-empty, quoted name string value for a property name, then...
-		if '"' != char {
-			return nil, r.lexError("Expected quoted object property name, but got something else instead")
-		}
-		nameValue, err := r.lexNextValueString()
+		propertyName, err := r.lexConsumeQuotedString()
 		if nil != err { return nil, err }
-		propertyName := nameValue.GetString()
-		if 0 == len(propertyName) {
-			return nil, r.lexError("Expected non-empty object property name, but got empty string instead")
-		}
+		if 0 == len(*propertyName) { return nil, r.lexError(
+			"Expected non-empty object property name, but got empty string instead",
+		)}
 		if r.lexConsumeWhitespace() { break }
 
 		// 3) Expect a ':' separator between the name and value
 		if ':' != r.lexPeekCharacter() {
-			return nil, r.lexError("Expected ':' object property name separator, but got '%c' instead", char)
+			return nil, r.lexError("Expected ':' object property name separator, but got '%c' instead", r.lexPeekCharacter())
 		}
 		r.lexConsumeCharacter()
 		if r.lexConsumeWhitespace() { break }
@@ -248,16 +252,14 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		// 4) Receive any possible valid value that follows
 		propertyValue, err := r.lexNextValue() // <- BEWARE: Recursion!
 		if nil != err { return nil, err }
-		if ! propertyValue.IsValid() {
-			return nil, r.lexError(
-				"Expected value for object property '%s', but got something else instead", propertyName,
-			)
-		}
-		if err = jsonValue.SetObjectProperty(propertyName, propertyValue); nil != err { return nil, err }
+		if ! propertyValue.IsValid() { return nil, r.lexError(
+			"Expected value for object property '%s', but got something else instead", *propertyName,
+		)}
+		if err = jsonValue.SetObjectProperty(*propertyName, propertyValue); nil != err { return nil, err }
 		if r.lexConsumeWhitespace() { break }
 
 		// 5) Expect a ',' separator between the name:value pairs or closing '}'
-		char = r.lexPeekCharacter()
+		char := r.lexPeekCharacter()
 		if ',' == char {
 			r.lexConsumeCharacter()
 		} else if '}' != char { break }
@@ -303,12 +305,10 @@ func (r *JsonLexer) lexNextValueNull() (*JsonValue, error) {
 }
 
 func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
-//fmt.Printf("Handling Array at line %d, pos %d\n", r.humanLine, r.humanPosition)
 	// Expect first character is square bracket opener
 	if char := r.lexConsumeCharacter(); char != '[' {
 		return nil, r.lexError("Expected array start with '[' but got '%c' instead", char)
 	}
-//fmt.Printf("Here!\n")
 	// We opened an Array value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
 	jsonValue.PrepareArray()
@@ -316,7 +316,6 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 
 	// Read comma-separated values until ']' token
 	for ; ! r.lexConsumeWhitespace() ; {
-//fmt.Printf("Seeking element at line %d, pos %d\n", r.humanLine, r.humanPosition)
 
 		// If we're not expecting an element to follow, then it's OK to close
 		if (! expectElement) {
@@ -325,7 +324,6 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 				r.lexConsumeCharacter()
 				return jsonValue, nil
 			}
-//fmt.Printf("Found '%c'\n", r.lexPeekCharacter())
 		}
 
 		// Receive any possible valid value that follows
@@ -452,7 +450,6 @@ func (r *JsonLexer) lexExpectConsumeAppendDigits(base string) (string, error) {
 		value = value + string(r.lexConsumeCharacter())
 		if r.lexAtEOF() { break }
 	}
-//fmt.Printf("Got digits [%s] at line %d, pos %d\n", value, r.humanLine, r.humanPosition)
 	return base + value, nil
 }
 
