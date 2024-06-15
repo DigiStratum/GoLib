@@ -34,16 +34,16 @@ type JsonValueIfc interface {
 
 	// Nulls
 	IsNull() bool
-	SetNull()
+	SetNull() *JsonValue
 
 	// Strings
 	IsString() bool
 	GetString() string
-	SetString(value string)
+	SetString(value string) *JsonValue
 
 	// Objects
 	IsObject() bool
-	PrepareObject()
+	PrepareObject() *JsonValue
 	SetObjectProperty(name string, jsonValue *JsonValue) error
 	DropObjectProperty(name string) error
 	HasObjectProperty(name string) bool
@@ -53,11 +53,11 @@ type JsonValueIfc interface {
 	// Booleans
 	IsBoolean() bool
 	GetBoolean() bool
-	SetBoolean(value bool)
+	SetBoolean(value bool) *JsonValue
 
 	// Arrays
 	IsArray() bool
-	PrepareArray()
+	PrepareArray() *JsonValue
 	GetArraySize() int
 	GetArrayValue(index int) *JsonValue
 	AppendArrayValue(jsonValue *JsonValue) error
@@ -65,12 +65,12 @@ type JsonValueIfc interface {
 	// Floats
 	IsFloat() bool
 	GetFloat() float64
-	SetFloat(value float64)
+	SetFloat(value float64) *JsonValue
 
 	// Integers
 	IsInteger() bool
 	GetInteger() int64
-	SetInteger(value int64)
+	SetInteger(value int64) *JsonValue
 
 	// TODO: Implement this bad boy!
 	//Select(selector string) (*JsonValue, error)
@@ -112,8 +112,9 @@ func (r *JsonValue) IsNull() bool {
 	return r.valueType == VALUE_TYPE_NULL
 }
 
-func (r *JsonValue) SetNull() {
+func (r *JsonValue) SetNull() *JsonValue {
 	r.valueType = VALUE_TYPE_NULL
+	return r
 }
 
 // Strings
@@ -126,19 +127,22 @@ func (r *JsonValue) GetString() string {
 	return r.valueString
 }
 
-func (r *JsonValue) SetString(value string) {
+func (r *JsonValue) SetString(value string) *JsonValue {
 	r.valueType = VALUE_TYPE_STRING
 	r.valueString = value
+	return r
 }
 
 // Objects
+
 func (r *JsonValue) IsObject() bool {
 	return r.valueType == VALUE_TYPE_OBJECT
 }
 
-func (r *JsonValue) PrepareObject() {
+func (r *JsonValue) PrepareObject() *JsonValue {
 	r.valueType = VALUE_TYPE_OBJECT
 	r.valueObject = make(map[string]*JsonValue)
+	return r
 }
 
 func (r *JsonValue) SetObjectProperty(name string, jsonValue *JsonValue) error {
@@ -183,6 +187,7 @@ func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 }
 
 // Booleans
+
 func (r *JsonValue) IsBoolean() bool {
 	return r.valueType == VALUE_TYPE_BOOLEAN
 }
@@ -191,14 +196,22 @@ func (r *JsonValue) GetBoolean() bool {
 	return r.IsBoolean() && r.valueBoolean
 }
 
-func (r *JsonValue) SetBoolean(value bool) {
+func (r *JsonValue) SetBoolean(value bool) *JsonValue {
 	r.valueType = VALUE_TYPE_BOOLEAN
 	r.valueBoolean = value
+	return r
 }
 
 // Arrays
+
 func (r *JsonValue) IsArray() bool {
 	return r.valueType == VALUE_TYPE_ARRAY
+}
+
+func (r *JsonValue) PrepareArray() *JsonValue {
+	r.valueType = VALUE_TYPE_ARRAY
+	r.valueArr = make([]*JsonValue, 0)
+	return r
 }
 
 func (r *JsonValue) GetArraySize() int {
@@ -212,11 +225,6 @@ func (r *JsonValue) GetArrayValue(index int) *JsonValue {
 	return r.valueArr[index]
 }
 
-func (r *JsonValue) PrepareArray() {
-	r.valueType = VALUE_TYPE_ARRAY
-	r.valueArr = make([]*JsonValue, 0)
-}
-
 func (r *JsonValue) AppendArrayValue(jsonValue *JsonValue) error {
 	if nil == jsonValue { return fmt.Errorf("nil JsonValue cannot be appended to Array value") }
 	r.valueArr = append(r.valueArr, jsonValue)
@@ -224,6 +232,7 @@ func (r *JsonValue) AppendArrayValue(jsonValue *JsonValue) error {
 }
 
 // Floats
+
 func (r *JsonValue) IsFloat() bool {
 	return r.valueType == VALUE_TYPE_FLOAT
 }
@@ -233,12 +242,14 @@ func (r *JsonValue) GetFloat() float64 {
 	return r.valueFloat
 }
 
-func (r *JsonValue) SetFloat(value float64) {
+func (r *JsonValue) SetFloat(value float64) *JsonValue {
 	r.valueType = VALUE_TYPE_FLOAT
 	r.valueFloat = value
+	return r
 }
 
 // Integers
+
 func (r *JsonValue) IsInteger() bool {
 	return r.valueType == VALUE_TYPE_INTEGER
 }
@@ -248,8 +259,9 @@ func (r *JsonValue) GetInteger() int64 {
 	return r.valueInteger
 }
 
-func (r *JsonValue) SetInteger(value int64) {
+func (r *JsonValue) SetInteger(value int64) *JsonValue {
 	r.valueType = VALUE_TYPE_INTEGER
 	r.valueInteger = value
+	return r
 }
 
