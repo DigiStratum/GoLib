@@ -24,6 +24,13 @@ func TestThat_Class_Method_DoesWhatever_WhenCondition(t *testing.T) {
 }
 // --------------------------
 
+TODO:
+ * Consider using t.Fatalf() instead of t.Errorf() to stop test execution; this would eliminate the
+   need for the bool return and the caller's responsibility to check it. It would, however force
+   every expectation check to abort the test which means that only one failure per pass can be
+   reported and corrected before running another pass to find the next failure - too annoying? Let's
+   try it and find out! ref: https://ieftimov.com/posts/testing-in-go-failing-tests/
+
 */
 
 import(

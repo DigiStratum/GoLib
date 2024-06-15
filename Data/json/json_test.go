@@ -18,7 +18,7 @@ func TestThat_Json_NewJson_ReturnsInstance(t *testing.T) {
 	sut := NewJson(nil)
 
 	// Verify
-	ExpectNonNil(sut, t)
+	if ! ExpectNonNil(sut, t) { return }
 }
 
 func TestThat_Json_NewJsonFromFile_ReturnsInstance(t *testing.T) {
@@ -26,7 +26,7 @@ func TestThat_Json_NewJsonFromFile_ReturnsInstance(t *testing.T) {
 	sut := NewJsonFromFile("")
 
 	// Verify
-	ExpectNonNil(sut, t)
+	if ! ExpectNonNil(sut, t) { return }
 }
 
 func TestThat_Json_Load_ReturnsError_ForNilJsonString(t *testing.T) {
@@ -38,7 +38,7 @@ func TestThat_Json_Load_ReturnsError_ForNilJsonString(t *testing.T) {
 	err := sut.Load(&target)
 
 	// Verify
-	ExpectNonNil(err, t)
+	if ! ExpectNonNil(err, t) { return }
 }
 
 func TestThat_Json_Load_ReturnsError_ForBadJsonString(t *testing.T) {
@@ -51,7 +51,7 @@ func TestThat_Json_Load_ReturnsError_ForBadJsonString(t *testing.T) {
 	err := sut.Load(&target)
 
 	// Verify
-	ExpectNonNil(err, t)
+	if ! ExpectNonNil(err, t) { return }
 }
 
 func TestThat_Json_Load_Works_ForGoodJsonString(t *testing.T) {
@@ -67,10 +67,10 @@ func TestThat_Json_Load_Works_ForGoodJsonString(t *testing.T) {
 	res, ok := target[name]
 
 	// Verify
-	ExpectNil(err, t)
-	ExpectNonNil(target, t)
-	ExpectBool(true, ok, t)
-	ExpectString(value, res, t)
+	if ! ExpectNil(err, t) { return }
+	if ! ExpectNonNil(target, t) { return }
+	if ! ExpectTrue(ok, t) { return }
+	if ! ExpectString(value, res, t) { return }
 }
 
 func TestThat_Json_Load_ReturnsError_ForBadFilePath(t *testing.T) {
@@ -82,7 +82,7 @@ func TestThat_Json_Load_ReturnsError_ForBadFilePath(t *testing.T) {
 	err := sut.Load(&target)
 
 	// Verify
-	ExpectNonNil(err, t)
+	if ! ExpectNonNil(err, t) { return }
 }
 
 func TestThat_Json_Load_ReturnsError_ForBadJsonFile(t *testing.T) {
@@ -94,7 +94,7 @@ func TestThat_Json_Load_ReturnsError_ForBadJsonFile(t *testing.T) {
 	err := sut.Load(&target)
 
 	// Verify
-	ExpectNonNil(err, t)
+	if ! ExpectNonNil(err, t) { return }
 }
 
 func TestThat_Json_Load_Works_ForGoodJsonFile(t *testing.T) {
@@ -106,13 +106,13 @@ func TestThat_Json_Load_Works_ForGoodJsonFile(t *testing.T) {
 	err := sut.Load(&target)
 
 	// Verify
-	ExpectNil(err, t)
-	ExpectNonNil(target, t)
+	if ! ExpectNil(err, t) { return }
+	if ! ExpectNonNil(target, t) { return }
 	for i := 1; i <= 5; i++ {
 		name := fmt.Sprintf("key%d", i)
 		value := fmt.Sprintf("value%d", i)
 		res, ok := target[name]
-		ExpectBool(true, ok, t)
-		ExpectString(value, res, t)
+		if ! ExpectTrue(ok, t) { return }
+		if ! ExpectString(value, res, t) { return }
 	}
 }
