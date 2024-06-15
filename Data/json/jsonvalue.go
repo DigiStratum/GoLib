@@ -5,8 +5,16 @@ package json
 Represent a JSON structure as an object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Add support for Marshal() to spit it back out as a JSON string again!
+ * Add support for ToJson() to spit it back out as a JSON string again!
  * Add support for array element and object property iterator
+ * Add support for de|referencing; make references an embeddable json string (like mustache), use
+   configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
+   convert the value type to that of the selected reference, null if it doesn't exist. For partial
+   references like "See also: {{sel.ect.or}}", convert the value type to string and perform string
+   replacement, empty string if it doesn't exist. Introduce "RJSON" envelope to encode json metadata
+   to describe the JSON encoding within, versioning, etc. to help with future-proofing, versioning,
+   etc.
+
 */
 
 import (

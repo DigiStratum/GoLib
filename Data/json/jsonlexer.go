@@ -22,18 +22,6 @@ structures.
 
 Ref: https://www.rfc-editor.org/rfc/rfc7159.html
 
-TODO:
- * Review ideas in https://github.com/valyala/fastjson/
- * Add support for de|referencing; make references an embeddable json string (like mustache), use
-   configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
-   convert the value type to that of the selected reference, null if it doesn't exist. For partial
-   references like "See also: {{sel.ect.or}}", convert the value type to string and perform string
-   replacement, empty string if it doesn't exist. Introduce "RJSON" envelope to encode json metadata
-   to describe the JSON encoding within, versioning, etc. to help with future-proofing, versioning,
-   etc.
- * Consider JIT lexing: only lex what's requested; leave remainder as raw JSON for later processing
- * Make DependencyInjectable to accept a logger for errors, debug, etc (?)
-
 Structures under consideration, no limit on recursion depth:
 
 NULL:
@@ -58,6 +46,10 @@ OBJECT:
 ARRAY:
   '[]'
   '[{NULL}, {STRING}, {NUMBER}, {BOOLEAN}, {OBJECT}, {ARRAY}]'
+
+TODO:
+ * Review ideas in https://github.com/valyala/fastjson/
+ * Consider JIT lexing: only lex what's requested; leave remainder as raw JSON for later processing
 
 */
 
@@ -177,8 +169,7 @@ func (r *JsonLexer) lexConsumeWhitespace() bool {
 func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
 	str, err := r.lexConsumeQuotedString()
 	if nil != err { return nil, err }
-	jsonValue := NewJsonValue()
-	jsonValue.SetString(*str)
+	jsonValue := NewJsonValue().SetString(*str)
 	return jsonValue, nil
 }
 
@@ -222,8 +213,7 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 	}
 
 	// We opened an Object value! Scaffold a JsonValue to return
-	jsonValue := NewJsonValue()
-	jsonValue.PrepareObject()
+	jsonValue := NewJsonValue().PrepareObject()
 
 	// Read comma-separated name:value pairs until '}' token
 	for ; (!  r.lexConsumeWhitespace()) ; {
@@ -277,13 +267,9 @@ func (r *JsonLexer) lexNextValueBool() (*JsonValue, error) {
 	for ; (! r.lexAtEOF()) && (len(value) <= 5) ; {
 		value = value + string(unicode.ToUpper(r.lexConsumeCharacter()))
 		if value == truthy {
-			jsonValue := NewJsonValue()
-			jsonValue.SetBoolean(true)
-			return jsonValue, nil
+			return NewJsonValue().SetBoolean(true), nil
 		} else if value == falsey {
-			jsonValue := NewJsonValue()
-			jsonValue.SetBoolean(false)
-			return jsonValue, nil
+			return NewJsonValue().SetBoolean(false), nil
 		}
 	}
 	return nil, r.lexError("Expected valid value for boolean, but got '%s' instead", value)
@@ -291,15 +277,10 @@ func (r *JsonLexer) lexNextValueBool() (*JsonValue, error) {
 
 // Extract a null JsonValue one character at a time
 func (r *JsonLexer) lexNextValueNull() (*JsonValue, error) {
-	null := "NULL"
 	value := ""
 	for ; (! r.lexAtEOF()) && (len(value) <= 4) ; {
 		value = value + string(unicode.ToUpper(r.lexConsumeCharacter()))
-		if value == null {
-			jsonValue := NewJsonValue()
-			jsonValue.SetNull()
-			return jsonValue, nil
-		}
+		if "NULL" == value { return NewJsonValue().SetNull(), nil }
 	}
 	return nil, r.lexError("Expected valid value for null, but got '%s' instead", value)
 }
@@ -408,24 +389,20 @@ func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
 	}
 
 	// 5) Return the valueStr as an int64 or float64!
-	jsonValue := NewJsonValue()
 	if isFloat {
 		// Floats
 		valueFloat, err := strconv.ParseFloat(valueStr, 64)
 		if nil != err {
 			return nil, r.lexError("Error converting number '%s' to float64: %s", valueStr, err.Error())
 		}
-		jsonValue.SetFloat(valueFloat)
-		return jsonValue, nil
+		return NewJsonValue().SetFloat(valueFloat), nil
 	}
 	// Integers
 	valueInteger, err := strconv.ParseInt(valueStr, 10, 64)
 	if nil != err {
-		return nil, r.lexError("Error converting parsed number '%s' to int64: %s", valueStr, err.Error())
+		return nil, r.lexError("Error converting number '%s' to int64: %s", valueStr, err.Error())
 	}
-	jsonValue.SetInteger(valueInteger)
-
-	return jsonValue, nil
+	return NewJsonValue().SetInteger(valueInteger), nil
 }
 
 func (r *JsonLexer) lexConsumeAppendCharacter(base string, acceptedChars ...rune) (string, error) {
