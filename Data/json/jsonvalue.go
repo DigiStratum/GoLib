@@ -80,8 +80,8 @@ type JsonValueIfc interface {
 	GetInteger() int64
 	SetInteger(value int64) *JsonValue
 
-	// TODO: Implement this bad boy!
-	//Select(selector string) (*JsonValue, error)
+	// Modern amenities ;^)
+	Select(selector string) (*JsonValue, error)
 }
 
 type JsonValue struct {
@@ -110,12 +110,16 @@ func NewJsonValue() *JsonValue {
 // JsonValueIfc
 // -------------------------------------------------------------------------------------------------
 
+// -----------------------------------------------
 // Validity
+
 func (r *JsonValue) IsValid() bool {
 	return r.valueType > VALUE_TYPE_INVALID
 }
 
+// -----------------------------------------------
 // Nulls
+
 func (r *JsonValue) IsNull() bool {
 	return r.valueType == VALUE_TYPE_NULL
 }
@@ -125,7 +129,9 @@ func (r *JsonValue) SetNull() *JsonValue {
 	return r
 }
 
+// -----------------------------------------------
 // Strings
+
 func (r *JsonValue) IsString() bool {
 	return r.valueType == VALUE_TYPE_STRING
 }
@@ -141,6 +147,7 @@ func (r *JsonValue) SetString(value string) *JsonValue {
 	return r
 }
 
+// -----------------------------------------------
 // Objects
 
 func (r *JsonValue) IsObject() bool {
@@ -194,6 +201,7 @@ func (r *JsonValue) GetObjectProperty(name string) *JsonValue {
 	return value
 }
 
+// -----------------------------------------------
 // Booleans
 
 func (r *JsonValue) IsBoolean() bool {
@@ -210,6 +218,7 @@ func (r *JsonValue) SetBoolean(value bool) *JsonValue {
 	return r
 }
 
+// -----------------------------------------------
 // Arrays
 
 func (r *JsonValue) IsArray() bool {
@@ -239,6 +248,7 @@ func (r *JsonValue) AppendArrayValue(jsonValue *JsonValue) error {
 	return nil
 }
 
+// -----------------------------------------------
 // Floats
 
 func (r *JsonValue) IsFloat() bool {
@@ -256,6 +266,7 @@ func (r *JsonValue) SetFloat(value float64) *JsonValue {
 	return r
 }
 
+// -----------------------------------------------
 // Integers
 
 func (r *JsonValue) IsInteger() bool {
@@ -271,5 +282,52 @@ func (r *JsonValue) SetInteger(value int64) *JsonValue {
 	r.valueType = VALUE_TYPE_INTEGER
 	r.valueInteger = value
 	return r
+}
+
+// -----------------------------------------------
+// Modern Amenities
+
+func (r *JsonValue) Select(selector string) (*JsonValue, error) {
+	// 1) An empty selector means we're already at the right place
+	if 0 == len(selector) { return r, nil }
+
+	// 1) If this isn't an Array or Object value...
+	if ! (r.IsArray() || r.IsObject()) {
+		return nil, fmt.Errorf("Selectors are only valid of Object or Array values")
+	}
+
+	// 2) Traverse the selector one element at a time
+	objectProperty, arrayIndex, newSelector, err := r.selectNextElement(selector)
+	if nil != err { return nil, err }
+	if nil != objectProperty {
+		if r.HasObjectProperty(*objectProperty) {
+			return r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
+		}
+		return nil, fmt.Errorf("Selected Object Property '%s' doesn't exist", *objectProperty)
+	}
+	if nil != arrayIndex {
+		if r.GetArraySize() > *arrayIndex {
+			return r.GetArrayValue(*arrayIndex).Select(newSelector) // <- BEWARE: recursion!
+		}
+		return nil, fmt.Errorf("Selected Array Index '%d' is out of bounds; Array size is %d", *arrayIndex, r.GetArraySize())
+	}
+
+	// selectNextElement() must return objectProperty, arrayIndex, or error and be handled above
+	return nil, fmt.Errorf("Unexpected error for selector '%s'", selector)
+}
+
+// -----------------------------------------------
+// Internal implementation
+
+func (r *JsonValue) selectNextElement(selector string) (objectProperty *string, arrayIndex *int, newSelector string, err error) {
+	// Return value defaults
+	objectProperty = nil
+	arrayIndex = nil
+	newSelector = ""
+	err = nil
+
+	// TODO: implement this!
+
+	return
 }
 
