@@ -312,13 +312,13 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 	// We opened an Array value! Scaffold a JsonValue to return
 	jsonValue := NewJsonValue()
 	jsonValue.PrepareArray()
-	expectElement := false
+	expectValue := false
 
 	// Read comma-separated values until ']' token
 	for ; ! r.lexConsumeWhitespace() ; {
 
 		// If we're not expecting an element to follow, then it's OK to close
-		if (! expectElement) {
+		if (! expectValue) {
 			// If the next character closes the array, then we're done!
 			if ']' == r.lexPeekCharacter() {
 				r.lexConsumeCharacter()
@@ -340,10 +340,10 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 		// Expect a ',' separator if another array element is coming at us...
 		if ',' == r.lexPeekCharacter() {
 			r.lexConsumeCharacter()
-			expectElement = true
+			expectValue = true
 			// After the value may be whitespace
 			if r.lexConsumeWhitespace() { break }
-		} else { expectElement = false }
+		} else { expectValue = false }
 	}
 
 	// If we got here then it's because we got to EOF before array closure

@@ -248,7 +248,7 @@ func TestThat_JsonLexer_LexJsonValue_Returns_boolean_values_for_various_booleans
 	if ! ExpectTrue(actual.IsArray(), t) { return }
 	if ! ExpectInt(6, actual.GetArraySize(), t) { return }
 	for i := 0; i < 6; i++ {
-		boolValue := actual.GetArrayElement(i)
+		boolValue := actual.GetArrayValue(i)
 		if ! ExpectNonNil(boolValue, t) { return }
 		if ! ExpectTrue(boolValue.IsBoolean(), t) { return }
 		if i < 3 {
@@ -289,17 +289,17 @@ func TestThat_JsonLexer_LexJsonValue_Returns_integer_values_for_various_integers
 	if ! ExpectTrue(actual.IsArray(), t) { return }
 	if ! ExpectInt(3, actual.GetArraySize(), t) { return }
 
-	intValue := actual.GetArrayElement(0)
+	intValue := actual.GetArrayValue(0)
 	if ! ExpectNonNil(intValue, t) { return }
 	if ! ExpectTrue(intValue.IsInteger(), t) { return }
 	if ! ExpectInt64(-9223372036854775808, intValue.GetInteger(), t) { return }
 
-	intValue = actual.GetArrayElement(1)
+	intValue = actual.GetArrayValue(1)
 	if ! ExpectNonNil(intValue, t) { return }
 	if ! ExpectTrue(intValue.IsInteger(), t) { return }
 	if ! ExpectInt64(0, intValue.GetInteger(), t) { return }
 
-	intValue = actual.GetArrayElement(2)
+	intValue = actual.GetArrayValue(2)
 	if ! ExpectNonNil(intValue, t) { return }
 	if ! ExpectTrue(intValue.IsInteger(), t) { return }
 	if ! ExpectInt64(9223372036854775807, intValue.GetInteger(), t) { return }
@@ -340,25 +340,25 @@ func TestThat_JsonLexer_LexJsonValue_Returns_float_values_for_various_floats_jso
 	if ! ExpectInt(4, actual.GetArraySize(), t) { return }
 
 	// Precisely zero (... zero!)
-	floatValue := actual.GetArrayElement(0)
+	floatValue := actual.GetArrayValue(0)
 	if ! ExpectNonNil(floatValue, t) { return }
 	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
 	if ! ExpectFloat64(float64(0.0), floatValue.GetFloat(), t) { return }
 
 	// Negative PI (negative float)
-	floatValue = actual.GetArrayElement(1)
+	floatValue = actual.GetArrayValue(1)
 	if ! ExpectNonNil(floatValue, t) { return }
 	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
 	if ! ExpectFloat64(float64(-3.14159), floatValue.GetFloat(), t) { return }
 
 	// Speed of light (m/s) (positive exponent)
-	floatValue = actual.GetArrayElement(2)
+	floatValue = actual.GetArrayValue(2)
 	if ! ExpectNonNil(floatValue, t) { return }
 	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
 	if ! ExpectFloat64(float64(2.9979E8), floatValue.GetFloat(), t) { return }
 
 	// Planck's Constant (negative exponent)
-	floatValue = actual.GetArrayElement(3)
+	floatValue = actual.GetArrayValue(3)
 	if ! ExpectNonNil(floatValue, t) { return }
 	if ! ExpectTrue(floatValue.IsFloat(), t) { return }
 	if ! ExpectFloat64(float64(6.62607015e-34), floatValue.GetFloat(), t) { return }

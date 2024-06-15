@@ -57,9 +57,9 @@ type JsonValueIfc interface {
 
 	// Arrays
 	IsArray() bool
-	GetArraySize() int
-	GetArrayElement(index int) *JsonValue
 	PrepareArray()
+	GetArraySize() int
+	GetArrayValue(index int) *JsonValue
 	AppendArrayValue(jsonValue *JsonValue) error
 
 	// Floats
@@ -206,7 +206,7 @@ func (r *JsonValue) GetArraySize() int {
 	return len(r.valueArr)
 }
 
-func (r *JsonValue) GetArrayElement(index int) *JsonValue {
+func (r *JsonValue) GetArrayValue(index int) *JsonValue {
 	if ! r.IsArray() { return nil }
 	if (index < 0) || (index >= len(r.valueArr)) { return nil }
 	return r.valueArr[index]
