@@ -19,7 +19,8 @@ TODO:
 
 import (
 	"fmt"
-	//"unicode/utf8"
+	"strconv"
+	"unicode"
 )
 
 type ValueType int
@@ -325,9 +326,82 @@ func (r *JsonValue) selectNextElement(selector string) (objectProperty *string, 
 	arrayIndex = nil
 	newSelector = ""
 	err = nil
+	if len(selector) == 0 { return }
+	cursor := 0
+	if '[' == selector[cursor] {
+		arrayIndex, newSelector, err = r.selectArrayIndexElement(selector)
+	} else {
+		objectProperty, newSelector, err = r.selectObjectPropertyElement(selector)
+	}
+	return
+}
 
-	// TODO: implement this!
+func (r *JsonValue) selectArrayIndexElement(selector string) (arrayIndex *int, newSelector string, err error) {
+	// Return value defaults
+	arrayIndex = nil
+	newSelector = ""
+	err = nil
 
+	// Expect an array index terminated by ']'
+	cursor := 0
+	arrayIndexStr := ""
+	for cursor = 1; cursor < len(selector); cursor++ {
+		char := selector[cursor]
+		// End of an array index?
+		if ']' == char { break }
+		// Digits?
+		if ('0' <= char) || ('9' >= char) {
+			arrayIndexStr = arrayIndexStr + string(char)
+			continue
+		}
+		// Something else unexpected!
+		err = fmt.Errorf("Unsupported character '%c' reading numeric array index in selector", char)
+		return
+	}
+	// If we extracted something...
+	if len(arrayIndexStr) > 0 {
+		// Parse it into an array inted integer
+		ai, _ := strconv.ParseInt(arrayIndexStr, 10, 32)
+		aiInt := int(ai)
+		arrayIndex = &aiInt
+		// Chop it and the '[]' delimiters off the selector
+		newSelector = selector[len(arrayIndexStr) + 2:]
+	} else {
+		err = fmt.Errorf("Missing numeric array index in selector")
+	}
+	return
+}
+
+func (r *JsonValue) selectObjectPropertyElement(selector string) (objectProperty *string, newSelector string, err error) {
+	// Return value defaults
+	objectProperty = nil
+	newSelector = ""
+	err = nil
+
+	// Expect an array index terminated by ']'
+	cursor := 0
+	objectPropertyStr := ""
+	for cursor = 1; cursor < len(selector); cursor++ {
+		char := selector[cursor]
+		// Some other array index or property interupting?
+		if ('[' == char) || ('.' == char) { break }
+		// If it's not some odd white-space character...
+		if (! unicode.IsSpace(rune(char))) {
+			objectPropertyStr = objectPropertyStr + string(char)
+			continue
+		}
+		err = fmt.Errorf("Unsupported character '%c' reading object property name in selector", char)
+		return
+	}
+	// If we extracted something...
+	if len(objectPropertyStr) > 0 {
+		objectProperty = &objectPropertyStr
+		// If the thing that stopped us was a '.' separator, chop it off along with what we found
+		if '.' == selector[cursor] { cursor++ }
+		newSelector = selector[cursor:]
+	} else {
+		err = fmt.Errorf("Missing object property name in selector")
+	}
 	return
 }
 
