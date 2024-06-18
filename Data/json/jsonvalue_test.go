@@ -247,3 +247,78 @@ func TestThat_JsonValue_GetInteger_Returns_expected_value(t *testing.T) {
 	if ! ExpectInt64(expectedValue, sut.GetInteger(), t) { return }
 }
 
+// Conveniences
+
+func TestThat_JsonValue_Select_Returns_Errors(t *testing.T) {
+	// Setup
+	json := `
+{
+	"shape": "arc",
+	"vectors": [
+		{
+			"radians": 3.14159,
+			"radius": 2,
+			"color": "red",
+			"hidden": false
+		},
+		{
+			"radians": 6.28318,
+			"radius": 7,
+			"color": "blue",
+			"hidden": false
+		}
+	]
+}
+`
+	lex := NewJsonLexer()
+	sut, err := lex.LexJsonValue(json)
+	if ! ExpectNoError(err, t) { return }
+	if ! ExpectNonNil(sut, t) { return }
+
+	// Test
+	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
+	for _, selector := range selectors {
+		actual1, err1 := sut.Select(selector)
+		// Verify
+		if ! ExpectNil(actual1, t) { return }
+		if ! ExpectError(err1, t) { return }
+	}
+}
+
+func TestThat_JsonValue_Select_Returns_Values(t *testing.T) {
+	// Setup
+	json := `
+{
+	"shape": "arc",
+	"vectors": [
+		{
+			"radians": 3.14159,
+			"radius": 2,
+			"color": "red",
+			"hidden": false
+		},
+		{
+			"radians": 6.28318,
+			"radius": 7,
+			"color": "blue",
+			"hidden": false
+		}
+	]
+}
+`
+	lex := NewJsonLexer()
+	sut, err := lex.LexJsonValue(json)
+	if ! ExpectNoError(err, t) { return }
+	if ! ExpectNonNil(sut, t) { return }
+
+	// Test
+	selectors := []string{ ".shape", ".vectors", ".vectors[1]", ".vectors[1].radians" }
+	for _, selector := range selectors {
+		//t.Logf("Testing good selector '%s'\n", selector)
+		// Verify
+		actual1, err1 := sut.Select(selector)
+		if ! ExpectNonNil(actual1, t) { return }
+		if ! ExpectNoError(err1, t) { return }
+	}
+}
+

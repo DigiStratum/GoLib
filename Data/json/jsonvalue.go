@@ -286,7 +286,7 @@ func (r *JsonValue) SetInteger(value int64) *JsonValue {
 }
 
 // -----------------------------------------------
-// Modern Amenities
+// Conveniences
 
 func (r *JsonValue) Select(selector string) (*JsonValue, error) {
 	// 1) An empty selector means we're already at the right place
@@ -330,7 +330,7 @@ func (r *JsonValue) selectNextElement(selector string) (objectProperty *string, 
 	cursor := 0
 	if '[' == selector[cursor] {
 		arrayIndex, newSelector, err = r.selectArrayIndexElement(selector)
-	} else {
+	} else if '.' == selector[cursor] {
 		objectProperty, newSelector, err = r.selectObjectPropertyElement(selector)
 	}
 	return
@@ -373,6 +373,7 @@ func (r *JsonValue) selectArrayIndexElement(selector string) (arrayIndex *int, n
 }
 
 func (r *JsonValue) selectObjectPropertyElement(selector string) (objectProperty *string, newSelector string, err error) {
+//fmt.Printf("selectObjectPropertyElement() 1")
 	// Return value defaults
 	objectProperty = nil
 	newSelector = ""
@@ -397,11 +398,16 @@ func (r *JsonValue) selectObjectPropertyElement(selector string) (objectProperty
 	if len(objectPropertyStr) > 0 {
 		objectProperty = &objectPropertyStr
 		// If the thing that stopped us was a '.' separator, chop it off along with what we found
-		if '.' == selector[cursor] { cursor++ }
+		if (cursor < len(selector)) && ('.' == selector[cursor]) { cursor++ }
 		newSelector = selector[cursor:]
 	} else {
 		err = fmt.Errorf("Missing object property name in selector")
 	}
+//if nil != objectProperty {
+//	fmt.Printf("Found object property element '%s'\n", *objectProperty)
+//} else {
+//	fmt.Printf("No object property starting selector '%s'\n", selector)
+//}
 	return
 }
 
