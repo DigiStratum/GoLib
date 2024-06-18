@@ -335,7 +335,16 @@ func TestThat_JsonValue_Select_Returns_Values(t *testing.T) {
 		if ! ExpectNonNil(actual1, t) { return }
 		if ! ExpectNoError(err1, t) { return }
 
-		
+		switch actual1.GetType() {
+			case VALUE_TYPE_STRING: if ! ExpectString("arc", actual1.GetString(), t) { return }
+			case VALUE_TYPE_ARRAY:
+				if ! ExpectTrue(actual1.IsArray(), t) { return }
+				if ! ExpectInt(2, actual1.GetArraySize(), t) { return }
+			case VALUE_TYPE_OBJECT:
+				if ! ExpectTrue(actual1.IsObject(), t) { return }
+				if ! ExpectTrue(actual1.HasObjectProperty("radians"), t) { return }
+			case VALUE_TYPE_FLOAT: if ! ExpectFloat64(float64(6.28318), actual1.GetFloat(), t) { return }
+		}
 	}
 }
 
