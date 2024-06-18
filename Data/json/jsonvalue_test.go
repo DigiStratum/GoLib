@@ -25,11 +25,26 @@ func TestThat_JsonValue_NewJsonValue_ReturnsInstance(t *testing.T) {
 
 func TestThat_JsonValue_IsValid_Returns_false_for_new_value(t *testing.T) {
 	// Setup
-	var sut JsonValueIfc = NewJsonValue()
+	sut := NewJsonValue()
 
 	// Verify
 	if ! ExpectNonNil(sut, t) { return }
 	if ! ExpectFalse(sut.IsValid(), t) { return }
+}
+
+func TestThat_JsonValue_GetType_returns_expected_type(t *testing.T) {
+	// Setup
+	sut := NewJsonValue()
+
+	// Test
+	if ! ExpectTrue(VALUE_TYPE_INVALID == sut.GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_INTEGER == sut.SetInteger(0).GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_STRING == sut.SetString("howdy!").GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_NULL == sut.SetNull().GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_FLOAT == sut.SetFloat(3.14159).GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_ARRAY == sut.PrepareArray().GetType(), t) { return }
+	if ! ExpectTrue(VALUE_TYPE_OBJECT == sut.PrepareObject().GetType(), t) { return }
+
 }
 
 // Nulls
@@ -319,6 +334,8 @@ func TestThat_JsonValue_Select_Returns_Values(t *testing.T) {
 		actual1, err1 := sut.Select(selector)
 		if ! ExpectNonNil(actual1, t) { return }
 		if ! ExpectNoError(err1, t) { return }
+
+		
 	}
 }
 

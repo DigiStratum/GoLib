@@ -40,6 +40,7 @@ type JsonValueIfc interface {
 
 	// Validity
 	IsValid() bool
+	GetType() ValueType
 
 	// Nulls
 	IsNull() bool
@@ -116,6 +117,10 @@ func NewJsonValue() *JsonValue {
 
 func (r *JsonValue) IsValid() bool {
 	return r.valueType > VALUE_TYPE_INVALID
+}
+
+func (r *JsonValue) GetType() ValueType {
+	return r.valueType
 }
 
 // -----------------------------------------------
