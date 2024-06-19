@@ -15,6 +15,7 @@ PASS=1
 gobin=`which go`
 for f in `find . -type f -name '*.go' | sed -r 's|/[^/]+$||' |sort |uniq`; do
 	# Try to vet this file
+	say "Vetting: $f"
 	output=`go vet $f 2>&1`
 	if [ $? != 0 ]; then
 		# Mark as failed if there was a non-zero return
