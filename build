@@ -10,11 +10,20 @@ set_death_dir $START_DIR
 
 say "BUILD: GoLib"
 say "BEGIN"
-
 if [ ! -f go.mod ]; then
 	say "Initializing"
-	go mod init
+	#go mod init
+	go mod tidy
 fi
+
+# Iterate over output of `go mod tidy` which recommends things that we should go get... and go get them!
+gobin=`which go`
+while read cmd
+do
+	echo "cmd: $gobin $cmd"
+	`$gobin $cmd`
+done <<< `go mod tidy 2>&1 |grep "found" | sed -e 's/go: found /get /g' | sed -e 's/ in .*$//g'`
+
 
 cd $START_DIR
 say "\nDONE! :^D"
