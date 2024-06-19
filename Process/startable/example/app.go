@@ -22,9 +22,17 @@ func NewApp() *app {
 	a.Startable = startable.NewStartable(
 		a.svc,
 		startable.MakeStartable(
+			// Start func
 			func () error {
-				if a.wsvc.Init() { return nil }
+				if a.wsvc.Init() {
+					fmt.Println("Started!")
+					return nil
+				}
 				return fmt.Errorf("Failed to Init() WrappableService")
+			},
+			// Stop func
+			func () {
+				fmt.Println("Stopped!")
 			},
 		),
 	)
