@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/DigiStratum/GoLib/Proces/startable"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 type app struct {

@@ -38,14 +38,15 @@ func RunBackgroundCommand_Nix(command string) (int, error) {
 		return 0, errors.New(fmt.Sprintf("%v: %v", err.Error(), stderr.String()))
 	}
 
-	pid := strconv.Atoi(stdout.String())
-	if 0 == pid { return 0, errors.New("Invalid PID! (shouldn't happen without error)") }
+	pid, err := strconv.Atoi(stdout.String())
+	if nil != err { return 0, fmt.Errorf("Error converting PID from string to int: %s", err.Error()) }
+	if 0 == pid { return 0, fmt.Errorf("Invalid PID! (shouldn't happen without error)") }
 
 	return pid, nil
 }
 
 func RunCommand_Nix(command string) (string, error) {
-	var stdout bytes.Buffer
+	//var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	// ref: https://stackoverflow.com/questions/1877045/how-do-you-get-the-output-of-a-system-command-in-go
 	output, err := exec.Command(fmt.Sprintf( "/bin/bash %s", command)).Output()
@@ -53,6 +54,6 @@ func RunCommand_Nix(command string) (string, error) {
 		return "", errors.New(fmt.Sprintf("%v: %v", err.Error(), stderr.String()))
 	}
 
-	return string(pid), nil
+	return string(output), nil
 }
 
