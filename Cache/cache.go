@@ -28,6 +28,7 @@ TODO:
  * Support optional Logger dependency injection (pass configuration in through DI as well?) so that we
    can log errors, stats, and more
  * Capture stats for things like sets, drops, hits, misses, purge operations, etc.
+ * Add iterator for cache entry keys
 
 */
 
@@ -279,6 +280,7 @@ func (r *Cache) pruneExpired() error {
 		if ci.IsExpired() {
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
+fmt.Printf("Pruning key: '%s'\n", key)
 		} else {
 			// The first non-expired one we find means all others after it are non-expired!
 			break
