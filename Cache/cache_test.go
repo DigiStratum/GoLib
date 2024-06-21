@@ -589,7 +589,7 @@ func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 
 	// Test
 	sut.pruneExpired()
-
+sut.GetKeys()
 	// Verify
 	ExpectInt(1, sut.Count(), t)
 }
