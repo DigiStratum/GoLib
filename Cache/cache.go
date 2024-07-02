@@ -182,7 +182,7 @@ func (r *Cache) GetKeys() []string {
 	keys := make([]string, len(r.cache))
 	i := 0
 	for key, _ := range r.cache {
-fmt.Printf("Key: '%s'\n", key)
+//fmt.Printf("Key: '%s'\n", key)
 		keys[i] = key
 		i++
 	}
@@ -289,13 +289,13 @@ func (r *Cache) pruneExpired() error {
 	// Find which keys we need to purge because their cacheItem is expired
 	purgeKeys := []string{}
 	for key, ci := range r.cache {
-fmt.Printf("Key: '%s' ...", key)
+//fmt.Printf("Key: '%s' ...", key)
 		if ci.IsExpired() {
-fmt.Printf("Drop!\n")
+//fmt.Printf("Drop!\n")
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
 		} else {
-fmt.Printf("Keep!\n")
+//fmt.Printf("Keep!\n")
 			// The first non-expired one we find means all others after it are non-expired!
 			// FIXME: ^^^ this seems like a lie! This is a hashmap, there is no sequencing of the keys - why would we think the ones that follow based on key iteration would have any newer/older timestamp - the collection is unsorted by the nature of the type of data structure!
 			//break

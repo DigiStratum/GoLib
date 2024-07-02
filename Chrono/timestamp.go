@@ -8,9 +8,7 @@ implementation uses Go runtime environment which could vary from one host to the
 Defaults to local TimeSource
 */
 
-import (
-	"fmt"
-)
+//import ( "fmt" )
 
 type TimeStampIfc interface {
 	Add(offset int64) *TimeStamp
@@ -83,9 +81,7 @@ func (r TimeStamp) CompareToNow() int {
 
 func (r TimeStamp) Diff(ts *TimeStamp) int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
-
-fmt.Printf("Diff = %d - %d = %d\n", r.timeStamp, ts.timeStamp, r.timeStamp - ts.timeStamp)
-
+//fmt.Printf("Diff = %d - %d = %d\n", r.timeStamp, ts.timeStamp, r.timeStamp - ts.timeStamp)
 	return r.timeStamp - ts.timeStamp
 }
 
