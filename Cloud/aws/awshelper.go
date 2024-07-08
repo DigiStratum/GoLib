@@ -10,6 +10,8 @@ broadly applicable which we will capture here.
 ref: https://docs.awssdk.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
 ref: https://github.com/aws/aws-sdk-go/tree/main/aws
 
+TODO:
+ * Validate config values however we can; awsRegion, for example, can only be so many things
 */
 
 import (
@@ -20,13 +22,21 @@ import (
         awssdkcredentials "github.com/aws/aws-sdk-go/aws/credentials"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 type AWSHelperIfc interface {
+	// Embedded Interface(s)
+	startable.StartableIfc
+	cfg.ConfigurableIfc
+
+	// Out own interface
 	GetSession() (*awssdksession.Session, error)
 }
 
-type AWSHelper struct {
+type aWSHelper struct {
+	*startable.Startable
+	*cfg.Configurable
 	awsSession		*awssdksession.Session
 	awsRegion		string
 	awsAccessKeyId		string
@@ -35,46 +45,71 @@ type AWSHelper struct {
 }
 
 // Make a new one of these
-func NewAWSHelper() *AWSHelper {
-	return &AWSHelper{}
+func NewAWSHelper() *aWSHelper {
+	awsh := aWSHelper{ }
+
+	// Declare Configuration
+	awsh.Configurable = cfg.NewConfigurable(
+		cfg.NewConfigItem("awsRegion").CaptureWith(awsh.captureConfigAwsRegion),
+		cfg.NewConfigItem("awsAccessKeyId").CaptureWith(awsh.captureConfigAwsAccessKeyId),
+		cfg.NewConfigItem("awsSecretAccessKeyId").CaptureWith(awsh.captureConfigAwsSecretAccessKeyId),
+		cfg.NewConfigItem("awsSessionToken").CaptureWith(awsh.captureConfigAwsSessionToken),
+	)
+
+	// Make Startable
+	awsh.Startable = startable.NewStartable(
+		awsh.Configurable,
+	)
+
+	return &awsh
 }
 
 // -------------------------------------------------------------------------------------------------
-// cfg.ConfigurableIfc Public Interface
+// StartableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *AWSHelper) Configure(config cfg.ConfigIfc) error {
-	if nil == config { return fmt.Errorf("AWSHelper.Configure() - Configuration was nil") }
+func (r *aWSHelper) Start() error {
+	return r.Startable.Start()
+}
 
-	if config.Has("awsRegion") {
-		awsRegion := config.Get("awsRegion")
-		if nil != awsRegion { r.awsRegion = *awsRegion }
-	}
+// -------------------------------------------------------------------------------------------------
+// ConfigurableIfc
+// -------------------------------------------------------------------------------------------------
 
-	if config.Has("awsAccessKeyId") {
-		awsAccessKeyId := config.Get("awsAccessKeyId")
-		if nil != awsAccessKeyId { r.awsAccessKeyId = *awsAccessKeyId }
-	}
+// Optionally accept overrides for defaults in configuration
+func (r *aWSHelper) Configure(config cfg.ConfigIfc) error {
+	// If we have already been configured, do not accept a second configuration
+	if r.Startable.IsStarted() { return nil }
 
-	if config.Has("awsSecretAccessKeyId") {
-		awsSecretAccessKeyId := config.Get("awsSecretAccessKeyId")
-		if nil != awsSecretAccessKeyId { r.awsSecretAccessKeyId = *awsSecretAccessKeyId }
-	}
+	return r.Configurable.Configure(config)
+}
 
-	if config.Has("awsSessionToken") {
-		awsSessionToken := config.Get("awsSessionToken")
-		if nil != awsSessionToken { r.awsSessionToken = *awsSessionToken }
-	}
+func (r *aWSHelper) captureConfigAwsRegion(value string) error {
+	r.awsRegion = value
+	return nil
+}
 
+func (r *aWSHelper) captureConfigAwsAccessKeyId(value string) error {
+	r.awsAccessKeyId = value
+	return nil
+}
+
+func (r *aWSHelper) captureConfigAwsSecretAccessKeyId(value string) error {
+	r.awsSecretAccessKeyId = value
+	return nil
+}
+
+func (r *aWSHelper) captureConfigAwsSessionToken(value string) error {
+	r.awsSessionToken = value
 	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
-// AWSHelperIfc Public Interface
+// AWSHelperIfc
 // -------------------------------------------------------------------------------------------------
 
 // Get our AWS session
-func (r *AWSHelper) GetSession() (*awssdksession.Session, error) {
+func (r *aWSHelper) GetSession() (*awssdksession.Session, error) {
 	if nil == r.awsSession {
 		config := awssdk.Config{}
 		if len(r.awsRegion) > 0 {
@@ -101,3 +136,4 @@ func (r *AWSHelper) GetSession() (*awssdksession.Session, error) {
 	}
 	return r.awsSession, nil
 }
+

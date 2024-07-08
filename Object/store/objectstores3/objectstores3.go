@@ -41,7 +41,7 @@ type ObjectStoreS3 struct {
 	awsS3		*s3.S3
 	awsS3Downloader	*s3manager.Downloader
 	readCache	*objs.MutableObjectStore
-	awsHelper	*cloud.AWSHelper
+	awsHelper	cloud.AWSHelperIfc
 }
 
 // -------------------------------------------------------------------------------------------------

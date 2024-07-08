@@ -12,11 +12,35 @@ say "BEGIN"
 
 # Lint all source files first
 PASS=1
-#for f in `find . -name "*.go"`; do
+gobin=`which go`
 for f in `find . -type f -name '*.go' | sed -r 's|/[^/]+$||' |sort |uniq`; do
-	go vet $f
+	# Try to vet this file
+	say "Vetting: $f"
+	output=`go vet $f 2>&1`
 	if [ $? != 0 ]; then
+		# Mark as failed if there was a non-zero return
 		PASS=0
+	fi
+	# If there was any verbose output...
+	if [ "" != "$output" ]; then
+		# Echo the output
+		echo "Vet error: $output"
+		# But also check if it's complaining that we need to go get some package dependency
+		cmd=`echo $output | grep "go get" | sed -e 's/.* go get //g'`
+		if [ "" != "$cmd" ]; then
+			# If so, then go get it...
+			echo "cmd: $gobin get $cmd"
+			`$gobin get $cmd`
+			# And then try vet again
+			output=`go vet $f 2>&1`
+			if [ $? == 0 ]; then
+				# If it worked this time, then all good!
+				PASS=1
+			else
+				# Still failed. stop.
+				break
+			fi
+		fi
 	fi
 done
 if [ $PASS == 0 ]; then
@@ -25,18 +49,24 @@ fi
 
 
 # Now run unit tests
-PASS=1
+NUMPASS=0
+NUMFAIL=0
 for testrunner in `find $SCRIPT_DIR -name "t"`; do
 	echo "Running test: '$testrunner'"
 	/bin/bash $testrunner
 	if [ $? != 0 ]; then
-		PASS=0
+		NUMFAIL=$(($NUMFAIL + 1))
+	else 
+		NUMPASS=$(($NUMPASS + 1))
 	fi
 done
 
 cd $START_DIR
-if [ $PASS == 0 ]; then
-	die "FAILED Testing stage (see above)!"
+
+say "RESULTS: $NUMPASS PASS - $NUMFAIL FAIL"
+if [ $NUMFAIL != 0 ]; then
+	say "FAILED! D^:{"
+	exit 1
 fi
-say "\nDONE! :^D"
+say "\nDONE! {:^D"
 

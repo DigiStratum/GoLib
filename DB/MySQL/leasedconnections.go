@@ -6,32 +6,36 @@ import (
 
 type LeasedConnectionsIfc interface {
 	// Public interface
-	GetLeaseForConnection(connection PooledConnectionIfc) *LeasedConnection
+	GetLeaseForConnection(connection PooledConnectionIfc) *leasedConnection
 	Release(leaseKey int64) bool
 
 	// Private interface
 	getNewLeaseKey() *int64
 }
 
-type LeasedConnections struct {
-	leases		map[int64]*LeasedConnection
+type leasedConnections struct {
+	leases		map[int64]*leasedConnection
 	nextLeaseKey	int64
 	mutex		sync.Mutex
 }
 
-func NewLeasedConnections() *LeasedConnections {
-	lc := LeasedConnections{
-		leases:		make(map[int64]*LeasedConnection),
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewLeasedConnections() *leasedConnections {
+	lc := leasedConnections{
+		leases:		make(map[int64]*leasedConnection),
 		nextLeaseKey:	0,
 	}
 	return &lc
 }
 
 // -------------------------------------------------------------------------------------------------
-// LeasedConnectionsIfc Public Interface
+// LeasedConnectionsIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) *LeasedConnection {
+func (r *leasedConnections) GetLeaseForConnection(connection PooledConnectionIfc) *leasedConnection {
 	if nil == connection { return nil }
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	// Get a new lease key...
@@ -44,7 +48,7 @@ func (r *LeasedConnections) GetLeaseForConnection(connection PooledConnectionIfc
 	return nil
 }
 
-func (r *LeasedConnections) Release(leaseKey int64) bool {
+func (r *leasedConnections) Release(leaseKey int64) bool {
 	r.mutex.Lock(); defer r.mutex.Unlock()
 	if ! r.leaseExists(leaseKey) { return false }
 	delete(r.leases, leaseKey)
@@ -52,17 +56,17 @@ func (r *LeasedConnections) Release(leaseKey int64) bool {
 }
 
 // -------------------------------------------------------------------------------------------------
-// LeasedConnectionsIfc Private Interface
+// leasedConnections
 // -------------------------------------------------------------------------------------------------
 
 // Is there a Lease on record now with this key?
-func (r *LeasedConnections) leaseExists(leaseKey int64) bool {
+func (r *leasedConnections) leaseExists(leaseKey int64) bool {
 	_, ok := r.leases[leaseKey]
 	return ok
 }
 
 // Return the next available Lease Key, or nil on failure
-func (r *LeasedConnections) getNewLeaseKey() *int64 {
+func (r *leasedConnections) getNewLeaseKey() *int64 {
 	// If we don't get this even on the first attempt, then something is wrong... but just in case...
 	for attempts := 0; attempts < 100; attempts++ {
 		r.nextLeaseKey++

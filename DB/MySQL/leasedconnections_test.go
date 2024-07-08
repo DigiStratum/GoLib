@@ -4,17 +4,18 @@ import(
 	"testing"
 
 	"github.com/DigiStratum/GoLib/DB"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
+	cfg "github.com/DigiStratum/GoLib/Config"
+
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
-	cfg "github.com/DigiStratum/GoLib/Config"
 )
 
 func TestThat_NewLeasedConnections_ReturnsSomething(t *testing.T) {
 	// Setup
 
 	// Test
-	var actual *LeasedConnections = NewLeasedConnections()
+	var actual LeasedConnectionsIfc = NewLeasedConnections()	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNonNil(actual, t)
@@ -69,13 +70,13 @@ func TestThat_LeasedConnections_Release_ReturnsFalse_ForBadLeaseKey(t *testing.T
 	ExpectFalse(result, t)
 }
 
-func getPooledConnection() *PooledConnection {
+func getPooledConnection() *pooledConnection {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
 	connectionFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connectionFactory)
-	connectionPool.InjectDependencies(deps)
+	connectionPool.InjectDependencies(
+		dep.NewDependencyInstance("connectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")

@@ -8,6 +8,8 @@ to the next. Defaults to local TimeSource.
 
 */
 
+//import ( "fmt" )
+
 type TimeStampIfc interface {
 	Add(offset int64) *timeStamp
 	Compare(ts TimeStampIfc) int
@@ -82,6 +84,7 @@ func (r *timeStamp) CompareToNow() int {
 func (r *timeStamp) Diff(ts TimeStampIfc) int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
 	if t, ok := ts.(*timeStamp); ok {
+    //fmt.Printf("Diff = %d - %d = %d\n", r.timeStamp, ts.timeStamp, r.timeStamp - ts.timeStamp)
 		return r.timeStamp - t.timeStamp
 	}
 	return 0

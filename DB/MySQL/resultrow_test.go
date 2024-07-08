@@ -95,23 +95,24 @@ func TestThat_ResultRow_ToJson_ReturnsPopulatedObject_WhenFieldsSet(t *testing.T
 	sut := NewResultRow()
 	expectedFields := []string{"one", "two", "three"}
 	for _, field := range expectedFields {
-		nullableValue := nulls.NewNullable(field)
-		sut.Set(field, *nullableValue)
+		nValue := nulls.NewNullable(field)
+		err := nValue.SetValue(field) // Set field value = name
+		if ! ExpectNoError(err, t) { return }
+		sut.Set(field, *nValue)
 	}
 
 	// Test
 	actualJson, err := sut.ToJson()
-
-	// Verify
-	ExpectNonNil(actualJson, t)
-	ExpectNoError(err, t)
+	if ! ExpectNonNil(actualJson, t) { return }
+	if ! ExpectNoError(err, t) { return }
 	// We cannot expect JSON-serialized fields in a specific order, so we deserialize and check for expected results
 	actualFields := make(map[string]string)
 	err = json.Unmarshal([]byte(*actualJson), &actualFields)
-	ExpectNoError(err, t)
+	if ! ExpectNoError(err, t) { return }
 	for _, field := range expectedFields {
 		actualValue, ok := actualFields[field]
-		ExpectTrue(ok, t)
-		ExpectString(field, actualValue, t)
+		if ! ExpectTrue(ok, t) { return }
+		if ! ExpectString(field, actualValue, t) { return } // Expect field value == name
 	}
 }
+

@@ -41,7 +41,7 @@ func NewDSN(dsn string) (*DSN, error) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// DSNIfc Public Interface
+// DSNIfc
 // -------------------------------------------------------------------------------------------------
 
 // Create a unique hash of this DSN so that we can log/associate it without revealing secrets
@@ -54,3 +54,4 @@ func (r DSN) ToHash() string {
 func (r DSN) ToString() string {
 	return r.dsnString
 }
+

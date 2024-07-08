@@ -4,7 +4,7 @@ import(
 	"testing"
 
 	"github.com/DigiStratum/GoLib/DB"
-	"github.com/DigiStratum/GoLib/Dependencies"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
 	. "github.com/DigiStratum/GoLib/Testing"
 	. "github.com/DigiStratum/GoLib/Testing/mocks"
 	cfg "github.com/DigiStratum/GoLib/Config"
@@ -12,11 +12,11 @@ import(
 
 func TestThat_NewPooledConnection_ReturnsSomething_WithoutError(t *testing.T) {
 	// Setup
-	var actual *PooledConnection
+	var actual PooledConnectionIfc
 	var err error
 
 	// Test
-	actual, err = getGoodNewPooledConnection()
+	actual, err = getGoodNewPooledConnection()	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNonNil(actual, t)
@@ -67,13 +67,16 @@ func TestThat_PooledConnection_IsConnected_ReturnsFalse_ForBadConnection(t *test
 	ExpectFalse(actual, t)
 }
 
-func getGoodNewPooledConnection() (*PooledConnection, error) {
+func getGoodNewPooledConnection() (*pooledConnection, error) {
+	// Make a new ConnectionPool
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	connectionPool := NewConnectionPool(*dsn)
-	deps := dependencies.NewDependencies()
+
+	// Inject ConnectionFactoryIfc
 	connectionFactory := NewMockDBConnectionFactory()
-	deps.Set("connectionFactory", connectionFactory)
-	connectionPool.InjectDependencies(deps)
+	connectionPool.InjectDependencies(
+		dep.NewDependencyInstance("ConnectionFactory", connectionFactory),
+	)
 
 	config := cfg.NewConfig()
 	config.Set("min_connections", "1")
@@ -87,7 +90,7 @@ func getGoodNewPooledConnection() (*PooledConnection, error) {
 	return NewPooledConnection(newConnection, connectionPool)
 }
 
-func getNilNewPooledConnection() (*PooledConnection, error) {
-	return &PooledConnection{}, nil
+func getNilNewPooledConnection() (*pooledConnection, error) {
+	return &pooledConnection{}, nil
 }
 

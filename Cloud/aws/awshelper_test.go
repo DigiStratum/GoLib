@@ -38,6 +38,7 @@ func TestThat_AWSHelper_Configure_AppliesConfigSettings(t *testing.T) {
 
 	// Test
 	err := sut.Configure(config)
+	sut.Start()
 
 	// Verify
 	ExpectNil(err, t)

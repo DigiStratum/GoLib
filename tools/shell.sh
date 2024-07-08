@@ -1,5 +1,9 @@
 #!/bin/bash
 
+
+# TODO:
+# * Stop using die/exit/TERM trap, etc. just return exit codes through the function calls back to parent, parent exits as needed.
+
 # Which directory should we return to upon death? Defaults to no change on exit (it stays where it dies)
 DEATH_DIR="."
 
@@ -101,8 +105,13 @@ runtests() {
 
 	# Run tests
 	#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt $RUN_TEST *.go
-	go test -v -count=1 -covermode=atomic $RUN_TEST *.go
-	die_on_error $? "ERROR!"
+	output=`go test -v -count=1 -covermode=atomic $RUN_TEST *.go`
+	res=$?
+	echo "$output" | grep -v "^--- PASS:" | grep -v "^--- FAIL:"
+	if [ 0 != $res ]; then
+		say "^^^^ ERROR!"
+		return 1
+	fi
 
 	say "\nDONE: $TESTRUNNER_DIR"
 }

@@ -14,9 +14,22 @@ JSON strings unnecessarily. As long as we are in a trusted code/library scope, t
 we get into an untrusted code/library scope, we must revert to pass by value as needed to prevent
 unauthorized tampering.
 
+Note that there is support for "dereferencing" values lurking within. If a value has a special
+notation "%key%" and we call one of the Dereference member functions, if there is a matching key
+within the available Config data, then the value of that matching key will replace the "%key%"
+reference. This is recursive up to a depth of MAX_REFERENCE_DEPTH defined below. If there is no
+match on the key, then no substitution is performed. There are some neat tricks with composition
+of Config collections that can DereferenceConfig() against eachother so that we can make
+references across Configs.
+
 In addition to the explicit imports below, we use the following classes from this same package:
  * HashMap
  * Json
+
+TODO:
+ * Add support for non-string values, including nested objects, to break name=value pair limits
+ * Add "configurator" Interface/boilerplate implementation(s) to fetch Config from various sources
+ * Allow override for MAX_REFERENCE_DEPTH and reduce the default. By a lot.
 
 */
 
@@ -33,7 +46,7 @@ const MAX_REFERENCE_DEPTH = 100
 type ConfigIfc interface {
 	// ref: https://www.geeksforgeeks.org/embedding-interfaces-in-golang/
 	hashmap.HashMapIfc
-	MergeConfig(mergeCfg ConfigIfc)
+	MergeConfig(mergeCfg ConfigIfc) *Config
 	GetSubsetConfig(prefix string) *Config
 	GetSubsetKeys(keys *[]string) *Config
 	GetInverseSubsetConfig(prefix string) *Config
@@ -41,6 +54,8 @@ type ConfigIfc interface {
 	Dereference(referenceConfig ConfigIfc) int
 	DereferenceAll(referenceConfigs ...ConfigIfc) int
 	DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool
+
+	Validate(required, optional *[]string) *Config
 }
 
 // Config embeds a HashMap so that we can extend it
@@ -67,8 +82,9 @@ func NewConfig() *Config {
 // -------------------------------------------------------------------------------------------------
 
 // Merge configuration data
-func (r *Config) MergeConfig(mergeCfg ConfigIfc) {
+func (r *Config) MergeConfig(mergeCfg ConfigIfc) *Config {
 	r.HashMap.Merge(mergeCfg)
+	return r
 }
 
 // Get configuration datum whose keys begin with the prefix...
@@ -109,7 +125,9 @@ func (r Config) DereferenceString(str string) *string {
 // Dereference any values we have that %reference% keys in the referenceConfig
 // returns count of references substituted
 func (r *Config) Dereference(referenceConfig ConfigIfc) int {
-	if nil == referenceConfig { return 0 }
+	if nil == r { return 0 }
+	// If no referenceConfig is specified, just dereference against ourselves
+	if nil == referenceConfig { return r.Dereference(r) }
 	subs := 0
 	// For each of our key/value pairs...
 	it := r.GetIterator()
@@ -127,6 +145,8 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 
 // Dereference against a list of other referenceConfigs
 func (r *Config) DereferenceAll(referenceConfigs ...ConfigIfc) int {
+	// If no reference Configs provided, just self-Dereference
+	if 0 == len(referenceConfigs) { return r.Dereference(r) }
 	subs := 0
 	for _, referenceConfig := range referenceConfigs {
 		res := r.Dereference(referenceConfig)
@@ -171,11 +191,6 @@ func (r *Config) Validate(required, optional *[]string) *Config {
 	r.hasExtraConfigs = (len(extraKeys) > 0)
 
 	return r
-}
-
-func (r *Config) IsValid() bool {
-	// Validity only requires that we have the required configuration keys...
-	return r.hasRequiredConfigs
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -18,26 +18,30 @@ type LeasedConnectionIfc interface {
 	Release() error
 }
 
-type LeasedConnection struct {
+type leasedConnection struct {
 	pooledConnection	PooledConnectionIfc
 	leaseKey		int64
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
 
-func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *LeasedConnection {
+func NewLeasedConnection(pooledConnection PooledConnectionIfc, leaseKey int64) *leasedConnection {
 	pooledConnection.Lease(leaseKey)
-	lc := LeasedConnection{
+	return &leasedConnection{
 		pooledConnection:	pooledConnection,
 		leaseKey:		leaseKey,
 	}
-	return &lc
 }
 
 // -------------------------------------------------------------------------------------------------
-// LeasedConnectionIfc Public Interface
+// LeasedConnectionIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *LeasedConnection) Release() error {
+func (r *leasedConnection) Release() error {
+	if nil == r { return fmt.Errorf("leasedConnection is nil") }
+	if nil == r.pooledConnection { return fmt.Errorf("leasedConnection.pooledConnection is nil") }
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	if err := r.pooledConnection.Release(); nil != err { return err }
 	r.leaseKey = 0
@@ -45,64 +49,64 @@ func (r *LeasedConnection) Release() error {
 }
 
 // -------------------------------------------------------------------------------------------------
-// ConnectionIfc Public Interface
+// ConnectionIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r LeasedConnection) IsConnected() bool {
+func (r *leasedConnection) IsConnected() bool {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return false }
 	return r.pooledConnection.IsConnected()
 }
 
 //  Leased connections are not allowed to tamper with the connection lifecycle
-func (r *LeasedConnection) Disconnect() { }
-func (r *LeasedConnection) Reconnect() { }
-func (r *LeasedConnection) Connect() error {
+func (r *leasedConnection) Disconnect() { }
+func (r *leasedConnection) Reconnect() { }
+func (r *leasedConnection) Connect() error {
 	return fmt.Errorf("Leased connection - no state changes allowed")
 }
 
-func (r LeasedConnection) InTransaction() bool {
+func (r *leasedConnection) InTransaction() bool {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return false }
 	return r.pooledConnection.InTransaction()
 }
 
-func (r *LeasedConnection) Begin() error {
+func (r *leasedConnection) Begin() error {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Begin()
 }
 
-func (r *LeasedConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
+func (r *leasedConnection) NewQuery(query SQLQueryIfc) (QueryIfc, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, fmt.Errorf("No Leased Connection!") }
-	// Feed NewQuery() our LeasedConnection so it doesn't have direct access to underlying pooledConnection
+	// Feed NewQuery() our *leasedConnection so it doesn't have direct access to underlying pooledConnection
 	return NewQuery(r, query)
 }
 
-func (r LeasedConnection) Commit() error {
+func (r *leasedConnection) Commit() error {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Commit()
 }
 
-func (r LeasedConnection) Rollback() error {
+func (r *leasedConnection) Rollback() error {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return errNoLease() }
 	return r.pooledConnection.Rollback()
 }
 
-func (r LeasedConnection) Exec(query SQLQueryIfc, args ...interface{}) (db.Result, error) {
+func (r *leasedConnection) Exec(query SQLQueryIfc, args ...interface{}) (db.Result, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Exec(query, args...)
 }
 
-func (r LeasedConnection) Query(query SQLQueryIfc, args ...interface{}) (*db.Rows, error) {
+func (r *leasedConnection) Query(query SQLQueryIfc, args ...interface{}) (*db.Rows, error) {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil, errNoLease() }
 	return r.pooledConnection.Query(query, args...)
 }
 
-func (r LeasedConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *db.Row {
+func (r *leasedConnection) QueryRow(query SQLQueryIfc, args ...interface{}) *db.Row {
 	if ! r.pooledConnection.MatchesLeaseKey(r.leaseKey) { return nil }
 	return r.pooledConnection.QueryRow(query, args...)
 }
 
 // -------------------------------------------------------------------------------------------------
-// LeasedConnection Private Implementation
+// leasedConnection
 // -------------------------------------------------------------------------------------------------
 
 func errNoLease() error {

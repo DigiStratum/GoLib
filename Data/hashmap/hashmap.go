@@ -41,6 +41,7 @@ type HashMapIfc interface {
 	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
+	GetMissing(keys *[]string) *[]string
 	GetSubset(keys *[]string) *HashMap
 	Drop(key string) *HashMap
 	DropSet(keys *[]string) *HashMap
@@ -166,6 +167,17 @@ func (r *HashMap) Has(key string) bool {
 func (r *HashMap) HasAll(keys *[]string) bool {
 	for _, key := range *keys { if ! r.Has(key) { return false } }
 	return true
+}
+
+// Get the list of missing keys according to HasAll()
+func (r *HashMap) GetMissing(keys *[]string) *[]string {
+	missing := make([]string, 0)
+	for _, key := range *keys {
+		if ! r.Has(key) {
+			missing = append(missing, key)
+		}
+	}
+	return &missing
 }
 
 // Make a new hashmap from a subset of the key-values from this one

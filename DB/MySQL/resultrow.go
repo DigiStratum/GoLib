@@ -3,9 +3,14 @@ package mysql
 /*
 A single result row from a MySQL query result set
 
-TODO: See if there is a way to encode each Nullable value as it's native JSON data type instead of making them all strings
+TODO:
+ * See if there is a way to encode each Nullable value as it's native JSON data type instead of
+   making them all strings
+ * See if we can convert resultRowSerializableProperties (why is this separate from ResultRow?) into
+   map[string]NullableIfc; We don't want to export ResultRow itself if possible, and allow
+   ResultRowIfc.Set() to accept a NullableIfc instead of Nullable struct for value
 
-Interesting:
+   Interesting:
  * http://go-database-sql.org/varcols.html
  * http://jmoiron.github.io/sqlx/
 */
@@ -26,7 +31,7 @@ type ResultRowIfc interface {
 
 // Non-exported structure with exported properties that we can serialize
 type resultRowSerializableProperties struct {
-	values		map[string]nullables.Nullable
+	values		map[string]*nullables.Nullable
 }
 
 // Exported structure with non-exported properties to prevent consumer from accessing directly
@@ -41,7 +46,7 @@ type ResultRow struct {
 func NewResultRow() *ResultRow {
 	return &ResultRow{
 		props:		resultRowSerializableProperties{
-			values:		make(map[string]nullables.Nullable),
+			values:		make(map[string]*nullables.Nullable),
 		},
 	}
 }
@@ -53,12 +58,12 @@ func NewResultRow() *ResultRow {
 // Get the named field value as a nullable from this ResultRow
 // Note: Defies "accept interfaces, return structs" convention to support multiple Nullable types
 func (r ResultRow) Get(field string) nullables.NullableIfc {
-	if value, ok := r.props.values[field]; ok { return &value }
+	if value, ok := r.props.values[field]; ok { return value }
 	return nil
 }
 
 func (r *ResultRow) Set(field string, value nullables.Nullable) {
-	r.props.values[field] = value
+	r.props.values[field] = &value
 }
 
 func (r ResultRow) Has(field string) bool {

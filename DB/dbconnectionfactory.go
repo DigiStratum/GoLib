@@ -5,8 +5,13 @@ Factory for producing DBConnections; we can use Dependency Injection to enable u
 */
 
 import(
+	"fmt"
 	"database/sql"
 )
+
+type DBConnectionFactoryIfc interface {
+	NewConnection(dsn DSNIfc) (*sql.DB, error)
+}
 
 type DBConnectionFactory struct {
 	driver		string
@@ -20,6 +25,11 @@ func NewDBConnectionFactory(driver string) *DBConnectionFactory {
 	return &DBConnectionFactory{
 		driver:		driver,
 	}
+}
+
+func DBConnectionFactryFromIfc(i interface{}) (DBConnectionFactoryIfc, error) {
+	if ii, ok := i.(DBConnectionFactoryIfc); ok { return ii, nil }
+	return nil, fmt.Errorf("Does not implement DBConnectionFactoryIfc")
 }
 
 // -------------------------------------------------------------------------------------------------

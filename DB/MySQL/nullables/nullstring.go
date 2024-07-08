@@ -115,7 +115,7 @@ func (r *NullString) Scan(value interface{}) error {
 
 func (r *NullString) MarshalJSON() ([]byte, error) {
 	// Nil reciever? Bogus request!
-	if nil == r { return make([]byte, 0), fmt.Errorf("NullString.MarshalJSON() - cannot make nothing into JSON") }
+	if nil == r { return make([]byte, 0), fmt.Errorf("NullString.MarshalJSON() - nil NullString, no JSON") }
 	if ! r.n.Valid { return []byte("null"), nil }
 	return json.Marshal(r.n.String)
 }

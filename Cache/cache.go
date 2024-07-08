@@ -28,6 +28,7 @@ TODO:
  * Support optional Logger dependency injection (pass configuration in through DI as well?) so that we
    can log errors, stats, and more
  * Capture stats for things like sets, drops, hits, misses, purge operations, etc.
+ * Add iterator for cache entry keys
 
 */
 
@@ -54,6 +55,7 @@ type CacheIfc interface {
 	SetExpires(key string, expires chrono.TimeStampIfc) bool
 	GetExpires(key string) chrono.TimeStampIfc
 	Get(key string) interface{}
+	GetKeys() []string
 	Has(key string) bool
 	HasAll(keys *[]string) bool
 	Drop(key string) (bool, error)
@@ -176,6 +178,17 @@ func (r *Cache) Get(key string) interface{} {
 	return nil
 }
 
+func (r *Cache) GetKeys() []string {
+	keys := make([]string, len(r.cache))
+	i := 0
+	for key, _ := range r.cache {
+//fmt.Printf("Key: '%s'\n", key)
+		keys[i] = key
+		i++
+	}
+	return keys
+}
+
 // Check whether we have a configuration element by key name
 func (r *Cache) Has(key string) bool {
 	_, ok := r.cache[key];
@@ -276,12 +289,16 @@ func (r *Cache) pruneExpired() error {
 	// Find which keys we need to purge because their cacheItem is expired
 	purgeKeys := []string{}
 	for key, ci := range r.cache {
+//fmt.Printf("Key: '%s' ...", key)
 		if ci.IsExpired() {
+//fmt.Printf("Drop!\n")
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
 		} else {
+//fmt.Printf("Keep!\n")
 			// The first non-expired one we find means all others after it are non-expired!
-			break
+			// FIXME: ^^^ this seems like a lie! This is a hashmap, there is no sequencing of the keys - why would we think the ones that follow based on key iteration would have any newer/older timestamp - the collection is unsorted by the nature of the type of data structure!
+			//break
 		}
 	}
 	// Purge them!

@@ -13,10 +13,10 @@ import(
 
 func TestThat_NewQuery_ReturnsError_WhenGivenNilConnection(t *testing.T) {
 	// Setup
-	var sut *Query
+	var sut QueryIfc
 	var err error
 	// Test
-	sut, err = NewQuery(nil, nil)
+	sut, err = NewQuery(nil, nil)	// <- Ensures that we satisfy our interface
 
 	// Verify
 	ExpectNil(sut, t)
@@ -331,7 +331,7 @@ func TestThat_Query_RunReturnAll_ReturnsError_WhenQueryExecutionFailsWithError(t
 	ExpectNoError((*mock).ExpectationsWereMet(), t)
 }
 
-func getGoodNewConnection() (*Connection, error) {
+func getGoodNewConnection() (*connection, error) {
 	dsn, _ := db.NewDSN("user:pass@tcp(host:333)/name")
 	mockDBConnection, _ := NewMockDBConnection(driverName, dsn)
 	return NewConnection(mockDBConnection)

@@ -32,7 +32,7 @@ type cacheItem struct {
 func NewCacheItem(key string, value interface{}, expires chrono.TimeStampIfc) *cacheItem {
 	return &cacheItem{
 		key:		key,
-		value: 		value,
+		value:		value,
 		expires:	expires,
 		size:		sizeable.Size(value),
 	}

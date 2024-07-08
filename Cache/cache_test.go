@@ -566,6 +566,13 @@ FIXME: Got another one because of bad luck when the system was not at all busy:
         Expect: '1', Actual: '2'
 --- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
 
+FIXME: Got another one, not busy at all. Seem like just timing fragility
+=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
+    expect.go:71:
+
+        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:587
+        Expect: '1', Actual: '2'
+
 */
 func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
@@ -576,13 +583,13 @@ func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 	sut.Set("expiredkey", "value1")
-	expiration := ts.Now().Add(-1000)
+	expiration := ts.Now().Add(-10000)
 	sut.SetExpires("expiredkey", expiration)
 	sut.Set("futurekey", "value2")
 
 	// Test
 	sut.pruneExpired()
-
+sut.GetKeys()
 	// Verify
 	ExpectInt(1, sut.Count(), t)
 }

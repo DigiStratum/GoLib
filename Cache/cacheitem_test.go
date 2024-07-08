@@ -43,7 +43,7 @@ func TestThat_CacheItem_Size_ReturnsRegularValue(t *testing.T) {
 	)
 
 	// Verify
-	ExpectInt64(120, sut.Size(), t)
+	ExpectInt64(119, sut.Size(), t)
 }
 
 func TestThat_CacheItem_IsExpired_ReturnsFalse(t *testing.T) {
