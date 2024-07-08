@@ -65,7 +65,7 @@ func (r *timeStamp) Add(offset int64) *timeStamp {
 	return r
 }
 
-func (r timeStamp) Compare(ts TimeStampIfc) int {
+func (r *timeStamp) Compare(ts TimeStampIfc) int {
 	if r.isForever { return 1 }			// Forever is always in the future
 	if t, ok := ts.(*timeStamp); ok {
 		if r.timeStamp < t.timeStamp { return -1 }	// Past
@@ -74,12 +74,12 @@ func (r timeStamp) Compare(ts TimeStampIfc) int {
 	return 1					// Future
 }
 
-func (r timeStamp) CompareToNow() int {
+func (r *timeStamp) CompareToNow() int {
 	if r.isForever { return 1 }			// Forever is always in the future
 	return r.Compare(r.timeSource.Now())
 }
 
-func (r timeStamp) Diff(ts TimeStampIfc) int64 {
+func (r *timeStamp) Diff(ts TimeStampIfc) int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
 	if t, ok := ts.(*timeStamp); ok {
 		return r.timeStamp - t.timeStamp
@@ -87,28 +87,28 @@ func (r timeStamp) Diff(ts TimeStampIfc) int64 {
 	return 0
 }
 
-func (r timeStamp) DiffNow() int64 {
+func (r *timeStamp) DiffNow() int64 {
 	if r.isForever { return 1 }			// Forever is always in the future
 	now := r.timeSource.Now()
 	return r.Diff(now)
 }
 
-func (r timeStamp) IsForever() bool {
+func (r *timeStamp) IsForever() bool {
 	return r.isForever
 }
 
-func (r timeStamp) IsPast() bool {
+func (r *timeStamp) IsPast() bool {
 	if r.isForever { return false }			// Forever is never in the past
 	diff := r.DiffNow()
 	return (diff < 0)
 }
 
-func (r timeStamp) IsFuture() bool {
+func (r *timeStamp) IsFuture() bool {
 	if r.isForever { return true }			// Forever is always in the future
 	return (r.DiffNow() > 0)
 }
 
-func (r timeStamp) ToUnixTimeStamp() int64 {
+func (r *timeStamp) ToUnixTimeStamp() int64 {
 	if r.isForever { return 0 }			// Forever has no definite timestamp
 	return r.timeStamp
 }
