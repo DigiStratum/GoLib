@@ -64,7 +64,7 @@ done
 cd $START_DIR
 
 say "RESULTS: $NUMPASS PASS - $NUMFAIL FAIL"
-if [ $NUMFAIL > 0 ]; then
+if [ $NUMFAIL != 0 ]; then
 	say "FAILED! D^:{"
 	exit 1
 fi
