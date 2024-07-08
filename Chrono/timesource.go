@@ -36,23 +36,23 @@ func NewTimeSource() *timeSource {
 // TimeSourceIfc Public Interface
 // -------------------------------------------------------------------------------------------------
 
-func (r timeSource) Now() TimeStampIfc {
+func (r *timeSource) Now() TimeStampIfc {
 	return NewTimeStamp(r)
 }
 
-func (r timeSource) NowUnixTimeStamp() int64 {
+func (r *timeSource) NowUnixTimeStamp() int64 {
 	return time.Now().Unix()
 }
 
-func (r timeSource) NowUnixTimeStampMilli() int64 {
+func (r *timeSource) NowUnixTimeStampMilli() int64 {
 	return time.Now().UnixMilli()
 }
 
-func (r timeSource) NowUnixTimeStampMicro() int64 {
+func (r *timeSource) NowUnixTimeStampMicro() int64 {
 	return time.Now().UnixMicro()
 }
 
-func (r timeSource) NowUnixTimeStampNano() int64 {
+func (r *timeSource) NowUnixTimeStampNano() int64 {
 	return time.Now().UnixNano()
 }
 
