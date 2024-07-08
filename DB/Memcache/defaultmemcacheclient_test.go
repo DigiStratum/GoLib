@@ -13,6 +13,20 @@ import(
 const FAKE_MEMCACHED_PORT = 21212
 const FAKE_MEMCACHED_HOST = "localhost"
 
+func TestThat_NewDefaultMemcacheClient_Returns_Expected_Interface(t *testing.T) {
+	// Setup
+	ts := chrono.NewTimeSource()
+
+	// Test
+	var err error
+	var sut MemcacheClientIfc
+	sut, err = NewDefaultMemcacheClient(ts)
+
+	// Verify
+	ExpectNil(sut, t)
+	ExpectError(err, t)
+}
+
 func TestThat_NewDefaultMemcacheClient_ReturnsError_WhenNoHostsSpecified(t *testing.T) {
 	// Setup
 	ts := chrono.NewTimeSource()
