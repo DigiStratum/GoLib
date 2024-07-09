@@ -348,3 +348,15 @@ func TestThat_JsonValue_Select_Returns_Values(t *testing.T) {
 	}
 }
 
+
+func TestThat_JsonValue_GetIterator_Returns_nil(t *testing.T) {
+	// Setup
+	sut := NewJsonValue()
+
+	// Test
+	actual := sut.GetIterator()
+
+	// Verify
+	if ! ExpectNil(actual, t) { return }
+}
+

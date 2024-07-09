@@ -429,6 +429,7 @@ type KeyValuePair struct {
 func (r *JsonValue) GetIterator() func () interface{} {
 	// Return object KeyValuePairs
 	if r.IsObject() {
+fmt.Println("Object!")
 		kvps := make([]KeyValuePair, 0)
 		var idx int = 0
 		for k, v := range r.valueObject {
@@ -447,6 +448,7 @@ func (r *JsonValue) GetIterator() func () interface{} {
 	}
 	// Return Array values
 	if r.IsArray() {
+fmt.Println("Array!")
 		idx := 0
 		var data_len = r.GetArraySize()
 		return func () interface{} {
@@ -457,5 +459,6 @@ func (r *JsonValue) GetIterator() func () interface{} {
 			return r.GetArrayValue(prev_idx)
 		}
 	}
+fmt.Println("Neither!")
 	return nil
 }
