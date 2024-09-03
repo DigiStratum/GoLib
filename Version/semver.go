@@ -6,6 +6,11 @@ Semantic Versioning (AKA SEMVER) representation
 
 We support major.minor.patch version scheme in accordance with accepted norms around SEMVER.
 
+ref: https://semver.npmjs.com/
+
+TODO:
+ * Support NPM style version/range specifiers: https://semver.npmjs.com/
+
 */
 
 import (
