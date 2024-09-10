@@ -1,7 +1,7 @@
 package json
 
 import(
-	//"fmt"
+	"fmt"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -357,6 +357,65 @@ func TestThat_JsonValue_GetIterator_Returns_nil(t *testing.T) {
 	actual := sut.GetIterator()
 
 	// Verify
-	if ! ExpectNil(actual, t) { return }
+	// Note: Can't use ExpectNil() here because there's something about the nil zero-value of
+	// actual once passed as an argument to the Expect*() func that prevents it from being seen
+	// as truly nil any longer.
+	if ! ExpectTrue(nil == actual, t) { return }
 }
+
+func TestThat_JsonValue_GetIterator_Returns_func(t *testing.T) {
+	// Setup
+	sut := NewJsonValue()
+	sut.PrepareObject()
+
+	// Test
+	actual := sut.GetIterator()
+
+	// Verify
+	// Note: Can't use ExpectNonNil() here because there's something about the nil zero-value of
+	// actual once passed as an argument to the Expect*() func that prevents it from being seen
+	// as truly nil any longer.
+	if ! ExpectFalse(nil == actual, t) { return }
+}
+
+func TestThat_JsonValue_GetIterator_Returns_Good_Iterator(t *testing.T) {
+	// Setup
+	sut := NewJsonValue()
+	sut.PrepareObject()
+	numprops := 3
+	for i := 1; i <= numprops; i++ {
+		sut.SetObjectProperty(fmt.Sprintf("p%d", i), NewJsonValue().SetInteger(int64(i)))
+	}
+
+	// Test
+	actual := sut.GetIterator()
+
+	// Verify
+	// Note: Can't use ExpectNonNil() here because there's something about the nil zero-value of
+	// actual once passed as an argument to the Expect*() func that prevents it from being seen
+	// as truly nil any longer.
+	if ! ExpectFalse(nil == actual, t) { return }
+	actualProps := make([]bool, numprops)
+	for i := 1; i <= numprops; i++ {
+		kvpi := actual()
+		kvp, ok := kvpi.(KeyValuePair)
+		// Expect a KeyValuePair to be the result of calling the Iterator func
+		if ! ExpectTrue(ok, t) { return }
+		actualValue := kvp.Value.GetInteger()
+		// Expect the KVP value to be an integer betwee 0 and numprops, inclusive
+		if ! ExpectTrue((actualValue >= 0) && (actualValue <= int64(numprops)), t) { return }
+		// Expect the KVP Key to be a string starting with "p" then the value
+		if ! ExpectString(fmt.Sprintf("p%d", actualValue), kvp.Key, t) { return }
+		actualProps[actualValue - 1] = true
+	}
+	final := actual()
+	// Expect the Iterator to return nothing after consuming all the expected KVP values
+	if ! ExpectNil(final, t) { return }
+	// Expect all the actual properties to have been represented (they come in unordered as object props)
+	for i := 1; i <= numprops; i++ {
+		if ! ExpectTrue(actualProps[i - 1], t) { return }
+	}
+}
+
+// TODO: Test Array iteration as well!
 
