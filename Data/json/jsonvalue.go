@@ -416,3 +416,45 @@ func (r *JsonValue) selectObjectPropertyElement(selector string) (objectProperty
 	return
 }
 
+// -------------------------------------------------------------------------------------------------
+// IterableIfc
+// -------------------------------------------------------------------------------------------------
+
+type KeyValuePair struct {
+        Key     string
+        Value   *JsonValue
+}
+
+// Returns iterator func of []KeyValuePair for Objects, []*JsonValue for Arrays, nil for other types
+func (r *JsonValue) GetIterator() func () interface{} {
+	// Return object KeyValuePairs
+	if r.IsObject() {
+		kvps := make([]KeyValuePair, 0)
+		var idx int = 0
+		for k, v := range r.valueObject {
+			kvps = append(kvps, KeyValuePair{ Key: k, Value: v })
+			idx++
+		}
+		idx = 0
+		return func () interface{} {
+			// If we're done iterating, return nothing
+			if idx >= len(kvps) { return nil }
+			prev_idx := idx
+			idx++
+			return kvps[prev_idx]
+		}
+	}
+	// Return Array values
+	if r.IsArray() {
+		idx := 0
+		var data_len = r.GetArraySize()
+		return func () interface{} {
+			// If we're done iterating, return nothing
+			if idx >= data_len { return nil }
+			prev_idx := idx
+			idx++
+			return r.GetArrayValue(prev_idx)
+		}
+	}
+	return nil
+}
