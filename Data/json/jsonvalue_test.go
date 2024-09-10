@@ -378,7 +378,7 @@ func TestThat_JsonValue_GetIterator_Returns_func(t *testing.T) {
 	if ! ExpectFalse(nil == actual, t) { return }
 }
 
-func TestThat_JsonValue_GetIterator_Returns_Good_Iterator(t *testing.T) {
+func TestThat_JsonValue_GetIterator_Returns_Object_Iterator(t *testing.T) {
 	// Setup
 	sut := NewJsonValue()
 	sut.PrepareObject()
@@ -395,6 +395,7 @@ func TestThat_JsonValue_GetIterator_Returns_Good_Iterator(t *testing.T) {
 	// actual once passed as an argument to the Expect*() func that prevents it from being seen
 	// as truly nil any longer.
 	if ! ExpectFalse(nil == actual, t) { return }
+
 	actualProps := make([]bool, numprops)
 	for i := 1; i <= numprops; i++ {
 		kvpi := actual()
@@ -417,5 +418,31 @@ func TestThat_JsonValue_GetIterator_Returns_Good_Iterator(t *testing.T) {
 	}
 }
 
-// TODO: Test Array iteration as well!
+func TestThat_JsonValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
+	// Setup
+	sut := NewJsonValue()
+	sut.PrepareArray()
+	numvals := 3
+	for i := 1; i <= numvals; i++ {
+		sut.AppendArrayValue(NewJsonValue().SetInteger(int64(i)))
+	}
+
+	// Test
+	actual := sut.GetIterator()
+
+	// Verify
+	// Note: Can't use ExpectNonNil() here because there's something about the nil zero-value of
+	// actual once passed as an argument to the Expect*() func that prevents it from being seen
+	// as truly nil any longer.
+	if ! ExpectFalse(nil == actual, t) { return }
+
+	for i := 1; i <= numvals; i++ {
+		vi := actual()
+		v, ok := vi.(*JsonValue)
+		// Expect a KeyValuePair to be the result of calling the Iterator func
+		if ! ExpectTrue(ok, t) { return }
+		if ! ExpectNonNil(v, t) { return }
+		if ! ExpectInt64(int64(i), v.GetInteger(),t) { return }
+	}
+}
 

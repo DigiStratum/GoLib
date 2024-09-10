@@ -425,6 +425,7 @@ type KeyValuePair struct {
         Value   *JsonValue
 }
 
+// Returns iterator func of []KeyValuePair for Objects, []*JsonValue for Arrays, nil for other types
 func (r *JsonValue) GetIterator() func () interface{} {
 	// Return object KeyValuePairs
 	if r.IsObject() {
