@@ -5,19 +5,19 @@ package json
 
 Dealing with JSON at a level of abstraction above encoding/json.
 
-TODO:
- * Implement our own json parser; explode it into a general tree structure that can use XPath style notation to access individual values
-
 */
 
 import(
 	"os"
 	"fmt"
 	"encoding/json"
+
+	"GoLib/Data"
 )
 
 type JsonIfc interface {
 	Load(target interface{}) error
+	ToDataValue() (*data.DataValue, error)
 }
 
 type Json struct {
@@ -77,3 +77,27 @@ func (r *Json) Load(target interface{}) error {
 
 	return fmt.Errorf("Json.Load(): Unsupported JSON source (%s)", r.source)
 }
+
+// Convert the Json source to a dynamic DataValue
+func (r *Json) ToDataValue() (*data.DataValue, error) {
+	lexer := jsonLexer{ }
+	switch (r.source) {
+		case "string":
+			if (nil == r.json) || ("" == *r.json) {
+				return nil, fmt.Errorf(
+					"Json.ToDataValue(): We were given nil or empty string for the JSON",
+				)
+			}
+			return lexer.LexDataValue(*r.json)
+		case "file":
+			json, err := os.ReadFile(r.path)
+			if nil != err {
+				return nil, fmt.Errorf(
+					"Json.ToDataValue(): Error reading JSON file: %s", err.Error(),
+				)
+			}
+			return lexer.LexDataValue(string(json))
+	}
+	return nil, fmt.Errorf("Json.ToDataValue(): Unsupported json source: '%s'", r.source)
+}
+

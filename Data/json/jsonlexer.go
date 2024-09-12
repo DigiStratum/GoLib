@@ -2,7 +2,7 @@ package json
 
 /*
 
-Lexically parse a JSON string ([]rune, really) into a JsonValue object tree
+Lexically parse a JSON string ([]rune, really) into a DataValue object tree
 
 Go has built-in capability for JSON Un/Marshal, however there are some limitations that make it
 less convenient for certain usages. While there is strong support for static, predefined
@@ -58,13 +58,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 	"strconv"
+
+	"GoLib/Data"
 )
 
-type JsonLexerIfc interface {
-	LexJsonValue(json string) (*JsonValue, error)
-}
-
-type JsonLexer struct {
+type jsonLexer struct {
 	lexerJson		[]rune
 	lexerJsonLen		int
 	lexerPosition		int
@@ -73,21 +71,11 @@ type JsonLexer struct {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Factory Functions
+// jsonLexerIfc
 // -------------------------------------------------------------------------------------------------
 
-// Make a new one of these!
-func NewJsonLexer() *JsonLexer {
-	r := JsonLexer{ }
-	return &r
-}
-
-// -------------------------------------------------------------------------------------------------
-// JsonLexerIfc
-// -------------------------------------------------------------------------------------------------
-
-// Lexically parse a JsonValue out of existing JSON
-func (r *JsonLexer) LexJsonValue(json string) (*JsonValue, error) {
+// Lexically parse a DataValue out of existing JSON
+func (r *jsonLexer) LexDataValue(json string) (*data.DataValue, error) {
 	if ! utf8.ValidString(json) { return nil, fmt.Errorf("JSON has invalid UTF-8 multibyte sequences") }
 	r.lexerJson = []rune(json)
 	r.lexerPosition = 0
@@ -101,13 +89,13 @@ func (r *JsonLexer) LexJsonValue(json string) (*JsonValue, error) {
 // Private implementation
 // -------------------------------------------------------------------------------------------------
 
-func (r *JsonLexer) lexNextValue() (*JsonValue, error) {
+func (r *jsonLexer) lexNextValue() (*data.DataValue, error) {
 	// No JSON is a coding mistake!
 	if nil == r.lexerJson { return nil, fmt.Errorf("JSON string was nil, nothing to lex") }
 
 	// 1) Consume any white-space, if any, between useful bits
 	r.lexConsumeWhitespace()
-	if r.lexAtEOF() { return NewJsonValue(), nil }
+	if r.lexAtEOF() { return data.NewDataValue(), nil }
 
 	// 2) Use the next character to determine data type for the value
 	switch unicode.ToUpper(r.lexPeekCharacter()) {
@@ -133,17 +121,17 @@ func (r *JsonLexer) lexNextValue() (*JsonValue, error) {
 }
 
 // Is this the end?
-func (r *JsonLexer) lexAtEOF() bool {
+func (r *jsonLexer) lexAtEOF() bool {
 	return r.lexerPosition >= r.lexerJsonLen
 }
 
 // Peek at the character for lexer's current position without consuming it
-func (r *JsonLexer) lexPeekCharacter() rune {
+func (r *jsonLexer) lexPeekCharacter() rune {
 	return r.lexerJson[r.lexerPosition]
 }
 
 // Every character must be consumed one at a time to track position
-func (r *JsonLexer) lexConsumeCharacter() rune {
+func (r *jsonLexer) lexConsumeCharacter() rune {
 	char := r.lexPeekCharacter()
 //fmt.Printf("'%c'@%d\n", char, r.lexerPosition)
 	r.lexerPosition++
@@ -157,7 +145,7 @@ func (r *JsonLexer) lexConsumeCharacter() rune {
 
 // Consume sequential white space characters to get to the next useful thing
 // Returns true if EOF reached, else false
-func (r *JsonLexer) lexConsumeWhitespace() bool {
+func (r *jsonLexer) lexConsumeWhitespace() bool {
 	for ; (! r.lexAtEOF()) ; {
 		if ! unicode.IsSpace(r.lexPeekCharacter()) { return false}
 		r.lexConsumeCharacter()
@@ -165,15 +153,15 @@ func (r *JsonLexer) lexConsumeWhitespace() bool {
 	return true
 }
 
-// Extract a quoted string JsonValue one character at a time
-func (r *JsonLexer) lexNextValueString() (*JsonValue, error) {
+// Extract a quoted string DataValue one character at a time
+func (r *jsonLexer) lexNextValueString() (*data.DataValue, error) {
 	str, err := r.lexConsumeQuotedString()
 	if nil != err { return nil, err }
-	jsonValue := NewJsonValue().SetString(*str)
-	return jsonValue, nil
+	dataValue := data.NewDataValue().SetString(*str)
+	return dataValue, nil
 }
 
-func (r *JsonLexer) lexConsumeQuotedString() (*string, error) {
+func (r *jsonLexer) lexConsumeQuotedString() (*string, error) {
 	// Expect first character is double-quote string opener
 	char := r.lexPeekCharacter()
 	if '"' != char { return nil, r.lexError("Expected '\"' for string but got '%c' instead", char) }
@@ -205,15 +193,15 @@ func (r *JsonLexer) lexConsumeQuotedString() (*string, error) {
 	return nil, r.lexError("String runs past EOF without closing")
 }
 
-// Extract an object JsonValue one name-value pair at a time
-func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
+// Extract an object DataValue one name-value pair at a time
+func (r *jsonLexer) lexNextValueObject() (*data.DataValue, error) {
 	// Expect first character is curly brace opener
 	if char := r.lexConsumeCharacter(); char != '{' {
 		return nil, r.lexError("Expected object start with '{' but got '%c' instead", char)
 	}
 
-	// We opened an Object value! Scaffold a JsonValue to return
-	jsonValue := NewJsonValue().PrepareObject()
+	// We opened an Object value! Scaffold a DataValue to return
+	dataValue := data.NewDataValue().PrepareObject()
 
 	// Read comma-separated name:value pairs until '}' token
 	for ; (!  r.lexConsumeWhitespace()) ; {
@@ -221,7 +209,7 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		// 1) If the next character closes the object, then we're done!
 		if '}' == r.lexPeekCharacter() {
 			r.lexConsumeCharacter()
-			return jsonValue, nil
+			return dataValue, nil
 		}
 
 		// 2) Expect a non-empty, quoted name string value for a property name, then...
@@ -245,7 +233,7 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 		if ! propertyValue.IsValid() { return nil, r.lexError(
 			"Expected value for object property '%s', but got something else instead", *propertyName,
 		)}
-		if err = jsonValue.SetObjectProperty(*propertyName, propertyValue); nil != err { return nil, err }
+		if err = dataValue.SetObjectProperty(*propertyName, propertyValue); nil != err { return nil, err }
 		if r.lexConsumeWhitespace() { break }
 
 		// 5) Expect a ',' separator between the name:value pairs or closing '}'
@@ -259,40 +247,40 @@ func (r *JsonLexer) lexNextValueObject() (*JsonValue, error) {
 	return nil, r.lexError("Object runs past EOF without closing")
 }
 
-// Extract a boolean JsonValue one character at a time
-func (r *JsonLexer) lexNextValueBool() (*JsonValue, error) {
+// Extract a boolean DataValue one character at a time
+func (r *jsonLexer) lexNextValueBool() (*data.DataValue, error) {
 	truthy := "TRUE"
 	falsey := "FALSE"
 	value := ""
 	for ; (! r.lexAtEOF()) && (len(value) <= 5) ; {
 		value = value + string(unicode.ToUpper(r.lexConsumeCharacter()))
 		if value == truthy {
-			return NewJsonValue().SetBoolean(true), nil
+			return data.NewDataValue().SetBoolean(true), nil
 		} else if value == falsey {
-			return NewJsonValue().SetBoolean(false), nil
+			return data.NewDataValue().SetBoolean(false), nil
 		}
 	}
 	return nil, r.lexError("Expected valid value for boolean, but got '%s' instead", value)
 }
 
-// Extract a null JsonValue one character at a time
-func (r *JsonLexer) lexNextValueNull() (*JsonValue, error) {
+// Extract a null DataValue one character at a time
+func (r *jsonLexer) lexNextValueNull() (*data.DataValue, error) {
 	value := ""
 	for ; (! r.lexAtEOF()) && (len(value) <= 4) ; {
 		value = value + string(unicode.ToUpper(r.lexConsumeCharacter()))
-		if "NULL" == value { return NewJsonValue().SetNull(), nil }
+		if "NULL" == value { return data.NewDataValue().SetNull(), nil }
 	}
 	return nil, r.lexError("Expected valid value for null, but got '%s' instead", value)
 }
 
-func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
+func (r *jsonLexer) lexNextValueArray() (*data.DataValue, error) {
 	// Expect first character is square bracket opener
 	if char := r.lexConsumeCharacter(); char != '[' {
 		return nil, r.lexError("Expected array start with '[' but got '%c' instead", char)
 	}
-	// We opened an Array value! Scaffold a JsonValue to return
-	jsonValue := NewJsonValue()
-	jsonValue.PrepareArray()
+	// We opened an Array value! Scaffold a DataValue to return
+	dataValue := data.NewDataValue()
+	dataValue.PrepareArray()
 	expectValue := false
 
 	// Read comma-separated values until ']' token
@@ -303,7 +291,7 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 			// If the next character closes the array, then we're done!
 			if ']' == r.lexPeekCharacter() {
 				r.lexConsumeCharacter()
-				return jsonValue, nil
+				return dataValue, nil
 			}
 		}
 
@@ -313,7 +301,7 @@ func (r *JsonLexer) lexNextValueArray() (*JsonValue, error) {
 		if ! value.IsValid() {
 			return nil, r.lexError("Expected array entry value but got something else instead")
 		}
-		if err = jsonValue.AppendArrayValue(value); nil != err { return nil, err }
+		if err = dataValue.AppendArrayValue(value); nil != err { return nil, err }
 
 		// After the value may be whitespace
 		if r.lexConsumeWhitespace() { break }
@@ -360,7 +348,7 @@ Note:
    interoperability standards, with optional override, and throw error as we parse and discover
    values that are out of range.
 */
-func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
+func (r *jsonLexer) lexNextValueNumber() (*data.DataValue, error) {
 	isFloat := false
 	valueStr := ""
 	var err error
@@ -395,17 +383,17 @@ func (r *JsonLexer) lexNextValueNumber() (*JsonValue, error) {
 		if nil != err {
 			return nil, r.lexError("Error converting number '%s' to float64: %s", valueStr, err.Error())
 		}
-		return NewJsonValue().SetFloat(valueFloat), nil
+		return data.NewDataValue().SetFloat(valueFloat), nil
 	}
 	// Integers
 	valueInteger, err := strconv.ParseInt(valueStr, 10, 64)
 	if nil != err {
 		return nil, r.lexError("Error converting number '%s' to int64: %s", valueStr, err.Error())
 	}
-	return NewJsonValue().SetInteger(valueInteger), nil
+	return data.NewDataValue().SetInteger(valueInteger), nil
 }
 
-func (r *JsonLexer) lexConsumeAppendCharacter(base string, acceptedChars ...rune) (string, error) {
+func (r *jsonLexer) lexConsumeAppendCharacter(base string, acceptedChars ...rune) (string, error) {
 	if ! r.lexAtEOF() {
 		char := r.lexPeekCharacter()
 		for _, acceptedChar := range acceptedChars {
@@ -420,7 +408,7 @@ func (r *JsonLexer) lexConsumeAppendCharacter(base string, acceptedChars ...rune
 	return base, r.lexError("Expected acceptable character [%s] but got something else or EOF", ac)
 }
 
-func (r *JsonLexer) lexExpectConsumeAppendDigits(base string) (string, error) {
+func (r *jsonLexer) lexExpectConsumeAppendDigits(base string) (string, error) {
 	if r.lexAtEOF() { return base, r.lexError("Expected digits but got EOF") }
 	value := ""
 	for char := r.lexPeekCharacter() ; ('0' <= char) && ('9' >= char) ; char = r.lexPeekCharacter() {
@@ -430,7 +418,7 @@ func (r *JsonLexer) lexExpectConsumeAppendDigits(base string) (string, error) {
 	return base + value, nil
 }
 
-func (r *JsonLexer) lexError(msg string, args ...interface{}) error {
+func (r *jsonLexer) lexError(msg string, args ...interface{}) error {
 	m := fmt.Sprintf(msg, args...)
 	return fmt.Errorf("%s at line %d, pos %d", m, r.humanLine, r.humanPosition)
 }
