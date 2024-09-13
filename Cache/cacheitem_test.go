@@ -3,9 +3,9 @@ package cache
 import(
 	"testing"
 
-	. "github.com/DigiStratum/GoLib/Testing"
+	. "GoLib/Testing"
 
-	"github.com/DigiStratum/GoLib/Chrono"
+	"GoLib/Chrono"
 )
 
 const FIXED_SIZE = 333

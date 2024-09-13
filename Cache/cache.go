@@ -38,9 +38,9 @@ import (
 	"time"
 	"container/list"
 
-	"github.com/DigiStratum/GoLib/Chrono"
-	"github.com/DigiStratum/GoLib/Data/sizeable"
-	cfg "github.com/DigiStratum/GoLib/Config"
+	"GoLib/Chrono"
+	"GoLib/Data/sizeable"
+	cfg "GoLib/Config"
 )
 
 type expiringItems []*cacheItem

@@ -1,8 +1,8 @@
 package cache
 
 import(
-	"github.com/DigiStratum/GoLib/Chrono"
-	"github.com/DigiStratum/GoLib/Data/sizeable"
+	"GoLib/Chrono"
+	"GoLib/Data/sizeable"
 )
 /*
 

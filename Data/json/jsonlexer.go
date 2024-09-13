@@ -233,7 +233,7 @@ func (r *jsonLexer) lexNextValueObject() (*data.DataValue, error) {
 		if ! propertyValue.IsValid() { return nil, r.lexError(
 			"Expected value for object property '%s', but got something else instead", *propertyName,
 		)}
-		if err = dataValue.SetObjectProperty(*propertyName, propertyValue); nil != err { return nil, err }
+		if err = dataValue.SetObjectProperty(*propertyName, propertyValue).GetError(); nil != err { return nil, err }
 		if r.lexConsumeWhitespace() { break }
 
 		// 5) Expect a ',' separator between the name:value pairs or closing '}'
@@ -301,7 +301,7 @@ func (r *jsonLexer) lexNextValueArray() (*data.DataValue, error) {
 		if ! value.IsValid() {
 			return nil, r.lexError("Expected array entry value but got something else instead")
 		}
-		if err = dataValue.AppendArrayValue(value); nil != err { return nil, err }
+		if err = dataValue.AppendArrayValue(value).GetError(); nil != err { return nil, err }
 
 		// After the value may be whitespace
 		if r.lexConsumeWhitespace() { break }

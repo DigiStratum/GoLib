@@ -11,12 +11,12 @@ import(
 	"time"
 	"testing"
 
-	. "github.com/DigiStratum/GoLib/Testing"
+	. "GoLib/Testing"
 
-	cfg "github.com/DigiStratum/GoLib/Config"
-	"github.com/DigiStratum/GoLib/Chrono"
-	"github.com/DigiStratum/GoLib/Data/sizeable"
-	"github.com/DigiStratum/GoLib/Process/runnable"
+	cfg "GoLib/Config"
+	"GoLib/Chrono"
+	"GoLib/Data/sizeable"
+	"GoLib/Process/runnable"
 )
 
 const GOROUTINE_WAIT_MSEC	= 25
