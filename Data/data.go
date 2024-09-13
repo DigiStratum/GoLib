@@ -13,6 +13,12 @@ TODO:
    replacement, empty string if it doesn't exist. Introduce "RDATA" envelope to encode metadata to
    describe the encoding within, versioning, etc. to help with future-proofing, versioning, etc.
  * Add support for immutability; once the immutable flag is set, no more changes allowed, read-only?
+ * Add support for start/stop DataValue callback events
+ * Add support for chunked document loading for streaming data sources (avoid loading entire
+   document into memory before lexing into structured data)
+ * Add YAML loader/lexer like json
+ * Add INI loader/lexer like json
+ * Add XML loader/lexer like json
 
 */
 
@@ -43,6 +49,7 @@ type DataValueIfc interface {
 	// Validity
 	IsValid() bool
 	GetType() ValueType
+	GetError() error
 
 	// Nulls
 	IsNull() bool
@@ -56,8 +63,8 @@ type DataValueIfc interface {
 	// Objects
 	IsObject() bool
 	PrepareObject() *DataValue
-	SetObjectProperty(name string, dataValue *DataValue) error
-	DropObjectProperty(name string) error
+	SetObjectProperty(name string, dataValue *DataValue) *DataValue
+	DropObjectProperty(name string) *DataValue
 	HasObjectProperty(name string) bool
 	GetObjectPropertyNames() []string
 	GetObjectProperty(name string) *DataValue
@@ -72,7 +79,7 @@ type DataValueIfc interface {
 	PrepareArray() *DataValue
 	GetArraySize() int
 	GetArrayValue(index int) *DataValue
-	AppendArrayValue(dataValue *DataValue) error
+	AppendArrayValue(dataValue *DataValue) *DataValue
 
 	// Floats
 	IsFloat() bool
@@ -89,6 +96,7 @@ type DataValueIfc interface {
 }
 
 type DataValue struct {
+	err			error
 	valueType		ValueType
 	valueBoolean		bool
 	valueInteger		int64
@@ -118,21 +126,29 @@ func NewDataValue() *DataValue {
 // Validity
 
 func (r *DataValue) IsValid() bool {
+	r.err = nil
 	return r.valueType > VALUE_TYPE_INVALID
 }
 
 func (r *DataValue) GetType() ValueType {
+	r.err = nil
 	return r.valueType
+}
+
+func (r *DataValue) GetError() error {
+	return r.err
 }
 
 // -----------------------------------------------
 // Nulls
 
 func (r *DataValue) IsNull() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_NULL
 }
 
 func (r *DataValue) SetNull() *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_NULL
 	return r
 }
@@ -141,15 +157,18 @@ func (r *DataValue) SetNull() *DataValue {
 // Strings
 
 func (r *DataValue) IsString() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_STRING
 }
 
 func (r *DataValue) GetString() string {
+	r.err = nil
 	if ! r.IsString() { return "" }
 	return r.valueString
 }
 
 func (r *DataValue) SetString(value string) *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_STRING
 	r.valueString = value
 	return r
@@ -159,42 +178,49 @@ func (r *DataValue) SetString(value string) *DataValue {
 // Objects
 
 func (r *DataValue) IsObject() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_OBJECT
 }
 
 func (r *DataValue) PrepareObject() *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_OBJECT
 	r.valueObject = make(map[string]*DataValue)
 	return r
 }
 
-func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) error {
+func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataValue {
+	r.err = nil
 	if VALUE_TYPE_OBJECT != r.valueType {
-		return fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
+		r.err = fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
+	} else {
+		// Don't add nil DataValue into map; Use VALUE_TYPE_NULL DataValue for JSON NULL value
+		if nil != dataValue { r.valueObject[name] = dataValue }
 	}
-
-	// Don't add nil DataValue into map; Use VALUE_TYPE_NULL DataValue for JSON NULL value
-	if nil != dataValue { r.valueObject[name] = dataValue }
-	return nil
+	return r
 }
 
-func (r *DataValue) DropObjectProperty(name string) error {
+func (r *DataValue) DropObjectProperty(name string) *DataValue {
+	r.err = nil
 	if VALUE_TYPE_OBJECT != r.valueType {
-		return fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
-	}
+		r.err = fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
+	} else {
 
-	// Delete property if exists; non-existent is non-error: caller already has desired result
-	if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
-	return nil
+		// Delete property if exists; non-existent is non-error: caller already has desired result
+		if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
+	}
+	return r
 }
 
 func (r *DataValue) HasObjectProperty(name string) bool {
+	r.err = nil
 	if ! r.IsObject() { return false }
 	_, ok := r.valueObject[name]
 	return ok
 }
 
 func (r *DataValue) GetObjectPropertyNames() []string {
+	r.err = nil
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
 	names := make([]string, 0)
 	if r.IsObject() {
@@ -204,6 +230,7 @@ func (r *DataValue) GetObjectPropertyNames() []string {
 }
 
 func (r *DataValue) GetObjectProperty(name string) *DataValue {
+	r.err = nil
 	if ! r.IsObject() { return nil }
 	value, _ := r.valueObject[name]
 	return value
@@ -213,14 +240,17 @@ func (r *DataValue) GetObjectProperty(name string) *DataValue {
 // Booleans
 
 func (r *DataValue) IsBoolean() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_BOOLEAN
 }
 
 func (r *DataValue) GetBoolean() bool {
+	r.err = nil
 	return r.IsBoolean() && r.valueBoolean
 }
 
 func (r *DataValue) SetBoolean(value bool) *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_BOOLEAN
 	r.valueBoolean = value
 	return r
@@ -230,45 +260,56 @@ func (r *DataValue) SetBoolean(value bool) *DataValue {
 // Arrays
 
 func (r *DataValue) IsArray() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_ARRAY
 }
 
 func (r *DataValue) PrepareArray() *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_ARRAY
 	r.valueArr = make([]*DataValue, 0)
 	return r
 }
 
 func (r *DataValue) GetArraySize() int {
+	r.err = nil
 	if ! r.IsArray() { return 0 }
 	return len(r.valueArr)
 }
 
 func (r *DataValue) GetArrayValue(index int) *DataValue {
+	r.err = nil
 	if ! r.IsArray() { return nil }
 	if (index < 0) || (index >= len(r.valueArr)) { return nil }
 	return r.valueArr[index]
 }
 
-func (r *DataValue) AppendArrayValue(dataValue *DataValue) error {
-	if nil == dataValue { return fmt.Errorf("nil DataValue cannot be appended to Array value") }
-	r.valueArr = append(r.valueArr, dataValue)
-	return nil
+func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
+	r.err = nil
+	if nil == dataValue {
+		r.err = fmt.Errorf("nil DataValue cannot be appended to Array value")
+	} else {
+		r.valueArr = append(r.valueArr, dataValue)
+	}
+	return r
 }
 
 // -----------------------------------------------
 // Floats
 
 func (r *DataValue) IsFloat() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_FLOAT
 }
 
 func (r *DataValue) GetFloat() float64 {
+	r.err = nil
 	if ! r.IsFloat() { return float64(0.0) }
 	return r.valueFloat
 }
 
 func (r *DataValue) SetFloat(value float64) *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_FLOAT
 	r.valueFloat = value
 	return r
@@ -278,15 +319,18 @@ func (r *DataValue) SetFloat(value float64) *DataValue {
 // Integers
 
 func (r *DataValue) IsInteger() bool {
+	r.err = nil
 	return r.valueType == VALUE_TYPE_INTEGER
 }
 
 func (r *DataValue) GetInteger() int64 {
+	r.err = nil
 	if ! r.IsInteger() { return int64(0) }
 	return r.valueInteger
 }
 
 func (r *DataValue) SetInteger(value int64) *DataValue {
+	r.err = nil
 	r.valueType = VALUE_TYPE_INTEGER
 	r.valueInteger = value
 	return r
@@ -296,6 +340,7 @@ func (r *DataValue) SetInteger(value int64) *DataValue {
 // Conveniences
 
 func (r *DataValue) Select(selector string) (*DataValue, error) {
+	r.err = nil
 	// 1) An empty selector means we're already at the right place
 	if 0 == len(selector) { return r, nil }
 
@@ -380,7 +425,6 @@ func (r *DataValue) selectArrayIndexElement(selector string) (arrayIndex *int, n
 }
 
 func (r *DataValue) selectObjectPropertyElement(selector string) (objectProperty *string, newSelector string, err error) {
-//fmt.Printf("selectObjectPropertyElement() 1")
 	// Return value defaults
 	objectProperty = nil
 	newSelector = ""
@@ -410,11 +454,7 @@ func (r *DataValue) selectObjectPropertyElement(selector string) (objectProperty
 	} else {
 		err = fmt.Errorf("Missing object property name in selector")
 	}
-//if nil != objectProperty {
-//	fmt.Printf("Found object property element '%s'\n", *objectProperty)
-//} else {
-//	fmt.Printf("No object property starting selector '%s'\n", selector)
-//}
+
 	return
 }
 
@@ -429,6 +469,7 @@ type KeyValuePair struct {
 
 // Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
 func (r *DataValue) GetIterator() func () interface{} {
+	r.err = nil
 	// Return object KeyValuePairs
 	if r.IsObject() {
 		kvps := make([]KeyValuePair, 0)
@@ -458,5 +499,7 @@ func (r *DataValue) GetIterator() func () interface{} {
 			return r.GetArrayValue(prev_idx)
 		}
 	}
+	r.err = fmt.Errorf("DataValue is neither an Object, nor Array, so cannot iterate!")
 	return nil
 }
+

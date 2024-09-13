@@ -88,10 +88,12 @@ func TestThat_DataValue_SetObjectProperty_Returns_error_for_non_object(t *testin
 	var sut DataValueIfc = NewDataValue()
 
 	// Test
-	err := sut.SetObjectProperty("name", NewDataValue())
+	actual := sut.SetObjectProperty("name", NewDataValue())
+	actualErr := sut.GetError()
 
 	// Verify
-	if ! ExpectError(err, t) { return }
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectError(actualErr, t) { return }
 }
 
 func TestThat_DataValue_SetObjectProperty_Returns_successfully_sets_value(t *testing.T) {
@@ -103,12 +105,14 @@ func TestThat_DataValue_SetObjectProperty_Returns_successfully_sets_value(t *tes
 	value.SetString(expectedValue)
 
 	// Test
-	err := sut.SetObjectProperty(expectedName, value)
-	actualValue := sut.GetObjectProperty(expectedName)
+	actual := sut.SetObjectProperty(expectedName, value)
+	actualErr := sut.GetError()
 
 	// Verify
-	if ! ExpectNoError(err, t) { return }
+	if ! ExpectNoError(actualErr, t) { return }
 	if ! ExpectTrue(sut.HasObjectProperty(expectedName), t) { return }
+	if ! ExpectNonNil(actual, t) { return }
+	actualValue := sut.GetObjectProperty(expectedName)
 	if ! ExpectNonNil(actualValue, t) { return }
 	if ! ExpectString(expectedValue, actualValue.GetString(), t) { return }
 }
@@ -265,32 +269,28 @@ func TestThat_DataValue_GetInteger_Returns_expected_value(t *testing.T) {
 // Conveniences
 
 // FIXME: Don't use Json Lexer - we are a base class, can't depend on a subclass!
-/*
 func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
 	// Setup
-	json := `
-{
-	"shape": "arc",
-	"vectors": [
-		{
-			"radians": 3.14159,
-			"radius": 2,
-			"color": "red",
-			"hidden": false
-		},
-		{
-			"radians": 6.28318,
-			"radius": 7,
-			"color": "blue",
-			"hidden": false
-		}
-	]
-}
-`
-	lex := NewJsonLexer()
-	sut, err := lex.LexJsonValue(json)
-	if ! ExpectNoError(err, t) { return }
-	if ! ExpectNonNil(sut, t) { return }
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("shape", NewDataValue().SetString("arc")).
+		SetObjectProperty(
+			"vectors",
+			NewDataValue().PrepareArray().
+			AppendArrayValue(
+				NewDataValue().PrepareObject().
+				SetObjectProperty("radians", NewDataValue().SetFloat(float64(3.14159))).
+				SetObjectProperty("radius", NewDataValue().SetInteger(int64(2))).
+				SetObjectProperty("color", NewDataValue().SetString("red")).
+				SetObjectProperty("hidden", NewDataValue().SetBoolean(false)),
+			).
+			AppendArrayValue(
+				NewDataValue().PrepareObject().
+				SetObjectProperty("radians", NewDataValue().SetFloat(float64(6.28318))).
+				SetObjectProperty("radius", NewDataValue().SetInteger(int64(7))).
+				SetObjectProperty("color", NewDataValue().SetString("blue")).
+				SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
+			),
+		)
 
 	// Test
 	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
@@ -304,29 +304,26 @@ func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
 
 func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 	// Setup
-	json := `
-{
-	"shape": "arc",
-	"vectors": [
-		{
-			"radians": 3.14159,
-			"radius": 2,
-			"color": "red",
-			"hidden": false
-		},
-		{
-			"radians": 6.28318,
-			"radius": 7,
-			"color": "blue",
-			"hidden": false
-		}
-	]
-}
-`
-	lex := NewJsonLexer()
-	sut, err := lex.LexJsonValue(json)
-	if ! ExpectNoError(err, t) { return }
-	if ! ExpectNonNil(sut, t) { return }
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("shape", NewDataValue().SetString("arc")).
+		SetObjectProperty(
+			"vectors",
+			NewDataValue().PrepareArray().
+			AppendArrayValue(
+				NewDataValue().PrepareObject().
+				SetObjectProperty("radians", NewDataValue().SetFloat(float64(3.14159))).
+				SetObjectProperty("radius", NewDataValue().SetInteger(int64(2))).
+				SetObjectProperty("color", NewDataValue().SetString("red")).
+				SetObjectProperty("hidden", NewDataValue().SetBoolean(false)),
+			).
+			AppendArrayValue(
+				NewDataValue().PrepareObject().
+				SetObjectProperty("radians", NewDataValue().SetFloat(float64(6.28318))).
+				SetObjectProperty("radius", NewDataValue().SetInteger(int64(7))).
+				SetObjectProperty("color", NewDataValue().SetString("blue")).
+				SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
+			),
+		)
 
 	// Test
 	selectors := []string{ ".shape", ".vectors", ".vectors[1]", ".vectors[1].radians" }
@@ -349,7 +346,6 @@ func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 		}
 	}
 }
-*/
 
 func TestThat_DataValue_GetIterator_Returns_nil(t *testing.T) {
 	// Setup
