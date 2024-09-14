@@ -19,7 +19,8 @@ TODO:
  * Add YAML loader/lexer like json
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
-
+ * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
+   with "pluck", etc
 */
 
 import (

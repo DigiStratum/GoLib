@@ -30,7 +30,7 @@ TODO:
  * Add support for non-string values, including nested objects, to break name=value pair limits
  * Add "configurator" Interface/boilerplate implementation(s) to fetch Config from various sources
  * Allow override for MAX_REFERENCE_DEPTH and reduce the default. By a lot.
-
+ * Extend Data/DataValue instead of Data/hashmap
 */
 
 import(
