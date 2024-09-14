@@ -19,6 +19,10 @@ TODO:
  * Add YAML loader/lexer like json
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
+ * Add support for binary (bytearray) data type
+ * Add loader/lexers for Google Protocol Buffers (AKA protobuf), MessagePack, BSON (Binary JSON),
+   and Avro (from Apache Hadoop) for faster/tighter data handling, application-to-application data
+   exchange where human readability is less important
  * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
    with "pluck", etc
 */
@@ -31,17 +35,17 @@ import (
 	"GoLib/Data/iterable"
 )
 
-type ValueType int
+type DataType int
 
 const (
-	VALUE_TYPE_INVALID ValueType = iota
-	VALUE_TYPE_NULL
-	VALUE_TYPE_BOOLEAN
-	VALUE_TYPE_INTEGER
-	VALUE_TYPE_FLOAT
-	VALUE_TYPE_STRING
-	VALUE_TYPE_OBJECT
-	VALUE_TYPE_ARRAY
+	DATA_TYPE_INVALID DataType = iota
+	DATA_TYPE_NULL
+	DATA_TYPE_BOOLEAN
+	DATA_TYPE_INTEGER
+	DATA_TYPE_FLOAT
+	DATA_TYPE_STRING
+	DATA_TYPE_OBJECT
+	DATA_TYPE_ARRAY
 )
 
 type DataValueIfc interface {
@@ -49,7 +53,7 @@ type DataValueIfc interface {
 
 	// Validity
 	IsValid() bool
-	GetType() ValueType
+	GetType() DataType
 	GetError() error
 
 	// Nulls
@@ -98,7 +102,7 @@ type DataValueIfc interface {
 
 type DataValue struct {
 	err			error
-	valueType		ValueType
+	valueType		DataType
 	valueBoolean		bool
 	valueInteger		int64
 	valueFloat		float64
@@ -114,7 +118,7 @@ type DataValue struct {
 // Make a new one of these for programmatic construction
 func NewDataValue() *DataValue {
 	r := DataValue{
-		valueType:	VALUE_TYPE_INVALID,
+		valueType:	DATA_TYPE_INVALID,
 	}
 	return &r
 }
@@ -128,10 +132,10 @@ func NewDataValue() *DataValue {
 
 func (r *DataValue) IsValid() bool {
 	r.err = nil
-	return r.valueType > VALUE_TYPE_INVALID
+	return r.valueType > DATA_TYPE_INVALID
 }
 
-func (r *DataValue) GetType() ValueType {
+func (r *DataValue) GetType() DataType {
 	r.err = nil
 	return r.valueType
 }
@@ -145,12 +149,12 @@ func (r *DataValue) GetError() error {
 
 func (r *DataValue) IsNull() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_NULL
+	return r.valueType == DATA_TYPE_NULL
 }
 
 func (r *DataValue) SetNull() *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_NULL
+	r.valueType = DATA_TYPE_NULL
 	return r
 }
 
@@ -159,7 +163,7 @@ func (r *DataValue) SetNull() *DataValue {
 
 func (r *DataValue) IsString() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_STRING
+	return r.valueType == DATA_TYPE_STRING
 }
 
 func (r *DataValue) GetString() string {
@@ -170,7 +174,7 @@ func (r *DataValue) GetString() string {
 
 func (r *DataValue) SetString(value string) *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_STRING
+	r.valueType = DATA_TYPE_STRING
 	r.valueString = value
 	return r
 }
@@ -180,22 +184,22 @@ func (r *DataValue) SetString(value string) *DataValue {
 
 func (r *DataValue) IsObject() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_OBJECT
+	return r.valueType == DATA_TYPE_OBJECT
 }
 
 func (r *DataValue) PrepareObject() *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_OBJECT
+	r.valueType = DATA_TYPE_OBJECT
 	r.valueObject = make(map[string]*DataValue)
 	return r
 }
 
 func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataValue {
 	r.err = nil
-	if VALUE_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.valueType {
 		r.err = fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
 	} else {
-		// Don't add nil DataValue into map; Use VALUE_TYPE_NULL DataValue for JSON NULL value
+		// Don't add nil DataValue into map; Use DATA_TYPE_NULL DataValue for JSON NULL value
 		if nil != dataValue { r.valueObject[name] = dataValue }
 	}
 	return r
@@ -203,7 +207,7 @@ func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataVa
 
 func (r *DataValue) DropObjectProperty(name string) *DataValue {
 	r.err = nil
-	if VALUE_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.valueType {
 		r.err = fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
 	} else {
 
@@ -242,7 +246,7 @@ func (r *DataValue) GetObjectProperty(name string) *DataValue {
 
 func (r *DataValue) IsBoolean() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_BOOLEAN
+	return r.valueType == DATA_TYPE_BOOLEAN
 }
 
 func (r *DataValue) GetBoolean() bool {
@@ -252,7 +256,7 @@ func (r *DataValue) GetBoolean() bool {
 
 func (r *DataValue) SetBoolean(value bool) *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_BOOLEAN
+	r.valueType = DATA_TYPE_BOOLEAN
 	r.valueBoolean = value
 	return r
 }
@@ -262,12 +266,12 @@ func (r *DataValue) SetBoolean(value bool) *DataValue {
 
 func (r *DataValue) IsArray() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_ARRAY
+	return r.valueType == DATA_TYPE_ARRAY
 }
 
 func (r *DataValue) PrepareArray() *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_ARRAY
+	r.valueType = DATA_TYPE_ARRAY
 	r.valueArr = make([]*DataValue, 0)
 	return r
 }
@@ -300,7 +304,7 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 
 func (r *DataValue) IsFloat() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_FLOAT
+	return r.valueType == DATA_TYPE_FLOAT
 }
 
 func (r *DataValue) GetFloat() float64 {
@@ -311,7 +315,7 @@ func (r *DataValue) GetFloat() float64 {
 
 func (r *DataValue) SetFloat(value float64) *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_FLOAT
+	r.valueType = DATA_TYPE_FLOAT
 	r.valueFloat = value
 	return r
 }
@@ -321,7 +325,7 @@ func (r *DataValue) SetFloat(value float64) *DataValue {
 
 func (r *DataValue) IsInteger() bool {
 	r.err = nil
-	return r.valueType == VALUE_TYPE_INTEGER
+	return r.valueType == DATA_TYPE_INTEGER
 }
 
 func (r *DataValue) GetInteger() int64 {
@@ -332,7 +336,7 @@ func (r *DataValue) GetInteger() int64 {
 
 func (r *DataValue) SetInteger(value int64) *DataValue {
 	r.err = nil
-	r.valueType = VALUE_TYPE_INTEGER
+	r.valueType = DATA_TYPE_INTEGER
 	r.valueInteger = value
 	return r
 }
