@@ -19,6 +19,7 @@ TODO:
  * Add YAML loader/lexer like json
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
+ * Add CSV loader/lexer like json
  * Add support for binary (bytearray) data type
  * Add loader/lexers for Google Protocol Buffers (AKA protobuf), MessagePack, BSON (Binary JSON),
    and Avro (from Apache Hadoop) for faster/tighter data handling, application-to-application data
