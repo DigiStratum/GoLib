@@ -125,15 +125,15 @@ func TestThat_DataValue_HasObjectProperty_Returns_false_for_non_property(t *test
 	if ! ExpectFalse(sut.HasObjectProperty("Nope!"), t) { return }
 }
 
-func TestThat_DataValue_GetObjectPropertyNames_Returns_Empty_set(t *testing.T) {
+func TestThat_DataValue_GetObjectProperties_Returns_Empty_set(t *testing.T) {
 	// Test
-	actual := NewDataValue().PrepareObject().GetObjectPropertyNames()
+	actual := NewDataValue().PrepareObject().GetObjectProperties()
 
 	// Verify
 	if ! ExpectInt(0, len(actual), t) { return }
 }
 
-func TestThat_DataValue_GetObjectPropertyNames_Returns_Expected_Names(t *testing.T) {
+func TestThat_DataValue_GetObjectProperties_Returns_Expected_Names(t *testing.T) {
 	// Setup
 	sut := NewDataValue().PrepareObject()
 	expectedName := "name"
@@ -141,7 +141,7 @@ func TestThat_DataValue_GetObjectPropertyNames_Returns_Expected_Names(t *testing
 	sut.SetObjectProperty(expectedName, value)
 
 	// Test
-	actual := sut.GetObjectPropertyNames()
+	actual := sut.GetObjectProperties()
 
 	// Verify
 	if ! ExpectInt(1, len(actual), t) { return }

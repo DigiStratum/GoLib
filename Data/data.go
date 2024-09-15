@@ -50,6 +50,31 @@ const (
 	DATA_TYPE_ARRAY
 )
 
+/*
+?        Copy() *HashMap
+x        LoadFromJsonString(jsonStr *string) error
+x        LoadFromJsonFile(jsonFile string) error
+-        IsEmpty() bool
+-        Size() int
+-        Merge(mergeHash HashMapIfc)
+-        Set(key, value string)
+-        Get(key string) *string
+-        GetInt64(key string) *int64
+-        GetBool(key string) bool
+-        GetKeys() []string
+-        Has(key string) bool
+-        HasAll(keys *[]string) bool
+-        GetMissing(keys *[]string) *[]string
+x        GetSubset(keys *[]string) *HashMap
+-        Drop(key string) *HashMap
+-        DropSet(keys *[]string) *HashMap
+x        DropAll()
+-        GetIterator() func () interface{}
+x        ToJson() (*string, error)
+?        ToLog(logger log.LoggerIfc, level log.LogLevel, label string)
+
+*/
+
 type DataValueIfc interface {
 	iterable.IterableIfc
 
@@ -73,8 +98,12 @@ type DataValueIfc interface {
 	SetObjectProperty(name string, dataValue *DataValue) *DataValue
 	DropObjectProperty(name string) *DataValue
 	HasObjectProperty(name string) bool
-	GetObjectPropertyNames() []string
+	GetObjectProperties() []string
 	GetObjectProperty(name string) *DataValue
+	// TODO: Implement these bulk key operations
+	//HasAllObjectProperties(names ...string) bool
+        //GetMissingObjectProperties(names ...string) *[]string
+	//DropObjectProperties(names ...string) *DataValue
 
 	// Booleans
 	IsBoolean() bool
@@ -100,6 +129,7 @@ type DataValueIfc interface {
 
 	// Modern amenities ;^)
 	Select(selector string) (*DataValue, error)
+	Merge(dataValue *DataValue) *DataValue
 }
 
 type DataValue struct {
@@ -226,7 +256,7 @@ func (r *DataValue) HasObjectProperty(name string) bool {
 	return ok
 }
 
-func (r *DataValue) GetObjectPropertyNames() []string {
+func (r *DataValue) GetObjectProperties() []string {
 	r.err = nil
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
 	names := make([]string, 0)
@@ -375,6 +405,18 @@ func (r *DataValue) Select(selector string) (*DataValue, error) {
 	// selectNextElement() must return objectProperty, arrayIndex, or error and be handled above
 	return nil, fmt.Errorf("Unexpected error for selector '%s'", selector)
 }
+
+func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
+	if dataValue.IsObject() {
+		// Key used to deduplicate object properties; existing key values will be overwritten
+		for k, v := range dataValue.valueObject { r.valueObject[k] = v }
+	} else if dataValue.IsArray() {
+		// Note: No deduplication for array values; pile dataValue's entries onto our tail
+		for _, v := range dataValue.valueArr { r.valueArr = append(r.valueArr,v) }
+	}
+	return r
+}
+
 
 // -----------------------------------------------
 // Internal implementation
