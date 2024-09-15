@@ -156,6 +156,25 @@ func TestThat_DataValue_GetObjectProperty_Returns_nil_for_missing_property(t *te
 	if ! ExpectNil(actual, t) { return }
 }
 
+func TestThat_DataValue_GetObjectProperty_Returns_datavalue(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject()
+	expectedName := "name"
+	expectedValue := "value"
+	sut.SetObjectProperty(expectedName, NewDataValue().SetString(expectedValue))
+
+	// Test
+	actual := sut.GetObjectProperty(expectedName)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectString(expectedValue, actual.GetString(), t) { return }
+}
+
+
+
+
+
 // Booleans
 
 func TestThat_DataValue_IsBoolean_Returns_true(t *testing.T) {

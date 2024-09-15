@@ -101,7 +101,7 @@ type DataValueIfc interface {
 	GetObjectProperties() []string
 	GetObjectProperty(name string) *DataValue
 	// TODO: Implement these bulk key operations
-	//HasAllObjectProperties(names ...string) bool
+	HasAllObjectProperties(names ...string) bool
         //GetMissingObjectProperties(names ...string) *[]string
 	//DropObjectProperties(names ...string) *DataValue
 
@@ -227,39 +227,47 @@ func (r *DataValue) PrepareObject() *DataValue {
 }
 
 func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataValue {
-	r.err = nil
 	if DATA_TYPE_OBJECT != r.valueType {
-		r.err = fmt.Errorf("Not an object type, cannot set object property; use PrepareObject() first!")
-	} else {
-		// Don't add nil DataValue into map; Use DATA_TYPE_NULL DataValue for JSON NULL value
-		if nil != dataValue { r.valueObject[name] = dataValue }
+		r.err = fmt.Errorf("Not an object type, cannot set property; use PrepareObject() first!")
+		return r
 	}
+	r.err = nil
+
+	// Don't add nil DataValue into map; Use DATA_TYPE_NULL DataValue for JSON NULL value
+	if nil != dataValue { r.valueObject[name] = dataValue }
 	return r
 }
 
 func (r *DataValue) DropObjectProperty(name string) *DataValue {
-	r.err = nil
 	if DATA_TYPE_OBJECT != r.valueType {
-		r.err = fmt.Errorf("Not an object type, cannot drop object property; use PrepareObject() first!")
-	} else {
-
-		// Delete property if exists; non-existent is non-error: caller already has desired result
-		if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
+		r.err = fmt.Errorf("Not an object type, cannot drop property; use PrepareObject() first!")
+		return r
 	}
+	r.err = nil
+
+	// Delete property if exists; non-existent is non-error: caller already has desired result
+	if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
 	return r
 }
 
 func (r *DataValue) HasObjectProperty(name string) bool {
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, cannot check property; use PrepareObject() first!")
+		return false
+	}
 	r.err = nil
-	if ! r.IsObject() { return false }
 	_, ok := r.valueObject[name]
 	return ok
 }
 
 func (r *DataValue) GetObjectProperties() []string {
-	r.err = nil
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
 	names := make([]string, 0)
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, cannot set property; use PrepareObject() first!")
+		return names
+	}
+	r.err = nil
 	if r.IsObject() {
 		for name, _ := range r.valueObject { names = append(names, name) }
 	}
@@ -267,10 +275,51 @@ func (r *DataValue) GetObjectProperties() []string {
 }
 
 func (r *DataValue) GetObjectProperty(name string) *DataValue {
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, cannot get property; use PrepareObject() first!")
+		return nil
+	}
 	r.err = nil
-	if ! r.IsObject() { return nil }
 	value, _ := r.valueObject[name]
 	return value
+}
+
+func (r *DataValue) HasAllObjectProperties(names ...string) bool {
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
+		return false
+	}
+	r.err = nil
+	for _, name := range names {
+		if _, ok := r.valueObject[name]; ! ok { return false }
+	}
+	return true
+}
+
+func (r *DataValue) GetMissingObjectProperties(names ...string) *[]string {
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
+		return nil
+	}
+	r.err = nil
+	missing := make([]string, 0)
+	for _, name := range names {
+		if ! r.IsObject() { missing = append(missing, name) }
+		if _, ok := r.valueObject[name]; ! ok { missing = append(missing, name) }
+	}
+	return &missing
+}
+
+func (r *DataValue) DropObjectProperties(names ...string) *DataValue {
+	if DATA_TYPE_OBJECT != r.valueType {
+		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
+		return r
+	}
+	r.err = nil
+	for _, name := range names {
+		if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
+	}
+	return r
 }
 
 // -----------------------------------------------
