@@ -37,13 +37,13 @@ func TestThat_DataValue_GetType_returns_expected_type(t *testing.T) {
 	sut := NewDataValue()
 
 	// Test
-	if ! ExpectTrue(VALUE_TYPE_INVALID == sut.GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_INTEGER == sut.SetInteger(0).GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_STRING == sut.SetString("howdy!").GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_NULL == sut.SetNull().GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_FLOAT == sut.SetFloat(3.14159).GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_ARRAY == sut.PrepareArray().GetType(), t) { return }
-	if ! ExpectTrue(VALUE_TYPE_OBJECT == sut.PrepareObject().GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_INVALID == sut.GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_INTEGER == sut.SetInteger(0).GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_STRING == sut.SetString("howdy!").GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_NULL == sut.SetNull().GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_FLOAT == sut.SetFloat(3.14159).GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_ARRAY == sut.PrepareArray().GetType(), t) { return }
+	if ! ExpectTrue(DATA_TYPE_OBJECT == sut.PrepareObject().GetType(), t) { return }
 
 }
 
@@ -335,14 +335,14 @@ func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 		if ! ExpectNoError(err1, t) { return }
 
 		switch actual1.GetType() {
-			case VALUE_TYPE_STRING: if ! ExpectString("arc", actual1.GetString(), t) { return }
-			case VALUE_TYPE_ARRAY:
+			case DATA_TYPE_STRING: if ! ExpectString("arc", actual1.GetString(), t) { return }
+			case DATA_TYPE_ARRAY:
 				if ! ExpectTrue(actual1.IsArray(), t) { return }
 				if ! ExpectInt(2, actual1.GetArraySize(), t) { return }
-			case VALUE_TYPE_OBJECT:
+			case DATA_TYPE_OBJECT:
 				if ! ExpectTrue(actual1.IsObject(), t) { return }
 				if ! ExpectTrue(actual1.HasObjectProperty("radians"), t) { return }
-			case VALUE_TYPE_FLOAT: if ! ExpectFloat64(float64(6.28318), actual1.GetFloat(), t) { return }
+			case DATA_TYPE_FLOAT: if ! ExpectFloat64(float64(6.28318), actual1.GetFloat(), t) { return }
 		}
 	}
 }
