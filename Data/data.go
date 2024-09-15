@@ -25,6 +25,7 @@ TODO:
    exchange where human readability is less important
  * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
    with "pluck", etc
+ * Refactor Config classes to derive from this instead of Hashmap
 */
 
 import (
