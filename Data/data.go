@@ -102,8 +102,8 @@ type DataValueIfc interface {
 	GetObjectProperty(name string) *DataValue
 	// TODO: Implement these bulk key operations
 	HasAllObjectProperties(names ...string) bool
-        //GetMissingObjectProperties(names ...string) *[]string
-	//DropObjectProperties(names ...string) *DataValue
+        GetMissingObjectProperties(names ...string) *[]string
+	DropObjectProperties(names ...string) *DataValue
 
 	// Booleans
 	IsBoolean() bool

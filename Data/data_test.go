@@ -11,7 +11,7 @@ import(
 
 func TestThat_DataValue_NewDataValue_ReturnsInstance(t *testing.T) {
 	// Setup
-	var sut DataValueIfc = NewDataValue()
+	var sut DataValueIfc = NewDataValue() // Verifies that result satisfies IFC
 
 	// Verify
 	if ! ExpectNonNil(sut, t) { return }
@@ -30,6 +30,15 @@ func TestThat_DataValue_IsValid_Returns_false_for_new_value(t *testing.T) {
 	// Verify
 	if ! ExpectNonNil(sut, t) { return }
 	if ! ExpectFalse(sut.IsValid(), t) { return }
+}
+
+func TestThat_DataValue_IsValid_Returns_true(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetString("whatever")
+
+	// Verify
+	if ! ExpectNonNil(sut, t) { return }
+	if ! ExpectTrue(sut.IsValid(), t) { return }
 }
 
 func TestThat_DataValue_GetType_returns_expected_type(t *testing.T) {
@@ -57,7 +66,23 @@ func TestThat_DataValue_IsNull_Returns_true_after_setting_null(t *testing.T) {
 	if ! ExpectTrue(sut.IsNull(), t) { return }
 }
 
+func TestThat_DataValue_IsNull_Returns_false_for_non_null_value(t *testing.T) {
+	// Test
+	sut := NewDataValue().SetString("whatever")
+
+	// Verify
+	if ! ExpectFalse(sut.IsNull(), t) { return }
+}
+
 // Strings
+
+func TestThat_DataValue_IsString_Returns_false_for_non_string(t *testing.T) {
+	// Test
+	sut := NewDataValue().SetNull()
+
+	// Verify
+	if ! ExpectFalse(sut.IsString(), t) { return }
+}
 
 func TestThat_DataValue_IsString_Returns_true_after_setting_string(t *testing.T) {
 	// Setup
@@ -74,6 +99,14 @@ func TestThat_DataValue_IsString_Returns_true_after_setting_string(t *testing.T)
 }
 
 // Objects
+
+func TestThat_DataValue_IsObject_Returns_false_for_non_object(t *testing.T) {
+	// Test
+	sut := NewDataValue().SetString("whatever")
+
+	// Verify
+	if ! ExpectFalse(sut.IsObject(), t) { return }
+}
 
 func TestThat_DataValue_IsObject_Returns_true_after_preparing_object(t *testing.T) {
 	// Test
@@ -125,6 +158,15 @@ func TestThat_DataValue_HasObjectProperty_Returns_false_for_non_property(t *test
 	if ! ExpectFalse(sut.HasObjectProperty("Nope!"), t) { return }
 }
 
+func TestThat_DataValue_HasObjectProperty_Returns_true(t *testing.T) {
+	// Setup
+	expectedName := "name"
+	sut := NewDataValue().PrepareObject().SetObjectProperty(expectedName, NewDataValue())
+
+	// Verify
+	if ! ExpectTrue(sut.HasObjectProperty(expectedName), t) { return }
+}
+
 func TestThat_DataValue_GetObjectProperties_Returns_Empty_set(t *testing.T) {
 	// Test
 	actual := NewDataValue().PrepareObject().GetObjectProperties()
@@ -171,9 +213,31 @@ func TestThat_DataValue_GetObjectProperty_Returns_datavalue(t *testing.T) {
 	if ! ExpectString(expectedValue, actual.GetString(), t) { return }
 }
 
+/*
 
+HasAllObjectProperties(names ...string) bool
+GetMissingObjectProperties(names ...string) *[]string
+DropObjectProperties(names ...string) *DataValue
 
+*/
 
+func TestThat_DataValue_HasAllObjectProperties_returns_false_for_missing_items(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject()
+
+	// Verify
+	if ! ExpectFalse(sut.HasAllObjectProperties("bogus"), t) { return }
+}
+
+func TestThat_DataValue_HasAllObjectProperties_returns_true(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("name1", NewDataValue()).
+		SetObjectProperty("name2", NewDataValue())
+
+	// Verify
+	if ! ExpectTrue(sut.HasAllObjectProperties("name1", "name2"), t) { return }
+}
 
 // Booleans
 
