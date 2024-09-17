@@ -20,13 +20,14 @@ TODO:
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
  * Add CSV loader/lexer like json
- * Add support for binary (bytearray) data type
  * Add loader/lexers for Google Protocol Buffers (AKA protobuf), MessagePack, BSON (Binary JSON),
    and Avro (from Apache Hadoop) for faster/tighter data handling, application-to-application data
    exchange where human readability is less important
  * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
    with "pluck", etc
+ * Add support for binary (bytearray) data type
  * Refactor Config classes to derive from this instead of Hashmap
+ * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
 */
 
 import (
@@ -100,7 +101,6 @@ type DataValueIfc interface {
 	HasObjectProperty(name string) bool
 	GetObjectProperties() []string
 	GetObjectProperty(name string) *DataValue
-	// TODO: Implement these bulk key operations
 	HasAllObjectProperties(names ...string) bool
         GetMissingObjectProperties(names ...string) *[]string
 	DropObjectProperties(names ...string) *DataValue
@@ -129,6 +129,8 @@ type DataValueIfc interface {
 
 	// Modern amenities ;^)
 	Select(selector string) (*DataValue, error)
+	HasAll(selectors ...string) bool
+	GetMissing(selectors ...string) []string
 	Merge(dataValue *DataValue) *DataValue
 }
 
@@ -453,6 +455,27 @@ func (r *DataValue) Select(selector string) (*DataValue, error) {
 
 	// selectNextElement() must return objectProperty, arrayIndex, or error and be handled above
 	return nil, fmt.Errorf("Unexpected error for selector '%s'", selector)
+}
+
+func (r *DataValue) HasAll(selectors ...string) bool {
+	// For each selector in the variadic list...
+	for _, selector := range selectors {
+		// If we found no DataValue or hit an error, then we don't have it, therefore FALSE!
+		if res, err := r.Select(selector); (nil == res) || (nil != err) { return false }
+	}
+	return true
+}
+
+func (r *DataValue) GetMissing(selectors ...string) []string {
+	missing := make([]string, 0)
+	// For each selector in the variadic list...
+	for _, selector := range selectors {
+		// If we found no DataValue or hit an error, then we don't have it, therefore MISSING!
+		if res, err := r.Select(selector); (nil == res) || (nil != err) {
+			missing = append(missing, selector)
+		}
+	}
+	return missing
 }
 
 func (r *DataValue) Merge(dataValue *DataValue) *DataValue {

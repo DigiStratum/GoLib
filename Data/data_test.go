@@ -487,6 +487,26 @@ func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 	}
 }
 
+// TODO: Cover HasAll(selectors ...string) bool
+
+func TestThat_DataValue_HasAll_returns_true_for_empty_list(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Verify
+	if ! ExpectTrue(sut.HasAll(), t) { return }
+}
+
+func TestThat_DataValue_HasAll_returns_false_for_missing_selector(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Verify
+	if ! ExpectFalse(sut.HasAll("bogus"), t) { return }
+}
+
+// TODO: Cover GetMissing(selectors ...string) []string
+
 func TestThat_DataValue_GetIterator_Returns_nil(t *testing.T) {
 	// Setup
 	sut := NewDataValue()
