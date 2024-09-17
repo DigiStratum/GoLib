@@ -55,21 +55,12 @@ type ConfigIfc interface {
 	DereferenceAll(referenceConfigs ...ConfigIfc) int
 	DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool
 
-	Validate(required, optional *[]string) *Config
+	//Validate(required, optional *[]string) *Config
 }
 
 // Config embeds a HashMap so that we can extend it
 type Config struct {
 	*hashmap.HashMap
-
-	hasRequiredConfigs	bool		// true if we had ALL required keys at time of Validate()
-	requiredKeys		*[]string	// Subset of keys we had at time of Validate() that are required
-
-	hasOptionalConfigs	bool		// true if we had ANY optional key at time of Validate()
-	optionalKeys		*[]string	// Subset of keys we had at time of Validate() that are optional
-
-	hasExtraConfigs		bool		// true if we had ANY extra key at time of Validate
-	extraKeys		*[]string	// Subset of keys we had at time of Validate() that are not required/optional
 }
 
 // Factory Functions
@@ -171,27 +162,26 @@ func (r *Config) DereferenceLoop(maxLoops int, referenceConfig ConfigIfc) bool {
 	return false
 }
 
+/*
+// FIXME: The idea of Validation is a good one, however this was just doing a bunch of data handling
+//        and returning no useful result; revisit!
+
 func (r *Config) Validate(required, optional *[]string) *Config {
 	// TODO: Make and use a new library of string sets since all we are interested in is the keys, not values
 	// Of the required keys, what do we actually have?
 	requiredSubset := r.HashMap.GetSubset(required)
 	requiredKeys := requiredSubset.GetKeys()
-	r.requiredKeys = &requiredKeys
-	r.hasRequiredConfigs = (nil == required) || (requiredSubset.Size() == len(*required))
 
 	// Of the optional keys, how many do we actually have?
 	optionalSubset := r.HashMap.GetSubset(optional)
 	optionalKeys := optionalSubset.GetKeys()
-	r.optionalKeys = &optionalKeys
-	r.hasOptionalConfigs = (optionalSubset.Size() > 0)
 
 	// If there are extra keys remaining after removing required + optional...
 	extraKeys := r.Copy().DropSet(required).DropSet(optional).GetKeys()
-	r.extraKeys = &extraKeys
-	r.hasExtraConfigs = (len(extraKeys) > 0)
 
 	return r
 }
+*/
 
 // -------------------------------------------------------------------------------------------------
 // Config Private Interface
