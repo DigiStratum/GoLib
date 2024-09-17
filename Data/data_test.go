@@ -213,13 +213,13 @@ func TestThat_DataValue_GetObjectProperty_Returns_datavalue(t *testing.T) {
 	if ! ExpectString(expectedValue, actual.GetString(), t) { return }
 }
 
-/*
+func TestThat_DataValue_HasAllObjectProperties_returns_false_for_non_objects(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetString("whatever")
 
-HasAllObjectProperties(names ...string) bool
-GetMissingObjectProperties(names ...string) *[]string
-DropObjectProperties(names ...string) *DataValue
-
-*/
+	// Verify
+	if ! ExpectFalse(sut.HasAllObjectProperties("bogus"), t) { return }
+}
 
 func TestThat_DataValue_HasAllObjectProperties_returns_false_for_missing_items(t *testing.T) {
 	// Setup
@@ -237,6 +237,63 @@ func TestThat_DataValue_HasAllObjectProperties_returns_true(t *testing.T) {
 
 	// Verify
 	if ! ExpectTrue(sut.HasAllObjectProperties("name1", "name2"), t) { return }
+}
+
+func TestThat_DataValue_GetMissingObjectProperties_returns_nil_for_non_objects(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetString("whatever")
+
+	// Verify
+	if ! ExpectNil(sut.GetMissingObjectProperties("bogus"), t) { return }
+}
+
+func TestThat_DataValue_GetMissingObjectProperties_returns_empty_set(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("name1", NewDataValue()).
+		SetObjectProperty("name2", NewDataValue())
+
+	actual := sut.GetMissingObjectProperties("name1", "name2")
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectInt(0, len(*actual), t) { return }
+}
+
+func TestThat_DataValue_GetMissingObjectProperties_returns_properties(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject()
+
+	actual := sut.GetMissingObjectProperties("name1", "name2")
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectInt(2, len(*actual), t) { return }
+}
+
+func TestThat_DataValue_DropObjectProperties_returns_datavalue(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("name1", NewDataValue())
+
+	// Verify
+	if ! ExpectTrue(sut.DropObjectProperties().HasObjectProperty("name1"), t) { return }
+}
+
+func TestThat_DataValue_DropObjectProperties_drops_named_properties(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("name1", NewDataValue()).
+		SetObjectProperty("name2", NewDataValue()).
+		SetObjectProperty("name3", NewDataValue())
+
+	// Test
+	actual := sut.DropObjectProperties("name1", "name3")
+
+	// Verify
+	if ! ExpectTrue(actual.HasObjectProperty("name2"), t) { return }
+	if ! ExpectFalse(actual.HasObjectProperty("name1"), t) { return }
+	if ! ExpectFalse(actual.HasObjectProperty("name3"), t) { return }
 }
 
 // Booleans
