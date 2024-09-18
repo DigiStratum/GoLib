@@ -95,7 +95,7 @@ func (r Config) GetInverseSubsetConfig(prefix string) *Config {
 	return r.getSubset(prefix, false)
 }
 
-// Rereference any %key% references to our own keys in the supplied string
+// Dereference any %key% references to our own keys in the supplied string
 // returns dereferenced string
 func (r Config) DereferenceString(str string) *string {
 	keys, err := r.getReferenceKeysFromString(str)

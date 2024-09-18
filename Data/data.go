@@ -589,6 +589,10 @@ type KeyValuePair struct {
 }
 
 // Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
+// FIXME: This needs to fire for all data types, not just Object|Array - this way, even a string or
+// int or otherwise will also get an iteration hit for processing
+// TODO: Determine whether we should make caller recurse on nested structures or iterate N-Depth on
+// our own here.
 func (r *DataValue) GetIterator() func () interface{} {
 	r.err = nil
 	// Return object KeyValuePairs
