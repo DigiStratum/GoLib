@@ -32,6 +32,7 @@ TODO:
 
 import (
 	"fmt"
+	"strings"
 	"strconv"
 	"unicode"
 
@@ -490,7 +491,64 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 }
 
 
-// TODO: Also need a ToString that is a bare value as a string rather than JSON encoded
+func (r *DataValue) ToString() string {
+	switch r.dataType {
+		case DATA_TYPE_NULL:
+			return ""
+
+		case DATA_TYPE_STRING:
+			return r.valueString
+
+		case DATA_TYPE_BOOLEAN:
+			if r.valueBoolean { return "true" }
+			return "false"
+
+		case DATA_TYPE_INTEGER:
+			return fmt.Sprint(r.valueInteger)
+
+		case DATA_TYPE_FLOAT:
+			return fmt.Sprint(r.valueFloat)
+
+		case DATA_TYPE_ARRAY:
+			var sb strings.Builder
+			sb.WriteString("[")
+			sep := ""
+			for _, value := range r.valueArr {
+				strValue := value.ToString() // <- Recursion Alert!
+				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
+					// Quote the value.... but chomp off the open/close double-quotes!
+					tVal := strconv.Quote(strValue)
+					strValue = tVal[1:len(tVal) - 1]
+				}
+				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
+				sep = ","
+			}
+			sb.WriteString("]")
+			return sb.String()
+
+		case DATA_TYPE_OBJECT:
+			var sb strings.Builder
+			sb.WriteString("{")
+			sep := ""
+			for key, value := range r.valueObject {
+				// Quote the key.... but chomp off the open/close double-quotes!
+				tVal := strconv.Quote(key)
+				strKey := tVal[1:len(tVal) - 1]
+				strValue := value.ToString() // <- Recursion Alert!
+				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
+					// Quote the value.... but chomp off the open/close double-quotes!
+					tVal := strconv.Quote(strValue)
+					strValue = tVal[1:len(tVal) - 1]
+				}
+				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
+				sep = ","
+			}
+			sb.WriteString("}")
+			return sb.String()
+	}
+	return ""
+}
+
 func (r *DataValue) ToJson() string {
 	switch r.dataType {
 		case DATA_TYPE_NULL:
@@ -533,7 +591,6 @@ func (r *DataValue) ToJson() string {
 	}
 	return ""
 }
-
 
 // -----------------------------------------------
 // Internal implementation
