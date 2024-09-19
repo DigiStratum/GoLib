@@ -516,9 +516,7 @@ func (r *DataValue) ToString() string {
 			for _, value := range r.valueArr {
 				strValue := value.ToString() // <- Recursion Alert!
 				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
-					// Quote the value.... but chomp off the open/close double-quotes!
-					tVal := strconv.Quote(strValue)
-					strValue = tVal[1:len(tVal) - 1]
+					strValue = strconv.Quote(strValue)
 				}
 				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
 				sep = ","
@@ -531,14 +529,10 @@ func (r *DataValue) ToString() string {
 			sb.WriteString("{")
 			sep := ""
 			for key, value := range r.valueObject {
-				// Quote the key.... but chomp off the open/close double-quotes!
-				tVal := strconv.Quote(key)
-				strKey := tVal[1:len(tVal) - 1]
+				strKey := strconv.Quote(key)
 				strValue := value.ToString() // <- Recursion Alert!
 				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
-					// Quote the value.... but chomp off the open/close double-quotes!
-					tVal := strconv.Quote(strValue)
-					strValue = tVal[1:len(tVal) - 1]
+					strValue = strconv.Quote(strValue)
 				}
 				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
 				sep = ","
@@ -555,9 +549,7 @@ func (r *DataValue) ToJson() string {
 			return "null"
 
 		case DATA_TYPE_STRING:
-			vstr := r.valueString
-			// TODO: escapte vstr also!
-			return "\"" + vstr + "\""
+			return strconv.Quote(r.valueString)
 
 		case DATA_TYPE_BOOLEAN:
 			if r.valueBoolean { return "true" }
@@ -570,24 +562,30 @@ func (r *DataValue) ToJson() string {
 			return fmt.Sprint(r.valueFloat)
 
 		case DATA_TYPE_ARRAY:
-			vstr := ""
+			var sb strings.Builder
+			sb.WriteString("[")
 			sep := ""
-			for i := 0; i < len(r.valueArr); i++ {
-				// Recursion!
-				vstr = fmt.Sprintf("%s%s%s", vstr, sep, r.valueArr[i].ToJson())
+			for _, value := range r.valueArr {
+				jsonValue := value.ToJson() // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s", sep, jsonValue))
 				sep = ","
 			}
-			return "[" + vstr + "]"
+			sb.WriteString("]")
+			return sb.String()
 
 		case DATA_TYPE_OBJECT:
-			vstr := ""
+			var sb strings.Builder
+			sb.WriteString("{")
 			sep := ""
-			for k, v := range r.valueObject {
+			for key, value := range r.valueObject {
 				// Recursion!
-				vstr = fmt.Sprintf("%s%s\"%s\":%s", vstr, sep, k, v.ToJson())
+				jsonKey := strconv.Quote(key)
+				jsonValue := value.ToJson() // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s%s", sep, jsonKey, jsonValue))
 				sep = ","
 			}
-			return "{" + vstr + "}"
+			sb.WriteString("}")
+			return sb.String()
 	}
 	return ""
 }
