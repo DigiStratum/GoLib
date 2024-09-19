@@ -1,14 +1,21 @@
 package config
 
+import (
+	"GoLib/Data"
+)
 
 const DEFAULT_REFERENCE_DELIMITER_OPENER = "%%"
 const DEFAULT_REFERENCE_DELIMITER_CLOSER = "%%"
 
 type ConfigIfc interface {
+	data.DataValueIfc
+
 	DereferenceString(str string) *string
 }
 
 type Config struct {
+	*data.DataValue
+
 	refDelimOpener		string
 	refDelimCloser		string
 
@@ -16,6 +23,7 @@ type Config struct {
 
 func NewConfig() *Config {
 	r := Config{
+		DataValue:		NewDataValue(),
 		refDelimOpener:		DEFAULT_REFERENCE_DELIMITER_OPENER,
 		refDelimCloser:		DEFAULT_REFERENCE_DELIMITER_CLOSER,
 	}
@@ -24,14 +32,15 @@ func NewConfig() *Config {
 // Dereference any %selector% references to our own keys in the supplied string
 // returns dereferenced string
 func (r *Config) DereferenceString(str string) *string {
-	keys, err := getReferenceKeysFromString(str)
+	selectors, err := getReferenceSelectorsFromString(str)
 	if nil != err {
 		// TODO: Log the error or pass it back to the caller
 		return nil
 	}
-	for _, key := range keys {
-		value := r.Get(key)
-		if nil == value {  continue }
+	for _, selector := range selectors {
+		value, err := Select(selector) (*DataValue, error)
+		//value := r.Get(key)
+		if (nil == value) || (nil != err) {  continue }
 
 		ref := fmt.Sprintf("%s%s%s", r.refDelimOpener, key, r.refDelimCloser)
 		str = strings.Replace(str, ref, *value, -1)

@@ -136,7 +136,7 @@ type DataValueIfc interface {
 
 type DataValue struct {
 	err			error
-	valueType		DataType
+	dataType		DataType
 	valueBoolean		bool
 	valueInteger		int64
 	valueFloat		float64
@@ -152,7 +152,7 @@ type DataValue struct {
 // Make a new one of these for programmatic construction
 func NewDataValue() *DataValue {
 	r := DataValue{
-		valueType:	DATA_TYPE_INVALID,
+		dataType:	DATA_TYPE_INVALID,
 	}
 	return &r
 }
@@ -166,12 +166,12 @@ func NewDataValue() *DataValue {
 
 func (r *DataValue) IsValid() bool {
 	r.err = nil
-	return r.valueType > DATA_TYPE_INVALID
+	return r.dataType > DATA_TYPE_INVALID
 }
 
 func (r *DataValue) GetType() DataType {
 	r.err = nil
-	return r.valueType
+	return r.dataType
 }
 
 func (r *DataValue) GetError() error {
@@ -183,12 +183,12 @@ func (r *DataValue) GetError() error {
 
 func (r *DataValue) IsNull() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_NULL
+	return r.dataType == DATA_TYPE_NULL
 }
 
 func (r *DataValue) SetNull() *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_NULL
+	r.dataType = DATA_TYPE_NULL
 	return r
 }
 
@@ -197,7 +197,7 @@ func (r *DataValue) SetNull() *DataValue {
 
 func (r *DataValue) IsString() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_STRING
+	return r.dataType == DATA_TYPE_STRING
 }
 
 func (r *DataValue) GetString() string {
@@ -208,7 +208,7 @@ func (r *DataValue) GetString() string {
 
 func (r *DataValue) SetString(value string) *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_STRING
+	r.dataType = DATA_TYPE_STRING
 	r.valueString = value
 	return r
 }
@@ -218,18 +218,18 @@ func (r *DataValue) SetString(value string) *DataValue {
 
 func (r *DataValue) IsObject() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_OBJECT
+	return r.dataType == DATA_TYPE_OBJECT
 }
 
 func (r *DataValue) PrepareObject() *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_OBJECT
+	r.dataType = DATA_TYPE_OBJECT
 	r.valueObject = make(map[string]*DataValue)
 	return r
 }
 
 func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataValue {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot set property; use PrepareObject() first!")
 		return r
 	}
@@ -241,7 +241,7 @@ func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataVa
 }
 
 func (r *DataValue) DropObjectProperty(name string) *DataValue {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot drop property; use PrepareObject() first!")
 		return r
 	}
@@ -253,7 +253,7 @@ func (r *DataValue) DropObjectProperty(name string) *DataValue {
 }
 
 func (r *DataValue) HasObjectProperty(name string) bool {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot check property; use PrepareObject() first!")
 		return false
 	}
@@ -265,7 +265,7 @@ func (r *DataValue) HasObjectProperty(name string) bool {
 func (r *DataValue) GetObjectProperties() []string {
 	// TODO: Cache this internally so that it doesn't need to be done on-the-fly for subsequent requests
 	names := make([]string, 0)
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot set property; use PrepareObject() first!")
 		return names
 	}
@@ -277,7 +277,7 @@ func (r *DataValue) GetObjectProperties() []string {
 }
 
 func (r *DataValue) GetObjectProperty(name string) *DataValue {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot get property; use PrepareObject() first!")
 		return nil
 	}
@@ -287,7 +287,7 @@ func (r *DataValue) GetObjectProperty(name string) *DataValue {
 }
 
 func (r *DataValue) HasAllObjectProperties(names ...string) bool {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
 		return false
 	}
@@ -299,7 +299,7 @@ func (r *DataValue) HasAllObjectProperties(names ...string) bool {
 }
 
 func (r *DataValue) GetMissingObjectProperties(names ...string) *[]string {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
 		return nil
 	}
@@ -313,7 +313,7 @@ func (r *DataValue) GetMissingObjectProperties(names ...string) *[]string {
 }
 
 func (r *DataValue) DropObjectProperties(names ...string) *DataValue {
-	if DATA_TYPE_OBJECT != r.valueType {
+	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
 		return r
 	}
@@ -329,7 +329,7 @@ func (r *DataValue) DropObjectProperties(names ...string) *DataValue {
 
 func (r *DataValue) IsBoolean() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_BOOLEAN
+	return r.dataType == DATA_TYPE_BOOLEAN
 }
 
 func (r *DataValue) GetBoolean() bool {
@@ -339,7 +339,7 @@ func (r *DataValue) GetBoolean() bool {
 
 func (r *DataValue) SetBoolean(value bool) *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_BOOLEAN
+	r.dataType = DATA_TYPE_BOOLEAN
 	r.valueBoolean = value
 	return r
 }
@@ -349,12 +349,12 @@ func (r *DataValue) SetBoolean(value bool) *DataValue {
 
 func (r *DataValue) IsArray() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_ARRAY
+	return r.dataType == DATA_TYPE_ARRAY
 }
 
 func (r *DataValue) PrepareArray() *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_ARRAY
+	r.dataType = DATA_TYPE_ARRAY
 	r.valueArr = make([]*DataValue, 0)
 	return r
 }
@@ -387,7 +387,7 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 
 func (r *DataValue) IsFloat() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_FLOAT
+	return r.dataType == DATA_TYPE_FLOAT
 }
 
 func (r *DataValue) GetFloat() float64 {
@@ -398,7 +398,7 @@ func (r *DataValue) GetFloat() float64 {
 
 func (r *DataValue) SetFloat(value float64) *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_FLOAT
+	r.dataType = DATA_TYPE_FLOAT
 	r.valueFloat = value
 	return r
 }
@@ -408,7 +408,7 @@ func (r *DataValue) SetFloat(value float64) *DataValue {
 
 func (r *DataValue) IsInteger() bool {
 	r.err = nil
-	return r.valueType == DATA_TYPE_INTEGER
+	return r.dataType == DATA_TYPE_INTEGER
 }
 
 func (r *DataValue) GetInteger() int64 {
@@ -419,7 +419,7 @@ func (r *DataValue) GetInteger() int64 {
 
 func (r *DataValue) SetInteger(value int64) *DataValue {
 	r.err = nil
-	r.valueType = DATA_TYPE_INTEGER
+	r.dataType = DATA_TYPE_INTEGER
 	r.valueInteger = value
 	return r
 }
@@ -487,6 +487,51 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 		for _, v := range dataValue.valueArr { r.valueArr = append(r.valueArr,v) }
 	}
 	return r
+}
+
+
+// TODO: Also need a ToString that is a bare value as a string rather than JSON encoded
+func (r *DataValue) ToJson() string {
+	switch r.dataType {
+		case DATA_TYPE_NULL:
+			return "null"
+
+		case DATA_TYPE_STRING:
+			vstr := r.valueString
+			// TODO: escapte vstr also!
+			return "\"" + vstr + "\""
+
+		case DATA_TYPE_BOOLEAN:
+			if r.valueBoolean { return "true" }
+			return "false"
+
+		case DATA_TYPE_INTEGER:
+			return fmt.Sprint(r.valueInteger)
+
+		case DATA_TYPE_FLOAT:
+			return fmt.Sprint(r.valueFloat)
+
+		case DATA_TYPE_ARRAY:
+			vstr := ""
+			sep := ""
+			for i := 0; i < len(r.valueArr); i++ {
+				// Recursion!
+				vstr = fmt.Sprintf("%s%s%s", vstr, sep, r.valueArr[i].ToJson())
+				sep = ","
+			}
+			return "[" + vstr + "]"
+
+		case DATA_TYPE_OBJECT:
+			vstr := ""
+			sep := ""
+			for k, v := range r.valueObject {
+				// Recursion!
+				vstr = fmt.Sprintf("%s%s\"%s\":%s", vstr, sep, k, v.ToJson())
+				sep = ","
+			}
+			return "{" + vstr + "}"
+	}
+	return ""
 }
 
 
