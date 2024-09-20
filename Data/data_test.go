@@ -2,6 +2,7 @@ package data
 
 import(
 	"fmt"
+	"strings"
 	"testing"
 
 	. "GoLib/Testing"
@@ -408,10 +409,8 @@ func TestThat_DataValue_GetInteger_Returns_expected_value(t *testing.T) {
 
 // Conveniences
 
-// FIXME: Don't use Json Lexer - we are a base class, can't depend on a subclass!
-func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
-	// Setup
-	sut := NewDataValue().PrepareObject().
+func makeBigDataValue() *DataValue {
+	return NewDataValue().PrepareObject().
 		SetObjectProperty("shape", NewDataValue().SetString("arc")).
 		SetObjectProperty(
 			"vectors",
@@ -431,39 +430,11 @@ func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
 				SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
 			),
 		)
-
-	// Test
-	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
-	for _, selector := range selectors {
-		actual1, err1 := sut.Select(selector)
-		// Verify
-		if ! ExpectNil(actual1, t) { return }
-		if ! ExpectError(err1, t) { return }
-	}
 }
 
 func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 	// Setup
-	sut := NewDataValue().PrepareObject().
-		SetObjectProperty("shape", NewDataValue().SetString("arc")).
-		SetObjectProperty(
-			"vectors",
-			NewDataValue().PrepareArray().
-			AppendArrayValue(
-				NewDataValue().PrepareObject().
-				SetObjectProperty("radians", NewDataValue().SetFloat(float64(3.14159))).
-				SetObjectProperty("radius", NewDataValue().SetInteger(int64(2))).
-				SetObjectProperty("color", NewDataValue().SetString("red")).
-				SetObjectProperty("hidden", NewDataValue().SetBoolean(false)),
-			).
-			AppendArrayValue(
-				NewDataValue().PrepareObject().
-				SetObjectProperty("radians", NewDataValue().SetFloat(float64(6.28318))).
-				SetObjectProperty("radius", NewDataValue().SetInteger(int64(7))).
-				SetObjectProperty("color", NewDataValue().SetString("blue")).
-				SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
-			),
-		)
+	sut := makeBigDataValue()
 
 	// Test
 	selectors := []string{ ".shape", ".vectors", ".vectors[1]", ".vectors[1].radians" }
@@ -487,7 +458,19 @@ func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 	}
 }
 
-// TODO: Cover HasAll(selectors ...string) bool
+func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
+	// Setup
+	sut := makeBigDataValue()
+
+	// Test
+	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
+	for _, selector := range selectors {
+		actual1, err1 := sut.Select(selector)
+		// Verify
+		if ! ExpectNil(actual1, t) { return }
+		if ! ExpectError(err1, t) { return }
+	}
+}
 
 func TestThat_DataValue_HasAll_returns_true_for_empty_list(t *testing.T) {
 	// Setup
@@ -505,7 +488,41 @@ func TestThat_DataValue_HasAll_returns_false_for_missing_selector(t *testing.T) 
 	if ! ExpectFalse(sut.HasAll("bogus"), t) { return }
 }
 
-// TODO: Cover GetMissing(selectors ...string) []string
+func TestThat_DataValue_GetMissing_returns_empty_set(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Test
+	actual := sut.GetMissing()
+
+	// Verify
+	if ! ExpectInt(0, len(actual), t) { return }
+}
+
+func TestThat_DataValue_GetMissing_returns_missing_selectors(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Test
+	actual := sut.GetMissing(".shape1", ".shape2")
+
+	// Verify
+	if ! ExpectInt(2, len(actual), t) { return }
+}
+
+func TestThat_DataValue_GetMissing_notices_matching_selectors(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("shape1", NewDataValue().SetString("arc")).
+		SetObjectProperty("shape2", NewDataValue().SetString("arc"))
+
+	// Test
+	actual := sut.GetMissing(".shape1", ".shape2")
+
+	// Verify
+	if ! ExpectInt(0, len(actual), t) { return }
+}
+
 
 func TestThat_DataValue_GetIterator_Returns_nil(t *testing.T) {
 	// Setup
@@ -603,4 +620,52 @@ func TestThat_DataValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
 		if ! ExpectInt64(int64(i), v.GetInteger(),t) { return }
 	}
 }
+
+// ToString() string
+
+func TestThat_DataValue_ToString_Returns_empty(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Test
+	actual := sut.ToString()
+
+	// Verify
+	if ! ExpectString("", actual, t) { return }
+}
+
+func TestThat_DataValue_ToString_Returns_object_properties(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("shape", NewDataValue().SetString("circle")).
+		SetObjectProperty("size", NewDataValue().SetInteger(50)).
+		SetObjectProperty("outline", NewDataValue().SetBoolean(true)).
+		SetObjectProperty("pi", NewDataValue().SetFloat(3.14159))
+
+	// Test
+	actual := sut.ToString()
+
+	// Verify
+	// Note: because the underlying structure is a map, we cannot guarantee the order of output.
+	if ! ExpectTrue(0 <= strings.Index(actual, "\"shape\":\"circle\""), t) { return }
+	if ! ExpectTrue(0 <= strings.Index(actual, "\"size\":50"), t) { return }
+	if ! ExpectTrue(0 <= strings.Index(actual, "\"outline\":true"), t) { return }
+	if ! ExpectTrue(0 <= strings.Index(actual, "\"pi\":3.14159"), t) { return }
+}
+
+func TestThat_DataValue_ToString_Returns_array_elements(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareArray().
+		AppendArrayValue(NewDataValue().SetInteger(13)).
+		AppendArrayValue(NewDataValue().SetString("bananas"))
+
+	// Test
+	actual := sut.ToString()
+
+	// Verify
+	if ! ExpectString("[13,\"bananas\"]", actual, t) { return }
+}
+
+// ToJson() string
+
 

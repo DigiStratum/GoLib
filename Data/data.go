@@ -28,6 +28,7 @@ TODO:
  * Add support for binary (bytearray) data type
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
+ * eliminate requirement for object propery selector to start with "."= it's just strange!
 */
 
 import (
@@ -133,6 +134,8 @@ type DataValueIfc interface {
 	HasAll(selectors ...string) bool
 	GetMissing(selectors ...string) []string
 	Merge(dataValue *DataValue) *DataValue
+	ToString() string
+	ToJson() string
 }
 
 type DataValue struct {
