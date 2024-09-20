@@ -1,5 +1,5 @@
 go.mod
 go.sum
 debug.log
-*test_coverage.txt
+*.test_coverage.txt
 

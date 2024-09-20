@@ -1,6 +1,13 @@
 # GoLib
 Go Library code, generally reusable bits
 
+## TEST
+go test -count=1 cache_test.go cache.go cacheitem.go
+^^ the -count=1 bypasses the test execution cache to force the tests to run each time.
+
+View the test coverage report like so:
+go tool cover -html=.test_coverage.txt
+
 ## TODO
 - Documentation/README, SDK site
 - Examples
@@ -24,9 +31,4 @@ Go Library code, generally reusable bits
   - ref: https://stackoverflow.com/questions/32768243/go-destructors/32781054
 - Handle r == nil receivers
   - ref: https://tour.golang.org/methods/12
-
-## TEST
-go test -count=1 cache_test.go cache.go cacheitem.go
-^^ the -count=1 bypasses the test execution cache to force the tests to run each time.
-
 

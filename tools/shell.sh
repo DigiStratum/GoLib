@@ -105,7 +105,7 @@ runtests() {
 
 	# Run tests
 	#go test -v -count=1 -covermode=atomic -coverprofile=test_coverage.txt $RUN_TEST *.go
-	output=`go test -v -count=1 -covermode=atomic $RUN_TEST *.go`
+	output=`go test -v -count=1 -covermode=atomic -coverprofile=.test_coverage.txt $RUN_TEST *.go`
 	res=$?
 	echo "$output" | grep -v "^--- PASS:" | grep -v "^--- FAIL:"
 	if [ 0 != $res ]; then
