@@ -623,15 +623,18 @@ func TestThat_DataValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
 
 // ToString() string
 
-func TestThat_DataValue_ToString_Returns_empty(t *testing.T) {
-	// Setup
-	sut := NewDataValue()
-
-	// Test
-	actual := sut.ToString()
-
+func TestThat_DataValue_ToString_Returns_empty_string_for_invalid(t *testing.T) {
 	// Verify
-	if ! ExpectString("", actual, t) { return }
+	if ! ExpectString("", NewDataValue().ToString(), t) { return }
+}
+
+func TestThat_DataValue_ToString_Returns_string_for_primitives(t *testing.T) {
+	// Verify
+	if ! ExpectString("null", NewDataValue().SetNull().ToString(), t) { return }
+	if ! ExpectString("apple", NewDataValue().SetString("apple").ToString(), t) { return }
+	if ! ExpectString("50", NewDataValue().SetInteger(50).ToString(), t) { return }
+	if ! ExpectString("6.28318", NewDataValue().SetFloat(6.28318).ToString(), t) { return }
+	if ! ExpectString("false", NewDataValue().SetBoolean(false).ToString(), t) { return }
 }
 
 func TestThat_DataValue_ToString_Returns_object_properties(t *testing.T) {
@@ -664,6 +667,36 @@ func TestThat_DataValue_ToString_Returns_array_elements(t *testing.T) {
 
 	// Verify
 	if ! ExpectString("[13,\"bananas\"]", actual, t) { return }
+}
+
+func TestThat_DataValue_ToString_Returns_array_in_object(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("prop",
+			NewDataValue().PrepareArray().
+				AppendArrayValue(NewDataValue().SetString("elem")),
+		)
+
+	// Test
+	actual := sut.ToString()
+
+	// Verify
+	if ! ExpectString("{\"prop\":[\"elem\"]}", actual, t) { return }
+}
+
+func TestThat_DataValue_ToString_Returns_object_in_array(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareArray().
+		AppendArrayValue(
+			NewDataValue().PrepareObject().
+				SetObjectProperty("prop", NewDataValue().SetString("val")),
+		)
+
+	// Test
+	actual := sut.ToString()
+
+	// Verify
+	if ! ExpectString("[{\"prop\":\"val\"}]", actual, t) { return }
 }
 
 // ToJson() string

@@ -497,7 +497,7 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 func (r *DataValue) ToString() string {
 	switch r.dataType {
 		case DATA_TYPE_NULL:
-			return ""
+			return "null"
 
 		case DATA_TYPE_STRING:
 			return r.valueString
