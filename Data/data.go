@@ -495,6 +495,9 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 
 
 func (r *DataValue) ToString() string {
+	return r.stringify(false)
+}
+/*
 	switch r.dataType {
 		case DATA_TYPE_NULL:
 			return "null"
@@ -544,15 +547,20 @@ func (r *DataValue) ToString() string {
 			return sb.String()
 	}
 	return ""
-}
+*/
 
 func (r *DataValue) ToJson() string {
+	return r.stringify(true)
+}
+
+func (r *DataValue) stringify(quoteStrings bool) string {
 	switch r.dataType {
 		case DATA_TYPE_NULL:
 			return "null"
 
 		case DATA_TYPE_STRING:
-			return strconv.Quote(r.valueString)
+			if quoteStrings { return strconv.Quote(r.valueString) }
+			return r.valueString
 
 		case DATA_TYPE_BOOLEAN:
 			if r.valueBoolean { return "true" }
@@ -584,7 +592,7 @@ func (r *DataValue) ToJson() string {
 				// Recursion!
 				jsonKey := strconv.Quote(key)
 				jsonValue := value.ToJson() // <- Recusrsion Alert!
-				sb.WriteString(fmt.Sprintf("%s%s%s", sep, jsonKey, jsonValue))
+				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, jsonKey, jsonValue))
 				sep = ","
 			}
 			sb.WriteString("}")

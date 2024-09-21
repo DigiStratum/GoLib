@@ -621,8 +621,6 @@ func TestThat_DataValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
 	}
 }
 
-// ToString() string
-
 func TestThat_DataValue_ToString_Returns_empty_string_for_invalid(t *testing.T) {
 	// Verify
 	if ! ExpectString("", NewDataValue().ToString(), t) { return }
@@ -701,4 +699,9 @@ func TestThat_DataValue_ToString_Returns_object_in_array(t *testing.T) {
 
 // ToJson() string
 
+// The only difference in string encodings for Json is that we containstrings with quotes
+func TestThat_DataValue_ToJson_Quotes_Strings(t *testing.T) {
+	// Verify
+	if ! ExpectString("\"apple\"", NewDataValue().SetString("apple").ToJson(), t) { return }
+}
 
