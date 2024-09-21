@@ -4,6 +4,9 @@ package data
 
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
+FIXME:
+ * add type checking and error captures for Array operations on non-Arrays
+
 TODO:
  * Add support for [de]serialization
  * Add support for [de]referencing; make references an embeddable string (like mustache), use
@@ -29,6 +32,7 @@ TODO:
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
  * eliminate requirement for object propery selector to start with "."= it's just strange!
+ * Add factory function for each data type to reduce caller code needed to initialize
 */
 
 import (
@@ -310,7 +314,6 @@ func (r *DataValue) GetMissingObjectProperties(names ...string) *[]string {
 	r.err = nil
 	missing := make([]string, 0)
 	for _, name := range names {
-		if ! r.IsObject() { missing = append(missing, name) }
 		if _, ok := r.valueObject[name]; ! ok { missing = append(missing, name) }
 	}
 	return &missing
@@ -497,57 +500,6 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 func (r *DataValue) ToString() string {
 	return r.stringify(false)
 }
-/*
-	switch r.dataType {
-		case DATA_TYPE_NULL:
-			return "null"
-
-		case DATA_TYPE_STRING:
-			return r.valueString
-
-		case DATA_TYPE_BOOLEAN:
-			if r.valueBoolean { return "true" }
-			return "false"
-
-		case DATA_TYPE_INTEGER:
-			return fmt.Sprint(r.valueInteger)
-
-		case DATA_TYPE_FLOAT:
-			return fmt.Sprint(r.valueFloat)
-
-		case DATA_TYPE_ARRAY:
-			var sb strings.Builder
-			sb.WriteString("[")
-			sep := ""
-			for _, value := range r.valueArr {
-				strValue := value.ToString() // <- Recursion Alert!
-				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
-					strValue = strconv.Quote(strValue)
-				}
-				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
-				sep = ","
-			}
-			sb.WriteString("]")
-			return sb.String()
-
-		case DATA_TYPE_OBJECT:
-			var sb strings.Builder
-			sb.WriteString("{")
-			sep := ""
-			for key, value := range r.valueObject {
-				strKey := strconv.Quote(key)
-				strValue := value.ToString() // <- Recursion Alert!
-				if (DATA_TYPE_NULL == value.dataType) || (DATA_TYPE_STRING == value.dataType) {
-					strValue = strconv.Quote(strValue)
-				}
-				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
-				sep = ","
-			}
-			sb.WriteString("}")
-			return sb.String()
-	}
-	return ""
-*/
 
 func (r *DataValue) ToJson() string {
 	return r.stringify(true)
