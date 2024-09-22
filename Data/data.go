@@ -5,14 +5,20 @@ package data
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Add support for [de]serialization
+ * Eliminate requirement for object propery selector to start with "."= it's just strange!
+ * Add support for immutability; once the immutable flag is set, no more changes allowed, read-only?
+ * Refactor Config classes to derive from this instead of Hashmap
+ * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
+
  * Add support for [de]referencing; make references an embeddable string (like mustache), use
    configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
    convert the value type to that of the selected reference, null if it doesn't exist. For partial
    references like "See also: {{sel.ect.or}}", convert the value type to string and perform string
    replacement, empty string if it doesn't exist. Introduce "RDATA" envelope to encode metadata to
    describe the encoding within, versioning, etc. to help with future-proofing, versioning, etc.
- * Add support for immutability; once the immutable flag is set, no more changes allowed, read-only?
+   ^^^ This functionality would belong in Config extension, NOT here in the base
+   
+
  * Add support for start/stop DataValue callback events
  * Add support for chunked document loading for streaming data sources (avoid loading entire
    document into memory before lexing into structured data)
@@ -26,9 +32,6 @@ TODO:
  * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
    with "pluck", etc
  * Add support for binary (bytearray) data type
- * Refactor Config classes to derive from this instead of Hashmap
- * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
- * eliminate requirement for object propery selector to start with "."= it's just strange!
 */
 
 import (
