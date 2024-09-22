@@ -29,7 +29,6 @@ TODO:
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
  * eliminate requirement for object propery selector to start with "."= it's just strange!
- * Add factory function for each data type to reduce caller code needed to initialize
 */
 
 import (
@@ -53,31 +52,6 @@ const (
 	DATA_TYPE_OBJECT
 	DATA_TYPE_ARRAY
 )
-
-/*
-?        Copy() *HashMap
-x        LoadFromJsonString(jsonStr *string) error
-x        LoadFromJsonFile(jsonFile string) error
--        IsEmpty() bool
--        Size() int
--        Merge(mergeHash HashMapIfc)
--        Set(key, value string)
--        Get(key string) *string
--        GetInt64(key string) *int64
--        GetBool(key string) bool
--        GetKeys() []string
--        Has(key string) bool
--        HasAll(keys *[]string) bool
--        GetMissing(keys *[]string) *[]string
-x        GetSubset(keys *[]string) *HashMap
--        Drop(key string) *HashMap
--        DropSet(keys *[]string) *HashMap
-x        DropAll()
--        GetIterator() func () interface{}
-x        ToJson() (*string, error)
-?        ToLog(logger log.LoggerIfc, level log.LogLevel, label string)
-
-*/
 
 type DataValueIfc interface {
 	iterable.IterableIfc
@@ -154,13 +128,26 @@ type DataValue struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-// Make a new one of these for programmatic construction
 func NewDataValue() *DataValue {
 	r := DataValue{
 		dataType:	DATA_TYPE_INVALID,
 	}
 	return &r
 }
+
+func NewNull() *DataValue { return (&DataValue{}).SetNull() }
+
+func NewString(value string) *DataValue { return (&DataValue{}).SetString(value) }
+
+func NewObject() *DataValue { return (&DataValue{}).PrepareObject() }
+
+func NewBoolean(value bool) *DataValue { return (&DataValue{}).SetBoolean(value) }
+
+func NewArray() *DataValue { return (&DataValue{}).PrepareArray() }
+
+func NewFloat(value float64) *DataValue { return (&DataValue{}).SetFloat(value) }
+
+func NewInteger(value int64) *DataValue { return (&DataValue{}).SetInteger(value) }
 
 // -------------------------------------------------------------------------------------------------
 // DataValueIfc

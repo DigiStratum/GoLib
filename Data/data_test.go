@@ -22,6 +22,93 @@ func TestThat_DataValue_NewDataValue_ReturnsInstance(t *testing.T) {
 	) { return }
 }
 
+// Factory Functions
+
+func TestThat_NewNull_clears_error_sets_type_and_returns_value(t *testing.T) {
+
+	// Test
+	actual := NewNull()
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_NULL == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+}
+
+func TestThat_NewString_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Setup
+	expectedString := "howdy!"
+
+	// Test
+	actual := NewString(expectedString)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_STRING == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectString(expectedString, actual.GetString(), t) { return }
+}
+
+func TestThat_NewObject_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Test
+	actual := NewObject()
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_OBJECT == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+}
+
+func TestThat_NewBoolean_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Test
+	actual := NewBoolean(true)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_BOOLEAN == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectTrue(actual.GetBoolean(), t) { return }
+}
+
+func TestThat_NewArray_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Test
+	actual := NewArray()
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_ARRAY == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectInt(0, actual.GetArraySize(), t) { return }
+}
+
+func TestThat_NewFloat_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Setup
+	var expectedFloat float64 = 3.14159
+
+	// Test
+	actual := NewFloat(expectedFloat)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_FLOAT == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectFloat64(expectedFloat, actual.GetFloat(), t) { return }
+}
+
+func TestThat_NewInteger_clears_error_sets_type_and_returns_value(t *testing.T) {
+	// Setup
+	var expectedInt int64 = 333
+
+	// Test
+	actual := NewInteger(expectedInt)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue((DATA_TYPE_INTEGER == actual.GetType()), t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectInt64(expectedInt, actual.GetInteger(), t) { return }
+}
+
 // Validity
 
 func TestThat_DataValue_IsValid_Returns_false_for_new_value(t *testing.T) {
