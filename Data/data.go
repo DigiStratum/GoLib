@@ -486,10 +486,10 @@ func (r *DataValue) GetMissing(selectors ...string) []string {
 }
 
 func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
-	if dataValue.IsObject() {
+	if r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
 		for k, v := range dataValue.valueObject { r.valueObject[k] = v }
-	} else if dataValue.IsArray() {
+	} else if r.IsArray() && dataValue.IsArray() {
 		// Note: No deduplication for array values; pile dataValue's entries onto our tail
 		for _, v := range dataValue.valueArr { r.valueArr = append(r.valueArr,v) }
 	}
@@ -507,8 +507,7 @@ func (r *DataValue) ToJson() string {
 
 func (r *DataValue) stringify(quoteStrings bool) string {
 	switch r.dataType {
-		case DATA_TYPE_NULL:
-			return "null"
+		case DATA_TYPE_NULL: return "null"
 
 		case DATA_TYPE_STRING:
 			if quoteStrings { return strconv.Quote(r.valueString) }
@@ -518,19 +517,18 @@ func (r *DataValue) stringify(quoteStrings bool) string {
 			if r.valueBoolean { return "true" }
 			return "false"
 
-		case DATA_TYPE_INTEGER:
-			return fmt.Sprint(r.valueInteger)
+		case DATA_TYPE_INTEGER: return fmt.Sprint(r.valueInteger)
 
-		case DATA_TYPE_FLOAT:
-			return fmt.Sprint(r.valueFloat)
+		case DATA_TYPE_FLOAT: return fmt.Sprint(r.valueFloat)
 
 		case DATA_TYPE_ARRAY:
 			var sb strings.Builder
 			sb.WriteString("[")
 			sep := ""
 			for _, value := range r.valueArr {
-				jsonValue := value.ToJson() // <- Recusrsion Alert!
-				sb.WriteString(fmt.Sprintf("%s%s", sep, jsonValue))
+				// Note: always quote strings in structured data, otherwise they can break the structure!
+				strValue := value.stringify(true) // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
 				sep = ","
 			}
 			sb.WriteString("]")
@@ -541,10 +539,10 @@ func (r *DataValue) stringify(quoteStrings bool) string {
 			sb.WriteString("{")
 			sep := ""
 			for key, value := range r.valueObject {
-				// Recursion!
-				jsonKey := strconv.Quote(key)
-				jsonValue := value.ToJson() // <- Recusrsion Alert!
-				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, jsonKey, jsonValue))
+				strKey := strconv.Quote(key)
+				// Note: always quote strings in structured data, otherwise they can break the structure!
+				strValue := value.stringify(true) // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
 				sep = ","
 			}
 			sb.WriteString("}")
@@ -586,7 +584,7 @@ func (r *DataValue) selectArrayIndexElement(selector string) (arrayIndex *int, n
 		// End of an array index?
 		if ']' == char { break }
 		// Digits?
-		if ('0' <= char) || ('9' >= char) {
+		if ('0' <= char) && ('9' >= char) {
 			arrayIndexStr = arrayIndexStr + string(char)
 			continue
 		}

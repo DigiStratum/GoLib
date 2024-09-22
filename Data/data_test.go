@@ -589,6 +589,99 @@ func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
 	}
 }
 
+func TestThat_DataValue_Select_Returns_nil_and_error_for_Missing_Object_Property(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject()
+
+	// Test
+	actual, err := sut.Select(".missingprop")
+
+	// Verify
+	if ! ExpectNil(actual, t) { return }
+	if ! ExpectError(err, t) { return }
+}
+
+func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_array_indexes(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareArray().
+		AppendArrayValue(NewDataValue().SetString("apples")).
+		AppendArrayValue(NewDataValue().SetString("oranges"))
+
+	// Test
+	actual1, err1 := sut.Select("[0]")
+	actual2, err2 := sut.Select("[]")
+	actual3, err3 := sut.Select("[A]")
+
+	// Verify
+	if ! ExpectNonNil(actual1, t) { return }
+	if ! ExpectNoError(err1, t) { return }
+	if ! ExpectNil(actual2, t) { return }
+	if ! ExpectError(err2, t) { return }
+	if ! ExpectNil(actual3, t) { return }
+	if ! ExpectError(err3, t) { return }
+}
+
+func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_names(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject().
+		SetObjectProperty("prop", NewDataValue().SetString("value"))
+
+	// Test
+	actual1, err1 := sut.Select(".prop")		// <- ok
+	actual2, err2 := sut.Select(".\nprop")		// <- white space = fail
+	actual3, err3 := sut.Select(".")		// <- no name = fail
+
+	// Verify
+	if ! ExpectNonNil(actual1, t) { return }
+	if ! ExpectNoError(err1, t) { return }
+	if ! ExpectNil(actual2, t) { return }
+	if ! ExpectError(err2, t) { return }
+	if ! ExpectNil(actual3, t) { return }
+	if ! ExpectError(err3, t) { return }
+}
+
+func TestThat_DataValue_Merge_Returns_DataValue_for_unstructured_values(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetBoolean(true)
+	m := NewDataValue().SetInteger(0)
+
+	// Test
+	actual := sut.Merge(m)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actual.GetBoolean(), t) { return }
+}
+
+func TestThat_DataValue_Merge_Merges_DataValue_for_Objects(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareObject()
+	m := NewDataValue().PrepareObject().SetObjectProperty("prop", NewDataValue().SetString("value"))
+
+	// Test
+	actual := sut.Merge(m)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actual.HasObjectProperty("prop"), t) { return }
+}
+
+func TestThat_DataValue_Merge_Merges_DataValue_for_Arrays(t *testing.T) {
+	// Setup
+	sut := NewDataValue().PrepareArray()
+	m := NewDataValue().PrepareArray().AppendArrayValue(NewDataValue().SetInteger(33))
+
+	// Test
+	actual := sut.Merge(m)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectInt(1, actual.GetArraySize(), t) { return }
+	dv := actual.GetArrayValue(0)
+	if ! ExpectNonNil(dv, t) { return }
+	if ! ExpectInt64(33, dv.GetInteger(), t) { return }
+}
+
 func TestThat_DataValue_HasAll_returns_true_for_empty_list(t *testing.T) {
 	// Setup
 	sut := NewDataValue()
