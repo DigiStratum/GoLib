@@ -419,12 +419,39 @@ func TestThat_DataValue_GetBoolean_Returns_false(t *testing.T) {
 
 // Arrays
 
-func TestThat_DataValue_IsArray_Returns_true(t *testing.T) {
+func TestThat_DataValue_PrepareArray_clears_error_and_Returns_array(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Test
+	actualBefore := sut.GetType()
+	actualBeforeErr := sut.GetError()
+	actualAfter := sut.PrepareArray().GetType()
+	actualAfterErr := sut.GetError()
+
+	// Verify
+	if ! ExpectTrue((DATA_TYPE_INVALID == actualBefore), t) { return }
+	if ! ExpectNoError(actualBeforeErr, t) { return }
+	if ! ExpectTrue((DATA_TYPE_ARRAY == actualAfter), t) { return }
+	if ! ExpectNoError(actualAfterErr, t) { return }
+}
+
+func TestThat_DataValue_IsArray_clears_error_and_Returns_true(t *testing.T) {
 	// Setup
 	sut := NewDataValue().PrepareArray()
 
 	// Verify
 	if ! ExpectTrue(sut.IsArray(), t) { return }
+	if ! ExpectNoError(sut.GetError(), t) { return }
+}
+
+func TestThat_DataValue_GetArraySize_sets_error_and_Returns_zero_for_non_arrays(t *testing.T) {
+	// Setup
+	sut := NewDataValue()
+
+	// Verify
+	if ! ExpectInt(0, sut.GetArraySize(), t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_GetArraySize_Returns_zero_by_default(t *testing.T) {
@@ -446,17 +473,22 @@ func TestThat_DataValue_GetArraySize_Returns_non_zero(t *testing.T) {
 	if ! ExpectInt(2, sut.GetArraySize(), t) { return }
 }
 
-func TestThat_DataValue_GetArrayValue_Returns_nil_for_non_array_or_mising_index(t *testing.T) {
+func TestThat_DataValue_GetArrayValue_sets_error_and_Returns_nil_for_non_array_or_bad_index(t *testing.T) {
 	// Setup
 	sut := NewDataValue()
 
 	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
 	if ! ExpectNil(sut.GetArrayValue(0), t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
+
 	sut.PrepareArray()
+	if ! ExpectNoError(sut.GetError(), t) { return }
 	if ! ExpectNil(sut.GetArrayValue(0), t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
-func TestThat_DataValue_GetArrayValue_Returns_value_for_good_index(t *testing.T) {
+func TestThat_DataValue_GetArrayValue_clears_error_and_Returns_value_for_good_index(t *testing.T) {
 	// Setup
 	sut := NewDataValue().PrepareArray()
 	expectedValue := "value"
@@ -466,8 +498,29 @@ func TestThat_DataValue_GetArrayValue_Returns_value_for_good_index(t *testing.T)
 	actual := sut.GetArrayValue(0)
 
 	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
 	if ! ExpectNonNil(actual, t) { return }
 	if ! ExpectString(expectedValue, actual.GetString(), t) { return }
+}
+
+func TestThat_DataValue_AppendArrayValue_sets_error_and_returns_original_for_non_array_or_nil_value(t *testing.T) {
+	// Setup
+	var expectedInt int64 = 333
+	sut := NewDataValue().SetInteger(expectedInt)
+	expectedValue := "value"
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	actual := sut.AppendArrayValue(NewDataValue().SetString(expectedValue))
+	if ! ExpectError(sut.GetError(), t) { return }
+	if ! ExpectInt64(expectedInt, actual.GetInteger(), t) { return }
+
+	// Test
+	sut.PrepareArray()
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	actual = sut.AppendArrayValue(nil)
+	if ! ExpectError(sut.GetError(), t) { return }
+	if ! ExpectTrue((DATA_TYPE_ARRAY == actual.GetType()), t) { return }
 }
 
 // Floats

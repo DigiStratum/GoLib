@@ -4,9 +4,6 @@ package data
 
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
-FIXME:
- * add type checking and error captures for Array operations on non-Arrays
-
 TODO:
  * Add support for [de]serialization
  * Add support for [de]referencing; make references an embeddable string (like mustache), use
@@ -367,19 +364,32 @@ func (r *DataValue) PrepareArray() *DataValue {
 }
 
 func (r *DataValue) GetArraySize() int {
+	if DATA_TYPE_ARRAY != r.dataType {
+		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
+		return 0
+	}
 	r.err = nil
-	if ! r.IsArray() { return 0 }
 	return len(r.valueArr)
 }
 
 func (r *DataValue) GetArrayValue(index int) *DataValue {
+	if DATA_TYPE_ARRAY != r.dataType {
+		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
+		return nil
+	}
 	r.err = nil
-	if ! r.IsArray() { return nil }
-	if (index < 0) || (index >= len(r.valueArr)) { return nil }
+	if (index < 0) || (index >= len(r.valueArr)) {
+		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArr) - 1))
+		return nil
+	}
 	return r.valueArr[index]
 }
 
 func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
+	if DATA_TYPE_ARRAY != r.dataType {
+		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
+		return r
+	}
 	r.err = nil
 	if nil == dataValue {
 		r.err = fmt.Errorf("nil DataValue cannot be appended to Array value")
@@ -465,6 +475,7 @@ func (r *DataValue) Select(selector string) (*DataValue, error) {
 }
 
 func (r *DataValue) HasAll(selectors ...string) bool {
+	r.err = nil
 	// For each selector in the variadic list...
 	for _, selector := range selectors {
 		// If we found no DataValue or hit an error, then we don't have it, therefore FALSE!
@@ -474,6 +485,7 @@ func (r *DataValue) HasAll(selectors ...string) bool {
 }
 
 func (r *DataValue) GetMissing(selectors ...string) []string {
+	r.err = nil
 	missing := make([]string, 0)
 	// For each selector in the variadic list...
 	for _, selector := range selectors {
@@ -486,6 +498,7 @@ func (r *DataValue) GetMissing(selectors ...string) []string {
 }
 
 func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
+	r.err = nil
 	if r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
 		for k, v := range dataValue.valueObject { r.valueObject[k] = v }
@@ -496,59 +509,63 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 	return r
 }
 
-
 func (r *DataValue) ToString() string {
+	r.err = nil
 	return r.stringify(false)
 }
 
 func (r *DataValue) ToJson() string {
+	r.err = nil
 	return r.stringify(true)
 }
 
-func (r *DataValue) stringify(quoteStrings bool) string {
-	switch r.dataType {
-		case DATA_TYPE_NULL: return "null"
+// -------------------------------------------------------------------------------------------------
+// IterableIfc
+// -------------------------------------------------------------------------------------------------
 
-		case DATA_TYPE_STRING:
-			if quoteStrings { return strconv.Quote(r.valueString) }
-			return r.valueString
+type KeyValuePair struct {
+        Key     string
+        Value   *DataValue
+}
 
-		case DATA_TYPE_BOOLEAN:
-			if r.valueBoolean { return "true" }
-			return "false"
-
-		case DATA_TYPE_INTEGER: return fmt.Sprint(r.valueInteger)
-
-		case DATA_TYPE_FLOAT: return fmt.Sprint(r.valueFloat)
-
-		case DATA_TYPE_ARRAY:
-			var sb strings.Builder
-			sb.WriteString("[")
-			sep := ""
-			for _, value := range r.valueArr {
-				// Note: always quote strings in structured data, otherwise they can break the structure!
-				strValue := value.stringify(true) // <- Recusrsion Alert!
-				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
-				sep = ","
-			}
-			sb.WriteString("]")
-			return sb.String()
-
-		case DATA_TYPE_OBJECT:
-			var sb strings.Builder
-			sb.WriteString("{")
-			sep := ""
-			for key, value := range r.valueObject {
-				strKey := strconv.Quote(key)
-				// Note: always quote strings in structured data, otherwise they can break the structure!
-				strValue := value.stringify(true) // <- Recusrsion Alert!
-				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
-				sep = ","
-			}
-			sb.WriteString("}")
-			return sb.String()
+// Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
+// FIXME: This needs to fire for all data types, not just Object|Array - this way, even a string or
+// int or otherwise will also get an iteration hit for processing
+// TODO: Determine whether we should make caller recurse on nested structures or iterate N-Depth on
+// our own here.
+func (r *DataValue) GetIterator() func () interface{} {
+	r.err = nil
+	// Return object KeyValuePairs
+	if r.IsObject() {
+		kvps := make([]KeyValuePair, 0)
+		var idx int = 0
+		for k, v := range r.valueObject {
+			kvps = append(kvps, KeyValuePair{ Key: k, Value: v })
+			idx++
+		}
+		idx = 0
+		return func () interface{} {
+			// If we're done iterating, return nothing
+			if idx >= len(kvps) { return nil }
+			prev_idx := idx
+			idx++
+			return kvps[prev_idx]
+		}
 	}
-	return ""
+	// Return Array values
+	if r.IsArray() {
+		idx := 0
+		var data_len = r.GetArraySize()
+		return func () interface{} {
+			// If we're done iterating, return nothing
+			if idx >= data_len { return nil }
+			prev_idx := idx
+			idx++
+			return r.GetArrayValue(prev_idx)
+		}
+	}
+	r.err = fmt.Errorf("DataValue is neither an Object, nor Array, so cannot iterate!")
+	return nil
 }
 
 // -----------------------------------------------
@@ -640,52 +657,49 @@ func (r *DataValue) selectObjectPropertyElement(selector string) (objectProperty
 	return
 }
 
-// -------------------------------------------------------------------------------------------------
-// IterableIfc
-// -------------------------------------------------------------------------------------------------
+func (r *DataValue) stringify(quoteStrings bool) string {
+	switch r.dataType {
+		case DATA_TYPE_NULL: return "null"
 
-type KeyValuePair struct {
-        Key     string
-        Value   *DataValue
-}
+		case DATA_TYPE_STRING:
+			if quoteStrings { return strconv.Quote(r.valueString) }
+			return r.valueString
 
-// Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
-// FIXME: This needs to fire for all data types, not just Object|Array - this way, even a string or
-// int or otherwise will also get an iteration hit for processing
-// TODO: Determine whether we should make caller recurse on nested structures or iterate N-Depth on
-// our own here.
-func (r *DataValue) GetIterator() func () interface{} {
-	r.err = nil
-	// Return object KeyValuePairs
-	if r.IsObject() {
-		kvps := make([]KeyValuePair, 0)
-		var idx int = 0
-		for k, v := range r.valueObject {
-			kvps = append(kvps, KeyValuePair{ Key: k, Value: v })
-			idx++
-		}
-		idx = 0
-		return func () interface{} {
-			// If we're done iterating, return nothing
-			if idx >= len(kvps) { return nil }
-			prev_idx := idx
-			idx++
-			return kvps[prev_idx]
-		}
+		case DATA_TYPE_BOOLEAN:
+			if r.valueBoolean { return "true" }
+			return "false"
+
+		case DATA_TYPE_INTEGER: return fmt.Sprint(r.valueInteger)
+
+		case DATA_TYPE_FLOAT: return fmt.Sprint(r.valueFloat)
+
+		case DATA_TYPE_ARRAY:
+			var sb strings.Builder
+			sb.WriteString("[")
+			sep := ""
+			for _, value := range r.valueArr {
+				// Note: always quote strings in structured data, otherwise they can break the structure!
+				strValue := value.stringify(true) // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))
+				sep = ","
+			}
+			sb.WriteString("]")
+			return sb.String()
+
+		case DATA_TYPE_OBJECT:
+			var sb strings.Builder
+			sb.WriteString("{")
+			sep := ""
+			for key, value := range r.valueObject {
+				strKey := strconv.Quote(key)
+				// Note: always quote strings in structured data, otherwise they can break the structure!
+				strValue := value.stringify(true) // <- Recusrsion Alert!
+				sb.WriteString(fmt.Sprintf("%s%s:%s", sep, strKey, strValue))
+				sep = ","
+			}
+			sb.WriteString("}")
+			return sb.String()
 	}
-	// Return Array values
-	if r.IsArray() {
-		idx := 0
-		var data_len = r.GetArraySize()
-		return func () interface{} {
-			// If we're done iterating, return nothing
-			if idx >= data_len { return nil }
-			prev_idx := idx
-			idx++
-			return r.GetArrayValue(prev_idx)
-		}
-	}
-	r.err = fmt.Errorf("DataValue is neither an Object, nor Array, so cannot iterate!")
-	return nil
+	return ""
 }
 
