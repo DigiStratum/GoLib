@@ -5,7 +5,6 @@ package data
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Eliminate requirement for object propery selector to start with "."= it's just strange!
  * Add support for immutability; once the immutable flag is set, no more changes allowed, read-only?
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
@@ -441,7 +440,7 @@ func (r *DataValue) Select(selector string) (*DataValue, error) {
 
 	// 1) If this isn't an Array or Object value...
 	if ! (r.IsArray() || r.IsObject()) {
-		return nil, fmt.Errorf("Selectors are only valid of Object or Array values")
+		return nil, fmt.Errorf("Selectors are only valid for Object or Array values")
 	}
 
 	// 2) Traverse the selector one element at a time
@@ -449,6 +448,7 @@ func (r *DataValue) Select(selector string) (*DataValue, error) {
 	if nil != err { return nil, err }
 	if nil != objectProperty {
 		if r.HasObjectProperty(*objectProperty) {
+			// If the new selector starts with a '.' (object property separator) then chop it off
 			return r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
 		}
 		return nil, fmt.Errorf("Selected Object Property '%s' doesn't exist", *objectProperty)
@@ -569,12 +569,20 @@ func (r *DataValue) selectNextElement(selector string) (objectProperty *string, 
 	err = nil
 	if len(selector) == 0 { return }
 	cursor := 0
-	if '[' == selector[cursor] {
+	if r.isValueArrayStartChar(selector[cursor]) {
 		arrayIndex, newSelector, err = r.selectArrayIndexElement(selector)
-	} else if '.' == selector[cursor] {
+	} else if r.isValueObjectStartChar(selector[cursor]) {
 		objectProperty, newSelector, err = r.selectObjectPropertyElement(selector)
 	}
 	return
+}
+
+func (r *DataValue) isValueArrayStartChar(ch byte) bool {
+	return '[' == ch
+}
+
+func (r *DataValue) isValueObjectStartChar(ch byte) bool {
+	return (('a' <= ch) && ('z' >= ch) || ('A' <= ch) && ('Z' >= ch))
 }
 
 func (r *DataValue) selectArrayIndexElement(selector string) (arrayIndex *int, newSelector string, err error) {
@@ -601,12 +609,20 @@ func (r *DataValue) selectArrayIndexElement(selector string) (arrayIndex *int, n
 	}
 	// If we extracted something...
 	if len(arrayIndexStr) > 0 {
-		// Parse it into an array inted integer
+		// Parse it into an array index integer
 		ai, _ := strconv.ParseInt(arrayIndexStr, 10, 32)
 		aiInt := int(ai)
 		arrayIndex = &aiInt
 		// Chop it and the '[]' delimiters off the selector
-		newSelector = selector[len(arrayIndexStr) + 2:]
+		nextPos := len(arrayIndexStr) + 2
+		if len(selector) > nextPos {
+			if '.' == selector[nextPos] {
+				newSelector = selector[nextPos+1:]
+			} else if '[' != selector[nextPos] {
+				err = fmt.Errorf("No valid separator found trailing this selector segment ")
+			}
+			//fmt.Printf("newSelector:[%s]\n", newSelector)
+		}
 	} else {
 		err = fmt.Errorf("Missing numeric array index in selector")
 	}
@@ -622,10 +638,11 @@ func (r *DataValue) selectObjectPropertyElement(selector string) (objectProperty
 	// Expect an array index terminated by ']'
 	cursor := 0
 	objectPropertyStr := ""
-	for cursor = 1; cursor < len(selector); cursor++ {
+	for cursor = 0; cursor < len(selector); cursor++ {
 		char := selector[cursor]
 		// Some other array index or property interupting?
-		if ('[' == char) || ('.' == char) { break }
+		if ('[' == char) { break }
+		if ('.' == char) { cursor++; break }
 		// If it's not some odd white-space character...
 		if (! unicode.IsSpace(rune(char))) {
 			objectPropertyStr = objectPropertyStr + string(char)
@@ -640,6 +657,7 @@ func (r *DataValue) selectObjectPropertyElement(selector string) (objectProperty
 		// If the thing that stopped us was a '.' separator, chop it off along with what we found
 		if (cursor < len(selector)) && ('.' == selector[cursor]) { cursor++ }
 		newSelector = selector[cursor:]
+		//fmt.Printf("newSelector:[%s]\n", newSelector)
 	} else {
 		err = fmt.Errorf("Missing object property name in selector")
 	}

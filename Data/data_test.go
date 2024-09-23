@@ -689,12 +689,12 @@ func makeBigDataValue() *DataValue {
 		)
 }
 
-func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
+func TestThat_DataValue_Select_Returns_Values_For_Good_Selectors(t *testing.T) {
 	// Setup
 	sut := makeBigDataValue()
 
 	// Test
-	selectors := []string{ ".shape", ".vectors", ".vectors[1]", ".vectors[1].radians" }
+	selectors := []string{ "shape", "vectors", "vectors[1]", "vectors[1].radians" }
 	for _, selector := range selectors {
 		//t.Logf("Testing good selector '%s'\n", selector)
 		// Verify
@@ -715,17 +715,17 @@ func TestThat_DataValue_Select_Returns_Values(t *testing.T) {
 	}
 }
 
-func TestThat_DataValue_Select_Returns_Errors(t *testing.T) {
+func TestThat_DataValue_Select_Returns_Errors_For_Bad_Selectors(t *testing.T) {
 	// Setup
 	sut := makeBigDataValue()
 
 	// Test
 	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
 	for _, selector := range selectors {
-		actual1, err1 := sut.Select(selector)
+		actual, err := sut.Select(selector)
 		// Verify
-		if ! ExpectNil(actual1, t) { return }
-		if ! ExpectError(err1, t) { return }
+		if ! ExpectNil(actual, t) { return }
+		if ! ExpectError(err, t) { return }
 	}
 }
 
@@ -767,7 +767,7 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_nam
 		SetObjectProperty("prop", NewDataValue().SetString("value"))
 
 	// Test
-	actual1, err1 := sut.Select(".prop")		// <- ok
+	actual1, err1 := sut.Select("prop")		// <- ok
 	actual2, err2 := sut.Select(".\nprop")		// <- white space = fail
 	actual3, err3 := sut.Select(".")		// <- no name = fail
 
@@ -854,7 +854,7 @@ func TestThat_DataValue_GetMissing_returns_missing_selectors(t *testing.T) {
 	sut := NewDataValue()
 
 	// Test
-	actual := sut.GetMissing(".shape1", ".shape2")
+	actual := sut.GetMissing("shape1", "shape2")
 
 	// Verify
 	if ! ExpectInt(2, len(actual), t) { return }
@@ -867,7 +867,7 @@ func TestThat_DataValue_GetMissing_notices_matching_selectors(t *testing.T) {
 		SetObjectProperty("shape2", NewDataValue().SetString("arc"))
 
 	// Test
-	actual := sut.GetMissing(".shape1", ".shape2")
+	actual := sut.GetMissing("shape1", "shape2")
 
 	// Verify
 	if ! ExpectInt(0, len(actual), t) { return }
