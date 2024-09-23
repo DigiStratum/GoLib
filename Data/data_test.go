@@ -109,7 +109,7 @@ func TestThat_NewInteger_clears_error_sets_type_and_returns_value(t *testing.T) 
 	if ! ExpectInt64(expectedInt, actual.GetInteger(), t) { return }
 }
 
-// Validity
+// State
 
 func TestThat_DataValue_IsValid_Returns_false_for_new_value(t *testing.T) {
 	// Setup
@@ -143,22 +143,48 @@ func TestThat_DataValue_GetType_returns_expected_type(t *testing.T) {
 	if ! ExpectTrue(DATA_TYPE_OBJECT == sut.PrepareObject().GetType(), t) { return }
 }
 
+func TestThat_DataValue_IsImmutable_returns_false_by_default(t *testing.T) {
+	// Test
+	sut := NewDataValue()
+
+	// Verify
+	if ! ExpectFalse(sut.IsImmutable(), t) { return }
+}
+
+func TestThat_DataValue_SetImmutable_changes_immutable_state(t *testing.T) {
+	// Test
+	sut := NewDataValue()
+
+	// Verify
+	if ! ExpectTrue(sut.SetImmutable().IsImmutable(), t) { return }
+}
+
 // Nulls
 
 func TestThat_DataValue_IsNull_Returns_true_after_setting_null(t *testing.T) {
-	// Test
-	sut := NewDataValue().SetNull()
+	// Setup
+	sut := NewDataValue()
 
 	// Verify
-	if ! ExpectTrue(sut.IsNull(), t) { return }
+	if ! ExpectTrue(sut.SetNull().IsNull(), t) { return }
 }
 
 func TestThat_DataValue_IsNull_Returns_false_for_non_null_value(t *testing.T) {
-	// Test
-	sut := NewDataValue().SetString("whatever")
+	// Setup
+	sut := NewDataValue()
 
 	// Verify
-	if ! ExpectFalse(sut.IsNull(), t) { return }
+	if ! ExpectFalse(sut.SetString("whatever").IsNull(), t) { return }
+}
+
+func TestThat_DataValue_SetNull_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetNull()
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 // Strings
@@ -193,7 +219,27 @@ func TestThat_DataValue_IsString_Returns_true_after_setting_string(t *testing.T)
 	if ! ExpectString(expected2, sut.SetString(expected2).GetString(), t) { return }
 }
 
+func TestThat_DataValue_SetString_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetString("whatever")
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
 // Objects
+
+func TestThat_DataValue_PrepareObject_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.PrepareObject()
+	if ! ExpectError(sut.GetError(), t) { return }
+}
 
 func TestThat_DataValue_IsObject_Returns_false_for_non_object(t *testing.T) {
 	// Test
@@ -243,6 +289,16 @@ func TestThat_DataValue_SetObjectProperty_Returns_successfully_sets_value(t *tes
 	actualValue := sut.GetObjectProperty(expectedName)
 	if ! ExpectNonNil(actualValue, t) { return }
 	if ! ExpectString(expectedValue, actualValue.GetString(), t) { return }
+}
+
+func TestThat_DataValue_SetObjectProperty_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewObject().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetObjectProperty("prop", NewNull())
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_HasObjectProperty_Returns_false_for_non_property(t *testing.T) {
@@ -308,6 +364,16 @@ func TestThat_DataValue_DropObjectProperty_Returns_DataValue_And_Clears_Error_An
 	if ! ExpectNonNil(actual, t) { return }
 	if ! ExpectTrue(actual.IsObject(), t) { return }
 	if ! ExpectNoError(errAfter, t) { return }
+}
+
+func TestThat_DataValue_DropObjectProperty_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewObject().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.DropObjectProperty("prop")
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_GetObjectProperties_Returns_Empty_set(t *testing.T) {
@@ -429,6 +495,16 @@ func TestThat_DataValue_GetMissingObjectProperties_returns_properties(t *testing
 	if ! ExpectInt(2, len(*actual), t) { return }
 }
 
+func TestThat_DataValue_DropObjectProperties_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewObject().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.DropObjectProperties("prop")
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
 func TestThat_DataValue_DropObjectProperties_returns_datavalue(t *testing.T) {
 	// Setup
 	sut := NewDataValue().PrepareObject().
@@ -487,6 +563,16 @@ func TestThat_DataValue_GetObjectProperty_Returns_nil_and_Sets_Error_For_Non_Obj
 
 // Booleans
 
+func TestThat_DataValue_SetBoolean_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetBoolean(true)
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
 func TestThat_DataValue_IsBoolean_Returns_true(t *testing.T) {
 	// Setup
 	sut := NewDataValue().SetBoolean(true)
@@ -505,6 +591,16 @@ func TestThat_DataValue_GetBoolean_Returns_false(t *testing.T) {
 }
 
 // Arrays
+
+func TestThat_DataValue_PrepareArray_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewDataValue().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.PrepareArray()
+	if ! ExpectError(sut.GetError(), t) { return }
+}
 
 func TestThat_DataValue_PrepareArray_clears_error_and_Returns_array(t *testing.T) {
 	// Setup
@@ -610,7 +706,27 @@ func TestThat_DataValue_AppendArrayValue_sets_error_and_returns_original_for_non
 	if ! ExpectTrue((DATA_TYPE_ARRAY == actual.GetType()), t) { return }
 }
 
+func TestThat_DataValue_AppendArrayValue_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewArray().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.AppendArrayValue(NewNull())
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
 // Floats
+
+func TestThat_DataValue_SetFloat_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewArray().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetFloat(3.14159)
+	if ! ExpectError(sut.GetError(), t) { return }
+}
 
 func TestThat_DataValue_IsFloat_Returns_true(t *testing.T) {
 	// Setup
@@ -638,6 +754,16 @@ func TestThat_DataValue_GetFloat_returns_0value_for_non_integers(t *testing.T) {
 }
 
 // Integers
+
+func TestThat_DataValue_SetInteger_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewArray().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.SetInteger(333)
+	if ! ExpectError(sut.GetError(), t) { return }
+}
 
 func TestThat_DataValue_IsInteger_Returns_true(t *testing.T) {
 	// Setup
@@ -778,6 +904,16 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_nam
 	if ! ExpectError(err2, t) { return }
 	if ! ExpectNil(actual3, t) { return }
 	if ! ExpectError(err3, t) { return }
+}
+
+func TestThat_DataValue_Merge_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewArray().SetImmutable()
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	sut.Merge(NewArray())
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_Merge_Returns_DataValue_for_unstructured_values(t *testing.T) {

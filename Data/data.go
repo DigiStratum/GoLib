@@ -5,9 +5,9 @@ package data
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
 TODO:
- * Add support for immutability; once the immutable flag is set, no more changes allowed, read-only?
  * Refactor Config classes to derive from this instead of Hashmap
- * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data
+ * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data?
+ * Add a Copy() method to deep-copy the tree (and clear state flags for error/immutability on copy)
 
  * Add support for [de]referencing; make references an embeddable string (like mustache), use
    configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
@@ -16,11 +16,12 @@ TODO:
    replacement, empty string if it doesn't exist. Introduce "RDATA" envelope to encode metadata to
    describe the encoding within, versioning, etc. to help with future-proofing, versioning, etc.
    ^^^ This functionality would belong in Config extension, NOT here in the base
-   
 
  * Add support for start/stop DataValue callback events
  * Add support for chunked document loading for streaming data sources (avoid loading entire
    document into memory before lexing into structured data)
+ * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
+   with "pluck", etc
  * Add YAML loader/lexer like json
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
@@ -28,9 +29,9 @@ TODO:
  * Add loader/lexers for Google Protocol Buffers (AKA protobuf), MessagePack, BSON (Binary JSON),
    and Avro (from Apache Hadoop) for faster/tighter data handling, application-to-application data
    exchange where human readability is less important
- * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
-   with "pluck", etc
  * Add support for binary (bytearray) data type
+ * Consider Iterating tree recursively for all data types, not just Object|Array; maybe some new type
+   of iterator with an onMutation circuit breaker and callable (i.e. Iterator calls callable
 */
 
 import (
@@ -58,10 +59,12 @@ const (
 type DataValueIfc interface {
 	iterable.IterableIfc
 
-	// Validity
+	// State
 	IsValid() bool
 	GetType() DataType
 	GetError() error
+	IsImmutable() bool
+	SetImmutable() *DataValue
 
 	// Nulls
 	IsNull() bool
@@ -117,6 +120,7 @@ type DataValueIfc interface {
 
 type DataValue struct {
 	err			error
+	isImmutable		bool
 	dataType		DataType
 	valueBoolean		bool
 	valueInteger		int64
@@ -137,26 +141,26 @@ func NewDataValue() *DataValue {
 	return &r
 }
 
-func NewNull() *DataValue { return (&DataValue{}).SetNull() }
+func NewNull() *DataValue { return NewDataValue().SetNull() }
 
-func NewString(value string) *DataValue { return (&DataValue{}).SetString(value) }
+func NewString(value string) *DataValue { return NewDataValue().SetString(value) }
 
-func NewObject() *DataValue { return (&DataValue{}).PrepareObject() }
+func NewObject() *DataValue { return NewDataValue().PrepareObject() }
 
-func NewBoolean(value bool) *DataValue { return (&DataValue{}).SetBoolean(value) }
+func NewBoolean(value bool) *DataValue { return NewDataValue().SetBoolean(value) }
 
-func NewArray() *DataValue { return (&DataValue{}).PrepareArray() }
+func NewArray() *DataValue { return NewDataValue().PrepareArray() }
 
-func NewFloat(value float64) *DataValue { return (&DataValue{}).SetFloat(value) }
+func NewFloat(value float64) *DataValue { return NewDataValue().SetFloat(value) }
 
-func NewInteger(value int64) *DataValue { return (&DataValue{}).SetInteger(value) }
+func NewInteger(value int64) *DataValue { return NewDataValue().SetInteger(value) }
 
 // -------------------------------------------------------------------------------------------------
 // DataValueIfc
 // -------------------------------------------------------------------------------------------------
 
 // -----------------------------------------------
-// Validity
+// State
 
 func (r *DataValue) IsValid() bool {
 	r.err = nil
@@ -172,6 +176,15 @@ func (r *DataValue) GetError() error {
 	return r.err
 }
 
+func (r *DataValue) IsImmutable() bool {
+	return r.isImmutable
+}
+
+func (r *DataValue) SetImmutable() *DataValue {
+	r.isImmutable = true
+	return r
+}
+
 // -----------------------------------------------
 // Nulls
 
@@ -181,6 +194,10 @@ func (r *DataValue) IsNull() bool {
 }
 
 func (r *DataValue) SetNull() *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_NULL
 	return r
@@ -201,6 +218,10 @@ func (r *DataValue) GetString() string {
 }
 
 func (r *DataValue) SetString(value string) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_STRING
 	r.valueString = value
@@ -216,6 +237,10 @@ func (r *DataValue) IsObject() bool {
 }
 
 func (r *DataValue) PrepareObject() *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_OBJECT
 	r.valueObject = make(map[string]*DataValue)
@@ -225,6 +250,10 @@ func (r *DataValue) PrepareObject() *DataValue {
 func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataValue {
 	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot set property; use PrepareObject() first!")
+		return r
+	}
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
 		return r
 	}
 	r.err = nil
@@ -237,6 +266,10 @@ func (r *DataValue) SetObjectProperty(name string, dataValue *DataValue) *DataVa
 func (r *DataValue) DropObjectProperty(name string) *DataValue {
 	if DATA_TYPE_OBJECT != r.dataType {
 		r.err = fmt.Errorf("Not an object type, cannot drop property; use PrepareObject() first!")
+		return r
+	}
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
 		return r
 	}
 	r.err = nil
@@ -310,6 +343,10 @@ func (r *DataValue) DropObjectProperties(names ...string) *DataValue {
 		r.err = fmt.Errorf("Not an object type, it has no properties; use PrepareObject() first!")
 		return r
 	}
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	for _, name := range names {
 		if _, ok := r.valueObject[name]; ok { delete(r.valueObject, name) }
@@ -331,6 +368,10 @@ func (r *DataValue) GetBoolean() bool {
 }
 
 func (r *DataValue) SetBoolean(value bool) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_BOOLEAN
 	r.valueBoolean = value
@@ -346,6 +387,10 @@ func (r *DataValue) IsArray() bool {
 }
 
 func (r *DataValue) PrepareArray() *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_ARRAY
 	r.valueArr = make([]*DataValue, 0)
@@ -379,12 +424,16 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
 		return r
 	}
-	r.err = nil
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	if nil == dataValue {
 		r.err = fmt.Errorf("nil DataValue cannot be appended to Array value")
-	} else {
-		r.valueArr = append(r.valueArr, dataValue)
+		return r
 	}
+	r.err = nil
+	r.valueArr = append(r.valueArr, dataValue)
 	return r
 }
 
@@ -403,6 +452,10 @@ func (r *DataValue) GetFloat() float64 {
 }
 
 func (r *DataValue) SetFloat(value float64) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_FLOAT
 	r.valueFloat = value
@@ -424,6 +477,10 @@ func (r *DataValue) GetInteger() int64 {
 }
 
 func (r *DataValue) SetInteger(value int64) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	r.dataType = DATA_TYPE_INTEGER
 	r.valueInteger = value
@@ -488,6 +545,10 @@ func (r *DataValue) GetMissing(selectors ...string) []string {
 }
 
 func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
 	r.err = nil
 	if r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
@@ -519,10 +580,6 @@ type KeyValuePair struct {
 }
 
 // Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
-// FIXME: This needs to fire for all data types, not just Object|Array - this way, even a string or
-// int or otherwise will also get an iteration hit for processing
-// TODO: Determine whether we should make caller recurse on nested structures or iterate N-Depth on
-// our own here.
 func (r *DataValue) GetIterator() func () interface{} {
 	r.err = nil
 	// Return object KeyValuePairs
