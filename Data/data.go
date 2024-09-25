@@ -98,6 +98,7 @@ type DataValueIfc interface {
 	GetArraySize() int
 	GetArrayValue(index int) *DataValue
 	AppendArrayValue(dataValue *DataValue) *DataValue
+	ReplaceArrayValue(index int, dataValue *DataValue) *DataValue
 
 	// Floats
 	IsFloat() bool
@@ -436,6 +437,24 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 	r.valueArr = append(r.valueArr, dataValue)
 	return r
 }
+func (r *DataValue) ReplaceArrayValue(index int, dataValue *DataValue) *DataValue {
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
+	}
+	if DATA_TYPE_ARRAY != r.dataType {
+		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
+		return nil
+	}
+	r.err = nil
+	if (index < 0) || (index >= len(r.valueArr)) {
+		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArr) - 1))
+		return nil
+	}
+	if nil == dataValue { dataValue = NewNull() }
+	r.valueArr[index] = dataValue
+	return r
+}
 
 // -----------------------------------------------
 // Floats
@@ -575,8 +594,13 @@ func (r *DataValue) ToJson() string {
 // -------------------------------------------------------------------------------------------------
 
 type KeyValuePair struct {
-        Key     string
-        Value   *DataValue
+        Key	string
+        Value	*DataValue
+}
+
+type IndexValuePair struct {
+        Index	int
+        Value	*DataValue
 }
 
 // Returns iterator func of []KeyValuePair for Objects, []*DataValue for Arrays, nil for other types
@@ -608,7 +632,7 @@ func (r *DataValue) GetIterator() func () interface{} {
 			if idx >= data_len { return nil }
 			prev_idx := idx
 			idx++
-			return r.GetArrayValue(prev_idx)
+			return IndexValuePair{Index: prev_idx, Value: r.GetArrayValue(prev_idx)}
 		}
 	}
 	r.err = fmt.Errorf("DataValue is neither an Object, nor Array, so cannot iterate!")

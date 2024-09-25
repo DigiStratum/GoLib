@@ -14,8 +14,8 @@ import (
 	"GoLib/Data"
 )
 
-const DEFAULT_REFERENCE_DELIMITER_OPENER = "%"
-const DEFAULT_REFERENCE_DELIMITER_CLOSER = "%"
+const DEFAULT_REFERENCE_DELIMITER_OPENER = '%'
+const DEFAULT_REFERENCE_DELIMITER_CLOSER = '%'
 
 type ConfigIfc interface {
 	data.DataValueIfc
@@ -26,8 +26,8 @@ type ConfigIfc interface {
 type Config struct {
 	*data.DataValue
 
-	refDelimOpener		string
-	refDelimCloser		string
+	refDelimOpener		byte
+	refDelimCloser		byte
 
 }
 
@@ -51,7 +51,7 @@ func (r *Config) DereferenceString(str string) *string {
 		value, err := r.Select(selector)
 		if (nil == value) || (nil != err) {  continue }
 
-		ref := fmt.Sprintf("%s%s%s", r.refDelimOpener, selector, r.refDelimCloser)
+		ref := fmt.Sprintf("%c%s%c", r.refDelimOpener, selector, r.refDelimCloser)
 		str = strings.Replace(str, ref, value.ToString(), -1)
 	}
 	return &str
@@ -85,20 +85,21 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 			}
 
 		case data.DATA_TYPE_ARRAY:
-			for vi := it(); nil != vi; vi = it() {
+			for ivpi := it(); nil != ivpi; ivpi = it() {
 				// FIXME: Array iterator must return the array index as the key!
-				v, ok := vi.(*data.DataValue)
+				ivp, ok := ivpi.(*data.IndexValuePair)
 				if ! ok { continue } // TODO: Error/Warning warranted?
-				if v.IsString() {
-					tstr := referenceConfig.DereferenceString(kvp.Value.GetString())
+				if ivp.Value.IsString() {
+					tstr := referenceConfig.DereferenceString(ivp.Value.GetString())
 					// Nothing to do if nothing was done...
-					if (nil == tstr) || (kvp.Value.GetString() == *tstr) { continue }
+					if (nil == tstr) || (ivp.Value.GetString() == *tstr) { continue }
 					//r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
 					// TODO: Implement an in-place update for ARRAY data values!
-					r.SetArrayValue(
+					r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
 					subs++
 				}
 			}
+	}
 	return subs
 }
 
@@ -107,34 +108,29 @@ func (r *Config) Dereference(referenceConfig ConfigIfc) int {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Config) getReferenceSelectorsFromString(str string) ([]string, error) {
-	runes := []rune(str)
-	keys := make([]string, 0)
-	inKey := false
-	var keyRunes []rune
-	for i := 0; i < len(runes); i++ {
-		// Marker!
-		if (runes[i] == r.refDelimOpener) || (runes[i] == r.refDelimCloser) {
-			// If we're working on a key...
-			if inKey && (runes[i] == r.refDelimCloser) {
+	selectors := make([]string, 0)
+	inSelector := false
+	var sb strings.Builder
+	for _, char := range str {
+		// If we found a delimiter char...
+		if (char == rune(r.refDelimOpener)) || (char == rune(r.refDelimCloser)) {
+			// If we're working on a selector...
+			if inSelector && (char == rune(r.refDelimCloser)) {
 				// This is the end!
-				key := string(keyRunes)
-				keys = append(keys, key)
-				inKey = false
-			} else if ! inKey && (runes[i] == r.refDelimOpener) {
+				selectors = append(selectors, sb.String())
+				inSelector = false
+			} else if ! inSelector && (char == rune(r.refDelimOpener)) {
 				// This is the beginning!
-				keyRunes = make([]rune, 0)
-				inKey = true
+				sb.Reset()
+				inSelector = true
 			}
 		} else {
-			// If we're working on a key...
-			if inKey {
-				// Add this rune to it
-				keyRunes = append(keyRunes, runes[i])
-			}
+			// If we're working on a key, add this byte to it
+			if inSelector { sb.WriteRune(char) }
 		}
 	}
 	var err error
-	if inKey { err = fmt.Errorf("Unmatched reference key marker in string '%s'", str) }
-	return keys, err
+	if inSelector { err = fmt.Errorf("Unmatched selector delimiter in string '%s'", str) }
+	return selectors, err
 }
 
