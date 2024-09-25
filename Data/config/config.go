@@ -4,7 +4,11 @@ package config
 
 TODO:
  * Add Setter func to change the open/close delimiters from defaults
-
+ * Consider a configurable logger - if we wanted Config to log warnings/errors via logger, but
+   logger needs Config to initialize, then a circular dependency would be formed, an anti-pattern
+   which implies the need for a third resource upon which both depend. what is it? Some kind of
+   separate ConfigurableLoggerIfc, a higher level construct which depends on both, but upon which
+   neither depend, perhaps...
 */
 
 import (
@@ -14,13 +18,16 @@ import (
 	"GoLib/Data"
 )
 
-const DEFAULT_REFERENCE_DELIMITER_OPENER = '%'
-const DEFAULT_REFERENCE_DELIMITER_CLOSER = '%'
+// Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
+const MAX_REFERENCE_DEPTH			= 10
+const DEFAULT_REFERENCE_DELIMITER_OPENER	= '%'
+const DEFAULT_REFERENCE_DELIMITER_CLOSER	= '%'
 
 type ConfigIfc interface {
 	data.DataValueIfc
 
 	DereferenceString(str string) *string
+	Dereference(referenceConfigs ...ConfigIfc) int
 }
 
 type Config struct {
@@ -57,48 +64,58 @@ func (r *Config) DereferenceString(str string) *string {
 	return &str
 }
 
-// Dereference values with %reference% selectors against referenceConfig; returns num substitutions
+// Dereference values with %reference% selectors against referenceConfig(s); returns num substitutions
 // Note that this is a single-pass iteration dereference; if subs comes out > 0 then an additinoal
 // pass may be called for to see if more subs are possible (think of subtitutions that themselves
 // contain additional keys needing deferencing). A DereferenceAll() method can run N passes up to
 // some cycle limit to avoid perpetual loop scenarios.
-func (r *Config) Dereference(referenceConfig ConfigIfc) int {
-	// FIXME: This can only be done against an Object or Array type of Config; break out for any other primitive type
+func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 	if nil == r { return 0 }
-	// If no referenceConfig is specified, just dereference against ourselves
-	if nil == referenceConfig { return r.Dereference(r) }
-	subs := 0
-	// For each of our key/value pairs...
-	it := r.GetIterator()
-	switch r.GetType() {
-		case data.DATA_TYPE_OBJECT:
-			for kvpi := it(); nil != kvpi; kvpi = it() {
-				kvp, ok := kvpi.(*data.KeyValuePair)
-				if ! ok { continue } // TODO: Error/Warning warranted?
-				if kvp.Value.IsString() {
-					tstr := referenceConfig.DereferenceString(kvp.Value.GetString())
-					// Nothing to do if nothing was done...
-					if (nil == tstr) || (kvp.Value.GetString() == *tstr) { continue }
-					r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
-					subs++
-				}
-			}
+	var subs int
+	referenceDepth := 0
+	for true {
+		subs = 0
+		referenceDepth++
+		if MAX_REFERENCE_DEPTH >= referenceDepth { break }
 
-		case data.DATA_TYPE_ARRAY:
-			for ivpi := it(); nil != ivpi; ivpi = it() {
-				// FIXME: Array iterator must return the array index as the key!
-				ivp, ok := ivpi.(*data.IndexValuePair)
-				if ! ok { continue } // TODO: Error/Warning warranted?
-				if ivp.Value.IsString() {
-					tstr := referenceConfig.DereferenceString(ivp.Value.GetString())
-					// Nothing to do if nothing was done...
-					if (nil == tstr) || (ivp.Value.GetString() == *tstr) { continue }
-					//r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
-					// TODO: Implement an in-place update for ARRAY data values!
-					r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
-					subs++
-				}
+		// Dereference against ourselves; allows for interesting combos like we have a value
+		// and reference config back-references a value that we have to sub it back in, etc.
+		subs = r.Dereference(r) // <- Beware, recursion!
+
+		for _, referenceConfig := range referenceConfigs {
+			// Add support for dereferencing other data types as they become available via Iterator, at
+			// least string would make sense, but Iterator only supports Array|Object currently.
+			switch r.GetType() {
+				case data.DATA_TYPE_OBJECT:
+					it := r.GetIterator()
+					for kvpi := it(); nil != kvpi; kvpi = it() {
+						if kvp, ok := kvpi.(*data.KeyValuePair); (nil != kvp) && ok {
+							if kvp.Value.IsString() {
+								tstr := referenceConfig.DereferenceString(kvp.Value.ToString())
+								// Nothing to do if nothing changed...
+								if (nil == tstr) || (kvp.Value.GetString() == *tstr) { continue }
+								r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
+								subs++
+							}
+						}
+					}
+
+				case data.DATA_TYPE_ARRAY:
+					it := r.GetIterator()
+					for ivpi := it(); nil != ivpi; ivpi = it() {
+						if ivp, ok := ivpi.(*data.IndexValuePair); (nil != ivp) && ok {
+							if ivp.Value.IsString() {
+								tstr := referenceConfig.DereferenceString(ivp.Value.ToString())
+								// Nothing to do if nothing changed...
+								if (nil == tstr) || (ivp.Value.GetString() == *tstr) { continue }
+								r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
+								subs++
+							}
+						}
+					}
 			}
+		}
+		if 0 == subs { break }
 	}
 	return subs
 }
