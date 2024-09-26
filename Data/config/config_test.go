@@ -33,6 +33,18 @@ func TestThat_Config_DereferenceString_Returns_Original_String_without_selectors
 	if ! ExpectString(expected, *actual, t) { return }
 }
 
+func TestThat_Config_DereferenceString_Returns_Original_String_with_broken_selector(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+
+	// Test
+	actual := sut.DereferenceString("Howdy %name!")
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectString("Howdy %name!", *actual, t) { return }
+}
+
 func TestThat_Config_DereferenceString_Returns_String_with_object_property_selector_replaced(t *testing.T) {
 	// Setup
 	sut := NewConfig()

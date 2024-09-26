@@ -54,7 +54,7 @@ func (r *Config) DereferenceString(str string) *string {
 	selectors, err := r.getReferenceSelectorsFromString(str)
 	if nil != err {
 		// TODO: Log the error or pass it back to the caller
-		return nil
+		return &str
 	}
 	for _, selector := range selectors {
 		value, err := r.Select(selector)
