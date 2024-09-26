@@ -1098,12 +1098,12 @@ func TestThat_DataValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
 	if ! ExpectFalse(nil == actual, t) { return }
 
 	for i := 1; i <= numvals; i++ {
-		vi := actual()
-		v, ok := vi.(*DataValue)
+		ivpi := actual()
+		ivp, ok := ivpi.(IndexValuePair)
 		// Expect a KeyValuePair to be the result of calling the Iterator func
 		if ! ExpectTrue(ok, t) { return }
-		if ! ExpectNonNil(v, t) { return }
-		if ! ExpectInt64(int64(i), v.GetInteger(),t) { return }
+		if ! ExpectNonNil(ivp, t) { return }
+		if ! ExpectInt64(int64(i), ivp.Value.GetInteger(),t) { return }
 	}
 }
 
