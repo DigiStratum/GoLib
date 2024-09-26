@@ -9,6 +9,8 @@ TODO:
    which implies the need for a third resource upon which both depend. what is it? Some kind of
    separate ConfigurableLoggerIfc, a higher level construct which depends on both, but upon which
    neither depend, perhaps...
+ * Add support for dereferencing other data types as they become available via Iterator, at least
+   string would make sense, but Iterator only supports Array|Object currently.
 */
 
 import (
@@ -83,8 +85,6 @@ func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 		subs = r.Dereference(r) // <- Beware, recursion!
 
 		for _, referenceConfig := range referenceConfigs {
-			// Add support for dereferencing other data types as they become available via Iterator, at
-			// least string would make sense, but Iterator only supports Array|Object currently.
 			switch r.GetType() {
 				case data.DATA_TYPE_OBJECT:
 					it := r.GetIterator()

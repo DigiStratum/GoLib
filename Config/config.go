@@ -3,6 +3,8 @@ package config
 
 /*
 
+DEPRECATED - See GoLib/Data/config replacement
+
 This Config class extends (embeds) our own HashMap with additional capabilities specific to the
 needs of managing simple configuration data for our purposes. You can load configuration data from
 JSON files, Get/Set individual configuration values, merge additional configuration data in, and
