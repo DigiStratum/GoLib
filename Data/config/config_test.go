@@ -1,5 +1,13 @@
 package config
 
+/*
+
+TODO:
+ * Add test coverage for max depth by setting it low and then hitting it and verifying that the
+   number of substitutions is fewer than they would have been with a higher max
+
+*/
+
 import(
 	//"fmt"
 	//"strings"

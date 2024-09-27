@@ -15,8 +15,12 @@ based on delimiter encapsulated identifiers which are handled as DataValue selec
 be nested such that multiple reference Configs can cross-reference each other up to a maximum
 reference depth to prevent runaway recursion.
 
+FIXME:
+ * Ensure that Config.DataValue cannot be replaced from outside; UNexport Config as config if
+   this is so.
+ * Set DataValue as immutable after Derference() - it's read-only configuration at that point.
+
 TODO:
- * Add Setter func to change the open/close delimiters from defaults
  * Consider a configurable logger - if we wanted Config to log warnings/errors via logger, but
    logger needs Config to initialize, then a circular dependency would be formed, an anti-pattern
    which implies the need for a third resource upon which both depend. what is it? Some kind of
@@ -27,6 +31,7 @@ TODO:
  * Add support for casting dereferenced values to a non-String. e.g. %intvalue:integer% to cause
    the result of the dereferenced string to be stored as a NewInteger({parsed intvalue}) instead
    of storing back as a string.
+
 */
 
 import (
@@ -36,13 +41,16 @@ import (
 	"GoLib/Data"
 )
 
-// Prevent runaway processes with absurd boundaries with an absolute maximum on loop count
-const MAX_REFERENCE_DEPTH			= 10
+// Sane defaults
+const DEFAULT_MAX_REFERENCE_DEPTH		= 10
 const DEFAULT_REFERENCE_DELIMITER_OPENER	= '%'
 const DEFAULT_REFERENCE_DELIMITER_CLOSER	= '%'
 
 type ConfigIfc interface {
 	data.DataValueIfc
+
+	SetMaxDepth(max int) *Config
+	SetDelimiters(opener, closer byte) *Config
 
 	DereferenceString(str string) (*string, int)
 	Dereference(referenceConfigs ...ConfigIfc) int
@@ -51,21 +59,49 @@ type ConfigIfc interface {
 type Config struct {
 	*data.DataValue
 
+	refDepthMax		int
 	refDelimOpener		byte
 	refDelimCloser		byte
 
 }
 
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
 func NewConfig() *Config {
-	r := Config{
-		DataValue:		data.NewDataValue(),
-		refDelimOpener:		DEFAULT_REFERENCE_DELIMITER_OPENER,
-		refDelimCloser:		DEFAULT_REFERENCE_DELIMITER_CLOSER,
-	}
-	return &r
+	return FromDataValue(data.NewDataValue())
+}
+
+// Create instancer from DataValue (which can have its own factories from various data sources, like
+// JSON, YAML, XML etc., string/stream/file/environment, etc)
+func FromDataValue(dataValue *data.DataValue) *Config {
+	r := &Config{ DataValue: dataValue }
+	return r.
+		SetMaxDepth(DEFAULT_MAX_REFERENCE_DEPTH).
+		SetDelimiters(
+			DEFAULT_REFERENCE_DELIMITER_OPENER,
+			DEFAULT_REFERENCE_DELIMITER_CLOSER,
+		)
+}
+
+// -------------------------------------------------------------------------------------------------
+// ConfigIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *Config) SetMaxDepth(max int) *Config {
+	r.refDepthMax = max
+	return r
+}
+
+func (r *Config) SetDelimiters(opener, closer byte) *Config {
+	r.refDelimOpener = opener
+	r.refDelimCloser = closer
+	return r
 }
 
 // Dereference any %selector% references our keys in supplied string; returns dereferenced string
+// and num substitutions
 func (r *Config) DereferenceString(str string) (*string, int) {
 	selectors, err := r.getReferenceSelectorsFromString(str)
 	if nil != err {
@@ -92,7 +128,7 @@ func (r *Config) DereferenceString(str string) (*string, int) {
 func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 	referenceDepth := 0
 	subs := 0
-	for (MAX_REFERENCE_DEPTH > referenceDepth) {
+	for (r.refDepthMax > referenceDepth) {
 		referenceDepth++
 		passSubs := r.dereferencePass(referenceConfigs...)
 		if 0 == passSubs { break }
@@ -100,6 +136,10 @@ func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 	}
 	return subs
 }
+
+// -------------------------------------------------------------------------------------------------
+// Config implementation
+// -------------------------------------------------------------------------------------------------
 
 func (r *Config) dereferencePass(referenceConfigs ...ConfigIfc) int {
 	subs := 0
@@ -142,10 +182,6 @@ func (r *Config) dereferenceOne(before string, referenceConfig ConfigIfc) (*stri
 	}
 	return tstr, subs
 }
-
-// -------------------------------------------------------------------------------------------------
-// Config implementation
-// -------------------------------------------------------------------------------------------------
 
 func (r *Config) getReferenceSelectorsFromString(str string) ([]string, error) {
 	selectors := make([]string, 0)
