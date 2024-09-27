@@ -72,52 +72,57 @@ func (r *Config) DereferenceString(str string) *string {
 // contain additional keys needing deferencing). A DereferenceAll() method can run N passes up to
 // some cycle limit to avoid perpetual loop scenarios.
 func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
-	if nil == r { return 0 }
-	var subs int
 	referenceDepth := 0
-	for true {
-		subs = 0
+	subs := 0
+	for (MAX_REFERENCE_DEPTH > referenceDepth) {
 		referenceDepth++
-		if MAX_REFERENCE_DEPTH >= referenceDepth { break }
-
-		// Dereference against ourselves; allows for interesting combos like we have a value
-		// and reference config back-references a value that we have to sub it back in, etc.
-		subs = r.Dereference(r) // <- Beware, recursion!
-
-		for _, referenceConfig := range referenceConfigs {
-			switch r.GetType() {
-				case data.DATA_TYPE_OBJECT:
-					it := r.GetIterator()
-					for kvpi := it(); nil != kvpi; kvpi = it() {
-						if kvp, ok := kvpi.(*data.KeyValuePair); (nil != kvp) && ok {
-							if kvp.Value.IsString() {
-								tstr := referenceConfig.DereferenceString(kvp.Value.ToString())
-								// Nothing to do if nothing changed...
-								if (nil == tstr) || (kvp.Value.GetString() == *tstr) { continue }
-								r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
-								subs++
-							}
-						}
-					}
-
-				case data.DATA_TYPE_ARRAY:
-					it := r.GetIterator()
-					for ivpi := it(); nil != ivpi; ivpi = it() {
-						if ivp, ok := ivpi.(*data.IndexValuePair); (nil != ivp) && ok {
-							if ivp.Value.IsString() {
-								tstr := referenceConfig.DereferenceString(ivp.Value.ToString())
-								// Nothing to do if nothing changed...
-								if (nil == tstr) || (ivp.Value.GetString() == *tstr) { continue }
-								r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
-								subs++
-							}
-						}
-					}
-			}
-		}
-		if 0 == subs { break }
+		passSubs := r.dereferencePass(referenceConfigs...)
+		if 0 == passSubs { break }
+		subs += passSubs
 	}
 	return subs
+}
+
+func (r *Config) dereferencePass(referenceConfigs ...ConfigIfc) int {
+	subs := 0
+	for _, referenceConfig := range referenceConfigs {
+		switch r.GetType() {
+			case data.DATA_TYPE_OBJECT:
+				it := r.GetIterator()
+				for kvpi := it(); nil != kvpi; kvpi = it() {
+					if kvp, ok := kvpi.(data.KeyValuePair); ok {
+						tstr := r.dereferenceOne(kvp.Value.GetString(), referenceConfig)
+						if nil == tstr { continue }
+						r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
+						subs++
+					}
+				}
+
+			case data.DATA_TYPE_ARRAY:
+				it := r.GetIterator()
+				for ivpi := it(); nil != ivpi; ivpi = it() {
+					if ivp, ok := ivpi.(data.IndexValuePair); ok {
+						tstr := r.dereferenceOne(ivp.Value.GetString(), referenceConfig)
+						if nil == tstr { continue }
+						r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
+						subs++
+					}
+				}
+		}
+	}
+	return subs
+}
+
+func (r *Config) dereferenceOne(before string, referenceConfig ConfigIfc) *string {
+	tstr := referenceConfig.DereferenceString(before)
+	// If referenceConfig has/changes nothing...
+	if (nil == tstr) || (before == *tstr) {
+		// What if we try to dereference against ourselves?
+		tstr = r.DereferenceString(before)
+		// Nothing to do if nothing changed...
+		if (nil == tstr) || (before == *tstr) { return nil }
+	}
+	return tstr
 }
 
 // -------------------------------------------------------------------------------------------------
