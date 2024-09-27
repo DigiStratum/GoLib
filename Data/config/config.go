@@ -2,6 +2,19 @@ package config
 
 /*
 
+General purpose structured configuration data
+
+This next generation Configuration object supports structured data by embedding GoLib/Data/DataValue
+as the underlying storage model.
+
+We support a string dereferencing model to pull other values into the current value for string
+building. Dereferencing only works for strings at this time because DataValue does not support
+this intrinsically - you can't have, for example, an Integer data type that is represented as a
+"%intvalue%" selector which is a String data type (see related TODO below). Dereferencing is
+based on delimiter encapsulated identifiers which are handled as DataValue selectors. These can
+be nested such that multiple reference Configs can cross-reference each other up to a maximum
+reference depth to prevent runaway recursion.
+
 TODO:
  * Add Setter func to change the open/close delimiters from defaults
  * Consider a configurable logger - if we wanted Config to log warnings/errors via logger, but
@@ -11,6 +24,9 @@ TODO:
    neither depend, perhaps...
  * Add support for dereferencing other data types as they become available via Iterator, at least
    string would make sense, but Iterator only supports Array|Object currently.
+ * Add support for casting dereferenced values to a non-String. e.g. %intvalue:integer% to cause
+   the result of the dereferenced string to be stored as a NewInteger({parsed intvalue}) instead
+   of storing back as a string.
 */
 
 import (
@@ -28,7 +44,7 @@ const DEFAULT_REFERENCE_DELIMITER_CLOSER	= '%'
 type ConfigIfc interface {
 	data.DataValueIfc
 
-	DereferenceString(str string) *string
+	DereferenceString(str string) (*string, int)
 	Dereference(referenceConfigs ...ConfigIfc) int
 }
 
@@ -50,20 +66,22 @@ func NewConfig() *Config {
 }
 
 // Dereference any %selector% references our keys in supplied string; returns dereferenced string
-func (r *Config) DereferenceString(str string) *string {
+func (r *Config) DereferenceString(str string) (*string, int) {
 	selectors, err := r.getReferenceSelectorsFromString(str)
 	if nil != err {
 		// TODO: Log the error or pass it back to the caller
-		return &str
+		return &str, 0
 	}
+	subs := 0
 	for _, selector := range selectors {
 		value, err := r.Select(selector)
 		if (nil == value) || (nil != err) {  continue }
 
 		ref := fmt.Sprintf("%c%s%c", r.refDelimOpener, selector, r.refDelimCloser)
 		str = strings.Replace(str, ref, value.ToString(), -1)
+		subs++
 	}
-	return &str
+	return &str, subs
 }
 
 // Dereference values with %reference% selectors against referenceConfig(s); returns num substitutions
@@ -91,10 +109,10 @@ func (r *Config) dereferencePass(referenceConfigs ...ConfigIfc) int {
 				it := r.GetIterator()
 				for kvpi := it(); nil != kvpi; kvpi = it() {
 					if kvp, ok := kvpi.(data.KeyValuePair); ok {
-						tstr := r.dereferenceOne(kvp.Value.GetString(), referenceConfig)
-						if nil == tstr { continue }
+						tstr, drsubs := r.dereferenceOne(kvp.Value.GetString(), referenceConfig)
+						if (nil == tstr) || (0 == drsubs) { continue }
 						r.SetObjectProperty(kvp.Key, data.NewString(*tstr))
-						subs++
+						subs = subs + drsubs
 					}
 				}
 
@@ -102,10 +120,10 @@ func (r *Config) dereferencePass(referenceConfigs ...ConfigIfc) int {
 				it := r.GetIterator()
 				for ivpi := it(); nil != ivpi; ivpi = it() {
 					if ivp, ok := ivpi.(data.IndexValuePair); ok {
-						tstr := r.dereferenceOne(ivp.Value.GetString(), referenceConfig)
-						if nil == tstr { continue }
+						tstr, drsubs := r.dereferenceOne(ivp.Value.GetString(), referenceConfig)
+						if (nil == tstr) || (0 == drsubs) { continue }
 						r.ReplaceArrayValue(ivp.Index, data.NewString(*tstr))
-						subs++
+						subs = subs + drsubs
 					}
 				}
 		}
@@ -113,16 +131,16 @@ func (r *Config) dereferencePass(referenceConfigs ...ConfigIfc) int {
 	return subs
 }
 
-func (r *Config) dereferenceOne(before string, referenceConfig ConfigIfc) *string {
-	tstr := referenceConfig.DereferenceString(before)
+func (r *Config) dereferenceOne(before string, referenceConfig ConfigIfc) (*string, int) {
+	tstr, subs := referenceConfig.DereferenceString(before)
 	// If referenceConfig has/changes nothing...
-	if (nil == tstr) || (before == *tstr) {
+	if (nil == tstr) || (before == *tstr) || (0 == subs) {
 		// What if we try to dereference against ourselves?
-		tstr = r.DereferenceString(before)
+		tstr, subs = r.DereferenceString(before)
 		// Nothing to do if nothing changed...
-		if (nil == tstr) || (before == *tstr) { return nil }
+		if (nil == tstr) || (before == *tstr) || (0 == subs) { return nil, 0 }
 	}
-	return tstr
+	return tstr, subs
 }
 
 // -------------------------------------------------------------------------------------------------
