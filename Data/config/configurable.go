@@ -52,7 +52,7 @@ func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Configurable) AddConfigItems(configItems ...ConfigItemIfc) *Configurable {
-	for _, configItem := range configItems { r.declared[configItem.GetName()] = configItem }
+	for _, configItem := range configItems { r.declared[configItem.GetSelector()] = configItem }
 	return r
 }
 
@@ -72,13 +72,17 @@ func (r *Configurable) HasMissingConfigs() bool {
 
 // Verify that all required Configs are captured
 func (r *Configurable) GetMissingConfigs() []string {
-	missingConfigs := []string{}
-	for name, declaredConfigItem := range r.declared {
+	requiredConfigs := []string{}
+	//missingConfigs := []string{}
+	//for name, declaredConfigItem := range r.declared {
+	for selector, declaredConfigItem := range r.declared {
 		if ! declaredConfigItem.IsRequired() { continue }
-		if ! r.config.Has(name) { continue }
-		missingConfigs = append(missingConfigs, name)
+		//if ! r.config.Has(name) { continue }
+		//missingConfigs = append(missingConfigs, name)
+		requiredConfigs = append(requiredConfigs, selector)
 	}
-	return missingConfigs
+	//return missingConfigs
+	return r.config.GetMissing(requiredConfigs...)
 }
 
 func (r *Configurable) GetConfig() *Config {
@@ -96,34 +100,30 @@ func (r *Configurable) Start() error {
 	// Make sure nothing required is missing
 	if missingConfigs := r.GetMissingConfigs(); len(missingConfigs) > 0 {
 		return fmt.Errorf(
-			"Missing required config(s) with name(s): %s",
-			strings.Join(missingConfigs, ","),
+			"Missing required config(s): '%s'",
+			strings.Join(missingConfigs, "','"),
 		)
 	}
 
 	// For all the declared Config Items...
-	for name, configItem := range r.declared {
+	for selector, configItem := range r.declared {
 
-		// Get the value for this named ConfigItem
-		value := r.config.Get(name)
+		// Get the value for this config selector
+		configDataValue := r.config.Select(selector)
 
 		// If this ConfigItem has a Validation Func...
-		if (nil != value) && configItem.CanValidate() {
-			if ! configItem.Validate(*value) {
+		if (nil != configDataValue) && configItem.CanValidate() {
+			if ! configItem.Validate(configDataValue) {
 				return fmt.Errorf(
 					"Configuration Item '%s' failed validation with value: '%s'",
-					name, *value,
+					selector, configDataValue.ToString(),
 				)
 			}
 		}
 
 		// If this ConfigItem has a Capture Func...
 		if configItem.CanCapture() {
-			if err := configItem.Capture(value); nil != err { return err }
-		}
-		if configItem.CanCaptureSubset() {
-			subset := r.config.GetSubsetConfig(name)
-			if err := configItem.CaptureSubset(subset); nil != err { return err }
+			if err := configItem.Capture(configDataValue); nil != err { return err }
 		}
 	}
 

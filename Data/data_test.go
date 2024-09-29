@@ -824,9 +824,9 @@ func TestThat_DataValue_Select_Returns_Values_For_Good_Selectors(t *testing.T) {
 	for _, selector := range selectors {
 		//t.Logf("Testing good selector '%s'\n", selector)
 		// Verify
-		actual1, err1 := sut.Select(selector)
+		actual1 := sut.Select(selector)
 		if ! ExpectNonNil(actual1, t) { return }
-		if ! ExpectNoError(err1, t) { return }
+		if ! ExpectNoError(sut.GetError(), t) { return }
 
 		switch actual1.GetType() {
 			case DATA_TYPE_STRING: if ! ExpectString("arc", actual1.GetString(), t) { return }
@@ -848,10 +848,11 @@ func TestThat_DataValue_Select_Returns_Errors_For_Bad_Selectors(t *testing.T) {
 	// Test
 	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
 	for _, selector := range selectors {
-		actual, err := sut.Select(selector)
+fmt.Printf("Testing selector '%s'\n", selector)
+		actual := sut.Select(selector)
 		// Verify
 		if ! ExpectNil(actual, t) { return }
-		if ! ExpectError(err, t) { return }
+		if ! ExpectError(sut.GetError(), t) { return }
 	}
 }
 
@@ -860,11 +861,11 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_Missing_Object_Property
 	sut := NewDataValue().PrepareObject()
 
 	// Test
-	actual, err := sut.Select(".missingprop")
+	actual := sut.Select(".missingprop")
 
 	// Verify
 	if ! ExpectNil(actual, t) { return }
-	if ! ExpectError(err, t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_array_indexes(t *testing.T) {
@@ -873,18 +874,16 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_array_indexes(t *te
 		AppendArrayValue(NewDataValue().SetString("apples")).
 		AppendArrayValue(NewDataValue().SetString("oranges"))
 
-	// Test
-	actual1, err1 := sut.Select("[0]")
-	actual2, err2 := sut.Select("[]")
-	actual3, err3 := sut.Select("[A]")
-
 	// Verify
+	actual1 := sut.Select("[0]")
 	if ! ExpectNonNil(actual1, t) { return }
-	if ! ExpectNoError(err1, t) { return }
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	actual2 := sut.Select("[]")
 	if ! ExpectNil(actual2, t) { return }
-	if ! ExpectError(err2, t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
+	actual3 := sut.Select("[A]")
 	if ! ExpectNil(actual3, t) { return }
-	if ! ExpectError(err3, t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_names(t *testing.T) {
@@ -892,18 +891,16 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_nam
 	sut := NewDataValue().PrepareObject().
 		SetObjectProperty("prop", NewDataValue().SetString("value"))
 
-	// Test
-	actual1, err1 := sut.Select("prop")		// <- ok
-	actual2, err2 := sut.Select(".\nprop")		// <- white space = fail
-	actual3, err3 := sut.Select(".")		// <- no name = fail
-
 	// Verify
+	actual1 := sut.Select("prop")		// <- ok
 	if ! ExpectNonNil(actual1, t) { return }
-	if ! ExpectNoError(err1, t) { return }
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	actual2 := sut.Select(".\nprop")		// <- white space = fail
 	if ! ExpectNil(actual2, t) { return }
-	if ! ExpectError(err2, t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
+	actual3 := sut.Select(".")		// <- no name = fail
 	if ! ExpectNil(actual3, t) { return }
-	if ! ExpectError(err3, t) { return }
+	if ! ExpectError(sut.GetError(), t) { return }
 }
 
 func TestThat_DataValue_Merge_sets_error_when_immutable(t *testing.T) {

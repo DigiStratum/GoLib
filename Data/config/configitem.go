@@ -21,7 +21,7 @@ type CaptureFunc func (dataValue data.DataValueIfc) error
 type ValidateFunc func (dataValue data.DataValueIfc) bool
 
 type ConfigItemIfc interface {
-	GetName() string
+	GetSelector() string
 	SetRequired() *configItem
 	IsRequired() bool
 
@@ -37,7 +37,7 @@ type ConfigItemIfc interface {
 }
 
 type configItem struct {
-	name		string
+	selector	string
 	defaultValue	data.DataValueIfc
 	hasDefault	bool
 	isRequired	bool
@@ -49,9 +49,9 @@ type configItem struct {
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewConfigItem(name string) *configItem {
+func NewConfigItem(selector string) *configItem {
 	return &configItem{
-		name:		name,
+		selector:		selector,
 	}
 }
 
@@ -59,8 +59,8 @@ func NewConfigItem(name string) *configItem {
 // ConfigItemIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *configItem) GetName() string {
-	return r.name
+func (r *configItem) GetSelector() string {
+	return r.selector
 }
 
 func (r *configItem) SetRequired() *configItem {
@@ -94,7 +94,7 @@ func (r *configItem) Capture(dataValue data.DataValueIfc) error {
 	if ! r.CanCapture() {
 		return fmt.Errorf(
 			"No Capture function is set for configItem: %s",
-			r.GetName(),
+			r.GetSelector(),
 		)
 	}
 
@@ -111,7 +111,7 @@ func (r *configItem) Capture(dataValue data.DataValueIfc) error {
 			// ... reject it!
 			return fmt.Errorf(
 				"Nil value with no Default for required configItem: %s",
-				r.GetName(),
+				r.GetSelector(),
 			)
 		}
 

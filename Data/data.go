@@ -4,6 +4,19 @@ package data
 
 Represent a data structure as a loosely typed object tree with JavaScript-like selectors and other conveniences.
 
+On Error handling - while we would normally return multiple values along with an error as needed for
+a given function result, because we had a goal of a chainable builder-style pattern here, and
+because some of the builder mutators could result in an error, it was necessary to capture the error
+and stash it instead of returning multiple value, since functions with multiple return values are
+not chainable. So we stash the "last error" in a structure member property and make it available via
+the GetError() method. In a chaining scenario, such an error would be lost if it were to occur mid-
+stream in the chain after the next operation clears it. Either some sort of error history or, more
+simply, a logger, would be necessary to preserve this through the chain to make it known to the
+caller and/or developer. Although not all of the methods are intended for the purpose of chaining,
+certainly only those that return the receiver pointer (a *DataValue) as the result, this same error
+capture/get approach is used throughout for consistency. Thus any consumer/extension of this package
+will be able to use a uniform method of error discovery and handling instead of varying by method.
+
 TODO:
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data?
@@ -111,7 +124,7 @@ type DataValueIfc interface {
 	SetInteger(value int64) *DataValue
 
 	// Modern amenities ;^)
-	Select(selector string) (*DataValue, error)
+	Select(selector string) *DataValue
 	HasAll(selectors ...string) bool
 	GetMissing(selectors ...string) []string
 	Merge(dataValue DataValueIfc) *DataValue
@@ -509,35 +522,56 @@ func (r *DataValue) SetInteger(value int64) *DataValue {
 // -----------------------------------------------
 // Conveniences
 
-func (r *DataValue) Select(selector string) (*DataValue, error) {
+func (r *DataValue) Select(selector string) *DataValue {
 	r.err = nil
 	// 1) An empty selector means we're already at the right place
-	if 0 == len(selector) { return r, nil }
+	if 0 == len(selector) {
+if nil != r.err { fmt.Printf("Select('%s') Error 1: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 1!\n", selector) }
+		return r
+	}
 
 	// 1) If this isn't an Array or Object value...
 	if ! (r.IsArray() || r.IsObject()) {
-		return nil, fmt.Errorf("Selectors are only valid for Object or Array values")
+		r.err = fmt.Errorf("Selectors are only valid for Object or Array values")
+if nil != r.err { fmt.Printf("Select('%s') Error 2: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 2!\n", selector) }
+		return nil
 	}
 
 	// 2) Traverse the selector one element at a time
 	objectProperty, arrayIndex, newSelector, err := r.selectNextElement(selector)
-	if nil != err { return nil, err }
+	if nil != err {
+		r.err = err
+if nil != r.err { fmt.Printf("Select('%s') Error 3: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 3!\n", selector) }
+		return nil
+	}
 	if nil != objectProperty {
 		if r.HasObjectProperty(*objectProperty) {
 			// If the new selector starts with a '.' (object property separator) then chop it off
-			return r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
+if nil != r.err { fmt.Printf("Select('%s') Error 4a: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 4a!\n", selector) }
+			res := r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
+if nil != r.err { fmt.Printf("Select('%s') Error 4b: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 4b!\n", selector) }
+			return res
 		}
-		return nil, fmt.Errorf("Selected Object Property '%s' doesn't exist", *objectProperty)
+		r.err = fmt.Errorf("Selected Object Property '%s' doesn't exist", *objectProperty)
+if nil != r.err { fmt.Printf("Select('%s') Error 5: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 5!\n", selector) }
+		return nil
 	}
 	if nil != arrayIndex {
 		if r.GetArraySize() > *arrayIndex {
-			return r.GetArrayValue(*arrayIndex).Select(newSelector) // <- BEWARE: recursion!
+if nil != r.err { fmt.Printf("Select('%s') Error 6a: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 6a!\n", selector) }
+			res := r.GetArrayValue(*arrayIndex).Select(newSelector) // <- BEWARE: recursion!
+if nil != r.err { fmt.Printf("Select('%s') Error 6b: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 6b!\n", selector) }
+			return res
 		}
-		return nil, fmt.Errorf("Selected Array Index '%d' is out of bounds; Array size is %d", *arrayIndex, r.GetArraySize())
+		r.err = fmt.Errorf("Selected Array Index '%d' is out of bounds; Array size is %d", *arrayIndex, r.GetArraySize())
+if nil != r.err { fmt.Printf("Select('%s') Error 7: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 7!\n", selector) }
+		return nil
 	}
 
 	// selectNextElement() must return objectProperty, arrayIndex, or error and be handled above
-	return nil, fmt.Errorf("Unexpected error for selector '%s'", selector)
+	r.err = fmt.Errorf("Unexpected error for selector '%s'", selector)
+if nil != r.err { fmt.Printf("Select('%s') Error 8: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 8!\n", selector) }
+	return nil
 }
 
 func (r *DataValue) HasAll(selectors ...string) bool {
@@ -545,7 +579,7 @@ func (r *DataValue) HasAll(selectors ...string) bool {
 	// For each selector in the variadic list...
 	for _, selector := range selectors {
 		// If we found no DataValue or hit an error, then we don't have it, therefore FALSE!
-		if res, err := r.Select(selector); (nil == res) || (nil != err) { return false }
+		if res := r.Select(selector); nil == res { return false }
 	}
 	return true
 }
@@ -556,7 +590,7 @@ func (r *DataValue) GetMissing(selectors ...string) []string {
 	// For each selector in the variadic list...
 	for _, selector := range selectors {
 		// If we found no DataValue or hit an error, then we don't have it, therefore MISSING!
-		if res, err := r.Select(selector); (nil == res) || (nil != err) {
+		if res := r.Select(selector); nil == res {
 			missing = append(missing, selector)
 		}
 	}
