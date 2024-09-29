@@ -54,6 +54,7 @@ type ConfigIfc interface {
 
 	DereferenceString(str string) (*string, int)
 	Dereference(referenceConfigs ...ConfigIfc) int
+	MergeConfig(config ConfigIfc) *Config
 }
 
 type Config struct {
@@ -135,6 +136,11 @@ func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 		subs += passSubs
 	}
 	return subs
+}
+
+func (r *Config) MergeConfig(config ConfigIfc) *Config {
+	r.DataValue.Merge(config)
+	return r
 }
 
 // -------------------------------------------------------------------------------------------------

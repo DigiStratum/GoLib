@@ -114,7 +114,7 @@ type DataValueIfc interface {
 	Select(selector string) (*DataValue, error)
 	HasAll(selectors ...string) bool
 	GetMissing(selectors ...string) []string
-	Merge(dataValue *DataValue) *DataValue
+	Merge(dataValue DataValueIfc) *DataValue
 	ToString() string
 	ToJson() string
 }
@@ -563,7 +563,7 @@ func (r *DataValue) GetMissing(selectors ...string) []string {
 	return missing
 }
 
-func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
+func (r *DataValue) Merge(dataValue DataValueIfc) *DataValue {
 	if r.isImmutable {
 		r.err = fmt.Errorf("Data is immutable, cannot modify!")
 		return r
@@ -571,10 +571,20 @@ func (r *DataValue) Merge(dataValue *DataValue) *DataValue {
 	r.err = nil
 	if r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
-		for k, v := range dataValue.valueObject { r.valueObject[k] = v }
+		it := r.GetIterator()
+		for kvpi := it(); nil != kvpi; kvpi = it() {
+			if kvp, ok := kvpi.(KeyValuePair); ok {
+				dataValue.SetObjectProperty(kvp.Key, kvp.Value)
+			}
+		}
 	} else if r.IsArray() && dataValue.IsArray() {
 		// Note: No deduplication for array values; pile dataValue's entries onto our tail
-		for _, v := range dataValue.valueArr { r.valueArr = append(r.valueArr,v) }
+		it := r.GetIterator()
+		for ivpi := it(); nil != ivpi; ivpi = it() {
+			if ivp, ok := ivpi.(IndexValuePair); ok {
+				dataValue.AppendArrayValue(ivp.Value)
+			}
+		}
 	}
 	return r
 }
