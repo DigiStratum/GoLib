@@ -171,11 +171,10 @@ func TestThat_Config_Dereference_iterates_for_array_few_reference_configs(t *tes
 
 	// Test
 	actual := sut.Dereference(ref)
-	actualValue, err := sut.Select("[3]")
+	actualValue := sut.Select("[3]")
 
 	// Verify
 	if ! ExpectInt(2, actual, t) { return }
-	if ! ExpectNoError(err, t) { return }
 	if ! ExpectString("Greetings, Earthling number 333!", actualValue.ToString(), t) { return }
 }
 

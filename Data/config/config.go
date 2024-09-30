@@ -111,8 +111,8 @@ func (r *Config) DereferenceString(str string) (*string, int) {
 	}
 	subs := 0
 	for _, selector := range selectors {
-		value, err := r.Select(selector)
-		if (nil == value) || (nil != err) {  continue }
+		value := r.Select(selector)
+		if nil == value {  continue }
 
 		ref := fmt.Sprintf("%c%s%c", r.refDelimOpener, selector, r.refDelimCloser)
 		str = strings.Replace(str, ref, value.ToString(), -1)
