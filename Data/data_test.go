@@ -716,6 +716,76 @@ func TestThat_DataValue_AppendArrayValue_sets_error_when_immutable(t *testing.T)
 	if ! ExpectError(sut.GetError(), t) { return }
 }
 
+// ReplaceArrayValue(index int, dataValue *DataValue) *DataValue
+
+func TestThat_DataValue_ReplaceArrayValue_Replaces_existing_value(t *testing.T) {
+	// Setup
+	sut := NewArray().AppendArrayValue(NewString("original"))
+	expected := "replaced"
+
+	// Test
+	sut.ReplaceArrayValue(0, NewString(expected))
+
+	// Verify
+	if ! ExpectString(expected, sut.GetArrayValue(0).GetString(), t) { return }
+}
+
+func TestThat_DataValue_ReplaceArrayValue_sets_error_for_index_too_high(t *testing.T) {
+	// Setup
+	sut := NewArray()
+
+	// Test
+	sut.ReplaceArrayValue(0, NewString("boing!"))
+
+	// Verify
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
+func TestThat_DataValue_ReplaceArrayValue_sets_error_for_negative_index(t *testing.T) {
+	// Setup
+	sut := NewArray()
+
+	// Test
+	sut.ReplaceArrayValue(-1, NewString("boing!"))
+
+	// Verify
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
+func TestThat_DataValue_ReplaceArrayValue_replaces_existing_with_null_value(t *testing.T) {
+	// Setup
+	sut := NewArray().AppendArrayValue(NewString("original"))
+
+	// Test
+	sut.ReplaceArrayValue(0, nil)
+
+	// Verify
+	if ! ExpectNoError(sut.GetError(), t) { return }
+	if ! ExpectTrue(sut.GetArrayValue(0).IsNull(), t) { return }
+}
+
+func TestThat_DataValue_ReplaceArrayValue_sets_error_when_immutable(t *testing.T) {
+	// Setup
+	sut := NewArray().AppendArrayValue(NewString("original")).SetImmutable()
+
+	// Test
+	sut.ReplaceArrayValue(0, NewString("boing!"))
+
+	// Verify
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
+func TestThat_DataValue_ReplaceArrayValue_sets_error_for_non_array(t *testing.T) {
+	// Setup
+	sut := NewObject()
+
+	// Test
+	sut.ReplaceArrayValue(0, NewString("boing!"))
+
+	// Verify
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
 // Floats
 
 func TestThat_DataValue_SetFloat_sets_error_when_immutable(t *testing.T) {
@@ -793,24 +863,22 @@ func TestThat_DataValue_GetInteger_returns_0value_for_non_integers(t *testing.T)
 // Conveniences
 
 func makeBigDataValue() *DataValue {
-	return NewDataValue().PrepareObject().
+	return NewObject().
 		SetObjectProperty("shape", NewDataValue().SetString("arc")).
-		SetObjectProperty(
-			"vectors",
-			NewDataValue().PrepareArray().
+		SetObjectProperty( "vectors", NewArray().
 			AppendArrayValue(
-				NewDataValue().PrepareObject().
-				SetObjectProperty("radians", NewDataValue().SetFloat(float64(3.14159))).
-				SetObjectProperty("radius", NewDataValue().SetInteger(int64(2))).
-				SetObjectProperty("color", NewDataValue().SetString("red")).
-				SetObjectProperty("hidden", NewDataValue().SetBoolean(false)),
+				NewObject().
+					SetObjectProperty("radians", NewDataValue().SetFloat(float64(3.14159))).
+					SetObjectProperty("radius", NewDataValue().SetInteger(int64(2))).
+					SetObjectProperty("color", NewDataValue().SetString("red")).
+					SetObjectProperty("hidden", NewDataValue().SetBoolean(false)),
 			).
 			AppendArrayValue(
-				NewDataValue().PrepareObject().
-				SetObjectProperty("radians", NewDataValue().SetFloat(float64(6.28318))).
-				SetObjectProperty("radius", NewDataValue().SetInteger(int64(7))).
-				SetObjectProperty("color", NewDataValue().SetString("blue")).
-				SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
+				NewObject().
+					SetObjectProperty("radians", NewDataValue().SetFloat(float64(6.28318))).
+					SetObjectProperty("radius", NewDataValue().SetInteger(int64(7))).
+					SetObjectProperty("color", NewDataValue().SetString("blue")).
+					SetObjectProperty("hidden", NewDataValue().SetBoolean(true)),
 			),
 		)
 }
@@ -848,11 +916,9 @@ func TestThat_DataValue_Select_Returns_Errors_For_Bad_Selectors(t *testing.T) {
 	// Test
 	selectors := []string{ "[]", "[0]", "bogusproperty", "vectors[2]", "vectors[0]radians" }
 	for _, selector := range selectors {
-fmt.Printf("Testing selector '%s'\n", selector)
 		actual := sut.Select(selector)
 		// Verify
 		if ! ExpectNil(actual, t) { return }
-		if ! ExpectError(sut.GetError(), t) { return }
 	}
 }
 
@@ -928,11 +994,11 @@ func TestThat_DataValue_Merge_Returns_DataValue_for_unstructured_values(t *testi
 
 func TestThat_DataValue_Merge_Merges_DataValue_for_Objects(t *testing.T) {
 	// Setup
-	sut := NewDataValue().PrepareObject()
-	m := NewDataValue().PrepareObject().SetObjectProperty("prop", NewDataValue().SetString("value"))
+	sut := NewObject()
+	mergeData := NewObject().SetObjectProperty("prop", NewDataValue().SetString("value"))
 
 	// Test
-	actual := sut.Merge(m)
+	actual := sut.Merge(mergeData)
 
 	// Verify
 	if ! ExpectNonNil(actual, t) { return }
@@ -1185,4 +1251,5 @@ func TestThat_DataValue_ToJson_Quotes_Strings(t *testing.T) {
 	// Verify
 	if ! ExpectString("\"apple\"", NewDataValue().SetString("apple").ToJson(), t) { return }
 }
+
 

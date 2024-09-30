@@ -451,13 +451,13 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 	return r
 }
 func (r *DataValue) ReplaceArrayValue(index int, dataValue *DataValue) *DataValue {
-	if r.isImmutable {
-		r.err = fmt.Errorf("Data is immutable, cannot modify!")
-		return r
-	}
 	if DATA_TYPE_ARRAY != r.dataType {
 		r.err = fmt.Errorf("Not an array type; use PrepareArray() first!")
 		return nil
+	}
+	if r.isImmutable {
+		r.err = fmt.Errorf("Data is immutable, cannot modify!")
+		return r
 	}
 	r.err = nil
 	if (index < 0) || (index >= len(r.valueArr)) {
@@ -525,52 +525,35 @@ func (r *DataValue) SetInteger(value int64) *DataValue {
 func (r *DataValue) Select(selector string) *DataValue {
 	r.err = nil
 	// 1) An empty selector means we're already at the right place
-	if 0 == len(selector) {
-if nil != r.err { fmt.Printf("Select('%s') Error 1: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 1!\n", selector) }
-		return r
-	}
+	if 0 == len(selector) { return r }
 
 	// 1) If this isn't an Array or Object value...
 	if ! (r.IsArray() || r.IsObject()) {
 		r.err = fmt.Errorf("Selectors are only valid for Object or Array values")
-if nil != r.err { fmt.Printf("Select('%s') Error 2: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 2!\n", selector) }
 		return nil
 	}
 
 	// 2) Traverse the selector one element at a time
 	objectProperty, arrayIndex, newSelector, err := r.selectNextElement(selector)
-	if nil != err {
-		r.err = err
-if nil != r.err { fmt.Printf("Select('%s') Error 3: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 3!\n", selector) }
-		return nil
-	}
+	if nil != err { r.err = err; return nil }
 	if nil != objectProperty {
 		if r.HasObjectProperty(*objectProperty) {
 			// If the new selector starts with a '.' (object property separator) then chop it off
-if nil != r.err { fmt.Printf("Select('%s') Error 4a: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 4a!\n", selector) }
-			res := r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
-if nil != r.err { fmt.Printf("Select('%s') Error 4b: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 4b!\n", selector) }
-			return res
+			return r.GetObjectProperty(*objectProperty).Select(newSelector) // <- BEWARE: recursion!
 		}
 		r.err = fmt.Errorf("Selected Object Property '%s' doesn't exist", *objectProperty)
-if nil != r.err { fmt.Printf("Select('%s') Error 5: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 5!\n", selector) }
 		return nil
 	}
 	if nil != arrayIndex {
 		if r.GetArraySize() > *arrayIndex {
-if nil != r.err { fmt.Printf("Select('%s') Error 6a: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 6a!\n", selector) }
-			res := r.GetArrayValue(*arrayIndex).Select(newSelector) // <- BEWARE: recursion!
-if nil != r.err { fmt.Printf("Select('%s') Error 6b: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 6b!\n", selector) }
-			return res
+			return r.GetArrayValue(*arrayIndex).Select(newSelector) // <- BEWARE: recursion!
 		}
 		r.err = fmt.Errorf("Selected Array Index '%d' is out of bounds; Array size is %d", *arrayIndex, r.GetArraySize())
-if nil != r.err { fmt.Printf("Select('%s') Error 7: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 7!\n", selector) }
 		return nil
 	}
 
 	// selectNextElement() must return objectProperty, arrayIndex, or error and be handled above
 	r.err = fmt.Errorf("Unexpected error for selector '%s'", selector)
-if nil != r.err { fmt.Printf("Select('%s') Error 8: '%s'\n", selector, r.err.Error()) } else { fmt.Printf("Select('%s') OK 8!\n", selector) }
 	return nil
 }
 
@@ -603,20 +586,20 @@ func (r *DataValue) Merge(dataValue DataValueIfc) *DataValue {
 		return r
 	}
 	r.err = nil
-	if r.IsObject() && dataValue.IsObject() {
+	if (nil != dataValue) && r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
-		it := r.GetIterator()
+		it := dataValue.GetIterator()
 		for kvpi := it(); nil != kvpi; kvpi = it() {
 			if kvp, ok := kvpi.(KeyValuePair); ok {
-				dataValue.SetObjectProperty(kvp.Key, kvp.Value)
+				r.SetObjectProperty(kvp.Key, kvp.Value)
 			}
 		}
-	} else if r.IsArray() && dataValue.IsArray() {
+	} else if (nil != dataValue) && r.IsArray() && dataValue.IsArray() {
 		// Note: No deduplication for array values; pile dataValue's entries onto our tail
-		it := r.GetIterator()
+		it := dataValue.GetIterator()
 		for ivpi := it(); nil != ivpi; ivpi = it() {
 			if ivp, ok := ivpi.(IndexValuePair); ok {
-				dataValue.AppendArrayValue(ivp.Value)
+				r.AppendArrayValue(ivp.Value)
 			}
 		}
 	}
