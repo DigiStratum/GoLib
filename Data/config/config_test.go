@@ -243,3 +243,111 @@ func TestThat_Config_Dereference_iterates_for_object_few_reference_configs(t *te
 	if ! ExpectString("Greetings, Earthling - your lucky numbers are 333 and 3.14159: true %invalid%%[2]%!", actualValue.ToString(), t) { return }
 }
 
+func TestThat_Config_MergeConfig_returns_original_for_nil(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	sut.PrepareObject().
+		SetObjectProperty("prop1", data.NewString("Soup"))
+
+	// Test
+	actual := sut.MergeConfig(nil)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
+	if ! ExpectTrue(actual.HasObjectProperty("prop1"), t) { return }
+	if ! ExpectInt(1, len(actual.GetObjectProperties()), t) { return }
+}
+
+func TestThat_Config_MergeConfig_returns_original_for_array_vs_object_datavalue(t *testing.T) {
+	// Setup
+	expectedName := "prop1"
+	expectedValue := "Soup"
+	sut := NewConfig()
+	sut.PrepareObject().
+		SetObjectProperty(expectedName, data.NewString(expectedValue))
+	mergeCfg := NewConfig()
+	mergeCfg.PrepareArray().
+		AppendArrayValue(data.NewString("bogus"))
+
+	// Test
+	actual := sut.MergeConfig(mergeCfg)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectError(actual.GetError(), t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
+	if ! ExpectTrue(actual.HasObjectProperty(expectedName), t) { return }
+	if ! ExpectTrue(actual.GetObjectProperty(expectedName).IsString(), t) { return }
+	if ! ExpectString(expectedValue, actual.GetObjectProperty(expectedName).GetString(), t) { return }
+	if ! ExpectInt(1, len(actual.GetObjectProperties()), t) { return }
+}
+
+func TestThat_Config_MergeConfig_returns_original_for_object_vs_array_datavalue(t *testing.T) {
+	// Setup
+	expectedValue := "Toast"
+	sut := NewConfig()
+	sut.PrepareArray().
+		AppendArrayValue(data.NewString(expectedValue))
+	mergeCfg := NewConfig()
+	mergeCfg.PrepareObject().
+		SetObjectProperty("bogusprop", data.NewString("Salad"))
+
+	// Test
+	actual := sut.MergeConfig(mergeCfg)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectError(actual.GetError(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(1, actual.GetArraySize(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(0).IsString(), t) { return }
+	if ! ExpectString(expectedValue, actual.GetArrayValue(0).GetString(), t) { return }
+}
+
+func TestThat_Config_MergeConfig_merges_objects(t *testing.T) {
+	// Setup
+	expectedName := "prop2"
+	expectedValue := "Salad"
+	sut := NewConfig()
+	sut.PrepareObject().
+		SetObjectProperty("prop1", data.NewString("Soup"))
+	mergeCfg := NewConfig()
+	mergeCfg.PrepareObject().
+		SetObjectProperty(expectedName, data.NewString(expectedValue))
+
+	// Test
+	actual := sut.MergeConfig(mergeCfg)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
+	if ! ExpectTrue(actual.HasObjectProperty(expectedName), t) { return }
+	if ! ExpectTrue(actual.GetObjectProperty(expectedName).IsString(), t) { return }
+	if ! ExpectString(expectedValue, actual.GetObjectProperty(expectedName).GetString(), t) { return }
+	if ! ExpectInt(2, len(actual.GetObjectProperties()), t) { return }
+}
+
+func TestThat_Config_MergeConfig_merges_arrays(t *testing.T) {
+	// Setup
+	expectedValue := "Butter"
+	sut := NewConfig()
+	sut.PrepareArray().
+		AppendArrayValue(data.NewString("Toast"))
+	mergeCfg := NewConfig()
+	mergeCfg.PrepareArray().
+		AppendArrayValue(data.NewString(expectedValue))
+
+	// Test
+	actual := sut.MergeConfig(mergeCfg)
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectNoError(actual.GetError(), t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(2, actual.GetArraySize(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(1).IsString(), t) { return }
+	if ! ExpectString(expectedValue, actual.GetArrayValue(1).GetString(), t) { return }
+}
+

@@ -586,7 +586,11 @@ func (r *DataValue) Merge(dataValue DataValueIfc) *DataValue {
 		return r
 	}
 	r.err = nil
-	if (nil != dataValue) && r.IsObject() && dataValue.IsObject() {
+	if nil == dataValue {
+		r.err = fmt.Errorf("nil merge value, nothing possible!")
+		return r
+	}
+	if r.IsObject() && dataValue.IsObject() {
 		// Key used to deduplicate object properties; existing key values will be overwritten
 		it := dataValue.GetIterator()
 		for kvpi := it(); nil != kvpi; kvpi = it() {
@@ -594,7 +598,7 @@ func (r *DataValue) Merge(dataValue DataValueIfc) *DataValue {
 				r.SetObjectProperty(kvp.Key, kvp.Value)
 			}
 		}
-	} else if (nil != dataValue) && r.IsArray() && dataValue.IsArray() {
+	} else if r.IsArray() && dataValue.IsArray() {
 		// Note: No deduplication for array values; pile dataValue's entries onto our tail
 		it := dataValue.GetIterator()
 		for ivpi := it(); nil != ivpi; ivpi = it() {
@@ -602,6 +606,9 @@ func (r *DataValue) Merge(dataValue DataValueIfc) *DataValue {
 				r.AppendArrayValue(ivp.Value)
 			}
 		}
+	} else {
+		r.err = fmt.Errorf("mismatch value type, nothing possible!")
+		return r
 	}
 	return r
 }
