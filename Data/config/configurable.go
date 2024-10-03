@@ -28,15 +28,15 @@ type ConfigurableIfc interface {
 	// Our own interface
 	DeclareConfigItems(configItems ...ConfigItemIfc) *Configurable
 	Configure(config ConfigIfc) error
-	HasMissingConfigs() bool
 	GetMissingConfigs() []string
-	GetConfig() *Config
+	HasMissingConfigs() bool
+	GetConfig() ConfigIfc
 }
 
 // Exported to support embedding
 type Configurable struct {
 	*startable.Startable
-	config		*Config
+	config		ConfigIfc
 	declared	map[string]ConfigItemIfc	// Key is ConfigItem.name for fast lookups
 }
 
@@ -67,13 +67,10 @@ func (r *Configurable) DeclareConfigItems(configItems ...ConfigItemIfc) *Configu
 func (r *Configurable) Configure(config ConfigIfc) error {
 	// Disallow Configure() after we've already Started
 	if r.Startable.IsStarted() { return fmt.Errorf("Already started; Config is immutable now") }
-	r.config = NewConfig().MergeConfig(config)
+	if nil == config {
+		r.config = NewConfig()
+	} else { r.config = config }
 	return nil
-}
-
-// MissingConfigs as a bool!
-func (r *Configurable) HasMissingConfigs() bool {
-	return len(r.GetMissingConfigs()) > 0
 }
 
 // Verify that all required Configs are captured
@@ -86,7 +83,12 @@ func (r *Configurable) GetMissingConfigs() []string {
 	return r.config.GetMissing(requiredConfigs...)
 }
 
-func (r *Configurable) GetConfig() *Config {
+// MissingConfigs as a bool!
+func (r *Configurable) HasMissingConfigs() bool {
+	return len(r.GetMissingConfigs()) > 0
+}
+
+func (r *Configurable) GetConfig() ConfigIfc {
 	// Require Start() first to finalize Config
 	if ! r.Startable.IsStarted() { return nil }
 	return r.config
