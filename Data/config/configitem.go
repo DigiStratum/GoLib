@@ -18,7 +18,7 @@ import (
 )
 
 type CaptureFunc func (dataValue data.DataValueIfc) error
-type ValidateFunc func (dataValue data.DataValueIfc) bool
+type ValidateFunc func (dataValue data.DataValueIfc) error
 
 type ConfigItemIfc interface {
 	GetSelector() string
@@ -31,7 +31,7 @@ type ConfigItemIfc interface {
 
 	CanValidate() bool
 	ValidateWith(validateFunc ValidateFunc) *configItem
-	Validate(dataValue data.DataValueIfc) bool
+	Validate(dataValue data.DataValueIfc) error
 
 	SetDefault(dataValue data.DataValueIfc) *configItem
 }
@@ -72,14 +72,14 @@ func (r *configItem) IsRequired() bool {
 	return r.isRequired
 }
 
+// Capture
+// -----------------------------------------------
+
 func (r *configItem) SetDefault(dataValue data.DataValueIfc) *configItem {
 	r.defaultValue = dataValue
 	r.hasDefault = true
 	return r
 }
-
-// Capture
-// -----------------------------------------------
 
 func (r *configItem) CanCapture() bool {
 	return nil != r.captureFunc
@@ -134,9 +134,8 @@ func (r *configItem) ValidateWith(validateFunc ValidateFunc) *configItem {
 	return r
 }
 
-func (r *configItem) Validate(dataValue data.DataValueIfc) bool {
-	// You're calling Validate on a ConfigItem that can't be validated? Fail!
-	if ! r.CanValidate() { return false }
+func (r *configItem) Validate(dataValue data.DataValueIfc) error {
+	if ! r.CanValidate() { return fmt.Errorf("No validator set for this Config item!") }
 	return r.validateFunc(dataValue)
 }
 

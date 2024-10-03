@@ -114,12 +114,13 @@ func (r *Configurable) Start() error {
 
 		// If this ConfigItem has a Validation Func...
 		if (nil != configDataValue) && configItem.CanValidate() {
-			if ! configItem.Validate(configDataValue) {
+			if err := configItem.Validate(configDataValue); nil != err {
 				return fmt.Errorf(
-					"Config Item '%s' failed validation with value: (%s) '%s'",
+					"Config Item '%s' failed validation with value: (%s) '%s': %s",
 					selector,
 					configDataValue.GetType().ToString(),
 					configDataValue.ToString(),
+					err.Error(),
 				)
 			}
 		}
