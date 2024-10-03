@@ -21,7 +21,9 @@ TODO:
  * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data?
  * Add a Copy() method to deep-copy the tree (and clear state flags for error/immutability on copy)
-
+ * Add a Pluck() method to pluck out one or more selectors as a new DataValue, exxectively a subset
+   of the original, though capable of effectively replicating the entire original as with Copy()
+ 
  * Add support for [de]referencing; make references an embeddable string (like mustache), use
    configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
    convert the value type to that of the selected reference, null if it doesn't exist. For partial
@@ -68,6 +70,20 @@ const (
 	DATA_TYPE_OBJECT
 	DATA_TYPE_ARRAY
 )
+
+func (r DataType) ToString() string {
+	switch r {
+		case DATA_TYPE_INVALID: return "invalid"
+		case DATA_TYPE_NULL: return "null"
+		case DATA_TYPE_BOOLEAN: return "boolean"
+		case DATA_TYPE_INTEGER: return "integer"
+		case DATA_TYPE_FLOAT: return "float"
+		case DATA_TYPE_STRING: return "string"
+		case DATA_TYPE_OBJECT: return "object"
+		case DATA_TYPE_ARRAY: return "array"
+	}
+	return ""
+}
 
 type DataValueIfc interface {
 	iterable.IterableIfc

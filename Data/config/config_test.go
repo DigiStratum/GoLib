@@ -9,8 +9,6 @@ TODO:
 */
 
 import(
-	//"fmt"
-	//"strings"
 	"testing"
 
 	"GoLib/Data"

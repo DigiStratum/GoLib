@@ -5,6 +5,12 @@ package config
 Configurable is an interface with base implementation that allows any construct to embed the data
 and behaviors associated with being provided with Config data and ensuring that it is complete.
 
+Note that while some of what is covered here could also be covered with general purpose dependency
+injection, however configurability and config details are such fundamental building blocks that we
+believe they deserve to be first class citizens of our framework for improved clarity and config
+specific operations that are not to be confused or comingled with other dependencies (which may
+also have need of some or all of the config data).
+
 */
 
 import (
@@ -20,7 +26,7 @@ type ConfigurableIfc interface {
 	startable.StartableIfc
 
 	// Our own interface
-	AddConfigItems(configItems ...ConfigItemIfc) *Configurable
+	DeclareConfigItems(configItems ...ConfigItemIfc) *Configurable
 	Configure(config ConfigIfc) error
 	HasMissingConfigs() bool
 	GetMissingConfigs() []string
@@ -44,14 +50,14 @@ func NewConfigurable(configItems ...ConfigItemIfc) *Configurable {
 		declared:	make(map[string]ConfigItemIfc),
 		config:		NewConfig(),
 	}
-	return c.AddConfigItems(configItems...)
+	return c.DeclareConfigItems(configItems...)
 }
 
 // -------------------------------------------------------------------------------------------------
 // ConfigurableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *Configurable) AddConfigItems(configItems ...ConfigItemIfc) *Configurable {
+func (r *Configurable) DeclareConfigItems(configItems ...ConfigItemIfc) *Configurable {
 	for _, configItem := range configItems { r.declared[configItem.GetSelector()] = configItem }
 	return r
 }
@@ -73,15 +79,10 @@ func (r *Configurable) HasMissingConfigs() bool {
 // Verify that all required Configs are captured
 func (r *Configurable) GetMissingConfigs() []string {
 	requiredConfigs := []string{}
-	//missingConfigs := []string{}
-	//for name, declaredConfigItem := range r.declared {
 	for selector, declaredConfigItem := range r.declared {
 		if ! declaredConfigItem.IsRequired() { continue }
-		//if ! r.config.Has(name) { continue }
-		//missingConfigs = append(missingConfigs, name)
 		requiredConfigs = append(requiredConfigs, selector)
 	}
-	//return missingConfigs
 	return r.config.GetMissing(requiredConfigs...)
 }
 
@@ -115,8 +116,10 @@ func (r *Configurable) Start() error {
 		if (nil != configDataValue) && configItem.CanValidate() {
 			if ! configItem.Validate(configDataValue) {
 				return fmt.Errorf(
-					"Configuration Item '%s' failed validation with value: '%s'",
-					selector, configDataValue.ToString(),
+					"Config Item '%s' failed validation with value: (%s) '%s'",
+					selector,
+					configDataValue.GetType().ToString(),
+					configDataValue.ToString(),
 				)
 			}
 		}
