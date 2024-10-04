@@ -1,6 +1,7 @@
 package config
 
 import(
+	"fmt"
 	"testing"
 
 	"GoLib/Data"
@@ -10,7 +11,7 @@ import(
 
 // Interface
 
-func TestThat_Config_NewConfigurable_Returns_Instance(t *testing.T) {
+func TestThat_Configurable_NewConfigurable_Returns_Instance(t *testing.T) {
 	// Setup
 	var sut ConfigurableIfc = NewConfigurable() // Verifies that result satisfies IFC
 
@@ -20,7 +21,7 @@ func TestThat_Config_NewConfigurable_Returns_Instance(t *testing.T) {
 
 // DeclareConfigItems
 
-func TestThat_Config_DeclareConfigItems_returns_self(t *testing.T) {
+func TestThat_Configurable_DeclareConfigItems_returns_self(t *testing.T) {
 	// Setup
 	sut := NewConfigurable()
 
@@ -32,7 +33,7 @@ func TestThat_Config_DeclareConfigItems_returns_self(t *testing.T) {
 	if ! ExpectInt(0, len(actual.declared), t) { return }
 }
 
-func TestThat_Config_DeclareConfigItems_declares_items_by_selector(t *testing.T) {
+func TestThat_Configurable_DeclareConfigItems_declares_items_by_selector(t *testing.T) {
 	// Setup
 	sut := NewConfigurable()
 
@@ -49,7 +50,7 @@ func TestThat_Config_DeclareConfigItems_declares_items_by_selector(t *testing.T)
 
 // Configure
 
-func TestThat_Config_Configure_Returns_error_when_started(t *testing.T) {
+func TestThat_Configurable_Configure_Returns_error_when_started(t *testing.T) {
 	// Setup
 	sut := NewConfigurable()
 
@@ -63,7 +64,7 @@ func TestThat_Config_Configure_Returns_error_when_started(t *testing.T) {
 	if ! ExpectError(actualErr2, t) { return }
 }
 
-func TestThat_Config_Configure_Replaces_Config_data(t *testing.T) {
+func TestThat_Configurable_Configure_Replaces_Configurable_data(t *testing.T) {
 	// Setup
 	sut := NewConfigurable()
 	initialConfig := NewConfig()
@@ -85,7 +86,7 @@ func TestThat_Config_Configure_Replaces_Config_data(t *testing.T) {
 
 // GetMissingConfigs | HasMissingConfigs
 
-func TestThat_Config_No_MissingConfigs_when_nothing_declared(t *testing.T) {
+func TestThat_Configurable_No_MissingConfigs_when_nothing_declared(t *testing.T) {
 	// Setup
 	sut := NewConfigurable()
 
@@ -94,7 +95,7 @@ func TestThat_Config_No_MissingConfigs_when_nothing_declared(t *testing.T) {
 	if ! ExpectFalse(sut.HasMissingConfigs(), t) { return }
 }
 
-func TestThat_Config_Has_MissingConfigs_when_required_but_missing(t *testing.T) {
+func TestThat_Configurable_Has_MissingConfigs_when_required_but_missing(t *testing.T) {
 	// Setup
 	sut := NewConfigurable().
 		DeclareConfigItems(
@@ -113,7 +114,7 @@ func TestThat_Config_Has_MissingConfigs_when_required_but_missing(t *testing.T) 
 	if ! ExpectTrue(sut.HasMissingConfigs(), t) { return }
 }
 
-func TestThat_Config_No_MissingConfigs_when_required_and_provided(t *testing.T) {
+func TestThat_Configurable_No_MissingConfigs_when_required_and_provided(t *testing.T) {
 	// Setup
 	sut := NewConfigurable().
 		DeclareConfigItems(
@@ -134,5 +135,101 @@ func TestThat_Config_No_MissingConfigs_when_required_and_provided(t *testing.T) 
 	if ! ExpectFalse(sut.HasMissingConfigs(), t) { return }
 }
 
+// Start
+
+func TestThat_Configurable_Start_returns_no_error_by_default(t *testing.T) {
+	// Setup
+	sut := NewConfigurable()
+
+	// Verify
+	if ! ExpectNoError(sut.Start(), t) { return }
+	if ! ExpectNoError(sut.Start(), t) { return } // Also no error when starting a second time
+}
+
+func TestThat_Configurable_Start_returns_error_with_missing_configs(t *testing.T) {
+	// Setup
+	sut := NewConfigurable().
+		DeclareConfigItems(
+			NewConfigItem("c1"),
+			NewConfigItem("c2").SetRequired(),
+			NewConfigItem("c3").SetRequired(),
+			NewConfigItem("c4").SetRequired(),
+		)
+	config := NewConfig()
+	config.PrepareObject().
+		SetObjectProperty("c3", data.NewNull())
+	sut.Configure(config)
+
+	// Verify
+	if ! ExpectError(sut.Start(), t) { return }
+}
+
+func TestThat_Configurable_Start_returns_error_for_validation_errors(t *testing.T) {
+	// Setup
+	sut := NewConfigurable().
+		DeclareConfigItems(
+			NewConfigItem("c1").ValidateWith(func (dv data.DataValueIfc) error {
+				return fmt.Errorf("fail!")
+			}),
+		)
+	config := NewConfig()
+	config.PrepareObject().
+		SetObjectProperty("c1", data.NewNull())
+	sut.Configure(config)
+
+	// Verify
+	if ! ExpectError(sut.Start(), t) { return }
+}
+
+func TestThat_Configurable_Start_returns_error_for_capture_errors(t *testing.T) {
+	// Setup
+	sut := NewConfigurable().
+		DeclareConfigItems(
+			NewConfigItem("c1").CaptureWith(func (dv data.DataValueIfc) error {
+				return fmt.Errorf("fail!")
+			}),
+		)
+	config := NewConfig()
+	config.PrepareObject().
+		SetObjectProperty("c1", data.NewNull())
+	sut.Configure(config)
+
+	// Verify
+	if ! ExpectError(sut.Start(), t) { return }
+}
+
+
+
+// GetConfig
+
+func TestThat_Configurable_Returns_nil_when_not_started(t *testing.T) {
+	// Setup
+	sut := NewConfigurable()
+
+	// Verify
+	if ! ExpectNil(sut.GetConfig(), t) { return }
+}
+
+func TestThat_Configurable_Returns_config_when_started(t *testing.T) {
+	// Setup
+	sut := NewConfigurable()
+	expectedKey := "prop"
+	expectedValue := "value"
+	cfg := NewConfig()
+	cfg.PrepareObject().
+		SetObjectProperty(expectedKey, data.NewString(expectedValue))
+	sut.Configure(cfg)
+	sut.Start()
+
+	// Test
+	actual := sut.GetConfig()
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actual.IsObject(), t) { return }
+	if ! ExpectNonNil(actual.GetObjectProperty(expectedKey), t) { return }
+	if ! ExpectTrue(actual.GetObjectProperty(expectedKey).IsString(), t) { return }
+	if ! ExpectString(expectedValue, actual.GetObjectProperty(expectedKey).GetString(), t) { return }
+}
 
 
