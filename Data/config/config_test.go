@@ -26,6 +26,23 @@ func TestThat_Config_NewConfig_ReturnsInstance(t *testing.T) {
 	if ! ExpectNonNil(sut, t) { return }
 }
 
+/*
+// FIXME: How do we make this happen when DataValue is embedded into Config? Is Has-A vs Is-A the only viable solution?
+func TestThat_Config_Prevents_External_Tampering_of_embedded_Config(t *testing.T) {
+	// Setup
+	sut := NewConfig()
+	sut.SetString("boom!")
+
+	// Test
+	sut.DataValue = data.NewString("wah!")
+
+	// Verify
+	if ! ExpectString("boom!", sut.GetString(), t) { return }
+}
+*/
+
+// DereferenceString
+
 func TestThat_Config_DereferenceString_Returns_Original_String_without_selectors(t *testing.T) {
 	// Setup
 	sut := NewConfig()
@@ -79,6 +96,8 @@ func TestThat_Config_DereferenceString_Returns_String_with_object_property_selec
 	if ! ExpectInt(1, actualNum, t) { return }
 	if ! ExpectString("Howdy Doody!", *actual, t) { return }
 }
+
+// Dereference
 
 // Non-Structures
 
@@ -240,6 +259,8 @@ func TestThat_Config_Dereference_iterates_for_object_few_reference_configs(t *te
 	if ! ExpectNonNil(actualValue, t) { return }
 	if ! ExpectString("Greetings, Earthling - your lucky numbers are 333 and 3.14159: true %invalid%%[2]%!", actualValue.ToString(), t) { return }
 }
+
+// MergeConfig
 
 func TestThat_Config_MergeConfig_returns_original_for_nil(t *testing.T) {
 	// Setup

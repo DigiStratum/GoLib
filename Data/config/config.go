@@ -18,7 +18,6 @@ reference depth to prevent runaway recursion.
 FIXME:
  * Ensure that Config.DataValue cannot be replaced from outside; UNexport Config as config if
    this is so.
- * Set DataValue as immutable after Derference() - it's read-only configuration at that point.
 
 TODO:
  * Consider a configurable logger - if we wanted Config to log warnings/errors via logger, but
