@@ -18,7 +18,6 @@ capture/get approach is used throughout for consistency. Thus any consumer/exten
 will be able to use a uniform method of error discovery and handling instead of varying by method.
 
 TODO:
- * Refactor Config classes to derive from this instead of Hashmap
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data?
  * Add a Copy() method to deep-copy the tree (and clear state flags for error/immutability on copy)
  * Add a Pluck() method to pluck out one or more selectors as a new DataValue, exxectively a subset
@@ -156,7 +155,7 @@ type DataValue struct {
 	valueInteger		int64
 	valueFloat		float64
 	valueString		string
-	valueArr		[]*DataValue
+	valueArray		[]*DataValue
 	valueObject		map[string]*DataValue
 }
 
@@ -184,6 +183,34 @@ func NewArray() *DataValue { return NewDataValue().PrepareArray() }
 func NewFloat(value float64) *DataValue { return NewDataValue().SetFloat(value) }
 
 func NewInteger(value int64) *DataValue { return NewDataValue().SetInteger(value) }
+
+// Clone a deep copy of this entire thing; all pointers dereferenced and copied by value
+func Clone(dataValue *DataValue) *DataValue {
+	dv := DataValue{
+		err:			dataValue.err,
+		isImmutable:		dataValue.isImmutable,
+		dataType:		dataValue.dataType,
+		valueBoolean:		dataValue.valueBoolean,
+		valueInteger:		dataValue.valueInteger,
+		valueFloat:		dataValue.valueFloat,
+		valueString:		dataValue.valueString,
+	}
+	switch dataValue.dataType {
+		case DATA_TYPE_ARRAY:
+			dv.valueArray = make([]*DataValue, 0)
+			for _, arrayValue := range dataValue.valueArray {
+				dv.valueArray = append(dv.valueArray, Clone(arrayValue)) // <- BEWARE: recursion!
+			}
+
+		case DATA_TYPE_OBJECT:
+			dv.valueObject = make(map[string]*DataValue)
+			for key, objectValue := range dataValue.valueObject {
+				dv.valueObject[key] = Clone(objectValue) // <- BEWARE: recursion!
+			}
+	}
+
+	return &dv
+}
 
 // -------------------------------------------------------------------------------------------------
 // DataValueIfc
@@ -423,7 +450,7 @@ func (r *DataValue) PrepareArray() *DataValue {
 	}
 	r.err = nil
 	r.dataType = DATA_TYPE_ARRAY
-	r.valueArr = make([]*DataValue, 0)
+	r.valueArray = make([]*DataValue, 0)
 	return r
 }
 
@@ -433,7 +460,7 @@ func (r *DataValue) GetArraySize() int {
 		return 0
 	}
 	r.err = nil
-	return len(r.valueArr)
+	return len(r.valueArray)
 }
 
 func (r *DataValue) GetArrayValue(index int) *DataValue {
@@ -442,11 +469,11 @@ func (r *DataValue) GetArrayValue(index int) *DataValue {
 		return nil
 	}
 	r.err = nil
-	if (index < 0) || (index >= len(r.valueArr)) {
-		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArr) - 1))
+	if (index < 0) || (index >= len(r.valueArray)) {
+		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArray) - 1))
 		return nil
 	}
-	return r.valueArr[index]
+	return r.valueArray[index]
 }
 
 func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
@@ -463,7 +490,7 @@ func (r *DataValue) AppendArrayValue(dataValue *DataValue) *DataValue {
 		return r
 	}
 	r.err = nil
-	r.valueArr = append(r.valueArr, dataValue)
+	r.valueArray = append(r.valueArray, dataValue)
 	return r
 }
 func (r *DataValue) ReplaceArrayValue(index int, dataValue *DataValue) *DataValue {
@@ -476,12 +503,12 @@ func (r *DataValue) ReplaceArrayValue(index int, dataValue *DataValue) *DataValu
 		return r
 	}
 	r.err = nil
-	if (index < 0) || (index >= len(r.valueArr)) {
-		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArr) - 1))
+	if (index < 0) || (index >= len(r.valueArray)) {
+		r.err = fmt.Errorf("Array index %d out of bounds; valid range is 0 to %d", index, (len(r.valueArray) - 1))
 		return nil
 	}
 	if nil == dataValue { dataValue = NewNull() }
-	r.valueArr[index] = dataValue
+	r.valueArray[index] = dataValue
 	return r
 }
 
@@ -816,7 +843,7 @@ func (r *DataValue) stringify(quoteStrings bool) string {
 			var sb strings.Builder
 			sb.WriteString("[")
 			sep := ""
-			for _, value := range r.valueArr {
+			for _, value := range r.valueArray {
 				// Note: always quote strings in structured data, otherwise they can break the structure!
 				strValue := value.stringify(true) // <- Recusrsion Alert!
 				sb.WriteString(fmt.Sprintf("%s%s", sep, strValue))

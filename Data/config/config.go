@@ -76,7 +76,8 @@ func NewConfig() *Config {
 // Create instancer from DataValue (which can have its own factories from various data sources, like
 // JSON, YAML, XML etc., string/stream/file/environment, etc)
 func FromDataValue(dataValue *data.DataValue) *Config {
-	r := &Config{ DataValue: dataValue }
+	r := &Config{ DataValue: data.Clone(dataValue) }
+
 	return r.
 		SetMaxDepth(DEFAULT_MAX_REFERENCE_DEPTH).
 		SetDelimiters(
@@ -121,10 +122,13 @@ func (r *Config) DereferenceString(str string) (*string, int) {
 }
 
 // Dereference values with %reference% selectors against referenceConfig(s); returns num substitutions
-// Note that this is a single-pass iteration dereference; if subs comes out > 0 then an additinoal
-// pass may be called for to see if more subs are possible (think of subtitutions that themselves
-// contain additional keys needing deferencing). A DereferenceAll() method can run N passes up to
-// some cycle limit to avoid perpetual loop scenarios.
+// This is a multple-pass iteration dereference; if subs comes out > 0 then an additional pass may
+// be called for to see if more subs are possible (think of subtitutions that themselves contain
+// additional keys needing deferencing), so we make another pass up to a configured max depth.
+// TODO: Technically max passes is not "depth" since this is non-recursive; rename to "derefPassMax"
+// TODO: It doesn't seem like the return value int actually provides any utility value. Maybe just
+// return self and set immutable - should only need to call this once. Perform any mutations/merges
+// needed before Dereferencing, and then it's baked, no more changes!
 func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 	referenceDepth := 0
 	subs := 0
@@ -137,6 +141,7 @@ func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 	return subs
 }
 
+// Merge properties of passed config into our own embedded data
 func (r *Config) MergeConfig(config ConfigIfc) *Config {
 	r.DataValue.Merge(config)
 	return r
