@@ -26,21 +26,6 @@ func TestThat_Config_NewConfig_ReturnsInstance(t *testing.T) {
 	if ! ExpectNonNil(sut, t) { return }
 }
 
-/*
-// FIXME: How do we make this happen when DataValue is embedded into Config? Is Has-A vs Is-A the only viable solution?
-func TestThat_Config_Prevents_External_Tampering_of_embedded_Config(t *testing.T) {
-	// Setup
-	sut := NewConfig()
-	sut.SetString("boom!")
-
-	// Test
-	sut.DataValue = data.NewString("wah!")
-
-	// Verify
-	if ! ExpectString("boom!", sut.GetString(), t) { return }
-}
-*/
-
 // DereferenceString
 
 func TestThat_Config_DereferenceString_Returns_Original_String_without_selectors(t *testing.T) {
@@ -368,5 +353,27 @@ func TestThat_Config_MergeConfig_merges_arrays(t *testing.T) {
 	if ! ExpectInt(2, actual.GetArraySize(), t) { return }
 	if ! ExpectTrue(actual.GetArrayValue(1).IsString(), t) { return }
 	if ! ExpectString(expectedValue, actual.GetArrayValue(1).GetString(), t) { return }
+}
+
+// CloneConfig
+
+func TestThat_Config_CloneConfig_Copies_the_config(t *testing.T) {
+	// Setup
+	sut := NewConfig().
+		SetDelimiters('{', '}').
+		SetMaxDepth(1)
+	sut.PrepareArray().
+		AppendArrayValue(data.NewString("Toast"))
+
+	// Test
+	cfg := sut.CloneConfig()
+
+	// Verify
+	if ! ExpectTrue(cfg.IsArray(), t) { return }
+	if ! ExpectInt(1, cfg.GetArraySize(), t) { return }
+	if ! ExpectString("Toast", sut.GetArrayValue(0).GetString(), t) { return }
+	if ! ExpectTrue('{' == cfg.refDelimOpener, t) { return }
+	if ! ExpectTrue('}' == cfg.refDelimCloser, t) { return }
+	if ! ExpectInt(1, cfg.refDepthMax, t) { return }
 }
 

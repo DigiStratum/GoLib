@@ -15,10 +15,6 @@ based on delimiter encapsulated identifiers which are handled as DataValue selec
 be nested such that multiple reference Configs can cross-reference each other up to a maximum
 reference depth to prevent runaway recursion.
 
-FIXME:
- * Ensure that Config.DataValue cannot be replaced from outside; UNexport Config as config if
-   this is so.
-
 TODO:
  * Consider a configurable logger - if we wanted Config to log warnings/errors via logger, but
    logger needs Config to initialize, then a circular dependency would be formed, an anti-pattern
@@ -54,6 +50,7 @@ type ConfigIfc interface {
 	DereferenceString(str string) (*string, int)
 	Dereference(referenceConfigs ...ConfigIfc) int
 	MergeConfig(config ConfigIfc) *Config
+	CloneConfig() *Config
 }
 
 type Config struct {
@@ -62,7 +59,6 @@ type Config struct {
 	refDepthMax		int
 	refDelimOpener		byte
 	refDelimCloser		byte
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -76,7 +72,7 @@ func NewConfig() *Config {
 // Create instancer from DataValue (which can have its own factories from various data sources, like
 // JSON, YAML, XML etc., string/stream/file/environment, etc)
 func FromDataValue(dataValue *data.DataValue) *Config {
-	r := &Config{ DataValue: data.Clone(dataValue) }
+	r := &Config{ DataValue: dataValue.Clone() }
 
 	return r.
 		SetMaxDepth(DEFAULT_MAX_REFERENCE_DEPTH).
@@ -145,6 +141,15 @@ func (r *Config) Dereference(referenceConfigs ...ConfigIfc) int {
 func (r *Config) MergeConfig(config ConfigIfc) *Config {
 	r.DataValue.Merge(config)
 	return r
+}
+
+func (r *Config) CloneConfig() *Config {
+	return &Config{
+		DataValue:		r.DataValue.Clone(),
+		refDepthMax:		r.refDepthMax,
+		refDelimOpener:		r.refDelimOpener,
+		refDelimCloser:		r.refDelimCloser,
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
