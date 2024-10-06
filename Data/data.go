@@ -19,23 +19,10 @@ will be able to use a uniform method of error discovery and handling instead of 
 
 TODO:
  * Add a generic selector Drop(selector string) method to Drop ANY matched selector from the Data?
- * Add a Copy() method to deep-copy the tree (and clear state flags for error/immutability on copy)
  * Add a Pluck() method to pluck out one or more selectors as a new DataValue, exxectively a subset
    of the original, though capable of effectively replicating the entire original as with Copy()
- 
- * Add support for [de]referencing; make references an embeddable string (like mustache), use
-   configurable start/stop delimiters with default; for whole-string references like "{{sel.ect.or}}"
-   convert the value type to that of the selected reference, null if it doesn't exist. For partial
-   references like "See also: {{sel.ect.or}}", convert the value type to string and perform string
-   replacement, empty string if it doesn't exist. Introduce "RDATA" envelope to encode metadata to
-   describe the encoding within, versioning, etc. to help with future-proofing, versioning, etc.
-   ^^^ This functionality would belong in Config extension, NOT here in the base
-
- * Add support for start/stop DataValue callback events
  * Add support for chunked document loading for streaming data sources (avoid loading entire
    document into memory before lexing into structured data)
- * Add support for conveniences of Hashmap, Config, and other popular libraries like underscore.js
-   with "pluck", etc
  * Add YAML loader/lexer like json
  * Add INI loader/lexer like json
  * Add XML loader/lexer like json
@@ -56,33 +43,6 @@ import (
 
 	"GoLib/Data/iterable"
 )
-
-type DataType int
-
-const (
-	DATA_TYPE_INVALID DataType = iota
-	DATA_TYPE_NULL
-	DATA_TYPE_BOOLEAN
-	DATA_TYPE_INTEGER
-	DATA_TYPE_FLOAT
-	DATA_TYPE_STRING
-	DATA_TYPE_OBJECT
-	DATA_TYPE_ARRAY
-)
-
-func (r DataType) ToString() string {
-	switch r {
-		case DATA_TYPE_INVALID: return "invalid"
-		case DATA_TYPE_NULL: return "null"
-		case DATA_TYPE_BOOLEAN: return "boolean"
-		case DATA_TYPE_INTEGER: return "integer"
-		case DATA_TYPE_FLOAT: return "float"
-		case DATA_TYPE_STRING: return "string"
-		case DATA_TYPE_OBJECT: return "object"
-		case DATA_TYPE_ARRAY: return "array"
-	}
-	return ""
-}
 
 type DataValueIfc interface {
 	iterable.IterableIfc
@@ -145,6 +105,7 @@ type DataValueIfc interface {
 	Merge(dataValue DataValueIfc) *DataValue
 	ToString() string
 	ToJson() string
+	Clone() *DataValue
 }
 
 type DataValue struct {
@@ -183,34 +144,6 @@ func NewArray() *DataValue { return NewDataValue().PrepareArray() }
 func NewFloat(value float64) *DataValue { return NewDataValue().SetFloat(value) }
 
 func NewInteger(value int64) *DataValue { return NewDataValue().SetInteger(value) }
-
-// Clone a deep copy of this entire thing; all pointers dereferenced and copied by value
-func Clone(dataValue *DataValue) *DataValue {
-	dv := DataValue{
-		err:			dataValue.err,
-		isImmutable:		dataValue.isImmutable,
-		dataType:		dataValue.dataType,
-		valueBoolean:		dataValue.valueBoolean,
-		valueInteger:		dataValue.valueInteger,
-		valueFloat:		dataValue.valueFloat,
-		valueString:		dataValue.valueString,
-	}
-	switch dataValue.dataType {
-		case DATA_TYPE_ARRAY:
-			dv.valueArray = make([]*DataValue, 0)
-			for _, arrayValue := range dataValue.valueArray {
-				dv.valueArray = append(dv.valueArray, Clone(arrayValue)) // <- BEWARE: recursion!
-			}
-
-		case DATA_TYPE_OBJECT:
-			dv.valueObject = make(map[string]*DataValue)
-			for key, objectValue := range dataValue.valueObject {
-				dv.valueObject[key] = Clone(objectValue) // <- BEWARE: recursion!
-			}
-	}
-
-	return &dv
-}
 
 // -------------------------------------------------------------------------------------------------
 // DataValueIfc
@@ -664,6 +597,34 @@ func (r *DataValue) ToString() string {
 func (r *DataValue) ToJson() string {
 	r.err = nil
 	return r.stringify(true)
+}
+
+// Clone a deep copy of this entire thing; all pointers dereferenced and copied by value
+func (r *DataValue) Clone() *DataValue {
+	dv := DataValue{
+		err:			r.err,
+		isImmutable:		r.isImmutable,
+		dataType:		r.dataType,
+		valueBoolean:		r.valueBoolean,
+		valueInteger:		r.valueInteger,
+		valueFloat:		r.valueFloat,
+		valueString:		r.valueString,
+	}
+	switch r.dataType {
+		case DATA_TYPE_ARRAY:
+			dv.valueArray = make([]*DataValue, 0)
+			for _, arrayValue := range r.valueArray {
+				dv.valueArray = append(dv.valueArray, arrayValue.Clone()) // <- BEWARE: recursion!
+			}
+
+		case DATA_TYPE_OBJECT:
+			dv.valueObject = make(map[string]*DataValue)
+			for key, objectValue := range r.valueObject {
+				dv.valueObject[key] = objectValue.Clone() // <- BEWARE: recursion!
+			}
+	}
+
+	return &dv
 }
 
 // -------------------------------------------------------------------------------------------------

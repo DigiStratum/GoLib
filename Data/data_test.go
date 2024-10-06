@@ -883,6 +883,8 @@ func makeBigDataValue() *DataValue {
 		)
 }
 
+// Select
+
 func TestThat_DataValue_Select_Returns_Values_For_Good_Selectors(t *testing.T) {
 	// Setup
 	sut := makeBigDataValue()
@@ -969,6 +971,8 @@ func TestThat_DataValue_Select_Returns_nil_and_error_for_bad_object_property_nam
 	if ! ExpectError(sut.GetError(), t) { return }
 }
 
+// Merge
+
 func TestThat_DataValue_Merge_sets_error_when_immutable(t *testing.T) {
 	// Setup
 	sut := NewArray().SetImmutable()
@@ -976,6 +980,17 @@ func TestThat_DataValue_Merge_sets_error_when_immutable(t *testing.T) {
 	// Verify
 	if ! ExpectNoError(sut.GetError(), t) { return }
 	sut.Merge(NewArray())
+	if ! ExpectError(sut.GetError(), t) { return }
+}
+
+func TestThat_DataValue_Merge_sets_error_when_given_nil(t *testing.T) {
+	// Setup
+	sut := NewArray()
+
+	// Test
+	sut.Merge(nil)
+
+	// Verify
 	if ! ExpectError(sut.GetError(), t) { return }
 }
 
@@ -1021,6 +1036,8 @@ func TestThat_DataValue_Merge_Merges_DataValue_for_Arrays(t *testing.T) {
 	if ! ExpectInt64(33, dv.GetInteger(), t) { return }
 }
 
+// HasAll
+
 func TestThat_DataValue_HasAll_returns_true_for_empty_list(t *testing.T) {
 	// Setup
 	sut := NewDataValue()
@@ -1036,6 +1053,8 @@ func TestThat_DataValue_HasAll_returns_false_for_missing_selector(t *testing.T) 
 	// Verify
 	if ! ExpectFalse(sut.HasAll("bogus"), t) { return }
 }
+
+// GetMissing
 
 func TestThat_DataValue_GetMissing_returns_empty_set(t *testing.T) {
 	// Setup
@@ -1072,6 +1091,7 @@ func TestThat_DataValue_GetMissing_notices_matching_selectors(t *testing.T) {
 	if ! ExpectInt(0, len(actual), t) { return }
 }
 
+// GetIterator
 
 func TestThat_DataValue_GetIterator_Returns_nil(t *testing.T) {
 	// Setup
@@ -1170,6 +1190,8 @@ func TestThat_DataValue_GetIterator_Returns_Array_Iterator(t *testing.T) {
 	}
 }
 
+// ToString
+
 func TestThat_DataValue_ToString_Returns_empty_string_for_invalid(t *testing.T) {
 	// Verify
 	if ! ExpectString("", NewDataValue().ToString(), t) { return }
@@ -1246,10 +1268,49 @@ func TestThat_DataValue_ToString_Returns_object_in_array(t *testing.T) {
 	if ! ExpectString("[{\"prop\":\"val\"}]", actual, t) { return }
 }
 
+// ToJson
+
 // The only difference in string encodings for Json is that we containstrings with quotes
 func TestThat_DataValue_ToJson_Quotes_Strings(t *testing.T) {
 	// Verify
 	if ! ExpectString("\"apple\"", NewDataValue().SetString("apple").ToJson(), t) { return }
 }
 
+// Clone
+
+func TestThat_DataValue_Clone_Returns_deep_copy(t *testing.T) {
+	// Setup
+	var expectedInt int64 = 13
+	var expectedFloat float64 = 3.14159
+	expectedString := "bananas"
+	sut := NewDataValue().PrepareArray().
+		AppendArrayValue(NewInteger(expectedInt)).
+		AppendArrayValue(NewString(expectedString)).
+		AppendArrayValue(NewObject().
+			SetObjectProperty("float", NewFloat(expectedFloat)).
+			SetObjectProperty("boolean", NewBoolean(true)).
+			SetObjectProperty("null", NewNull()),
+	)
+
+	// Test
+	actual := sut.Clone()
+
+	// Verify
+	if ! ExpectNonNil(actual, t) { return }
+	if ! ExpectTrue(actual.IsArray(), t) { return }
+	if ! ExpectInt(3, actual.GetArraySize(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(0).IsInteger(), t) { return }
+	if ! ExpectInt64(expectedInt, actual.GetArrayValue(0).GetInteger(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(1).IsString(), t) { return }
+	if ! ExpectString(expectedString, actual.GetArrayValue(1).GetString(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).IsObject(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).HasObjectProperty("float"), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).GetObjectProperty("float").IsFloat(), t) { return }
+	if ! ExpectFloat64(expectedFloat, actual.GetArrayValue(2).GetObjectProperty("float").GetFloat(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).HasObjectProperty("boolean"), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).GetObjectProperty("boolean").GetBoolean(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).GetObjectProperty("boolean").IsBoolean(), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).HasObjectProperty("null"), t) { return }
+	if ! ExpectTrue(actual.GetArrayValue(2).GetObjectProperty("null").IsNull(), t) { return }
+}
 
