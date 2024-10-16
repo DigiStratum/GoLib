@@ -8,6 +8,8 @@ started.
 
 TODO:
  * Test coverage
+ * Separate Lockable (Lockability to prevent mutations) from Startable (having a Start() func);
+   Startable must be Lockable to block re-entry, but Lockable needn't be Startable...
 */
 
 type StartableIfc interface {
