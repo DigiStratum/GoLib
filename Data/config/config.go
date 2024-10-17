@@ -69,7 +69,7 @@ func NewConfig() *Config {
 	return FromDataValue(data.NewDataValue())
 }
 
-// Create instancer from DataValue (which can have its own factories from various data sources, like
+// Create instance from DataValue (which can have its own factories from various data sources, like
 // JSON, YAML, XML etc., string/stream/file/environment, etc)
 func FromDataValue(dataValue *data.DataValue) *Config {
 	r := &Config{ DataValue: dataValue.Clone() }

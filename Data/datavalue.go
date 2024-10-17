@@ -18,6 +18,8 @@ capture/get approach is used throughout for consistency. Thus any consumer/exten
 will be able to use a uniform method of error discovery and handling instead of varying by method.
 
 TODO:
+ * Add IsValid(rules) method where caller can specify validation rules and we return true/false
+   based on validating the rules against the current value
  * Add a typed Select method for each valid type (ala SelectInteger(selector), SelectArray(selector)
    so that caller can do type enforcement at the time of the select operation instead of having to
    validate it afterward. If the result is nil, then nothing matching selector+type exists.
