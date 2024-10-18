@@ -18,8 +18,17 @@ capture/get approach is used throughout for consistency. Thus any consumer/exten
 will be able to use a uniform method of error discovery and handling instead of varying by method.
 
 TODO:
+ * Add a FileInfo package that embeds this to describe metadata for and potentially load the entire
+   contents of known/supported file types from some resource. This way we can use a single library
+   to describe and access structured data from all sorts of supported file types consistently for
+   various usages rather than handling/accessing different types of files with different libraries
+   everywhere they pop up. In principle, such a thing could also be used to generate files from
+   scratch, particularly useful if we wanted to, say, generate a ZIP, CSV, JPG, or PDF on-the-fly
+   and return it to a client directly without ever storing the result anywhere.
  * Add IsValid(rules) method where caller can specify validation rules and we return true/false
-   based on validating the rules against the current value
+   based on validating the rules against the current value; perhaps we can use json-schema for at
+   least the structural validation aspect and apply some additional consideration(s) to cover rules
+   for allowed value(s), min/max record counts, etc.
  * Add a typed Select method for each valid type (ala SelectInteger(selector), SelectArray(selector)
    so that caller can do type enforcement at the time of the select operation instead of having to
    validate it afterward. If the result is nil, then nothing matching selector+type exists.
