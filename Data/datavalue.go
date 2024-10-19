@@ -55,7 +55,7 @@ import (
 	"strconv"
 	"unicode"
 
-	"GoLib/Data/iterable"
+	"github.com/DigiStratum/GoLib/Data/iterable"
 )
 
 type DataValueIfc interface {

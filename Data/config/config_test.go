@@ -11,9 +11,9 @@ TODO:
 import(
 	"testing"
 
-	"GoLib/Data"
+	"github.com/DigiStratum/GoLib/Data"
 
-	. "GoLib/Testing"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 // Interface

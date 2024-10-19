@@ -10,7 +10,7 @@ import(
 	"fmt"
 	"testing"
 
-	. "GoLib/Testing"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 func TestThat_Json_NewJson_ReturnsInstance(t *testing.T) {

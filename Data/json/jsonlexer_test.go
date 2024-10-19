@@ -3,7 +3,7 @@ package json
 import(
 	"testing"
 
-	. "GoLib/Testing"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 func newJsonLexer() *jsonLexer {

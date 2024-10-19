@@ -12,7 +12,7 @@ import(
 	"fmt"
 	"encoding/json"
 
-	"GoLib/Data"
+	"github.com/DigiStratum/GoLib/Data"
 )
 
 type JsonIfc interface {

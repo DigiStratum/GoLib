@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"GoLib/Process/startable"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 // Any type that implements ConfigurableIfc should be ready to receive configuration data one time as so:

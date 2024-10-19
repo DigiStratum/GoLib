@@ -59,7 +59,7 @@ import (
 	"unicode/utf8"
 	"strconv"
 
-	"GoLib/Data"
+	"github.com/DigiStratum/GoLib/Data"
 )
 
 type jsonLexer struct {

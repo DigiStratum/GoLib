@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"strings"
 
-	"GoLib/Data"
+	"github.com/DigiStratum/GoLib/Data"
 )
 
 // Sane defaults

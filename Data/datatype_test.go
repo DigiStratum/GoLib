@@ -3,7 +3,7 @@ package data
 import(
 	"testing"
 
-	. "GoLib/Testing"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 func TestThat_DataType_ToString_Returns_expected_type_descriptors(t *testing.T) {

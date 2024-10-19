@@ -5,7 +5,7 @@ import(
 	"strings"
 	"testing"
 
-	. "GoLib/Testing"
+	. "github.com/DigiStratum/GoLib/Testing"
 )
 
 // Interface

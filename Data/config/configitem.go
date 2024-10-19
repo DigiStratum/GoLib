@@ -14,7 +14,7 @@ TODO:
 import (
 	"fmt"
 
-	"GoLib/Data"
+	"github.com/DigiStratum/GoLib/Data"
 )
 
 type CaptureFunc func (dataValue data.DataValueIfc) error
