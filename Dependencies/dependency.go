@@ -8,6 +8,9 @@ requirements. Thus, an Injectable (which consumes DependencyInstances) can decla
 the dependencies that it requires as a set of Dependencies such that the Injector (which injects
 DependencyInstances) can ensure that the Dependency requirements are met.
 
+TODO:
+ * Change DependencyCaptureFunc to return error instead of bool, nil on success
+
 */
 
 import (
