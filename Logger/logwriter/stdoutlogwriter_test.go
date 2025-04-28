@@ -31,7 +31,7 @@ func TestThat_StdOutLogWriter_Log_SendsMessageToStdOut(t *testing.T) {
 	expectedString := "just one string of bits among so many"
 
 	// Test
-	sut.Log(expectedString)
+	sut.Log("%s", expectedString)
 	actualBytesRead, err2 := r.Read(buf)
 	actualString := string(buf[:actualBytesRead])
 

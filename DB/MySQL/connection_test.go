@@ -186,7 +186,7 @@ func TestThat_Connection_Commit_ReturnsError_WhenErrorOnTransactionCommit(t *tes
 	mockDB := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockDB.Mock).ExpectBegin()
 	expectedMsg := "bogus failure"
-	(*mockDB.Mock).ExpectCommit().WillReturnError(fmt.Errorf(expectedMsg))
+	(*mockDB.Mock).ExpectCommit().WillReturnError(fmt.Errorf("%s", expectedMsg))
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test
@@ -223,7 +223,7 @@ func TestThat_Connection_Rollback_ReturnsError_WhenErrorOnTransactionRollback(t 
 	mockDB := GetDBConnectionMockInfo(driverName, dsn)
 	(*mockDB.Mock).ExpectBegin()
 	expectedMsg := "bogus failure"
-	(*mockDB.Mock).ExpectRollback().WillReturnError(fmt.Errorf(expectedMsg))
+	(*mockDB.Mock).ExpectRollback().WillReturnError(fmt.Errorf("%s", expectedMsg))
 	sut, _ := NewConnection(mockDBConnection)
 
 	// Test

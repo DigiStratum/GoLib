@@ -141,11 +141,11 @@ type resourceTask struct {
 
 func (r resourceTask) GetAll() []resourceTask {
 	conn, err := r.connPool.GetConnection()
-	if nil != err { dief(fmt.Sprintf("GetConnection Error: %s\n", err.Error())) }
+	if nil != err { dief("%s", fmt.Sprintf("GetConnection Error: %s\n", err.Error())) }
 	defer conn.Release()
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	results, err := query.RunReturnAll() // No args for this example
-	if nil != err { dief(fmt.Sprintf("Query Error: %s\n", err.Error())) }
+	if nil != err { dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error())) }
 
 	// Collect results into []resourceTask
 	resourceTasks := make([]resourceTask, 0)
@@ -219,10 +219,10 @@ func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
 
 func runQueryReturnJson(query mysql.QueryIfc) string {
 	results, err := query.RunReturnAll() // No args for this example
-	if nil != err { dief(fmt.Sprintf("Query Error: %s\n", err.Error())) }
+	if nil != err { dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error())) }
 
 	json, err := results.ToJson()
-	if nil != err { dief(fmt.Sprintf("JSON Marshaler Error: %s\n", err.Error())) }
+	if nil != err { dief("%s", fmt.Sprintf("JSON Marshaler Error: %s\n", err.Error())) }
 
 	return *json
 }

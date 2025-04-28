@@ -38,7 +38,7 @@ func TestThat_Logger_SetLogWriter_ReplacesStdOutWithMock(t *testing.T) {
 
 	// Test
 	sut.SetLogWriter(mockWriter)
-	sut.Error(expectedMessage)
+	sut.Error("%s", expectedMessage)
 
 	// Verify
 	// Actual: 2022-05-19T08:03:24-07:00 thread:1652972604971037495 ERROR test message
@@ -54,7 +54,7 @@ func TestThat_Logger_LogTimestamp_EliminatesTimestampFromMessages(t *testing.T) 
 	sut.LogTimestamp(false)
 
 	// Test
-	sut.Error(expectedMessage)
+	sut.Error("%s", expectedMessage)
 
 	// Verify
 	// Actual: thread:1652972604971037495 ERROR test message
@@ -68,11 +68,11 @@ func TestThat_Logger_DefaultMinLogLevel_SuppressesLogLevelsBelowDefault(t *testi
 	expectedMessage := "test message"
 
 	// Test
-	sut.Debug(expectedMessage)
+	sut.Debug("%s", expectedMessage)
 	actualMessageBelow := LastMessage
-	sut.Info(expectedMessage)
+	sut.Info("%s", expectedMessage)
 	actualMessageAt := LastMessage
-	sut.Error(expectedMessage)
+	sut.Error("%s", expectedMessage)
 	actualMessageAbove := LastMessage
 
 	// Verify
@@ -91,19 +91,19 @@ func TestThat_Logger_SetMinLogLevel_PassessAllLogLevels_WhenAtLowestSetting(t *t
 
 	// Test / Verify
 	sut.SetMinLogLevel(CRAZY)
-	sut.Fatal(expectedMessage)
+	sut.Fatal("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Error(expectedMessage)
+	sut.Error("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Warn(expectedMessage)
+	sut.Warn("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Info(expectedMessage)
+	sut.Info("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Debug(expectedMessage)
+	sut.Debug("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Trace(expectedMessage)
+	sut.Trace("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
-	sut.Crazy(expectedMessage)
+	sut.Crazy("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
 }
 
@@ -114,19 +114,19 @@ func TestThat_Logger_SetMinLogLevel_SuppressesLowerLogLevels(t *testing.T) {
 
 	// Test / Verify
 	sut.SetMinLogLevel(FATAL)
-	sut.Error(expectedMessage)
+	sut.Error("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Warn(expectedMessage)
+	sut.Warn("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Info(expectedMessage)
+	sut.Info("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Debug(expectedMessage)
+	sut.Debug("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Trace(expectedMessage)
+	sut.Trace("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Crazy(expectedMessage)
+	sut.Crazy("%s", expectedMessage)
 	ExpectEmptyString(LastMessage, t)
-	sut.Fatal(expectedMessage)
+	sut.Fatal("%s", expectedMessage)
 	ExpectNonEmptyString(LastMessage, t)
 }
 
@@ -137,19 +137,19 @@ func TestThat_Logger_ErrorsReturnedOverWarnLevel(t *testing.T) {
 	var err error
 
 	// Test / Verify
-	err = sut.Fatal(expectedMessage)
+	err = sut.Fatal("%s", expectedMessage)
 	ExpectError(err, t)
-	err = sut.Error(expectedMessage)
+	err = sut.Error("%s", expectedMessage)
 	ExpectError(err, t)
-	err = sut.Warn(expectedMessage)
+	err = sut.Warn("%s", expectedMessage)
 	ExpectError(err, t)
-	err = sut.Info(expectedMessage)
+	err = sut.Info("%s", expectedMessage)
 	ExpectNoError(err, t)
-	err = sut.Debug(expectedMessage)
+	err = sut.Debug("%s", expectedMessage)
 	ExpectNoError(err, t)
-	err = sut.Trace(expectedMessage)
+	err = sut.Trace("%s", expectedMessage)
 	ExpectNoError(err, t)
-	err = sut.Crazy(expectedMessage)
+	err = sut.Crazy("%s", expectedMessage)
 	ExpectNoError(err, t)
 }
 

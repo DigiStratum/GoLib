@@ -105,7 +105,7 @@ func TestThat_ConfigItem_Capture_Passes_Through_CaptureFunc_Error(t *testing.T) 
 	expectedError := "yep, error!"
 	sut.CaptureWith(func (dataValue data.DataValueIfc) error {
 		if nil == dataValue { return nil }
-		return fmt.Errorf(expectedError)
+		return fmt.Errorf("%s", expectedError)
 	})
 
 	// Test
@@ -193,7 +193,7 @@ func TestThat_ConfigItem_Validate_Passes_Through_ValidateFunc_Error(t *testing.T
 	expectedError := "yep, error!"
 	sut.ValidateWith(func (dataValue data.DataValueIfc) error {
 		if nil == dataValue { return nil }
-		return fmt.Errorf(expectedError)
+		return fmt.Errorf("%s", expectedError)
 	})
 
 	// Test

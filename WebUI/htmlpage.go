@@ -82,7 +82,7 @@ func (page *HtmlPage) dereferenceFragments(document *string) *string {
 	}
 	fullyResolved := fragments.DereferenceLoop(DEREFERENCE_MAX_LOOPS, fragments)
 	if ! fullyResolved {
-		log.GetLogger().Warn(fmt.Sprintf(
+		log.GetLogger().Warn("%s", fmt.Sprintf(
 			"Possible incomplete dereferencing of page fragments with %d loops",
 			DEREFERENCE_MAX_LOOPS,
 		));
