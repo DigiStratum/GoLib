@@ -107,6 +107,7 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 	if config.Has("newItemExpires") {
 		newItemExpires := config.GetInt64("newItemExpires")
 		if nil != newItemExpires { r.newItemExpires = *newItemExpires }
+//fmt.Printf("Cache::Configure() - newItemExpires = %d\n", r.newItemExpires)
 	}
 
 	// New items added to cache won't drive total count above this; 0 (default) = unlimited
@@ -114,6 +115,7 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 	if config.Has("totalCountLimit") {
 		totalCountLimit := config.GetInt64("totalCountLimit")
 		if nil != totalCountLimit { r.totalCountLimit = int(*totalCountLimit) }
+//fmt.Printf("Cache::Configure() - totalCountLimit = %d\n", r.totalCountLimit)
 	}
 
 	// New items  added to cache we won't drive total size of all items above this; 0 = unlimited
@@ -123,6 +125,7 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 		if nil != totalSizeLimit {
 			r.totalSizeLimit = *totalSizeLimit
 		}
+//fmt.Printf("Cache::Configure() - totalSizeLimit = %d\n", r.totalSizeLimit)
 	}
 
 	return nil
@@ -357,7 +360,7 @@ func (r *Cache) pruneToLimits(key string, size int64) error {
 	r.pruneMutex.Lock(); defer r.pruneMutex.Unlock()
 
 	// Does this item fit right now without any prune/purge?
-	if (r.totalSizeLimit == 0) || (r.totalSize + size < r.totalSizeLimit) {
+	if (r.totalSizeLimit == 0) || (r.totalSize + size <= r.totalSizeLimit) {
 		if (r.totalCountLimit == 0) || (len(r.cache) + 1 < r.totalCountLimit) { return nil }
 	}
 
@@ -426,6 +429,9 @@ func (r *Cache) set(key string, value interface{}) bool {
 // return bool true if we drop it, else false
 func (r *Cache) drop(key string) (bool, error) {
 	if ! r.Has(key) { return false, nil }
+
+//fmt.Printf("Cache::Pruning key[%s]\n", key)
+
 	// Don't rejuvenate on the find since we're going to drop it!
 	element := r.findUsageListElementByKey(key, false)
 	if nil == element {
