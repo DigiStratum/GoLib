@@ -690,7 +690,7 @@ func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *te
 	content := "12345"
 	size := sizeable.Size(content)
 	config := cfg.NewConfig()
-	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2))) // <- not quite big enough to fit two of these...
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 	newKey := "newkey"
@@ -698,7 +698,7 @@ func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *te
 	// Test
 	sut.Set(key, content)
 	sut.Set(newKey, content)
-	sut.pruneToLimits(newKey, size)
+	sut.pruneToLimits(newKey, size) // <- pruning should eliminate the oldest one which should fit the total size limit
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
