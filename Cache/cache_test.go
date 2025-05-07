@@ -316,11 +316,17 @@ func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 
+	// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
+	secStart := time.Now().Second()
+	secDiff := 0
+	for ; secDiff == 0; secDiff = time.Now().Second() - secStart {
+		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)
+	}
+
 	// Intentionally 1 more than the limit which is both over-size and over count
 	for i := 0; i <= countLimit; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%2d", i)
-//fmt.Printf("sut.Set() ['%s'] = '%s'\n", key, content)
 		sut.Set(key, content)
 		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)	// pruning is an asynchronous operation - it needs time to run!
 	}
