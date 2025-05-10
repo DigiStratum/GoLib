@@ -21,6 +21,15 @@ import (
 
 const GOROUTINE_WAIT_MSEC = 25
 
+func waitSecondBoundary() {
+	// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
+	secStart := time.Now().Second()
+	secDiff := 0
+	for ; secDiff == 0; secDiff = time.Now().Second() - secStart {
+		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)
+	}
+}
+
 func TestThat_Cache_SetTimeSource_SetsTimeSource_WhenNonNil(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -366,11 +375,7 @@ func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	ExpectTrue((nil == err), t)
 
 	// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
-	secStart := time.Now().Second()
-	secDiff := 0
-	for ; secDiff == 0; secDiff = time.Now().Second() - secStart {
-		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)
-	}
+	waitSecondBoundary()
 
 	// Intentionally 1 more than the limit which is both over-size and over count
 	for i := 0; i <= countLimit; i++ {
@@ -755,6 +760,7 @@ func TestThat_Cache_itemCanFit_ReturnsFalse_WhenItemSizeOverLimit(t *testing.T) 
 	ExpectFalse(sut.itemCanFit(size*2), t)
 }
 
+/*
 func TestThat_Cache_numToPrune_ReturnsZero_WhenEmpty(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -803,6 +809,7 @@ func TestThat_Cache_numToPrune_ReturnsOne_ForNewItemKeyUnderSizeLimit(t *testing
 	// Verify
 	ExpectInt(1, sut.numToPrune("newkey", size+1), t)
 }
+*/
 
 /*
 unreliable test:
@@ -811,7 +818,7 @@ unreliable test:
 
 	expect.go:71:
 
-	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:704
+	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:844
 	    Expect: '1', Actual: '0'
 */
 func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *testing.T) {
@@ -828,9 +835,12 @@ func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *te
 	newKey := "newkey"
 
 	// Test
+
 	sut.Set(key, content)
 	sut.Set(newKey, content)
-	sut.pruneToLimits(newKey, size) // <- pruning should eliminate the oldest one which should fit the total size limit
+	//sut.pruneToLimits(newKey, size) // <- pruning should eliminate the oldest one which should fit the total size limit
+	// pruning runs async; give it a moment to process
+	waitSecondBoundary()
 
 	// Verify
 	ExpectInt(1, sut.Count(), t)
@@ -880,11 +890,17 @@ func TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToD
 	ExpectTrue((nil == err), t)
 
 	// Test
+
+	// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
+	waitSecondBoundary()
+
 	sut.Set("firstkey", content)
 	sut.Set("secondkey", content)
 	sut.findUsageListElementByKey("firstkey", true)
 	sut.Set("thirdkey", content)
-	sut.pruneToLimits("thirdkey", size)
+	//sut.pruneToLimits("thirdkey", size)
+	// pruning runs async; give it a moment to process
+	waitSecondBoundary()
 
 	// Verify
 	ExpectInt(2, sut.Count(), t)

@@ -334,6 +334,7 @@ func (r *Cache) has(key string) bool {
 func (r *Cache) pruneExpired() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+	fmt.Printf("Cache::pruneExpired() ... \n")
 
 	// Find which keys we need to purge because their cacheItem is expired
 	purgeKeys := []string{}
@@ -356,6 +357,7 @@ func (r *Cache) pruneExpired() error {
 			return err
 		}
 	}
+	fmt.Printf("Cache::pruneExpired() purged %d keys \n", len(purgeKeys))
 	return nil
 }
 
@@ -367,37 +369,22 @@ func (r *Cache) itemCanFit(size int64) bool {
 	return true
 }
 
-// How many existing cache entries must be pruned to fit one of this size?
-func (r *Cache) numToPrune(key string, size int64) int {
-	var pruneCount, replaceCount int
-	var replaceSize int64
-	if element := r.findUsageListElementByKey(key, false); nil != element {
-		replaceCount = 1
-		if ci, ok := r.cache[key]; ok {
-			replaceSize = ci.Size()
-		} else {
-			// element indicates we have this key, but map does not, therefore some desync
-			// Take this opportunity to drop it from the list
-			r.drop(key)
-			// TODO: capture & log the error returned
-		}
-	}
+// How many existing cache entries must be pruned
+func (r *Cache) numToPrune() int {
+	var pruneCount int
 
 	// If there is a count limit in effect...
 	if r.totalCountLimit > 0 {
-		futureCount := len(r.cache) + 1 - replaceCount
-		if futureCount > r.totalCountLimit {
-			pruneCount = futureCount - r.totalCountLimit
+		if len(r.cache) > r.totalCountLimit {
+			pruneCount = len(r.cache) - r.totalCountLimit
 		}
 	}
 
 	// If there is a size limit in effect...
 	if r.totalSizeLimit > 0 {
-		// If we add this to the cache without pruning, future size would be...
-		futureSize := r.totalSize + size - replaceSize
 		// If we break the size limit by adding...
-		if futureSize > r.totalSizeLimit {
-			pruneSize := futureSize - r.totalSizeLimit
+		if r.totalSize > r.totalSizeLimit {
+			pruneSize := r.totalSize - r.totalSizeLimit
 			num := 0
 			element := r.usageList.Back()
 			for ; (nil != element) && (pruneSize > 0); num++ {
@@ -416,42 +403,45 @@ func (r *Cache) numToPrune(key string, size int64) int {
 }
 
 // Prune the currently cached element collection to established limits
-func (r *Cache) pruneToLimits(key string, size int64) error {
+func (r *Cache) pruneToLimits() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+	var err error
+	fmt.Printf("Cache::pruneToLimits() ... \n")
 
 	// Does this item fit right now without any prune/purge?
-	if (r.totalSizeLimit == 0) || (r.totalSize+size <= r.totalSizeLimit) {
-		if (r.totalCountLimit == 0) || (len(r.cache)+1 < r.totalCountLimit) {
+	if (r.totalSizeLimit == 0) || (r.totalSize <= r.totalSizeLimit) {
+		if (r.totalCountLimit == 0) || (len(r.cache) <= r.totalCountLimit) {
 			return nil
 		}
 	}
 
-	pruneCount := r.numToPrune(key, size)
-	if 0 == pruneCount {
-		return nil
-	}
+	pruneCount := r.numToPrune()
+	if 0 < pruneCount {
 
-	// TODO: Make sure we're not pruning more than some percentage threshold
-	// (to minimize performance hits due to statistical outliers)
+		// TODO: Make sure we're not pruning more than some percentage threshold
+		// (to minimize performance hits due to statistical outliers)
 
-	// Prune starting at the back of the age list for the count we need to prune
-	element := r.usageList.Back()
-	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
-		dropKey := element.Value.(string)
-		_, err := r.drop(dropKey)
-		if nil != err {
-			return err
+		// Prune starting at the back of the age list for the count we need to prune
+		element := r.usageList.Back()
+		for ; (nil != element) && (pruneCount > 0); pruneCount-- {
+			dropKey := element.Value.(string)
+			fmt.Printf("Cache::pruneToLimits() dropping key %s \n", dropKey)
+			if _, err = r.drop(dropKey); nil != err {
+				break
+			}
+			element = element.Next()
 		}
-		element = element.Next()
+		fmt.Printf("Cache::pruneToLimits() pruned %d keys \n", pruneCount)
 	}
-	return nil
+
+	return err
 }
 
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
 func (r *Cache) set(key string, value interface{}) bool {
-
+	fmt.Printf("Cache::set() - key: '%s'\n", key)
 	// Get the size of the value
 	newSize := sizeable.Size(value)
 
@@ -491,7 +481,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 	// Go do some pruning, async so that we can get back to the caller now
 	// TODO: Capture error from pruneToLimits() in stats... or log... or something!
-	go r.pruneToLimits(key, newSize)
+	go r.pruneToLimits()
 
 	return true
 }
@@ -503,6 +493,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 func (r *Cache) drop(key string) (bool, error) {
 	var ret bool
 	var err error
+	fmt.Printf("Cache::drop() - key: '%s'\n", key)
 	foundMap := r.has(key)
 	if foundMap {
 		//fmt.Printf("Cache::drop() - foundMap\n")
