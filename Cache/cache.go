@@ -33,20 +33,20 @@ TODO:
 */
 
 import (
+	"container/list"
 	"fmt"
 	"sync"
 	"time"
-	"container/list"
 
-	"github.com/DigiStratum/GoLib/Chrono"
-	"github.com/DigiStratum/GoLib/Data/sizeable"
+	chrono "github.com/DigiStratum/GoLib/Chrono"
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
 
 type expiringItems []*cacheItem
 
 type CacheIfc interface {
-	Configure(config cfg.ConfigIfc) error			// cfg.ConfigurableIfc
+	Configure(config cfg.ConfigIfc) error // cfg.ConfigurableIfc
 	SetTimeSource(timeSource chrono.TimeSourceIfc)
 	IsEmpty() bool
 	Size() int64
@@ -65,24 +65,23 @@ type CacheIfc interface {
 }
 
 type Cache struct {
-	cache			map[string]*cacheItem
-	totalCountLimit		int
+	cache           map[string]*cacheItem
+	totalCountLimit int
 
 	// A list of cache keys with least recently used at back
-	usageList			*list.List
+	usageList *list.List
 	// A list of cache keys sorted by expiration
-	expiresList			expiringItems
+	expiresList expiringItems
 
 	// Default TimeSource; can change to a different TimeSource, but cannot be nil
-	timeSource		chrono.TimeSourceIfc
-	newItemExpires		int64
+	timeSource     chrono.TimeSourceIfc
+	newItemExpires int64
 
-	totalSize		int64
-	totalSizeLimit		int64
+	totalSize      int64
+	totalSizeLimit int64
 
-	mutex			sync.Mutex
-	pruneMutex		sync.Mutex
-	closed			bool
+	mutex  sync.Mutex
+	closed bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -101,21 +100,27 @@ func NewCache() *Cache {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Cache) Configure(config cfg.ConfigIfc) error {
-	if nil == config { return fmt.Errorf("Cache.Configure() - Configuration was nil") }
+	if nil == config {
+		return fmt.Errorf("Cache.Configure() - Configuration was nil")
+	}
 
 	// New items added to cache will expire in this count of seconds; 0 (default) = no expiration
 	if config.Has("newItemExpires") {
 		newItemExpires := config.GetInt64("newItemExpires")
-		if nil != newItemExpires { r.newItemExpires = *newItemExpires }
-//fmt.Printf("Cache::Configure() - newItemExpires = %d\n", r.newItemExpires)
+		if nil != newItemExpires {
+			r.newItemExpires = *newItemExpires
+		}
+		//fmt.Printf("Cache::Configure() - newItemExpires = %d\n", r.newItemExpires)
 	}
 
 	// New items added to cache won't drive total count above this; 0 (default) = unlimited
 	// When a limit is in place, the Least Recently Used (LRU) item will be evicted to make room for the new one
 	if config.Has("totalCountLimit") {
 		totalCountLimit := config.GetInt64("totalCountLimit")
-		if nil != totalCountLimit { r.totalCountLimit = int(*totalCountLimit) }
-//fmt.Printf("Cache::Configure() - totalCountLimit = %d\n", r.totalCountLimit)
+		if nil != totalCountLimit {
+			r.totalCountLimit = int(*totalCountLimit)
+		}
+		//fmt.Printf("Cache::Configure() - totalCountLimit = %d\n", r.totalCountLimit)
 	}
 
 	// New items  added to cache we won't drive total size of all items above this; 0 = unlimited
@@ -125,7 +130,7 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 		if nil != totalSizeLimit {
 			r.totalSizeLimit = *totalSizeLimit
 		}
-//fmt.Printf("Cache::Configure() - totalSizeLimit = %d\n", r.totalSizeLimit)
+		//fmt.Printf("Cache::Configure() - totalSizeLimit = %d\n", r.totalSizeLimit)
 	}
 
 	return nil
@@ -136,7 +141,9 @@ func (r *Cache) Configure(config cfg.ConfigIfc) error {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Cache) SetTimeSource(timeSource chrono.TimeSourceIfc) {
-	if nil != timeSource { r.timeSource = timeSource }
+	if nil != timeSource {
+		r.timeSource = timeSource
+	}
 }
 
 // Check whether this Cache is empty (has no properties)
@@ -148,35 +155,53 @@ func (r *Cache) IsEmpty() bool {
 func (r *Cache) Size() int64 {
 	return r.totalSize
 }
+
 // Return the count of entries currently being held in this cache
 func (r *Cache) Count() int {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return len(r.cache)
 }
 
 // Set a single cache element key to the specified value
 func (r *Cache) Set(key string, value interface{}) bool {
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return r.set(key, value)
 }
 
 // Set the expiration timestamp for a given Cache item; returns true if set, else false
 func (r *Cache) SetExpires(key string, expires chrono.TimeStampIfc) bool {
-	if ! r.Has(key) { return false }
-	if nil == expires { return false }
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	if !r.has(key) {
+		return false
+	}
+	if nil == expires {
+		return false
+	}
 	r.cache[key].SetExpires(expires)
 	return true
 }
 
 // Get the expiration timestamp for a given Cache item; returns nil if not set
 func (r *Cache) GetExpires(key string) chrono.TimeStampIfc {
-	if ! r.Has(key) { return nil }
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	if !r.has(key) {
+		return nil
+	}
 	return r.cache[key].GetExpires()
 }
 
 // Get a single cache element by key name
 func (r *Cache) Get(key string) interface{} {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if ci, ok := r.cache[key]; ok {
-		if ! ci.IsExpired() { return ci.GetValue() }
+		if !ci.IsExpired() {
+			return ci.GetValue()
+		}
 	}
 	return nil
 }
@@ -184,8 +209,10 @@ func (r *Cache) Get(key string) interface{} {
 func (r *Cache) GetKeys() []string {
 	keys := make([]string, len(r.cache))
 	i := 0
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	for key, _ := range r.cache {
-//fmt.Printf("Key: '%s'\n", key)
+		//fmt.Printf("Key: '%s'\n", key)
 		keys[i] = key
 		i++
 	}
@@ -194,14 +221,19 @@ func (r *Cache) GetKeys() []string {
 
 // Check whether we have a configuration element by key name
 func (r *Cache) Has(key string) bool {
-	_, ok := r.cache[key];
-	return ok
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	return r.has(key)
 }
 
 // Check whether we have configuration elements for all the key names
 func (r *Cache) HasAll(keys *[]string) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	for _, key := range *keys {
-		if ! r.Has(key) { return false }
+		if !r.has(key) {
+			return false
+		}
 	}
 	return true
 }
@@ -209,26 +241,33 @@ func (r *Cache) HasAll(keys *[]string) bool {
 // Drop an item from the cache with the supplied key
 // return true if we drop it, else false
 func (r *Cache) Drop(key string) (bool, error) {
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return r.drop(key)
 }
 
 // Check whether we have configuration elements for all the key names
 // return count of items actually dropped
 func (r *Cache) DropAll(keys *[]string) (int, error) {
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	numDropped := 0
 	for _, key := range *keys {
 		dropped, err := r.drop(key)
-		if nil != err { return 0, err }
-		if dropped { numDropped++ }
+		if nil != err {
+			return 0, err
+		}
+		if dropped {
+			numDropped++
+		}
 	}
 	return numDropped, nil
 }
 
 // Flush all the items out of the cache
 func (r *Cache) Flush() {
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.flush()
 }
 
@@ -247,13 +286,15 @@ func (r *Cache) Close() error {
 // -------------------------------------------------------------------------------------------------
 
 func (r *Cache) Run() {
-	if r.IsRunning() { return }
+	if r.IsRunning() {
+		return
+	}
 	r.init()
 	go r.runLoop()
 }
 
 func (r *Cache) IsRunning() bool {
-	return ! r.closed
+	return !r.closed
 }
 
 func (r *Cache) Stop() {
@@ -284,21 +325,26 @@ func (r *Cache) runLoop() {
 		time.Sleep(60)
 	}
 }
+func (r *Cache) has(key string) bool {
+	_, ok := r.cache[key]
+	return ok
+}
 
 // Purge expired cache items
 func (r *Cache) pruneExpired() error {
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	// Find which keys we need to purge because their cacheItem is expired
 	purgeKeys := []string{}
 	for key, ci := range r.cache {
-//fmt.Printf("Key: '%s' ...", key)
+		//fmt.Printf("Key: '%s' ...", key)
 		if ci.IsExpired() {
-//fmt.Printf("Drop!\n")
+			//fmt.Printf("Drop!\n")
 			// Expired items should be removed
 			purgeKeys = append(purgeKeys, key)
 		} else {
-//fmt.Printf("Keep!\n")
+			//fmt.Printf("Keep!\n")
 			// The first non-expired one we find means all others after it are non-expired!
 			// FIXME: ^^^ this seems like a lie! This is a hashmap, there is no sequencing of the keys - why would we think the ones that follow based on key iteration would have any newer/older timestamp - the collection is unsorted by the nature of the type of data structure!
 			//break
@@ -306,14 +352,18 @@ func (r *Cache) pruneExpired() error {
 	}
 	// Purge them!
 	for _, key := range purgeKeys {
-		if _, err := r.drop(key); nil != err { return err }
+		if _, err := r.drop(key); nil != err {
+			return err
+		}
 	}
 	return nil
 }
 
 func (r *Cache) itemCanFit(size int64) bool {
 	// If it's bigger than the size limit, then it's impossible
-	if (r.totalSizeLimit > 0) && (size > r.totalSizeLimit) { return false }
+	if (r.totalSizeLimit > 0) && (size > r.totalSizeLimit) {
+		return false
+	}
 	return true
 }
 
@@ -330,7 +380,9 @@ func (r *Cache) numToPrune(key string, size int64) int {
 	// If there is a count limit in effect...
 	if r.totalCountLimit > 0 {
 		futureCount := len(r.cache) + 1 - replaceCount
-		if futureCount > r.totalCountLimit { pruneCount = futureCount - r.totalCountLimit }
+		if futureCount > r.totalCountLimit {
+			pruneCount = futureCount - r.totalCountLimit
+		}
 	}
 
 	// If there is a size limit in effect...
@@ -348,7 +400,9 @@ func (r *Cache) numToPrune(key string, size int64) int {
 				pruneSize -= ci.Size()
 				element = element.Next()
 			}
-			if num > pruneCount { pruneCount = num }
+			if num > pruneCount {
+				pruneCount = num
+			}
 		}
 	}
 
@@ -357,15 +411,20 @@ func (r *Cache) numToPrune(key string, size int64) int {
 
 // Prune the currently cached element collection to established limits
 func (r *Cache) pruneToLimits(key string, size int64) error {
-	r.pruneMutex.Lock(); defer r.pruneMutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	// Does this item fit right now without any prune/purge?
-	if (r.totalSizeLimit == 0) || (r.totalSize + size <= r.totalSizeLimit) {
-		if (r.totalCountLimit == 0) || (len(r.cache) + 1 < r.totalCountLimit) { return nil }
+	if (r.totalSizeLimit == 0) || (r.totalSize+size <= r.totalSizeLimit) {
+		if (r.totalCountLimit == 0) || (len(r.cache)+1 < r.totalCountLimit) {
+			return nil
+		}
 	}
 
 	pruneCount := r.numToPrune(key, size)
-	if 0 == pruneCount { return nil }
+	if 0 == pruneCount {
+		return nil
+	}
 
 	// TODO: Make sure we're not pruning more than some percentage threshold
 	// (to minimize performance hits due to statistical outliers)
@@ -375,7 +434,9 @@ func (r *Cache) pruneToLimits(key string, size int64) error {
 	for ; (nil != element) && (pruneCount > 0); pruneCount-- {
 		dropKey := element.Value.(string)
 		_, err := r.drop(dropKey)
-		if nil != err { return err }
+		if nil != err {
+			return err
+		}
 		element = element.Next()
 	}
 	return nil
@@ -389,8 +450,12 @@ func (r *Cache) set(key string, value interface{}) bool {
 	newSize := sizeable.Size(value)
 
 	// If size limit is in play and this value is bigger than that, then it won't fit
-	if (0 < r.totalSizeLimit) && (newSize > r.totalSizeLimit) { return false }
-	if ! r.itemCanFit(newSize) { return false }
+	if (0 < r.totalSizeLimit) && (newSize > r.totalSizeLimit) {
+		return false
+	}
+	if !r.itemCanFit(newSize) {
+		return false
+	}
 
 	// Make a new cacheItem...
 
@@ -406,7 +471,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 	// If this key already exists...
 	var oldSize int64 = 0
-	if r.Has(key) {
+	if r.has(key) {
 		// Replace the existing item
 		// subtract out the old size so that we're adjusting totalSize to be the difference between the two
 		oldSize = r.cache[key].Size()
@@ -428,9 +493,11 @@ func (r *Cache) set(key string, value interface{}) bool {
 // Drop if exists
 // return bool true if we drop it, else false
 func (r *Cache) drop(key string) (bool, error) {
-	if ! r.Has(key) { return false, nil }
+	if !r.has(key) {
+		return false, nil
+	}
 
-//fmt.Printf("Cache::Pruning key[%s]\n", key)
+	//fmt.Printf("Cache::Pruning key[%s]\n", key)
 
 	// Don't rejuvenate on the find since we're going to drop it!
 	element := r.findUsageListElementByKey(key, false)
@@ -452,12 +519,16 @@ func (r *Cache) drop(key string) (bool, error) {
 
 func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Element {
 	// If the key is in the cache at all...
-	if _, ok := r.cache[key]; !ok { return nil }
+	if _, ok := r.cache[key]; !ok {
+		return nil
+	}
 
 	// Find the usageList element whose e.Value == key
 	for e := r.usageList.Front(); e != nil; e = e.Next() {
 		if ek, ok := e.Value.(string); ok {
-			if ek != key { continue }
+			if ek != key {
+				continue
+			}
 			// Found it!
 			if rejuvenate {
 				// Pull the element forward in the ageList
