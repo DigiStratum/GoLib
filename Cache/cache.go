@@ -373,8 +373,14 @@ func (r *Cache) numToPrune(key string, size int64) int {
 	var replaceSize int64
 	if element := r.findUsageListElementByKey(key, false); nil != element {
 		replaceCount = 1
-		ci := r.cache[key]
-		replaceSize = ci.Size()
+		if ci, ok := r.cache[key]; ok {
+			replaceSize = ci.Size()
+		} else {
+			// element indicates we have this key, but map does not, therefore some desync
+			// Take this opportunity to drop it from the list
+			r.drop(key)
+			// TODO: capture & log the error returned
+		}
 	}
 
 	// If there is a count limit in effect...
@@ -492,36 +498,46 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 // Drop if exists
 // return bool true if we drop it, else false
+// If something strange causes a desync between the map and the list, then we will
+// return true if either one has it and we drop it.
 func (r *Cache) drop(key string) (bool, error) {
-	if !r.has(key) {
-		return false, nil
+	var ret bool
+	var err error
+	foundMap := r.has(key)
+	if foundMap {
+		//fmt.Printf("Cache::drop() - foundMap\n")
+		// Drop from the cache map
+		size := r.cache[key].Size()
+		r.totalSize -= size
+		delete(r.cache, key)
+		ret = true
 	}
-
-	//fmt.Printf("Cache::Pruning key[%s]\n", key)
 
 	// Don't rejuvenate on the find since we're going to drop it!
 	element := r.findUsageListElementByKey(key, false)
-	if nil == element {
-		return false, fmt.Errorf(
-			"Cache.drop() - cache desync found (cache['%s'] exists, but same key not in element list)",
+	if nil != element {
+		//fmt.Printf("Cache::drop() - found element\n")
+		// Drop from the ordered usage list
+		r.usageList.Remove(element)
+		ret = true
+	}
+
+	// If foundMap XOR element (i.e. they don't match), then there was a desync
+	if foundMap != (nil != element) {
+		err = fmt.Errorf(
+			"Cache.drop() - WARN: cache desync; found '%s' in either map or list but not both!",
 			key,
 		)
 	}
 
-	// Drop from the ordered usage list
-	r.usageList.Remove(element)
-	// Drop from the cache map
-	size := r.cache[key].Size()
-	r.totalSize -= size
-	delete(r.cache, key)
-	return true, nil
+	return ret, err
 }
 
 func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Element {
 	// If the key is in the cache at all...
-	if _, ok := r.cache[key]; !ok {
-		return nil
-	}
+	//if _, ok := r.cache[key]; !ok {
+	//	return nil
+	//}
 
 	// Find the usageList element whose e.Value == key
 	for e := r.usageList.Front(); e != nil; e = e.Next() {

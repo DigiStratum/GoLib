@@ -329,6 +329,27 @@ Unreliable test:
 
 	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:364
 	    Expect: '3', Actual: '4'
+
+=== RUN   TestThat_Cache_Set_CausesPruning_WhenBothOverLimit
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x59bfb7b]
+
+goroutine 88 [running]:
+command-line-arguments.(*Cache).numToPrune(0xc0001845b0, {0xc0001807ac, 0x4}, 0xf)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:406 +0x2fb
+
+command-line-arguments.(*Cache).pruneToLimits(0xc0001845b0, {0xc0001807ac?, 0x0?}, 0x0?)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:430 +0x178
+
+created by command-line-arguments.(*Cache).set in goroutine 84
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:494 +0x628
+
+FAIL	command-line-arguments	0.985s
+FAIL
+^^^^ ERROR!
 */
 func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	// Setup
