@@ -6,24 +6,25 @@ Unit Tests for Cache
 
 */
 
-import(
+import (
 	"fmt"
-	"time"
 	"testing"
+	"time"
 
+	chrono "github.com/DigiStratum/GoLib/Chrono"
 	. "github.com/DigiStratum/GoLib/Testing"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	"github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 	"github.com/DigiStratum/GoLib/Process/runnable"
 )
 
-const GOROUTINE_WAIT_MSEC	= 25
+const GOROUTINE_WAIT_MSEC = 25
 
 func TestThat_Cache_SetTimeSource_SetsTimeSource_WhenNonNil(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	ts := chrono.NewTimeSource()
 	// Reset the timeSource to nil so that we can observe it change
 	sut.timeSource = nil
@@ -37,7 +38,8 @@ func TestThat_Cache_SetTimeSource_SetsTimeSource_WhenNonNil(t *testing.T) {
 
 func TestThat_Cache_SetTimeSource_DoesNotSetTimeSource_WhenNil(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	sut.SetTimeSource(nil)
@@ -48,7 +50,8 @@ func TestThat_Cache_SetTimeSource_DoesNotSetTimeSource_WhenNil(t *testing.T) {
 
 func TestThat_Cache_IsEmpty_ReturnsTrue_WhenEmpty(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectTrue(sut.IsEmpty(), t)
@@ -56,7 +59,8 @@ func TestThat_Cache_IsEmpty_ReturnsTrue_WhenEmpty(t *testing.T) {
 
 func TestThat_Cache_IsEmpty_ReturnsFalse_WhenNonEmpty(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Set("boguskey", "bogus value")
 
 	// Verify
@@ -65,7 +69,8 @@ func TestThat_Cache_IsEmpty_ReturnsFalse_WhenNonEmpty(t *testing.T) {
 
 func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectInt64(0, sut.Size(), t)
@@ -73,10 +78,11 @@ func TestThat_Cache_Size_Is0_WhenNew(t *testing.T) {
 
 func TestThat_Cache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
-	var expectedSize int64 = 0;
+	var expectedSize int64 = 0
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%d", i)
@@ -91,7 +97,8 @@ func TestThat_Cache_Size_IsCorrect_WithSomeEntries(t *testing.T) {
 
 func TestThat_Cache_Count_Is0_WhenNew(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectInt(0, sut.Count(), t)
@@ -99,7 +106,8 @@ func TestThat_Cache_Count_Is0_WhenNew(t *testing.T) {
 
 func TestThat_Cache_Get_ReturnsNil_ForMissingKey(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectNil(sut.Get("boguskey"), t)
@@ -107,7 +115,8 @@ func TestThat_Cache_Get_ReturnsNil_ForMissingKey(t *testing.T) {
 
 func TestThat_Cache_Has_ReturnsFalse_ForMissingKey(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectFalse(sut.Has("boguskey"), t)
@@ -115,13 +124,14 @@ func TestThat_Cache_Has_ReturnsFalse_ForMissingKey(t *testing.T) {
 
 func TestThat_Cache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	key := "fixedsizekey"
 	content := "1234567890"
-	ExpectTrue(sut.Set(key, content), t)	// Set our content
-	res := sut.Get(key)			// And retrieve the same to check it out
+	ExpectTrue(sut.Set(key, content), t) // Set our content
+	res := sut.Get(key)                  // And retrieve the same to check it out
 	ExpectNonNil(res, t)
 	val := res.(string)
 
@@ -134,14 +144,15 @@ func TestThat_Cache_Set_AddsNew_UnlimitedWithFixedContent(t *testing.T) {
 
 func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	key := "fixedsizekey"
 	content := "0123456789"
-	ExpectTrue(sut.Set(key, "oldgarbage"), t)	// First set some old garbage
-	ExpectTrue(sut.Set(key, content), t)		// Then replace it with our contet
-	res := sut.Get(key)				// And retrieve the same to check it out
+	ExpectTrue(sut.Set(key, "oldgarbage"), t) // First set some old garbage
+	ExpectTrue(sut.Set(key, content), t)      // Then replace it with our contet
+	res := sut.Get(key)                       // And retrieve the same to check it out
 	ExpectNonNil(res, t)
 	val := res.(string)
 
@@ -154,7 +165,8 @@ func TestThat_Cache_Set_ReplacesExisting_WithFixedContent(t *testing.T) {
 
 func TestThat_Cache_SetExpires_ReturnsFalse_ForMissingKey(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectFalse(sut.SetExpires("boguskey", nil), t)
@@ -162,7 +174,8 @@ func TestThat_Cache_SetExpires_ReturnsFalse_ForMissingKey(t *testing.T) {
 
 func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyBadTimeStamp(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Set("boguskey", "bogus value")
 
 	// Verify
@@ -171,7 +184,8 @@ func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyBadTimeStamp(t *testing.T)
 
 func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyGoodTimeStamp(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Set("boguskey", "bogus value")
 	ts := chrono.NewTimeSource()
 
@@ -181,7 +195,8 @@ func TestThat_Cache_SetExpires_ReturnsFalse_ForGoodKeyGoodTimeStamp(t *testing.T
 
 func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	res, err := sut.Drop("boguskey")
@@ -193,7 +208,8 @@ func TestThat_Cache_Drop_ReturnsFalse_ForMissingKeys(t *testing.T) {
 
 func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	key := "fixedsizekey"
@@ -221,16 +237,16 @@ sut.Set() ['key5'] = 'content-- 5'
 Cache::Pruning key[key1]
 OY
 Cache::Pruning key[key2]
-    expect.go:71: 
-        
+    expect.go:71:
+
         @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:343
         Expect: '4', Actual: '3'
-    expect.go:95: 
-        
+    expect.go:95:
+
         @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:348:
         Expect: 'true', Actual: 'false'
-    expect.go:124: 
-        
+    expect.go:124:
+
         @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:350:
         Expect: non-nil, Actual: nil
 panic: interface conversion: interface {} is nil, not string [recovered]
@@ -240,7 +256,8 @@ panic: interface conversion: interface {} is nil, not string [recovered]
 
 func TestThat_Cache_Set_CausesPruning_WhenCountOverLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	countLimit := 5
@@ -258,9 +275,9 @@ func TestThat_Cache_Set_CausesPruning_WhenCountOverLimit(t *testing.T) {
 	}
 
 	// Verify
-	ExpectInt(countLimit, sut.Count(), t)	// should only have count limit
-	ExpectFalse(sut.Has("key0"), t)		// The oldest on should be gone (pruned out due to limit)
-	for i := 1; i <= countLimit; i++ {	// We expect the lowest (oldest one) is replaced with the newest
+	ExpectInt(countLimit, sut.Count(), t) // should only have count limit
+	ExpectFalse(sut.Has("key0"), t)       // The oldest on should be gone (pruned out due to limit)
+	for i := 1; i <= countLimit; i++ {    // We expect the lowest (oldest one) is replaced with the newest
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content%d", i)
 		ExpectTrue(sut.Has(key), t)
@@ -273,10 +290,11 @@ func TestThat_Cache_Set_CausesPruning_WhenCountOverLimit(t *testing.T) {
 
 func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	count := 5
 	contentFormat := "content--##"
-	sizeLimit := (count - 1) * int(sizeable.Size(contentFormat) + 1)	// Limit size at 10 chars * our count, less one
+	sizeLimit := (count - 1) * int(sizeable.Size(contentFormat)+1) // Limit size at 10 chars * our count, less one
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", sizeLimit))
 	err := sut.Configure(config)
@@ -286,11 +304,11 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%2d", i)
 		sut.Set(key, content)
-		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)	// pruning is an asynchronous operation - it needs time to run!
+		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond) // pruning is an asynchronous operation - it needs time to run!
 	}
 
 	// Verify
-	ExpectInt(count - 1, sut.Count(), t)	// should cap out at the count-1 because of the size limit
+	ExpectInt(count-1, sut.Count(), t) // should cap out at the count-1 because of the size limit
 	ExpectFalse(sut.Has("key0"), t)
 	for i := 1; i < count; i++ { // We expect the lowest (oldest one) is replaced with the newest
 		key := fmt.Sprintf("key%d", i)
@@ -303,12 +321,22 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	}
 }
 
+/*
+Unreliable test:
+=== RUN   TestThat_Cache_Set_CausesPruning_WhenBothOverLimit
+
+	expect.go:71:
+
+	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:364
+	    Expect: '3', Actual: '4'
+*/
 func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	countLimit := 5
 	contentFormat := "content-##"
-	sizeLimit := (countLimit - 1) * int(sizeable.Size(contentFormat) + 1)	// Limit size at 10 chars * our count, less one
+	sizeLimit := (countLimit - 1) * int(sizeable.Size(contentFormat)+1) // Limit size at 10 chars * our count, less one
 
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", sizeLimit))
@@ -328,12 +356,12 @@ func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 		key := fmt.Sprintf("key%d", i)
 		content := fmt.Sprintf("content--%2d", i)
 		sut.Set(key, content)
-		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond)	// pruning is an asynchronous operation - it needs time to run!
+		time.Sleep(GOROUTINE_WAIT_MSEC * time.Millisecond) // pruning is an asynchronous operation - it needs time to run!
 	}
 
 	// Drop in a double-sized item which should displace two regular ones
 	expectedKey := fmt.Sprintf("key%d", countLimit)
-	expectedContent := "12345678901234567890"			// Items will be size 20+
+	expectedContent := "12345678901234567890" // Items will be size 20+
 	sut.Set(expectedKey, expectedContent)
 	ExpectTrue(sut.Has(expectedKey), t)
 	res := sut.Get(expectedKey)
@@ -342,7 +370,7 @@ func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	ExpectString(expectedContent, val, t)
 
 	// Verify
-	ExpectInt(countLimit - 2, sut.Count(), t) // We should have pruned out 3 total now, 
+	ExpectInt(countLimit-2, sut.Count(), t) // We should have pruned out 3 total now,
 	ExpectFalse(sut.Has("key0"), t)
 	ExpectFalse(sut.Has("key1"), t)
 	ExpectFalse(sut.Has("key2"), t)
@@ -359,7 +387,8 @@ func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 
 func TestThat_Cache_Configure_PreventsSet_WhenEntryAddedExceedsLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	sizeLimit := 5
@@ -376,7 +405,8 @@ func TestThat_Cache_Configure_PreventsSet_WhenEntryAddedExceedsLimit(t *testing.
 
 func TestThat_Cache_Configure_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	content := "12345"
@@ -388,12 +418,36 @@ func TestThat_Cache_Configure_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 
 	// Verify
 	sut.Set("anykey", content)
-	ExpectTrue(sut.Has("anykey"),t)
+	ExpectTrue(sut.Has("anykey"), t)
 }
 
+/*
+Implementation problem of some sort, not a test problem:
+=== RUN   TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x3985948]
+
+goroutine 76 [running]:
+command-line-arguments.(*Cache).numToPrune(0xc00032a150, {0x39acc20, 0x6}, 0x9)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:377 +0xc8
+
+command-line-arguments.(*Cache).pruneToLimits(0xc00032a150, {0x39acc20?, 0xc00015cc40?}, 0x3a49218?)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:424 +0x178
+
+created by command-line-arguments.(*Cache).set in goroutine 75
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:488 +0x628
+
+FAIL	command-line-arguments	0.929s
+FAIL
+^^^^ ERROR!
+*/
 func TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Test
 	key := "anykey"
@@ -419,10 +473,34 @@ func TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting(t *test
 	ExpectString(content, val, t)
 }
 
+/*
+Implementation problem of some sort, not a test problem:
+=== RUN   TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x5695948]
+
+goroutine 81 [running]:
+command-line-arguments.(*Cache).numToPrune(0xc000012850, {0x56bcc20, 0x6}, 0x9)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:377 +0xc8
+
+command-line-arguments.(*Cache).pruneToLimits(0xc000012850, {0x56bcc20?, 0x0?}, 0x0?)
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:424 +0x178
+
+created by command-line-arguments.(*Cache).set in goroutine 64
+
+	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:488 +0x628
+
+FAIL	command-line-arguments	1.111s
+FAIL
+^^^^ ERROR!
+*/
 func TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
-	keys := []string{ "key1", "key2" }
+	sut := NewCache()
+	defer sut.Close()
+	keys := []string{"key1", "key2"}
 	sut.Set("key1", "value1")
 	sut.Set("key2", "value2")
 
@@ -432,8 +510,9 @@ func TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys(t *testing.T) {
 
 func TestThat_Cache_HasAll_ReturnsFalse_IfCacheDoesNotHaveAllKeys(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
-	keys := []string{ "key1", "key2" }
+	sut := NewCache()
+	defer sut.Close()
+	keys := []string{"key1", "key2"}
 	sut.Set("key1", "value1")
 
 	// Verify
@@ -442,8 +521,9 @@ func TestThat_Cache_HasAll_ReturnsFalse_IfCacheDoesNotHaveAllKeys(t *testing.T) 
 
 func TestThat_Cache_DropAll_DropsSomeKeys_ForPartiallyMatchingKeySet(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
-	keys := []string{ "key1", "key2" }
+	sut := NewCache()
+	defer sut.Close()
+	keys := []string{"key1", "key2"}
 	sut.Set("key1", "value1")
 
 	// Test
@@ -451,12 +531,13 @@ func TestThat_Cache_DropAll_DropsSomeKeys_ForPartiallyMatchingKeySet(t *testing.
 
 	// Verify
 	ExpectNil(err, t)
-	ExpectInt(len(keys) - 1, res, t)
+	ExpectInt(len(keys)-1, res, t)
 }
 func TestThat_Cache_DropAll_DropsAllKeys_ForFullyMatchingKeySet(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
-	keys := []string{ "key1", "key2" }
+	sut := NewCache()
+	defer sut.Close()
+	keys := []string{"key1", "key2"}
 	sut.Set("key1", "value1")
 	sut.Set("key2", "value2")
 
@@ -470,7 +551,8 @@ func TestThat_Cache_DropAll_DropsAllKeys_ForFullyMatchingKeySet(t *testing.T) {
 
 func TestThat_Cache_Flush_DropsAllKeys(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Set("key1", "value1")
 	sut.Set("key2", "value2")
 
@@ -485,7 +567,8 @@ func TestThat_Cache_Flush_DropsAllKeys(t *testing.T) {
 
 func TestThat_Cache_Implements_RunnableIfc(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	var ifc interface{} = sut
 	_, ok := ifc.(runnable.RunnableIfc)
 
@@ -495,7 +578,8 @@ func TestThat_Cache_Implements_RunnableIfc(t *testing.T) {
 
 func TestThat_Cache_IsRunning_ReturnsTrue_AfterInitialization(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectTrue(sut.IsRunning(), t)
@@ -503,7 +587,8 @@ func TestThat_Cache_IsRunning_ReturnsTrue_AfterInitialization(t *testing.T) {
 
 func TestThat_Cache_IsRunning_ReturnsFalse_AfterClose(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Close()
 
 	// Verify
@@ -512,7 +597,8 @@ func TestThat_Cache_IsRunning_ReturnsFalse_AfterClose(t *testing.T) {
 
 func TestThat_Cache_IsRunning_ReturnsFalse_AfterStop(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Stop()
 
 	// Verify
@@ -521,7 +607,8 @@ func TestThat_Cache_IsRunning_ReturnsFalse_AfterStop(t *testing.T) {
 
 func TestThat_Cache_IsRunning_ReturnsTrue_AfterRun(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Stop()
 	sut.Run()
 
@@ -531,7 +618,8 @@ func TestThat_Cache_IsRunning_ReturnsTrue_AfterRun(t *testing.T) {
 
 func TestThat_Cache_Set_SetsForeverTimeStamp_WhenCacheHasDefaultExpiresSetting(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	sut.Set("testkey", "value1")
 
 	// Test
@@ -544,7 +632,8 @@ func TestThat_Cache_Set_SetsForeverTimeStamp_WhenCacheHasDefaultExpiresSetting(t
 
 func TestThat_Cache_pruneExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	sut.Set("foreverkey", "value1")
 
@@ -558,31 +647,36 @@ func TestThat_Cache_pruneExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 /*
 FIXME: This test fails occasionally when system is busy/multi-tasking
 === RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-    expect.go:49:
 
-        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:519
-        Expect: '1', Actual: '2'
+	expect.go:49:
+
+	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:519
+	    Expect: '1', Actual: '2'
+
 --- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
 
 FIXME: Got another one because of bad luck when the system was not at all busy:
 === RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-    expect.go:49:
 
-        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:578
-        Expect: '1', Actual: '2'
+	expect.go:49:
+
+	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:578
+	    Expect: '1', Actual: '2'
+
 --- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
 
 FIXME: Got another one, not busy at all. Seem like just timing fragility
 === RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-    expect.go:71:
 
-        @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:587
-        Expect: '1', Actual: '2'
+	expect.go:71:
 
+	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:587
+	    Expect: '1', Actual: '2'
 */
 func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	ts := chrono.NewTimeSource()
 	config := cfg.NewConfig()
 	config.Set("newItemExpires", "100")
@@ -595,14 +689,15 @@ func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 
 	// Test
 	sut.pruneExpired()
-sut.GetKeys()
+	sut.GetKeys()
 	// Verify
 	ExpectInt(1, sut.Count(), t)
 }
 
 func TestThat_Cache_itemCanFit_ReturnsTrue_WhenUnlimited(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	var size int64 = 1000
 
 	// Verify
@@ -611,7 +706,8 @@ func TestThat_Cache_itemCanFit_ReturnsTrue_WhenUnlimited(t *testing.T) {
 
 func TestThat_Cache_itemCanFit_ReturnsTrue_WhenItemSizeUnderOrAtLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	var size int64 = 1000
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", size))
@@ -620,12 +716,13 @@ func TestThat_Cache_itemCanFit_ReturnsTrue_WhenItemSizeUnderOrAtLimit(t *testing
 
 	// Verify
 	ExpectTrue(sut.itemCanFit(size), t)
-	ExpectTrue(sut.itemCanFit(size / 2), t)
+	ExpectTrue(sut.itemCanFit(size/2), t)
 }
 
 func TestThat_Cache_itemCanFit_ReturnsFalse_WhenItemSizeOverLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	var size int64 = 1000
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", size))
@@ -633,13 +730,14 @@ func TestThat_Cache_itemCanFit_ReturnsFalse_WhenItemSizeOverLimit(t *testing.T) 
 	ExpectTrue((nil == err), t)
 
 	// Verify
-	ExpectFalse(sut.itemCanFit(size + 1), t)
-	ExpectFalse(sut.itemCanFit(size * 2), t)
+	ExpectFalse(sut.itemCanFit(size+1), t)
+	ExpectFalse(sut.itemCanFit(size*2), t)
 }
 
 func TestThat_Cache_numToPrune_ReturnsZero_WhenEmpty(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	key := "newkey"
 	var size int64 = 1000
 
@@ -649,12 +747,13 @@ func TestThat_Cache_numToPrune_ReturnsZero_WhenEmpty(t *testing.T) {
 
 func TestThat_Cache_numToPrune_ReturnsZero_ForExistingItemKeyUnderSizeLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	key := "key"
 	content := "12345"
 	size := sizeable.Size(content)
 	config := cfg.NewConfig()
-	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size+(size/2)))
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 
@@ -662,17 +761,18 @@ func TestThat_Cache_numToPrune_ReturnsZero_ForExistingItemKeyUnderSizeLimit(t *t
 	sut.Set(key, content)
 
 	// Verify
-	ExpectInt(0, sut.numToPrune(key, size + 1), t)
+	ExpectInt(0, sut.numToPrune(key, size+1), t)
 }
 
 func TestThat_Cache_numToPrune_ReturnsOne_ForNewItemKeyUnderSizeLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	key := "existingkey"
 	content := "12345"
 	size := sizeable.Size(content)
 	config := cfg.NewConfig()
-	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2)))
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size+(size/2)))
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 
@@ -680,17 +780,28 @@ func TestThat_Cache_numToPrune_ReturnsOne_ForNewItemKeyUnderSizeLimit(t *testing
 	sut.Set(key, content)
 
 	// Verify
-	ExpectInt(1, sut.numToPrune("newkey", size + 1), t)
+	ExpectInt(1, sut.numToPrune("newkey", size+1), t)
 }
 
+/*
+unreliable test:
+
+=== RUN   TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit
+
+	expect.go:71:
+
+	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:704
+	    Expect: '1', Actual: '0'
+*/
 func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	key := "existingkey"
 	content := "12345"
 	size := sizeable.Size(content)
 	config := cfg.NewConfig()
-	config.Set("totalSizeLimit", fmt.Sprintf("%d", size + (size / 2))) // <- not quite big enough to fit two of these...
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size+(size/2))) // <- not quite big enough to fit two of these...
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 	newKey := "newkey"
@@ -706,7 +817,8 @@ func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *te
 
 func TestThat_Cache_findUsageListElementByKey_ReturnsNil_ForMissingKey(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 
 	// Verify
 	ExpectNil(sut.findUsageListElementByKey("boguskey", false), t)
@@ -714,7 +826,8 @@ func TestThat_Cache_findUsageListElementByKey_ReturnsNil_ForMissingKey(t *testin
 
 func TestThat_Cache_findUsageListElementByKey_ReturnsNonNil_ForExistingKey(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	key := "key"
 
 	// Test
@@ -724,12 +837,22 @@ func TestThat_Cache_findUsageListElementByKey_ReturnsNonNil_ForExistingKey(t *te
 	ExpectNonNil(sut.findUsageListElementByKey(key, false), t)
 }
 
+/*
+unreliable test:
+=== RUN   TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToDrop
+
+	expect.go:71:
+
+	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:805
+	    Expect: '2', Actual: '1'
+*/
 func TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToDrop(t *testing.T) {
 	// Setup
-	sut := NewCache(); defer sut.Close()
+	sut := NewCache()
+	defer sut.Close()
 	content := "12345"
 	size := sizeable.Size(content)
-	sizeLimit := (size * 2)+ (size / 2)	// Big enough to hold two of these, but not three!
+	sizeLimit := (size * 2) + (size / 2) // Big enough to hold two of these, but not three!
 	config := cfg.NewConfig()
 	config.Set("totalSizeLimit", fmt.Sprintf("%d", sizeLimit))
 	err := sut.Configure(config)
