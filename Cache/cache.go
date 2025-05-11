@@ -29,6 +29,11 @@ TODO:
    can log errors, stats, and more
  * Capture stats for things like sets, drops, hits, misses, purge operations, etc.
  * Add iterator for cache entry keys
+ * After correcting the set/drop/pruning and mutex/async timing issues we would need to make a second
+   pass to support prevention of the cache from growing beyond the configured size limit. As it is,
+   we allow the size to break the limit temporarily and then prune it back down to the limit. We had
+   some bits of ligic to attempt to acocunt for this but it was wrong and causing issues, so we have
+   simplified in favor of circling back around to this concern later.
 
 */
 
@@ -334,7 +339,7 @@ func (r *Cache) has(key string) bool {
 func (r *Cache) pruneExpired() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	fmt.Printf("Cache::pruneExpired() ... \n")
+	//fmt.Printf("Cache::pruneExpired() ... \n")
 
 	// Find which keys we need to purge because their cacheItem is expired
 	purgeKeys := []string{}
@@ -357,12 +362,12 @@ func (r *Cache) pruneExpired() error {
 			return err
 		}
 	}
-	fmt.Printf("Cache::pruneExpired() purged %d keys \n", len(purgeKeys))
+	//fmt.Printf("Cache::pruneExpired() purged %d keys \n", len(purgeKeys))
 	return nil
 }
 
+// Determine whether an item of this size fits our cache if it were the ONLY item
 func (r *Cache) itemCanFit(size int64) bool {
-	// If it's bigger than the size limit, then it's impossible
 	if (r.totalSizeLimit > 0) && (size > r.totalSizeLimit) {
 		return false
 	}
@@ -407,32 +412,35 @@ func (r *Cache) pruneToLimits() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	var err error
-	fmt.Printf("Cache::pruneToLimits() ... \n")
+	//fmt.Printf("Cache::pruneToLimits() ... \n")
 
-	// Does this item fit right now without any prune/purge?
+	// Are we within limits right now without any prune/purge?
 	if (r.totalSizeLimit == 0) || (r.totalSize <= r.totalSizeLimit) {
 		if (r.totalCountLimit == 0) || (len(r.cache) <= r.totalCountLimit) {
+			//fmt.Printf("Cache::pruneToLimits() Nothing to do!\n")
 			return nil
 		}
 	}
 
 	pruneCount := r.numToPrune()
 	if 0 < pruneCount {
+		//fmt.Printf("Cache::pruneToLimits() pruning %d keys \n", pruneCount)
 
 		// TODO: Make sure we're not pruning more than some percentage threshold
 		// (to minimize performance hits due to statistical outliers)
 
 		// Prune starting at the back of the age list for the count we need to prune
 		element := r.usageList.Back()
-		for ; (nil != element) && (pruneCount > 0); pruneCount-- {
+		prunedCount := 0
+		for ; (nil != element) && (prunedCount < pruneCount); prunedCount++ {
 			dropKey := element.Value.(string)
-			fmt.Printf("Cache::pruneToLimits() dropping key %s \n", dropKey)
+			//fmt.Printf("Cache::pruneToLimits() dropping key %s \n", dropKey)
 			if _, err = r.drop(dropKey); nil != err {
 				break
 			}
 			element = element.Next()
 		}
-		fmt.Printf("Cache::pruneToLimits() pruned %d keys \n", pruneCount)
+		//fmt.Printf("Cache::pruneToLimits() pruned %d keys \n", prunedCount)
 	}
 
 	return err
@@ -441,15 +449,14 @@ func (r *Cache) pruneToLimits() error {
 // Add content to front of age List and remember it by key in elements map
 // return true if we set it, else false
 func (r *Cache) set(key string, value interface{}) bool {
-	fmt.Printf("Cache::set() - key: '%s'\n", key)
+
 	// Get the size of the value
 	newSize := sizeable.Size(value)
+	//fmt.Printf("Cache::set() - key: '%s', size: %d\n", key, newSize)
 
 	// If size limit is in play and this value is bigger than that, then it won't fit
-	if (0 < r.totalSizeLimit) && (newSize > r.totalSizeLimit) {
-		return false
-	}
 	if !r.itemCanFit(newSize) {
+		//fmt.Printf("Cache::set() - item too big to fit in cache\n")
 		return false
 	}
 
@@ -468,10 +475,9 @@ func (r *Cache) set(key string, value interface{}) bool {
 	// If this key already exists...
 	var oldSize int64 = 0
 	if r.has(key) {
-		// Replace the existing item
 		// subtract out the old size so that we're adjusting totalSize to be the difference between the two
 		oldSize = r.cache[key].Size()
-		r.findUsageListElementByKey(key, true)
+		r.rejuvenateListElementByKey(key)
 	} else {
 		// Add the new item
 		r.usageList.PushFront(key)
@@ -493,7 +499,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 func (r *Cache) drop(key string) (bool, error) {
 	var ret bool
 	var err error
-	fmt.Printf("Cache::drop() - key: '%s'\n", key)
+	//fmt.Printf("Cache::drop() - key: '%s'\n", key)
 	foundMap := r.has(key)
 	if foundMap {
 		//fmt.Printf("Cache::drop() - foundMap\n")
@@ -524,32 +530,25 @@ func (r *Cache) drop(key string) (bool, error) {
 	return ret, err
 }
 
+// Find the usageList element whose e.Value == key
 func (r *Cache) findUsageListElementByKey(key string, rejuvenate bool) *list.Element {
-	// If the key is in the cache at all...
-	//if _, ok := r.cache[key]; !ok {
-	//	return nil
-	//}
-
-	// Find the usageList element whose e.Value == key
 	for e := r.usageList.Front(); e != nil; e = e.Next() {
 		if ek, ok := e.Value.(string); ok {
 			if ek != key {
 				continue
 			}
-			// Found it!
-			if rejuvenate {
-				// Pull the element forward in the ageList
-				r.usageList.MoveToFront(e)
-				// Also touch the expiration time
-				expires := r.timeSource.Now().Add(r.newItemExpires)
-				r.cache[key].SetExpires(expires)
-			}
 			return e
-		} else {
-			// e.Value is not a string? Strange problem to have... ignore!
 		}
 	}
-
-	// Somehow key in cache, but NOT usageList? Strange problem to have... ignore!
 	return nil
+}
+
+func (r *Cache) rejuvenateListElementByKey(key string) {
+	if element := r.findUsageListElementByKey(key, true); nil != element {
+		// Pull the element forward in the ageList
+		r.usageList.MoveToFront(element)
+		// Also touch the expiration time
+		expires := r.timeSource.Now().Add(r.newItemExpires)
+		r.cache[key].SetExpires(expires)
+	}
 }

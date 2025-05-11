@@ -21,8 +21,8 @@ import (
 
 const GOROUTINE_WAIT_MSEC = 25
 
+// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
 func waitSecondBoundary() {
-	// Wait for the current time to cross 1 second boundary to prevent race conditoin on sleep vs. eviction times
 	secStart := time.Now().Second()
 	secDiff := 0
 	for ; secDiff == 0; secDiff = time.Now().Second() - secStart {
@@ -231,38 +231,6 @@ func TestThat_Cache_Drop_ReturnsTrue_WhenExistingKeyDropped(t *testing.T) {
 	ExpectInt64(0, sut.Size(), t)
 }
 
-/*
-=== RUN   TestThat_Cache_Set_CausesPruning_WhenBothOverLimit
-Cache::Configure() - totalCountLimit = 5
-Cache::Configure() - totalSizeLimit = 60
-YO
-sut.Set() ['key0'] = 'content-- 0'
-sut.Set() ['key1'] = 'content-- 1'
-sut.Set() ['key2'] = 'content-- 2'
-sut.Set() ['key3'] = 'content-- 3'
-sut.Set() ['key4'] = 'content-- 4'
-Cache::Pruning key[key0]
-sut.Set() ['key5'] = 'content-- 5'
-Cache::Pruning key[key1]
-OY
-Cache::Pruning key[key2]
-    expect.go:71:
-
-        @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:343
-        Expect: '4', Actual: '3'
-    expect.go:95:
-
-        @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:348:
-        Expect: 'true', Actual: 'false'
-    expect.go:124:
-
-        @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:350:
-        Expect: non-nil, Actual: nil
-panic: interface conversion: interface {} is nil, not string [recovered]
-	panic: interface conversion: interface {} is nil, not string
-
-*/
-
 func TestThat_Cache_Set_CausesPruning_WhenCountOverLimit(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -330,36 +298,6 @@ func TestThat_Cache_Set_CausesPruning_WhenSizeOverLimit(t *testing.T) {
 	}
 }
 
-/*
-Unreliable test:
-=== RUN   TestThat_Cache_Set_CausesPruning_WhenBothOverLimit
-
-	expect.go:71:
-
-	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:364
-	    Expect: '3', Actual: '4'
-
-=== RUN   TestThat_Cache_Set_CausesPruning_WhenBothOverLimit
-panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x59bfb7b]
-
-goroutine 88 [running]:
-command-line-arguments.(*Cache).numToPrune(0xc0001845b0, {0xc0001807ac, 0x4}, 0xf)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:406 +0x2fb
-
-command-line-arguments.(*Cache).pruneToLimits(0xc0001845b0, {0xc0001807ac?, 0x0?}, 0x0?)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:430 +0x178
-
-created by command-line-arguments.(*Cache).set in goroutine 84
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:494 +0x628
-
-FAIL	command-line-arguments	0.985s
-FAIL
-^^^^ ERROR!
-*/
 func TestThat_Cache_Set_CausesPruning_WhenBothOverLimit(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -447,29 +385,6 @@ func TestThat_Cache_Configure_AllowsSet_WhenEntryIsExactlyLimit(t *testing.T) {
 	ExpectTrue(sut.Has("anykey"), t)
 }
 
-/*
-Implementation problem of some sort, not a test problem:
-=== RUN   TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting
-panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x3985948]
-
-goroutine 76 [running]:
-command-line-arguments.(*Cache).numToPrune(0xc00032a150, {0x39acc20, 0x6}, 0x9)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:377 +0xc8
-
-command-line-arguments.(*Cache).pruneToLimits(0xc00032a150, {0x39acc20?, 0xc00015cc40?}, 0x3a49218?)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:424 +0x178
-
-created by command-line-arguments.(*Cache).set in goroutine 75
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:488 +0x628
-
-FAIL	command-line-arguments	0.929s
-FAIL
-^^^^ ERROR!
-*/
 func TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -499,29 +414,6 @@ func TestThat_Cache_Configure_AllowsSet_WhenFullButEntryReplacesExisting(t *test
 	ExpectString(content, val, t)
 }
 
-/*
-Implementation problem of some sort, not a test problem:
-=== RUN   TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys
-panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x5695948]
-
-goroutine 81 [running]:
-command-line-arguments.(*Cache).numToPrune(0xc000012850, {0x56bcc20, 0x6}, 0x9)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:377 +0xc8
-
-command-line-arguments.(*Cache).pruneToLimits(0xc000012850, {0x56bcc20?, 0x0?}, 0x0?)
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:424 +0x178
-
-created by command-line-arguments.(*Cache).set in goroutine 64
-
-	/Users/skelly/Documents/GoProjects/GoLib/Cache/cache.go:488 +0x628
-
-FAIL	command-line-arguments	1.111s
-FAIL
-^^^^ ERROR!
-*/
 func TestThat_Cache_HasAll_ReturnsTrue_IfCacheHasAllKeys(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -670,35 +562,6 @@ func TestThat_Cache_pruneExpired_LeavesItemsThatNeverExpire(t *testing.T) {
 	ExpectInt(1, sut.Count(), t)
 }
 
-/*
-FIXME: This test fails occasionally when system is busy/multi-tasking
-=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-
-	expect.go:49:
-
-	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:519
-	    Expect: '1', Actual: '2'
-
---- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
-
-FIXME: Got another one because of bad luck when the system was not at all busy:
-=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-
-	expect.go:49:
-
-	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:578
-	    Expect: '1', Actual: '2'
-
---- FAIL: TestThat_Cache_pruneExpired_PurgesExpiredItems (0.00s)
-
-FIXME: Got another one, not busy at all. Seem like just timing fragility
-=== RUN   TestThat_Cache_pruneExpired_PurgesExpiredItems
-
-	expect.go:71:
-
-	    @/home/digistratum/Documents/Development/GoProjects/src/github.com/DigiStratum/GoLib/Cache/cache_test.go:587
-	    Expect: '1', Actual: '2'
-*/
 func TestThat_Cache_pruneExpired_PurgesExpiredItems(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -760,16 +623,13 @@ func TestThat_Cache_itemCanFit_ReturnsFalse_WhenItemSizeOverLimit(t *testing.T) 
 	ExpectFalse(sut.itemCanFit(size*2), t)
 }
 
-/*
 func TestThat_Cache_numToPrune_ReturnsZero_WhenEmpty(t *testing.T) {
 	// Setup
 	sut := NewCache()
 	defer sut.Close()
-	key := "newkey"
-	var size int64 = 1000
 
 	// Verify
-	ExpectInt(0, sut.numToPrune(key, size), t)
+	ExpectInt(0, sut.numToPrune(), t)
 }
 
 func TestThat_Cache_numToPrune_ReturnsZero_ForExistingItemKeyUnderSizeLimit(t *testing.T) {
@@ -788,39 +648,31 @@ func TestThat_Cache_numToPrune_ReturnsZero_ForExistingItemKeyUnderSizeLimit(t *t
 	sut.Set(key, content)
 
 	// Verify
-	ExpectInt(0, sut.numToPrune(key, size+1), t)
+	ExpectInt(0, sut.numToPrune(), t)
 }
 
-func TestThat_Cache_numToPrune_ReturnsOne_ForNewItemKeyUnderSizeLimit(t *testing.T) {
+func TestThat_Cache_numToPrune_CausesOneItemToBePruned_ForNewItemKeyUnderSizeLimit(t *testing.T) {
 	// Setup
 	sut := NewCache()
 	defer sut.Close()
-	key := "existingkey"
 	content := "12345"
 	size := sizeable.Size(content)
 	config := cfg.NewConfig()
-	config.Set("totalSizeLimit", fmt.Sprintf("%d", size+(size/2)))
+	config.Set("totalSizeLimit", fmt.Sprintf("%d", size+size/2)) // <- limit is too small to fit two of these...
 	err := sut.Configure(config)
 	ExpectTrue((nil == err), t)
 
 	// Test
-	sut.Set(key, content)
+	sut.Set("existingkey", content) // <- add first item within limits
+	sut.Set("newkey", content)      // <- add secont item over limit, should cause pruning of first
+	// pruning runs async; give it a moment to process
+	waitSecondBoundary()
 
 	// Verify
-	ExpectInt(1, sut.numToPrune("newkey", size+1), t)
+	ExpectInt(1, sut.Count(), t)     // <- only one item should remain after pruning
+	ExpectInt64(size, sut.Size(), t) // <- back under limit!
 }
-*/
 
-/*
-unreliable test:
-
-=== RUN   TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit
-
-	expect.go:71:
-
-	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:844
-	    Expect: '1', Actual: '0'
-*/
 func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -838,7 +690,6 @@ func TestThat_Cache_pruneToLimits_DropsOneItem_ForNewItemKeyUnderSizeLimit(t *te
 
 	sut.Set(key, content)
 	sut.Set(newKey, content)
-	//sut.pruneToLimits(newKey, size) // <- pruning should eliminate the oldest one which should fit the total size limit
 	// pruning runs async; give it a moment to process
 	waitSecondBoundary()
 
@@ -868,15 +719,6 @@ func TestThat_Cache_findUsageListElementByKey_ReturnsNonNil_ForExistingKey(t *te
 	ExpectNonNil(sut.findUsageListElementByKey(key, false), t)
 }
 
-/*
-unreliable test:
-=== RUN   TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToDrop
-
-	expect.go:71:
-
-	    @/Users/skelly/Documents/GoProjects/GoLib/Cache/cache_test.go:805
-	    Expect: '2', Actual: '1'
-*/
 func TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToDrop(t *testing.T) {
 	// Setup
 	sut := NewCache()
@@ -896,14 +738,13 @@ func TestThat_Cache_findUsageListElementByKey_BumpsFirstItem_CausingSecondOneToD
 
 	sut.Set("firstkey", content)
 	sut.Set("secondkey", content)
-	sut.findUsageListElementByKey("firstkey", true)
+	sut.Set("firstkey", content) // <- rejuvenate firstkey, making second key the oldest
 	sut.Set("thirdkey", content)
-	//sut.pruneToLimits("thirdkey", size)
 	// pruning runs async; give it a moment to process
 	waitSecondBoundary()
 
 	// Verify
 	ExpectInt(2, sut.Count(), t)
-	// LRU: with firstkey bumped, we expect secondkey pruned when thirdkey set
+	// LRU: with firstkey rejuvenated, we expect secondkey pruned when thirdkey set
 	ExpectFalse(sut.Has("secondkey"), t)
 }
