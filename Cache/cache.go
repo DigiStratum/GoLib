@@ -153,7 +153,7 @@ func (r *Cache) SetTimeSource(timeSource chrono.TimeSourceIfc) {
 
 // Check whether this Cache is empty (has no properties)
 func (r *Cache) IsEmpty() bool {
-	return 0 == r.Count()
+	return r.Count() == 0
 }
 
 // Get the number of properties in this Cache
@@ -327,7 +327,7 @@ func (r *Cache) runLoop() {
 	// While the Cache has not been closed...
 	for r.IsRunning() {
 		r.pruneExpired()
-		time.Sleep(60)
+		time.Sleep(60 * time.Second) // Explicitly use 60 seconds
 	}
 }
 func (r *Cache) has(key string) bool {
@@ -464,7 +464,7 @@ func (r *Cache) set(key string, value interface{}) bool {
 
 	// Set up an expiration time for this new item
 	var expires chrono.TimeStampIfc
-	if 0 == r.newItemExpires {
+	if r.newItemExpires == 0 {
 		expires = chrono.NewTimeStampForever()
 	} else {
 		expires = r.timeSource.Now().Add(r.newItemExpires)
@@ -522,7 +522,7 @@ func (r *Cache) drop(key string) (bool, error) {
 	// If foundMap XOR element (i.e. they don't match), then there was a desync
 	if foundMap != (nil != element) {
 		err = fmt.Errorf(
-			"Cache.drop() - WARN: cache desync; found '%s' in either map or list but not both!",
+			"Cache.drop() - WARN: cache desync; found '%s' in either map or list but not both",
 			key,
 		)
 	}

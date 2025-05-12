@@ -1,16 +1,17 @@
 package cache
 
-import(
-	"github.com/DigiStratum/GoLib/Chrono"
+import (
+	chrono "github.com/DigiStratum/GoLib/Chrono"
 	"github.com/DigiStratum/GoLib/Data/sizeable"
 )
+
 /*
 
 An item in the cache which may hold any arbitrary value with an expiration timestamp. The value is
 stored as an interface{}, so the consumer must be able to assert into the form it needs upon retrieval.
 */
 
-type cacheItemIfc interface {
+type CacheItemIfc interface {
 	IsExpired() bool
 	SetExpires(expires chrono.TimeStampIfc)
 	GetExpires() chrono.TimeStampIfc
@@ -20,10 +21,10 @@ type cacheItemIfc interface {
 }
 
 type cacheItem struct {
-	key		string
-	value		interface{}
-	expires		chrono.TimeStampIfc
-	size		int64
+	key     string
+	value   interface{}
+	expires chrono.TimeStampIfc
+	size    int64
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -31,15 +32,15 @@ type cacheItem struct {
 // -------------------------------------------------------------------------------------------------
 func NewCacheItem(key string, value interface{}, expires chrono.TimeStampIfc) *cacheItem {
 	return &cacheItem{
-		key:		key,
-		value:		value,
-		expires:	expires,
-		size:		sizeable.Size(value),
+		key:     key,
+		value:   value,
+		expires: expires,
+		size:    sizeable.Size(value),
 	}
 }
 
 // -------------------------------------------------------------------------------------------------
-// cacheItem Public Interface
+// CacheItem Public Interface
 // -------------------------------------------------------------------------------------------------
 
 func (r cacheItem) IsExpired() bool {
