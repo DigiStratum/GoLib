@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
+# Get the directory of the script (covers edge cases)
 # Handle edge cases without subprocesses
 if [[ "${BASH_SOURCE[0]}" = /* ]]; then
     # Absolute path
@@ -23,8 +22,10 @@ set_death_dir $START_DIR
 say "BUILD: GoLib"
 say "BEGIN"
 
+# Do all our work from the location of this script
 pushd $SCRIPT_DIR > /dev/null
 
+# If the module is not even initialized, start there
 if [ ! -f go.mod ]; then
 	modname=${PWD##*/}
 	say "Initializing Modle: $modname"
@@ -37,13 +38,13 @@ fi
 gobin=`which go`
 while read cmd
 do
+	# If `go mod tidy` turns up nothing, it may be an empty string, so just skip it
 	if [[ -n "$cmd" && "${cmd//[[:space:]]}" ]]; then
 		echo "cmd: $gobin $cmd"
 		`$gobin $cmd`
 	fi
 done <<< `go mod tidy 2>&1 |grep "found" | sed -e 's/go: found /get /g' | sed -e 's/ in .*$//g'`
 
-popd
-
-#cd $START_DIR
+# Return to where we began
+popd > /dev/null
 say "\nDONE! :^D"
