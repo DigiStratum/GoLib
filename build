@@ -30,9 +30,11 @@ if [ ! -f go.mod ]; then
 	modname=${PWD##*/}
 	say "Initializing Modle: $modname"
 	go mod init $modname
-	go mod tidy
-	go mod vendor
 fi
+
+#go clean -modcache
+go mod tidy
+go mod vendor
 
 # Iterate over output of `go mod tidy` which recommends things that we should go get... and go get them!
 gobin=`which go`
