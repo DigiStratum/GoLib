@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Ignore these patterns (space separated) for lint/test
+#IGNORE="\.\/vendor"
+IGNORE="vendor"
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 . $SCRIPT_DIR/tools/shell.sh
@@ -13,7 +17,15 @@ say "BEGIN"
 # Lint all source files first
 PASS=1
 gobin=`which go`
-for f in `find . -type f -name '*.go' | sed -r 's|/[^/]+$||' |sort |uniq`; do
+for f in `find . -type f -name '*.go' -not -path "$IGNORE" | sed -r 's|/[^/]+$||' |sort |uniq`; do
+
+	# Ignore paths matching the ignore list
+	for i in $IGNORE; do
+		fi="\.\/$i"
+		#echo "Compare [$f] to [$fi]"
+		if [[ $f =~ $fi ]]; then break 2; fi
+	done
+
 	# Try to vet this file
 	say "Vetting: $f"
 	output=`go vet $f 2>&1`
@@ -47,11 +59,16 @@ if [ $PASS == 0 ]; then
 	die "FAILED Vetting stage (see above)!"
 fi
 
-
 # Now run unit tests
 NUMPASS=0
 NUMFAIL=0
 for testrunner in `find $SCRIPT_DIR -name "t"`; do
+	# Ignore paths matching the ignore list
+	for i in $IGNORE; do
+		#echo "Compare [$testrunner] to [$SCRIPT_DIR/$i]"
+		if [[ $testrunner =~ "$SCSRIPT_DIR/$i" ]]; then break 2; fi
+	done
+
 	echo "Running test: '$testrunner'"
 	/bin/bash $testrunner
 	if [ $? != 0 ]; then
