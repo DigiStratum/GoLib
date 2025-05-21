@@ -1,6 +1,18 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+#SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Handle edge cases without subprocesses
+if [[ "${BASH_SOURCE[0]}" = /* ]]; then
+    # Absolute path
+    SCRIPT_DIR="${BASH_SOURCE[0]%/*}"
+elif [[ "${BASH_SOURCE[0]}" == */* ]]; then
+    # Relative path with directory component
+    SCRIPT_DIR="$PWD/${BASH_SOURCE[0]%/*}"
+else
+    # Just a filename
+    SCRIPT_DIR="$PWD"
+fi
 
 . $SCRIPT_DIR/tools/shell.sh
 
@@ -10,6 +22,9 @@ set_death_dir $START_DIR
 
 say "BUILD: GoLib"
 say "BEGIN"
+
+pushd $SCRIPT_DIR > /dev/null
+
 if [ ! -f go.mod ]; then
 	modname=${PWD##*/}
 	say "Initializing Modle: $modname"
@@ -28,7 +43,7 @@ do
 	fi
 done <<< `go mod tidy 2>&1 |grep "found" | sed -e 's/go: found /get /g' | sed -e 's/ in .*$//g'`
 
+popd
 
-cd $START_DIR
+#cd $START_DIR
 say "\nDONE! :^D"
-

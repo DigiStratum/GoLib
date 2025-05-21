@@ -5,7 +5,7 @@
 # * Stop using die/exit/TERM trap, etc. just return exit codes through the function calls back to parent, parent exits as needed.
 
 # Which directory should we return to upon death? Defaults to no change on exit (it stays where it dies)
-DEATH_DIR="."
+DEATH_DIR="$PWD"
 
 # Reset debug logging
 #debugLog="debug.log"
@@ -43,7 +43,7 @@ set_death_dir() {
 # Use this to die with a message
 die() {
 	say "$1"
-	# We need this to exit ths script, not just the function
+	# We need this to exit the script, not just the function
 	cd $DEATH_DIR
 	kill -s TERM $TOP_PID
 }
