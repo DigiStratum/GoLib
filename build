@@ -5,7 +5,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 . $SCRIPT_DIR/tools/shell.sh
 
 # Return to where we were executed from upon death
-START_DIR=`pwd`
+START_DIR=$PWD
 set_death_dir $START_DIR
 
 say "BUILD: GoLib"
