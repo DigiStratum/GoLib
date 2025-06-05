@@ -14,15 +14,15 @@ REF:
 
 */
 
-import(
-	"io"
+import (
 	"fmt"
-	"time"
-	"strconv"
+	"io"
 	gohttp "net/http"
+	"strconv"
+	"time"
 
-	"github.com/DigiStratum/GoLib/Process/startable"
 	cfg "github.com/DigiStratum/GoLib/Config"
+	"github.com/DigiStratum/GoLib/Process/startable"
 )
 
 type HttpClientIfc interface {
@@ -41,13 +41,13 @@ type HttpClient struct {
 	*startable.Startable
 
 	// Our own properties
-	client			*gohttp.Client
+	client *gohttp.Client
 
 	// Config
-	maxBodyLenKb		int
-	requestTimeout		time.Duration
-	idleTimeout		time.Duration
-	disableCompression	bool
+	maxBodyLenKb       int
+	requestTimeout     time.Duration
+	idleTimeout        time.Duration
+	disableCompression bool
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -60,29 +60,31 @@ func NewHttpClient() *HttpClient {
 	// TODO: This int/bool-as-string madness caused by Config only supporting string values; add multi-type support!
 	r.Configurable = cfg.NewConfigurable(
 		cfg.NewConfigItem("maxBodyLenKb").SetDefault("10240").CaptureWith(
-			func (value string) error {
+			func(value string) error {
 				v, err := strconv.Atoi(value)
-				if nil != err { return err }
+				if err != nil {
+					return err
+				}
 				r.maxBodyLenKb = v
 				return nil
 			},
 		),
 		cfg.NewConfigItem("requestTimeout").SetDefault("60s").CaptureWith(
-			func (value string) error {
+			func(value string) error {
 				var err error
 				r.requestTimeout, err = time.ParseDuration(value)
 				return err
 			},
 		),
 		cfg.NewConfigItem("idleTimeout").SetDefault("30").CaptureWith(
-			func (value string) error {
+			func(value string) error {
 				var err error
 				r.idleTimeout, err = time.ParseDuration(value)
 				return err
 			},
 		),
 		cfg.NewConfigItem("disableCompression").SetDefault("false").CaptureWith(
-			func (value string) error {
+			func(value string) error {
 				r.disableCompression = (value == "true")
 				return nil
 			},
@@ -103,12 +105,14 @@ func NewHttpClient() *HttpClient {
 
 func (r *HttpClient) Start() error {
 	// Call super
-	if err := r.Startable.Start(); nil != err { return err }
+	if err := r.Startable.Start(); err != nil {
+		return err
+	}
 
 	// Set up our net/http client
 	// ref: https://pkg.go.dev/net/http#Client
 	r.client = &gohttp.Client{
-		Transport:	&gohttp.Transport{
+		Transport: &gohttp.Transport{
 			IdleConnTimeout:    r.idleTimeout,
 			DisableCompression: r.disableCompression,
 		},
@@ -130,11 +134,15 @@ func (r *HttpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpRespon
 
 	// Transform the Request structure
 	request, err := r.fromHttpRequest(httpRequest)
-	if nil != err { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	// Make the request and capture the response
 	response, err := r.client.Do(request)
-	if nil != err { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	// Transform the Response structure
 	httpResponse, err := r.toHttpResponse(response)
@@ -150,7 +158,9 @@ func (r *HttpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 		httpRequest.GetURL(),
 		nil,
 	)
-	if nil != err { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	// Set up request headers
 	headers := httpRequest.GetHeaders()
@@ -203,14 +213,16 @@ func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 			readlen, err = response.Body.Read(bodybuf)
 			// EOF means we're done. readlen *should* never be
 			// 0, but trap just in case to prevent perpetual loop
-			if (io.EOF == err) || (0 == readlen) { break }
-			if nil != err { return nil, err }
-			copy(bodybuf[pos:], readbuf[0:readlen - 1])
+			if (err == io.EOF) || (readlen == 0) {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			copy(bodybuf[pos:], readbuf[0:readlen-1])
 		}
 		httpResponse.SetBinBody(&bodybuf)
 	}
 
 	return httpResponse, nil
 }
-
-

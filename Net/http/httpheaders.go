@@ -43,7 +43,9 @@ func NewHttpHeaders() HttpHeadersIfc {
 
 // DO we have the named header?
 func (r *httpHeaders) Has(name string) bool {
-	if _, ok := (*r)[name]; ok { return true }
+	if _, ok := (*r)[name]; ok {
+		return true
+	}
 	return false
 }
 
@@ -52,7 +54,9 @@ func (r *httpHeaders) Has(name string) bool {
 // Deprecated; use All() instead
 func (r *httpHeaders) Get(name string) string {
 	if values, ok := (*r)[name]; ok {
-		if len(values) > 0 { return values[0] }
+		if len(values) > 0 {
+			return values[0]
+		}
 	}
 	return ""
 }
@@ -84,7 +88,7 @@ func (r *httpHeaders) GetHeaderNames() *[]string {
 
 // Are there NO headers set?
 func (r *httpHeaders) IsEmpty() bool {
-	return 0 == len(*r)
+	return len(*r) == 0
 }
 
 // Some consumers need headers in the form of a simple data structure
@@ -93,7 +97,9 @@ func (r *httpHeaders) ToMap() *map[string]string {
 	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
 	h := make(map[string]string)
 	for n, vs := range *r {
-		if len(vs) == 0 { continue }
+		if len(vs) == 0 {
+			continue
+		}
 		h[n] = vs[0]
 	}
 	return &h
@@ -102,7 +108,9 @@ func (r *httpHeaders) ToMap() *map[string]string {
 // Single-name, multi-value support
 // TODO: Consider variadic support for value(s) here
 func (r *httpHeaders) Add(name string, value string) {
-	if _, ok := (*r)[name]; ! ok { (*r)[name] = make([]string, 0) }
+	if _, ok := (*r)[name]; !ok {
+		(*r)[name] = make([]string, 0)
+	}
 	(*r)[name] = append((*r)[name], value)
 }
 
@@ -117,7 +125,9 @@ func (r *httpHeaders) All(name string) *[]string {
 func (r *httpHeaders) MapAll() *map[string][]string {
 	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
 	h := make(map[string][]string)
-	for n, vs := range *r { h[n] = vs }
+	for n, vs := range *r {
+		h[n] = vs
+	}
 	return &h
 }
 
@@ -125,10 +135,11 @@ func (r *httpHeaders) MergeAll(headers HttpHeadersIfc) {
 	names := headers.GetHeaderNames()
 	for _, name := range *names {
 		values := headers.All(name)
-		if nil == values { continue }
+		if nil == values {
+			continue
+		}
 		for _, value := range *values {
 			r.Add(name, value)
 		}
 	}
 }
-
