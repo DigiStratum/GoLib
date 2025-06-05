@@ -11,13 +11,13 @@ type HttpRequestContextIfc interface {
 	GetRequestId() string
 }
 
-// TODO: Add more interesting properties such as which User is logged
-// in, which Account/Customer/Business/etc is being requested
+// FIXME: These properties are far too specific to StratifyServer to be generally useful/reusable
+// TODO: Convert this to generalized metadata so that we don't need native struct propserties
 type httpRequestContext struct {
-	serverPath	string	// The path that the Server matched on
-	modulePath	string	// The path that the Module matched on
-	prefixPath	string	// ServerPath/ModulePath
-	requestId	string	// UUID for this request
+	serverPath string // The path that the Server matched on
+	modulePath string // The path that the Module matched on
+	prefixPath string // ServerPath/ModulePath
+	requestId  string // UUID for this request
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -63,4 +63,3 @@ func (r *httpRequestContext) SetRequestId(requestId string) {
 func (r *httpRequestContext) GetRequestId() string {
 	return r.requestId
 }
-
