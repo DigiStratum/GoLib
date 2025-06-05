@@ -6,6 +6,10 @@ An Immutable HTTP Request structure and programmatic interface to it.
 
 Use NewHttpRequestBuilder() to create one of these.
 
+FIXME:
+ * Getters for non-primitive data types are returning mutable structures. We need Builders for ALL
+   of these to make them immutable as well.
+
 */
 
 import (
