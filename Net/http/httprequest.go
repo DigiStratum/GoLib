@@ -33,7 +33,6 @@ type HttpRequestIfc interface {
 	GetPathParameters() metadata.MetadataIfc
 	GetBody() *string
 	GetBodyData() *HttpBodyData
-	GetContext() HttpRequestContextIfc
 	GetHeaders() HttpHeadersIfc
 	GetAcceptableLanguages() *[]string
 }
@@ -51,7 +50,6 @@ type httpRequest struct {
 	headers     HttpHeadersIfc
 	body        *string
 	bodyData    *HttpBodyData
-	context     HttpRequestContextIfc
 	pathParams  metadata.MetadataIfc
 }
 
@@ -102,11 +100,6 @@ func (r *httpRequest) GetBody() *string {
 
 func (r *httpRequest) GetBodyData() *HttpBodyData {
 	return r.bodyData
-}
-
-// Get the Request Context
-func (r *httpRequest) GetContext() HttpRequestContextIfc {
-	return r.context
 }
 
 // Get the Request Headers

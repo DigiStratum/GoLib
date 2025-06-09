@@ -25,7 +25,6 @@ type HttpRequestBuilderIfc interface {
 	SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder
 	SetBody(body *string) *httpRequestBuilder
 	SetBodyData(bodyData *HttpBodyData) *httpRequestBuilder
-	SetContext(context HttpRequestContextIfc) *httpRequestBuilder
 	SetHeaders(headers HttpHeadersIfc) *httpRequestBuilder
 	SetPathParameters(params metadata.MetadataIfc) *httpRequestBuilder
 	GetHttpRequest() *httpRequest
@@ -45,7 +44,6 @@ func NewHttpRequestBuilder() *httpRequestBuilder {
 		request: &httpRequest{
 			headers:  NewHttpHeaders(),
 			bodyData: &bodyData,
-			context:  NewHttpRequestContext(),
 		},
 	}
 }
@@ -108,12 +106,6 @@ func (r *httpRequestBuilder) SetBody(body *string) *httpRequestBuilder {
 
 func (r *httpRequestBuilder) SetBodyData(bodyData *HttpBodyData) *httpRequestBuilder {
 	r.request.bodyData = bodyData
-	return r
-}
-
-// Set the Request Context
-func (r *httpRequestBuilder) SetContext(context HttpRequestContextIfc) *httpRequestBuilder {
-	r.request.context = context
 	return r
 }
 
