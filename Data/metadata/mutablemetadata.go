@@ -2,30 +2,32 @@ package metadata
 
 /*
 
-Mutable extension of otherwise immutable Metadata
+TODO:
+ * Add support for JSON un|marshal to deserialze
 
 */
 
-type MutableMetadataIfc interface {
+type MetadataBuilderIfc interface {
 	// Embedded interface(s)
 	MetadataIfc
 
 	// Our own interface
-	Set(name, value string) *mutableMetadata
+	Set(name, value string) *metadataBuilder
+	GetMetadata() *metadata
 }
 
-type mutableMetadata struct {
+type metadataBuilder struct {
 	// Embedded struct+interface(s)
-	MetadataIfc
+	metadata *metadata
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewMutableMetadata() *mutableMetadata {
-	return &mutableMetadata{
-		MetadataIfc:		NewMetadata(),
+func NewMutableMetadata() *metadataBuilder {
+	return &metadataBuilder{
+		metadata: NewMetadata(),
 	}
 }
 
@@ -33,10 +35,12 @@ func NewMutableMetadata() *mutableMetadata {
 // MutableMetadataIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *mutableMetadata) Set(name, value string) *mutableMetadata {
+func (r *metadataBuilder) Set(name, value string) *metadataBuilder {
 	//r.MetadataIfc.data[name] = value
-	metadata := r.MetadataIfc.getMetadata()
-	metadata.data[name] = value
+	r.metadata.data[name] = value
 	return r
 }
 
+func (r *metadataBuilder) GetMetadata() *metadata {
+	return r.metadata
+}
