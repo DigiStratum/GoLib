@@ -25,18 +25,17 @@ type metadataBuilder struct {
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewMutableMetadata() *metadataBuilder {
+func NewMetadataBuilder() *metadataBuilder {
 	return &metadataBuilder{
 		metadata: NewMetadata(),
 	}
 }
 
 // -------------------------------------------------------------------------------------------------
-// MutableMetadataIfc
+// MetadataBuilderIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *metadataBuilder) Set(name, value string) *metadataBuilder {
-	//r.MetadataIfc.data[name] = value
 	r.metadata.data[name] = value
 	return r
 }

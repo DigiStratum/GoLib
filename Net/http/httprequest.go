@@ -81,9 +81,7 @@ func (r *httpRequest) GetURL() string {
 }
 
 func (r *httpRequest) GetMethod() HttpRequestMethod {
-	// Force result to be one of the enumerated set
-	hlpr := GetHelper()
-	return hlpr.GetHttpRequestMethod(hlpr.GetHttpRequestMethodText(r.method))
+	return r.method
 }
 
 func (r *httpRequest) GetURI() string {

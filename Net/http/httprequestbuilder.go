@@ -4,6 +4,7 @@ package http
 
 TODO
  * Add "BodyBuilder helper for Body Data to build it up one name/value at a time
+ * Fix up the SetQueryString and SetQueryParameters funcs so that they match values, cannot diverge
 */
 
 import (
@@ -93,6 +94,7 @@ func (r *httpRequestBuilder) SetURI(uri string) *httpRequestBuilder {
 }
 
 func (r *httpRequestBuilder) SetQueryString(queryString string) *httpRequestBuilder {
+	// TODO: SetQueryParameters() should be called to match this
 	r.request.queryString = queryString
 	return r
 }
@@ -121,6 +123,7 @@ func (r *httpRequestBuilder) SetPathParameters(params metadata.MetadataIfc) *htt
 
 // Set the query parameters
 func (r *httpRequestBuilder) SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder {
+	// TODO: SetQueryString() should be called to match this
 	r.request.queryParams = params
 	return r
 }
