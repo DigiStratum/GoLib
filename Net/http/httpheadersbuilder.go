@@ -23,11 +23,10 @@ func NewHttpHeadersBuilder() *httpHeadersBuilder {
 }
 
 // -------------------------------------------------------------------------------------------------
-// HttpHeadersBuilderIfc Implementation
+// HttpHeadersBuilderIfc
 // -------------------------------------------------------------------------------------------------
 
 // Single-name, multi-value support
-// TODO: Consider variadic support for value(s) here
 func (r *httpHeadersBuilder) Set(name string, values ...string) *httpHeadersBuilder {
 	// If the header is not set, then create it
 	if _, ok := (*r.headers)[name]; !ok {
@@ -44,13 +43,15 @@ func (r *httpHeadersBuilder) Set(name string, values ...string) *httpHeadersBuil
 }
 
 func (r *httpHeadersBuilder) Merge(headers HttpHeadersIfc) *httpHeadersBuilder {
-	names := headers.GetHeaderNames()
-	for _, name := range *names {
-		values := headers.All(name)
-		if nil == values {
-			continue
+	if headers != nil {
+		names := headers.GetHeaderNames()
+		for _, name := range *names {
+			values := headers.All(name)
+			if nil == values {
+				continue
+			}
+			r.Set(name, *values...)
 		}
-		r.Set(name, *values...)
 	}
 	return r
 }

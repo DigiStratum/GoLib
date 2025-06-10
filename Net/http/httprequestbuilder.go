@@ -83,9 +83,7 @@ func (r *httpRequestBuilder) SetURL(urlStr string) *httpRequestBuilder {
 }
 
 func (r *httpRequestBuilder) SetMethod(method HttpRequestMethod) *httpRequestBuilder {
-	// Force value to be one of the enumerated set
-	hlpr := GetHelper()
-	r.request.method = hlpr.GetHttpRequestMethod(hlpr.GetHttpRequestMethodText(method))
+	r.request.method = method
 	return r
 }
 
