@@ -1,17 +1,31 @@
 package http
 
+/*
+
+A set of HTTP Headers for Request or Response
+
+Note that a resource server will typically support a maximum size for the request payload. This
+varies by server (for example, Apache defaults to 8K, IIS 16K, and Nginx 1M), and is configurable.
+
+Because this implementation is server-agnostic, we do not enforce a maximum size here, but we do
+provide a Size() function to allow the caller to determine the size of the headers in bytes. If a
+resource server implementation decides to reject a request due to the size breaking the configured
+limit, then it should return an HTTP 413 Payload Too Large response status to the client
+
+TODO:
+ * Consider direct support with validation for specific, known header names
+   ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers
+ * Also validate custom header names against RFC 7230 for acceptable characters < 40 length
+   ref: https://datatracker.ietf.org/doc/html/rfc7230
+*/
+
 type HttpHeadersIfc interface {
 	Has(name string) bool
-	GetHeaderNames() *[]string
+	GetNames() *[]string
 	IsEmpty() bool
-
-	// Deprecated: Single name, single value
-	Get(name string) string
-	ToMap() *map[string]string
-
-	// Single-name, multi-value support
-	All(name string) *[]string
-	MapAll() *map[string][]string
+	Get(name string) *[]string
+	ToMap() *map[string][]string
+	Size() int
 }
 
 // Name/value pair header map for Request or Response
@@ -32,26 +46,12 @@ func NewHttpHeaders() *httpHeaders {
 
 // DO we have the named header?
 func (r *httpHeaders) Has(name string) bool {
-	if _, ok := (*r)[name]; ok {
-		return true
-	}
-	return false
-}
-
-// Get a single header
-// TODO: Change this to return nil (string pointer instead of string) if the value is not set - the difference between unset and set-but-empty
-// Deprecated; use All() instead
-func (r *httpHeaders) Get(name string) string {
-	if values, ok := (*r)[name]; ok {
-		if len(values) > 0 {
-			return values[0]
-		}
-	}
-	return ""
+	_, ok := (*r)[name]
+	return ok
 }
 
 // Get the complete set of names
-func (r *httpHeaders) GetHeaderNames() *[]string {
+func (r *httpHeaders) GetNames() *[]string {
 	names := make([]string, 0)
 	for name, _ := range *r {
 		names = append(names, name)
@@ -64,33 +64,43 @@ func (r *httpHeaders) IsEmpty() bool {
 	return len(*r) == 0
 }
 
-// Some consumers need headers in the form of a simple data structure
-// Deprecated; use MapAll() instead
-func (r *httpHeaders) ToMap() *map[string]string {
-	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
-	h := make(map[string]string)
-	for n, vs := range *r {
-		if len(vs) == 0 {
-			continue
-		}
-		h[n] = vs[0]
-	}
-	return &h
-}
-
-func (r *httpHeaders) All(name string) *[]string {
+func (r *httpHeaders) Get(name string) *[]string {
 	if values, ok := (*r)[name]; ok {
 		return &values
 	}
-	emptySet := make([]string, 0)
-	return &emptySet
+	return nil
 }
 
-func (r *httpHeaders) MapAll() *map[string][]string {
-	// Copy it, don't just point to our internal data, or Bad Things Will Happen (tm)
+func (r *httpHeaders) ToMap() *map[string][]string {
+	// Copy it, don't just point to our internal data, or caller gets control of our content
 	h := make(map[string][]string)
 	for n, vs := range *r {
 		h[n] = vs
 	}
 	return &h
+}
+
+/*
+A set of headers will render out as a text block like:
+---
+Header-Name: value1; value2; value3\n
+Header-Name2: value1; value2\n
+\n\n
+---
+Our Size() function will return the length of this text block, including the separators
+*/
+func (r *httpHeaders) Size() int {
+	l := 1
+	for _, values := range *r {
+		for _, value := range values {
+			// Length of the value plus colon-space and space+semicolon separators
+			l += (len(value) + 4)
+		}
+		l++ // Length of a newline bewtween headers
+	}
+	// If there are no headers, we return 2 for final, double newline
+	if l == 1 {
+		l = 2
+	}
+	return l
 }
