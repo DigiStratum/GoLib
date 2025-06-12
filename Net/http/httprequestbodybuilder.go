@@ -2,7 +2,7 @@ package http
 
 type HttpRequestBodyBuilderIfc interface {
 	Set(name string, values ...string)
-	Merge(headers HttpHeadersIfc)
+	Merge(requestBody HttpRequestBodyIfc)
 	GetHttpRequestBody() HttpRequestBodyIfc
 }
 
