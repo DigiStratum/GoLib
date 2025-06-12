@@ -16,11 +16,22 @@ TODO:
 
 */
 
-type HttpRequestBodyDataIfc interface {
+type HttpRequestBodyIfc interface {
 }
 
-type httpRequestBodyData struct {
+type httpRequestBody struct {
 	// HTTP Request body data form-encoded supports name/-multivalue pairs
 	// (i.e. a name can havev multiple, ordered values)
-	bodyData map[string][]string
+	body map[string][]string
+}
+
+// -------------------------------------------------------------------------------------------------
+// Factory Functions
+// -------------------------------------------------------------------------------------------------
+
+func NewHttpRequestBody() *httpRequestBody {
+	r := &httpRequestBody{
+		body: make(map[string][]string),
+	}
+	return r
 }

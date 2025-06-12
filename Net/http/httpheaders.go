@@ -12,11 +12,11 @@ provide a Size() function to allow the caller to determine the size of the heade
 resource server implementation decides to reject a request due to the size breaking the configured
 limit, then it should return an HTTP 413 Payload Too Large response status to the client
 
-TODO:
- * Consider direct support with validation for specific, known header names
-   ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers
- * Also validate custom header names against RFC 7230 for acceptable characters < 40 length
-   ref: https://datatracker.ietf.org/doc/html/rfc7230
+FIXME:
+ * Make httpHeaders a struct that HAS a map, not IS a map! being a map makes it possible for any
+   layer of code to modify the map contents directly. by hiding it in a private struct member, we
+   can prevent consumers from touching it.
+
 */
 
 type HttpHeadersIfc interface {
