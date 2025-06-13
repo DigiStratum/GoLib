@@ -12,20 +12,24 @@ provide a Size() function to allow the caller to determine the size of the heade
 resource server implementation decides to reject a request due to the size breaking the configured
 limit, then it should return an HTTP 413 Payload Too Large response status to the client
 
+TODO:
+  * Make this iterable so that we can iterate over the name-value pairs
 */
+
+// Name/value pair header map for Request or Response
+type httpHeadersData map[string][]string
+
+type httpHeaders struct {
+	headers httpHeadersData
+}
 
 type HttpHeadersIfc interface {
 	Has(name string) bool
 	GetNames() *[]string
 	IsEmpty() bool
 	Get(name string) *[]string
-	ToMap() *map[string][]string
+	ToMap() *httpHeadersData
 	Size() int
-}
-
-// Name/value pair header map for Request or Response
-type httpHeaders struct {
-	headers map[string][]string
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -34,7 +38,7 @@ type httpHeaders struct {
 
 func NewHttpHeaders() *httpHeaders {
 	r := httpHeaders{
-		headers: make(map[string][]string),
+		headers: make(httpHeadersData),
 	}
 	return &r
 }
@@ -70,9 +74,9 @@ func (r *httpHeaders) Get(name string) *[]string {
 	return nil
 }
 
-func (r *httpHeaders) ToMap() *map[string][]string {
+func (r *httpHeaders) ToMap() *httpHeadersData {
 	// Copy it, don't just point to our internal data, or caller gets control of our content
-	h := make(map[string][]string)
+	h := make(httpHeadersData)
 	for n, vs := range r.headers {
 		h[n] = vs
 	}

@@ -1,5 +1,14 @@
 package http
 
+/*
+
+Builder for HTTP Request Body
+
+TODO:
+  * Add a Factory Function to produce an HttpRequestBody from form-encoded POST data
+  * Consider a Factory Function to inherit from an existing HttpRequestBody
+*/
+
 type HttpRequestBodyBuilderIfc interface {
 	Set(name string, values ...string)
 	Merge(requestBody HttpRequestBodyIfc)
@@ -17,7 +26,9 @@ type httpRequestBodyBuilder struct {
 
 func NewHttpRequestBodyBuilder() *httpRequestBodyBuilder {
 	r := httpRequestBodyBuilder{
-		requestBody: NewHttpRequestBody(),
+		requestBody: &httpRequestBody{
+			body: make(httpRequestBodyData),
+		},
 	}
 	return &r
 }

@@ -12,15 +12,15 @@ TODO:
  * Deduplicate provided values for Set() against existing ones
 */
 
-type HttpHeadersBuilderIfc interface {
-	Set(name string, values ...string)
-	Merge(headers HttpHeadersIfc)
-	GetHttpHeaders() HttpHeadersIfc
-}
-
 // Name/value pair header map for Request or Response
 type httpHeadersBuilder struct {
 	headers *httpHeaders
+}
+
+type HttpHeadersBuilderIfc interface {
+	Set(name string, values ...string)
+	Merge(headers HttpHeadersIfc)
+	GetHttpHeaders() *httpHeaders
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -29,7 +29,9 @@ type httpHeadersBuilder struct {
 
 func NewHttpHeadersBuilder() *httpHeadersBuilder {
 	r := httpHeadersBuilder{
-		headers: NewHttpHeaders(),
+		headers: &httpHeaders{
+			headers: make(httpHeadersData),
+		},
 	}
 	return &r
 }
