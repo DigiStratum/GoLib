@@ -33,73 +33,86 @@ TODO:
 
 */
 
-import(
+import (
 	"fmt"
-	"math"
-	"testing"
-	"runtime"
 	"reflect"
 	"regexp"
+	"runtime"
+	"testing"
 )
 
-func getCaller() string {
-	_, file, no, ok := runtime.Caller(2)
-	if ok { return fmt.Sprintf("@%s:%d", file, no) }
-	return ""
+func ExpectUnequal[T int | int16 | int32 | int64 | string | bool](expected, actual T, t *testing.T) bool {
+	if expected != actual {
+		return true
+	}
+	t.Errorf("\n\n%s\nExpectUnequal: Expected: '%v', Actual: '%v'", getCaller(), expected, actual)
+	return false
 }
 
+func ExpectEqual[T int | int16 | int32 | int64 | string | bool](expected, actual T, t *testing.T) bool {
+	if expected == actual {
+		return true
+	}
+	t.Errorf("\n\n%s\nExpectEqual: Expected: '%v', Actual: '%v'", getCaller(), expected, actual)
+	return false
+}
+
+func ExpectFloat[T float32 | float64](expected, actual T, t *testing.T) bool {
+	// Note: Can't use Math.Abs() here because it doesn't work with generic types
+	var diff T = expected - actual
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff <= 0.0001 {
+		return true
+	}
+	t.Errorf("\n\n%s\nExpectFloat: Expected: '%v', Actual: '%v'", getCaller(), expected, actual)
+	return false
+}
+
+// Deprecated: Use ExpectEqual instead
 func ExpectEmptyString(actual string, t *testing.T) bool {
-	if 0 == len(actual) { return true }
-	t.Errorf("\n\n%s:\nExpect len('%s') == 0, Actual: %d", getCaller(), actual, len(actual))
-	return false
+	return ExpectEqual("", actual, t)
 }
 
+// Deprecated: Use ExpectUnequal instead
 func ExpectNonEmptyString(actual string, t *testing.T) bool {
-	if 0 < len(actual) { return true }
-	t.Errorf("\n\n%s:\nExpect len('%s') > 0, Actual: %d", getCaller(), actual, len(actual))
-	return false
+	return ExpectUnequal("", actual, t)
 }
 
+// Deprecated: Use ExpectEqual instead
 func ExpectString(expect, actual string, t *testing.T) bool {
-	if expect == actual { return true }
-	t.Errorf("\n\n%s:\nExpect: '%s', Actual: '%s'", getCaller(), expect, actual)
-	return false
+	return ExpectEqual(expect, actual, t)
 }
 
+// Deprecated: Use ExpectEqual instead
 func ExpectInt(expect, actual int, t *testing.T) bool {
-	if expect == actual { return true }
-	t.Errorf("\n\n%s\nExpect: '%d', Actual: '%d'", getCaller(), expect, actual)
-	return false
+	return ExpectEqual(expect, actual, t)
 }
 
+// Deprecated: Use ExpectEqual instead
 func ExpectInt64(expect, actual int64, t *testing.T) bool {
-	if expect == actual { return true }
-	t.Errorf("\n\n%s\nExpect: '%d', Actual: '%d'", getCaller(), expect, actual)
-	return false
+	return ExpectEqual(expect, actual, t)
 }
 
-func ExpectFloat64(expect, actual float64, t *testing.T) bool {
-	if math.Abs(expect - actual) < 0.0001 { return true }
-	t.Errorf("\n\n%s\nExpect: '%f', Actual: '%f'", getCaller(), expect, actual)
-	return false
-}
-
+// Deprecated: Use ExpectEqual instead
 func ExpectBool(expect, actual bool, t *testing.T) bool {
-	if expect == actual { return true }
-	t.Errorf("\n\n%s:\nExpect: '%t', Actual: '%t'", getCaller(), expect, actual)
-	return false
+	return ExpectEqual(expect, actual, t)
 }
 
+// Deprecated: Use ExpectEqual instead
 func ExpectTrue(actual bool, t *testing.T) bool {
-	if true == actual { return true }
-	t.Errorf("\n\n%s:\nExpect: 'true', Actual: '%t'", getCaller(), actual)
-	return false
+	return ExpectEqual(true, actual, t)
 }
 
+// Deprecated: Use ExpectEqual instead
 func ExpectFalse(actual bool, t *testing.T) bool {
-	if false == actual { return true }
-	t.Errorf("\n\n%s:\nExpect: 'false', Actual: '%t'", getCaller(), actual)
-	return false
+	return ExpectEqual(false, actual, t)
+}
+
+// Deprecated: Use ExpectFloat instead
+func ExpectFloat64(expect, actual float64, t *testing.T) bool {
+	return ExpectFloat(expect, actual, t)
 }
 
 // ref: https://stackoverflow.com/questions/31595791/how-to-test-panics
@@ -128,21 +141,34 @@ func ExpectNonNil(value interface{}, t *testing.T) bool {
 }
 
 func ExpectError(err error, t *testing.T) bool {
-	if nil != err {	return true }
+	if nil != err {
+		return true
+	}
 	t.Errorf("\n\n%s:\nExpect: error, Actual: nil error", getCaller())
 	return false
 }
 
 func ExpectNoError(err error, t *testing.T) bool {
-	if nil == err {	return true }
+	if nil == err {
+		return true
+	}
 	t.Errorf("\n\n%s:\nExpect: nil error, Actual: error('%s')", getCaller(), err.Error())
 	return false
 }
 
-func ExpectMatch(expect, actual string, t *testing.T) bool {
-	matched, err := regexp.MatchString(expect, actual)
-	if nil == err && matched { return true }
-	t.Errorf("\n\n%s:\nExpect: pattern [%s] match actual [%s], Actual: no match", getCaller(), expect, actual)
+func ExpectMatch(pattern, actual string, t *testing.T) bool {
+	matched, err := regexp.MatchString(pattern, actual)
+	if nil == err && matched {
+		return true
+	}
+	t.Errorf("\n\n%s:\nExpect: pattern [%s] match actual [%s], Actual: no match", getCaller(), pattern, actual)
 	return false
 }
 
+func getCaller() string {
+	_, file, no, ok := runtime.Caller(2)
+	if ok {
+		return fmt.Sprintf("@%s:%d", file, no)
+	}
+	return ""
+}
