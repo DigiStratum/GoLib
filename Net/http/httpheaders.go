@@ -16,6 +16,10 @@ TODO:
   * Make this iterable so that we can iterate over the name-value pairs
 */
 
+import (
+	"strings"
+)
+
 // Name/value pair header map for Request or Response
 type httpHeadersData map[string][]string
 
@@ -106,4 +110,61 @@ func (r *httpHeaders) Size() int {
 		l = 2
 	}
 	return l
+}
+
+// TODO: Move header-specific support to header-specific source files
+
+// Extract a list of languages from the Accept-Language header (if any)
+// ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
+func (r *httpHeaders) GetAcceptableLanguages() *[]string {
+	if !r.Has("Accept-Language") {
+		return nil
+	}
+	languages := r.getWeightedHeaderList("Accept-Language")
+	// TODO: filter results according to what we support
+	// (i.e. code, code-locale, code-locale-orthography); remove orthography/anything after locale
+	// TODO: convert "*" into "default"
+	return languages
+}
+
+// -------------------------------------------------------------------------------------------------
+// httpHeaders
+// -------------------------------------------------------------------------------------------------
+
+// Extract a list of values from headers, ordered by preference expressed as quality value
+// ref: https://developer.mozilla.org/en-US/docs/Glossary/Quality_values
+func (r *httpHeaders) getWeightedHeaderList(headerName string) *[]string {
+
+	// Get the value of the header we're after
+	headerValue := r.Get(headerName)
+
+	if (headerValue == nil) || (len(*headerValue) == 0) {
+		// no header, no list!
+		values := make([]string, 0)
+		return &values
+	}
+
+	// Split the header on "," in case it has multiple values
+	headerValues := strings.Split((*headerValue)[0], ",")
+	values := make([]string, len(headerValues))
+
+	// For each value we found...
+	kept := 0
+	for _, value := range headerValues {
+		// If it has a ";", then there are extra details attached to split off
+		if strings.Contains(value, ";") {
+			valueParts := strings.Split(value, ";")
+			// Keep the first part, the rest is metadata
+			values[kept] = valueParts[0]
+			kept++
+			// TODO: Check out the other parts; they should be formatted as "name=value"
+			// TODO: If the name = "q" and the value is a float from 0.0 to 1.0, use it to sort
+			// TODO: If ANY value has a "q" specified, then sort must be performed, assume 1.0 for unspecified q
+		} else {
+			// Keep this value
+			values[kept] = value
+			kept++
+		}
+	}
+	return &values
 }

@@ -3,8 +3,8 @@ package metadata
 /*
 
 TODO:
- * Add support for JSON un|marshal to deserialze
-
+  * Add support for JSON un|marshal to deserialze
+  * Convert this into a builder, not a mutable object
 */
 
 type MetadataBuilderIfc interface {

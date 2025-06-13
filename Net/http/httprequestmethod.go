@@ -4,6 +4,11 @@ import "strings"
 
 type HttpRequestMethod int
 
+type HttpRequestMethodIfc interface {
+	ToString() string
+	IsIdempotent() bool
+}
+
 const (
 	METHOD_UNKNOWN HttpRequestMethod = iota
 	METHOD_GET
@@ -61,4 +66,9 @@ func (r HttpRequestMethod) ToString() string {
 		return "OPTIONS"
 	}
 	return "UNKNOWN REQUEST METHOD"
+}
+
+// Quick check if the current request is expected to be idempotent in implementation
+func (r HttpRequestMethod) IsIdempotent() bool {
+	return (METHOD_PATCH != r) && (METHOD_POST != r)
 }
