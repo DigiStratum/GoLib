@@ -42,19 +42,19 @@ func NewHttpHeadersBuilder() *httpHeadersBuilder {
 func (r *httpHeadersBuilder) Set(name string, values ...string) *httpHeadersBuilder {
 	// If the named header is not set, then create it
 
-	if _, ok := (*r.headers)[name]; !ok {
-		(*r.headers)[name] = make([]string, 0)
+	if _, ok := r.headers.headers[name]; !ok {
+		r.headers.headers[name] = make([]string, 0)
 	}
 
 	for _, value := range values {
-		(*r.headers)[name] = append((*r.headers)[name], value)
+		r.headers.headers[name] = append(r.headers.headers[name], value)
 	}
 	return r
 }
 
 func (r *httpHeadersBuilder) Merge(headers *httpHeaders) *httpHeadersBuilder {
 	if headers != nil {
-		for name, values := range *headers {
+		for name, values := range headers.headers {
 			// Use Set() to merge provided values with existing, instead of overwriting
 			r.Set(name, values...)
 		}

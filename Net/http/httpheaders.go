@@ -12,11 +12,6 @@ provide a Size() function to allow the caller to determine the size of the heade
 resource server implementation decides to reject a request due to the size breaking the configured
 limit, then it should return an HTTP 413 Payload Too Large response status to the client
 
-FIXME:
- * Make httpHeaders a struct that HAS a map, not IS a map! being a map makes it possible for any
-   layer of code to modify the map contents directly. by hiding it in a private struct member, we
-   can prevent consumers from touching it.
-
 */
 
 type HttpHeadersIfc interface {
@@ -29,14 +24,18 @@ type HttpHeadersIfc interface {
 }
 
 // Name/value pair header map for Request or Response
-type httpHeaders map[string][]string
+type httpHeaders struct {
+	headers map[string][]string
+}
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
 func NewHttpHeaders() *httpHeaders {
-	r := make(httpHeaders)
+	r := httpHeaders{
+		headers: make(map[string][]string),
+	}
 	return &r
 }
 
@@ -46,14 +45,14 @@ func NewHttpHeaders() *httpHeaders {
 
 // DO we have the named header?
 func (r *httpHeaders) Has(name string) bool {
-	_, ok := (*r)[name]
+	_, ok := r.headers[name]
 	return ok
 }
 
 // Get the complete set of names
 func (r *httpHeaders) GetNames() *[]string {
 	names := make([]string, 0)
-	for name, _ := range *r {
+	for name, _ := range r.headers {
 		names = append(names, name)
 	}
 	return &names
@@ -61,11 +60,11 @@ func (r *httpHeaders) GetNames() *[]string {
 
 // Are there NO headers set?
 func (r *httpHeaders) IsEmpty() bool {
-	return len(*r) == 0
+	return len(r.headers) == 0
 }
 
 func (r *httpHeaders) Get(name string) *[]string {
-	if values, ok := (*r)[name]; ok {
+	if values, ok := r.headers[name]; ok {
 		return &values
 	}
 	return nil
@@ -74,7 +73,7 @@ func (r *httpHeaders) Get(name string) *[]string {
 func (r *httpHeaders) ToMap() *map[string][]string {
 	// Copy it, don't just point to our internal data, or caller gets control of our content
 	h := make(map[string][]string)
-	for n, vs := range *r {
+	for n, vs := range r.headers {
 		h[n] = vs
 	}
 	return &h
@@ -91,7 +90,7 @@ Our Size() function will return the length of this text block, including the sep
 */
 func (r *httpHeaders) Size() int {
 	l := 1
-	for _, values := range *r {
+	for _, values := range r.headers {
 		for _, value := range values {
 			// Length of the value plus colon-space and space+semicolon separators
 			l += (len(value) + 4)
