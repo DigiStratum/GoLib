@@ -12,18 +12,18 @@ FIXME:
 */
 
 import (
-	"fmt"
-	"sync"
-	"strconv"
 	gojson "encoding/json"
+	"fmt"
+	"strconv"
+	"sync"
 
 	"github.com/DigiStratum/GoLib/Data/json"
 	log "github.com/DigiStratum/GoLib/Logger"
 )
 
 type KeyValuePair struct {
-	Key	string
-	Value	string
+	Key   string
+	Value string
 }
 
 // HashMap public interface
@@ -40,20 +40,20 @@ type HashMapIfc interface {
 	GetBool(key string) bool
 	GetKeys() []string
 	Has(key string) bool
-	HasAll(keys *[]string) bool
+	HasAll(keys ...string) bool
 	GetMissing(keys *[]string) *[]string
 	GetSubset(keys *[]string) *HashMap
 	Drop(key string) *HashMap
 	DropSet(keys *[]string) *HashMap
 	DropAll()
-	GetIterator() func () interface{}
+	GetIterator() func() interface{}
 	ToJson() (*string, error)
 	ToLog(logger log.LoggerIfc, level log.LogLevel, label string)
 }
 
 type HashMap struct {
-	hash		map[string]string
-	mutex		sync.Mutex
+	hash  map[string]string
+	mutex sync.Mutex
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -62,19 +62,23 @@ type HashMap struct {
 
 func NewHashMap() *HashMap {
 	return &HashMap{
-		hash:	make(map[string]string),
+		hash: make(map[string]string),
 	}
 }
 
 func NewHashMapFromJsonString(json *string) (*HashMap, error) {
 	r := NewHashMap()
-	if err := r.LoadFromJsonString(json); nil != err { return nil, err }
+	if err := r.LoadFromJsonString(json); nil != err {
+		return nil, err
+	}
 	return r, nil
 }
 
 func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 	r := NewHashMap()
-	if err := r.LoadFromJsonFile(jsonFile); nil != err { return nil, err }
+	if err := r.LoadFromJsonFile(jsonFile); nil != err {
+		return nil, err
+	}
 	return r, nil
 }
 
@@ -87,27 +91,35 @@ func NewHashMapFromJsonFile(jsonFile string) (*HashMap, error) {
 // ref: https://developer20.com/be-aware-of-coping-in-go/
 func (r *HashMap) Copy() *HashMap {
 	n := NewHashMap()
-	for k, v := range (*r).hash { n.Set(k, v) }
+	for k, v := range (*r).hash {
+		n.Set(k, v)
+	}
 	return n
 }
 
 // Load our hash map with JSON data from a string (or return an error)
 func (r *HashMap) LoadFromJsonString(jsonStr *string) error {
-	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	if nil == r {
+		return fmt.Errorf("nil receiver, nothing to do")
+	}
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return json.NewJson(jsonStr).Load(&r.hash)
 }
 
 // Load our hash map with JSON data from a file (or return an error)
 func (r *HashMap) LoadFromJsonFile(jsonFile string) error {
-	if nil == r { return fmt.Errorf("This receiver is nil, nothing to do!") }
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	if nil == r {
+		return fmt.Errorf("nil receiver, nothing to do")
+	}
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return json.NewJsonFromFile(jsonFile).Load(&r.hash)
 }
 
 // Check whether this HashMap is empty (has no properties)
 func (r *HashMap) IsEmpty() bool {
-	return 0 == r.Size()
+	return r.Size() == 0
 }
 
 // Get the number of properties in this HashMap
@@ -117,24 +129,33 @@ func (r *HashMap) Size() int {
 
 // Merge some additional data on top of our own
 func (r *HashMap) Merge(mergeHash HashMapIfc) {
-	if nil == r { return }
-	r.mutex.Lock(); defer r.mutex.Unlock()
+	if nil == r {
+		return
+	}
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	keys := mergeHash.GetKeys()
 	for _, key := range keys {
 		value := mergeHash.Get(key)
-		if nil != value { r.set(key, *value) }
+		if nil != value {
+			r.set(key, *value)
+		}
 	}
 }
 
 // Set a single data element key to the specified value
 func (r *HashMap) Set(key, value string) {
-	if nil == r { return }
+	if nil == r {
+		return
+	}
 	r.set(key, value)
 }
 
 // Get a single data element by key name
 func (r *HashMap) Get(key string) *string {
-	if val, ok := r.hash[key]; ok { return &val }
+	if val, ok := r.hash[key]; ok {
+		return &val
+	}
 	return nil
 }
 
@@ -142,7 +163,9 @@ func (r *HashMap) Get(key string) *string {
 func (r *HashMap) GetInt64(key string) *int64 {
 	value := r.Get(key)
 	if nil != value {
-		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err { return &vc }
+		if vc, err := strconv.ParseInt(*value, 0, 64); nil == err {
+			return &vc
+		}
 	}
 	return nil
 }
@@ -150,11 +173,19 @@ func (r *HashMap) GetInt64(key string) *int64 {
 // Get a single data element by key name as a boolean
 func (r *HashMap) GetBool(key string) bool {
 	s := r.Get(key)
-	if nil == s { return false }
-	if ("true" == *s) || ("TRUE" == *s) || ("t" == *s) || ("T" == *s) || ("1" == *s) { return true }
-	if ("on" == *s) || ("ON" == *s) || ("yes" == *s) || ("YES" == *s) { return true }
+	if nil == s {
+		return false
+	}
+	if (*s == "true") || (*s == "TRUE") || (*s == "t") || (*s == "T") || (*s == "1") {
+		return true
+	}
+	if (*s == "on") || (*s == "ON") || (*s == "yes") || (*s == "YES") {
+		return true
+	}
 	n := r.GetInt64(key)
-	if nil == n { return false }
+	if nil == n {
+		return false
+	}
 	return *n != 0
 }
 
@@ -164,8 +195,12 @@ func (r *HashMap) Has(key string) bool {
 }
 
 // Check whether we have configuration elements for all the key names
-func (r *HashMap) HasAll(keys *[]string) bool {
-	for _, key := range *keys { if ! r.Has(key) { return false } }
+func (r *HashMap) HasAll(keys ...string) bool {
+	for _, key := range keys {
+		if !r.Has(key) {
+			return false
+		}
+	}
 	return true
 }
 
@@ -173,7 +208,7 @@ func (r *HashMap) HasAll(keys *[]string) bool {
 func (r *HashMap) GetMissing(keys *[]string) *[]string {
 	missing := make([]string, 0)
 	for _, key := range *keys {
-		if ! r.Has(key) {
+		if !r.Has(key) {
 			missing = append(missing, key)
 		}
 	}
@@ -185,7 +220,9 @@ func (r *HashMap) GetSubset(keys *[]string) *HashMap {
 	n := NewHashMap()
 	if nil != keys {
 		for _, k := range *keys {
-			if v, ok := r.hash[k]; ok { n.hash[k] = v }
+			if v, ok := r.hash[k]; ok {
+				n.hash[k] = v
+			}
 		}
 	}
 	return n
@@ -195,21 +232,30 @@ func (r *HashMap) GetSubset(keys *[]string) *HashMap {
 func (r *HashMap) GetKeys() []string {
 	keys := make([]string, len(r.hash))
 	i := 0
-	for key, _ := range r.hash { keys[i] = key; i++ }
+	for key := range r.hash {
+		keys[i] = key
+		i++
+	}
 	return keys
 }
 
 // Drop a single key from the hashmap, if it's set
 func (r *HashMap) Drop(key string) *HashMap {
-	if ! r.Has(key) { return r }
+	if !r.Has(key) {
+		return r
+	}
 	delete(r.hash, key)
 	return r
 }
 
 // Drop an set of keys from the hashmap, if any are set
 func (r *HashMap) DropSet(keys *[]string) *HashMap {
-	if nil == keys { return r }
-	for _, k := range *keys { r.Drop(k) }
+	if nil == keys {
+		return r
+	}
+	for _, k := range *keys {
+		r.Drop(k)
+	}
 	return r
 }
 
@@ -220,9 +266,13 @@ func (r *HashMap) DropAll() {
 
 // Dump JSON-like representation of our entries in readable form to supplied logger
 func (r *HashMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) {
-	if nil == logger { return }
+	if nil == logger {
+		return
+	}
 	logger.Any(level, "\"%s\": {", label)
-	for k, v := range r.hash { logger.Any(level, "\t\"%s\": \"%s\"", k, v) }
+	for k, v := range r.hash {
+		logger.Any(level, "\t\"%s\": \"%s\"", k, v)
+	}
 	logger.Any(level, "}")
 }
 
@@ -231,18 +281,20 @@ func (r *HashMap) ToLog(logger log.LoggerIfc, level log.LogLevel, label string) 
 // -------------------------------------------------------------------------------------------------
 
 // Iterate over all of our items, returning each as a *KeyValuePair in the form of an interface{}
-func (r *HashMap) GetIterator() func () interface{} {
+func (r *HashMap) GetIterator() func() interface{} {
 	kvps := make([]KeyValuePair, r.Size())
 	var idx int = 0
 	for k, v := range r.hash {
-		kvps[idx] = KeyValuePair{ Key: k, Value: v }
+		kvps[idx] = KeyValuePair{Key: k, Value: v}
 		idx++
 	}
 	idx = 0
 	var data_len = r.Size()
-	return func () interface{} {
+	return func() interface{} {
 		// If we're done iterating, return do nothing
-		if idx >= data_len { return nil }
+		if idx >= data_len {
+			return nil
+		}
 		prev_idx := idx
 		idx++
 		return &kvps[prev_idx]
@@ -255,7 +307,9 @@ func (r *HashMap) GetIterator() func () interface{} {
 
 func (r *HashMap) ToJson() (*string, error) {
 	jsonBytes, err := gojson.Marshal(r.hash)
-	if nil != err { return nil, err }
+	if nil != err {
+		return nil, err
+	}
 	jsonString := string(jsonBytes[:])
 	return &jsonString, nil
 }
@@ -282,6 +336,8 @@ func (r *HashMap) UnmarshalJSON(value []byte) error {
 
 // Set a single data element key to the specified value
 func (r *HashMap) set(key, value string) {
-	if nil == r { return }
+	if nil == r {
+		return
+	}
 	r.hash[key] = value
 }

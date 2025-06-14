@@ -12,7 +12,7 @@ allow the state to be modified directly by an outside party.
 
 */
 
-import(
+import (
 	"fmt"
 	"testing"
 
@@ -317,7 +317,7 @@ func TestThat_HashMap_Merge_AddsEntries_ForNonEmptyMaps(t *testing.T) {
 
 func TestThat_HashMap_Merge_DoesNothing_WhenNilForEmptySet(t *testing.T) {
 	// Setup
-	var sut *HashMap	// nil
+	var sut *HashMap // nil
 
 	// Test
 	sut.Merge(NewHashMap())
@@ -331,7 +331,7 @@ func TestThat_HashMap_Merge_DoesNothing_WhenNilForNonEmptySet(t *testing.T) {
 	//defer ExpectPanic(t)
 	other := NewHashMap()
 	other.Set("beep", "boop")
-	var sut *HashMap	// nil
+	var sut *HashMap // nil
 
 	// Test
 	sut.Merge(other)
@@ -340,7 +340,7 @@ func TestThat_HashMap_Merge_DoesNothing_WhenNilForNonEmptySet(t *testing.T) {
 func TestThat_HashMap_Set_DoesNothing_WhenNil(t *testing.T) {
 	// Setup
 	//defer ExpectPanic(t)
-	var sut *HashMap	// nil
+	var sut *HashMap // nil
 
 	// Test
 	sut.Set("testkey", "testvalue")
@@ -449,7 +449,7 @@ func TestThat_HashMap_GetKeys_ReturnsKeys_ForNonEmptyMap(t *testing.T) {
 
 	// Verify
 	ExpectInt(2, len(actual), t)
-	ExpectTrue(((actual[0]=="k1")&&(actual[1]=="k2"))||((actual[1]=="k1")&&(actual[0]=="k2")), t)
+	ExpectTrue(((actual[0] == "k1") && (actual[1] == "k2")) || ((actual[1] == "k1") && (actual[0] == "k2")), t)
 }
 
 func TestThat_HashMap_Has_IsFalse_WhenKeyMissing(t *testing.T) {
@@ -478,7 +478,7 @@ func TestThat_HashMap_HasAll_ReturnsTrue_WhenKeysEmptySet(t *testing.T) {
 	keys := make([]string, 0)
 
 	// Test
-	ExpectBool(true, sut.HasAll(&keys), t)
+	ExpectBool(true, sut.HasAll(keys...), t)
 }
 
 func TestThat_HashMap_HasAll_ReturnsFalse_WhenAnyKeyMissing(t *testing.T) {
@@ -488,7 +488,7 @@ func TestThat_HashMap_HasAll_ReturnsFalse_WhenAnyKeyMissing(t *testing.T) {
 	keys[0] = "missingkey"
 
 	// Test
-	ExpectBool(false, sut.HasAll(&keys), t)
+	ExpectBool(false, sut.HasAll(keys...), t)
 }
 
 func TestThat_HashMap_HasAll_ReturnsTrue_WhenAllKeysExist(t *testing.T) {
@@ -501,7 +501,7 @@ func TestThat_HashMap_HasAll_ReturnsTrue_WhenAllKeysExist(t *testing.T) {
 	keys[1] = "okey"
 
 	// Test
-	ExpectBool(true, sut.HasAll(&keys), t)
+	ExpectBool(true, sut.HasAll(keys...), t)
 }
 
 func TestThat_HashMap_GetIterator_ReturnsIterator_WhenEmpty(t *testing.T) {
@@ -522,7 +522,7 @@ func TestThat_HashMap_GetIterator_ReturnsWorkingIterator_WhenNonEmpty(t *testing
 	sut := NewHashMap()
 	expectedItems := make(map[string]string)
 	numItems := 10
-	for i :=0; i < numItems; i++ {
+	for i := 0; i < numItems; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf("v%d", i)
 		sut.Set(key, value)
