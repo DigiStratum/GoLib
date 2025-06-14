@@ -4,20 +4,22 @@ package metadata
 
 TODO:
   * Add support for JSON un|marshal to deserialze
-  * Convert this into a builder, not a mutable object
+  * Add Factory Function to derive from existing *metadata
+  * Add Factory Function to derive from existing HashMapIfc
+
 */
 
-type MetadataBuilderIfc interface {
-	// Embedded interface(s)
-	MetadataIfc
+import (
+	"github.com/DigiStratum/GoLib/Data/hashmap"
+)
 
+type MetadataBuilderIfc interface {
 	// Our own interface
 	Set(name, value string) *metadataBuilder
 	GetMetadata() *metadata
 }
 
 type metadataBuilder struct {
-	// Embedded struct+interface(s)
 	metadata *metadata
 }
 
@@ -27,7 +29,9 @@ type metadataBuilder struct {
 
 func NewMetadataBuilder() *metadataBuilder {
 	return &metadataBuilder{
-		metadata: NewMetadata(),
+		metadata: &metadata{
+			data: hashmap.NewHashMap(),
+		},
 	}
 }
 
@@ -36,7 +40,7 @@ func NewMetadataBuilder() *metadataBuilder {
 // -------------------------------------------------------------------------------------------------
 
 func (r *metadataBuilder) Set(name, value string) *metadataBuilder {
-	r.metadata.data[name] = value
+	r.metadata.data.Set(name, value)
 	return r
 }
 
