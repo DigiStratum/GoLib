@@ -7,7 +7,7 @@ import (
 
 type HelperIfc interface {
 	// Payload Helpers
-	SingularizePostData(bodyData *HttpBodyData) map[string]string
+	SingularizePostData(bodyData *httpRequestBody) map[string]string
 	GetMimetype(uri string) string
 }
 
@@ -39,12 +39,18 @@ func NewHelper() *helper {
 
 // Scan over the body data and, for each unique name, scrub out any duplicates
 // TODO: refactor or make some variant which creates a value SET instead of tracking the dupes
-func (hlpr *helper) SingularizePostData(bodyData *HttpBodyData) map[string]string {
+// FIXME: what's the point of this function? It takes real data and makes it fake for no real purpose?
+// Deprecated: Prove that this is useful or it's gone.
+func (hlpr *helper) SingularizePostData(bodyData *httpRequestBody) map[string]string {
 	var data = make(map[string]string)
-	for name, values := range *bodyData {
-		if len(values) > 0 {
-			data[name] = values[0]
+	names := bodyData.GetNames()
+	for _, name := range *names {
+		values := bodyData.Get(name)
+		if (values == nil) || (len(*values) == 0) {
+			continue
 		}
+		// 0th element only. why?
+		data[name] = (*values)[0]
 	}
 	return data
 }

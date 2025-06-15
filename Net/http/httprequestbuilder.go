@@ -25,7 +25,7 @@ type HttpRequestBuilderIfc interface {
 	SetQueryString(queryString string) *httpRequestBuilder
 	SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder
 	SetBody(body *string) *httpRequestBuilder
-	SetBodyData(bodyData *HttpBodyData) *httpRequestBuilder
+	SetBodyData(bodyData *httpRequestBody) *httpRequestBuilder
 	SetHeaders(headers HttpHeadersIfc) *httpRequestBuilder
 	SetPathParameters(params metadata.MetadataIfc) *httpRequestBuilder
 	GetHttpRequest() *httpRequest
@@ -40,11 +40,10 @@ type httpRequestBuilder struct {
 // -------------------------------------------------------------------------------------------------
 
 func NewHttpRequestBuilder() *httpRequestBuilder {
-	bodyData := make(HttpBodyData)
 	return &httpRequestBuilder{
 		request: &httpRequest{
 			headers:  NewHttpHeaders(),
-			bodyData: &bodyData,
+			bodyData: NewHttpRequestBodyBuilder().GetHttpRequestBody(),
 		},
 	}
 }
@@ -104,13 +103,13 @@ func (r *httpRequestBuilder) SetBody(body *string) *httpRequestBuilder {
 	return r
 }
 
-func (r *httpRequestBuilder) SetBodyData(bodyData *HttpBodyData) *httpRequestBuilder {
+func (r *httpRequestBuilder) SetBodyData(bodyData *httpRequestBody) *httpRequestBuilder {
 	r.request.bodyData = bodyData
 	return r
 }
 
 // Set the Request Headers
-func (r *httpRequestBuilder) SetHeaders(headers HttpHeadersIfc) *httpRequestBuilder {
+func (r *httpRequestBuilder) SetHeaders(headers *httpHeaders) *httpRequestBuilder {
 	r.request.headers = headers
 	return r
 }

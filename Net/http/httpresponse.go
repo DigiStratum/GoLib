@@ -33,16 +33,6 @@ type httpResponse struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewHttpResponse() *httpResponse {
-	// Initialize with properties that will generate valid result for all Getter methods
-	bodystring := ""
-	return &httpResponse{
-		status:     STATUS_UNKNOWN,
-		headers:    NewHttpHeaders(),
-		bodystring: &bodystring,
-	}
-}
-
 // Produce an HTTP response with standard headers
 func NewHttpResponseStandard(status HttpStatus, body *string, contentType string) *httpResponse {
 	hdrs := NewHttpHeadersBuilder().

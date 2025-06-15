@@ -27,7 +27,7 @@ type HttpRequestIfc interface {
 	GetPathParameters() metadata.MetadataIfc
 	GetBody() *string
 	GetBodyData() *httpRequestBody
-	GetHeaders() HttpHeadersIfc
+	GetHeaders() *httpHeaders
 }
 
 type httpRequest struct {

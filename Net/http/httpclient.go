@@ -152,9 +152,8 @@ func (r *HttpClient) GetRequestResponse(httpRequest HttpRequestIfc) (*httpRespon
 
 // Data transform from our own HttpRequestIfc to Go net/http::Request
 func (r *HttpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Request, error) {
-	hlpr := GetHelper()
 	request, err := gohttp.NewRequest(
-		hlpr.GetHttpRequestMethodText(httpRequest.GetMethod()),
+		httpRequest.GetMethod().ToString(),
 		httpRequest.GetURL(),
 		nil,
 	)
@@ -164,9 +163,13 @@ func (r *HttpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 
 	// Set up request headers
 	headers := httpRequest.GetHeaders()
-	headerNames := headers.GetHeaderNames()
+	headerNames := headers.GetNames()
 	for _, headerName := range *headerNames {
-		request.Header.Add(headerName, headers.Get(headerName))
+		headerValues := headers.Get(headerName)
+		if headerValues == nil {
+			continue
+		}
+		request.Header.Add(headerName, (*headerValues)[0])
 	}
 
 	return request, nil
@@ -174,24 +177,22 @@ func (r *HttpClient) fromHttpRequest(httpRequest HttpRequestIfc) (*gohttp.Reques
 
 // Data transform to our own HttpResponseIfc from Go net/http::Response
 func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, error) {
-	hlpr := GetHelper()
-
-	httpResponse := NewHttpResponse()
-	httpResponse.SetStatus(hlpr.GetHttpStatus(response.StatusCode))
+	httpResponseBuilder := NewHttpResponseBuilder().
+		SetStatus(HttpStatusFromCode(response.StatusCode))
 
 	// Capture the protocol version from the server response
-	httpResponse.SetProtocolVersion(
+	httpResponseBuilder.SetProtocolVersion(
 		fmt.Sprintf("%d.%d", response.ProtoMajor, response.ProtoMinor),
 	)
 
 	// Transform response headers
-	httpResponseHeaders := NewHttpHeaders()
+	httpResponseHeadersBuilder := NewHttpHeadersBuilder()
 	for name, values := range response.Header {
 		for _, value := range values {
-			httpResponseHeaders.Add(name, value)
+			httpResponseHeadersBuilder.Set(name, value)
 		}
 	}
-	httpResponse.SetHeaders(httpResponseHeaders)
+	httpResponseBuilder.SetHeaders(httpResponseHeadersBuilder.GetHttpHeaders())
 
 	// Transform response body
 	if response.ContentLength > 0 {
@@ -221,8 +222,8 @@ func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 			}
 			copy(bodybuf[pos:], readbuf[0:readlen-1])
 		}
-		httpResponse.SetBinBody(&bodybuf)
+		httpResponseBuilder.SetBinBody(&bodybuf)
 	}
 
-	return httpResponse, nil
+	return httpResponseBuilder.GetHttpResponse(), nil
 }

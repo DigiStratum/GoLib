@@ -37,17 +37,6 @@ type HttpHeadersIfc interface {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Factory Functions
-// -------------------------------------------------------------------------------------------------
-
-func NewHttpHeaders() *httpHeaders {
-	r := httpHeaders{
-		headers: make(httpHeadersData),
-	}
-	return &r
-}
-
-// -------------------------------------------------------------------------------------------------
 // HttpHeadersIfc Implementation
 // -------------------------------------------------------------------------------------------------
 
@@ -113,7 +102,6 @@ func (r *httpHeaders) Size() int {
 }
 
 // TODO: Move header-specific support to header-specific source files
-
 // Extract a list of languages from the Accept-Language header (if any)
 // ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
 func (r *httpHeaders) GetAcceptableLanguages() *[]string {
