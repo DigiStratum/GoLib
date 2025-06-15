@@ -41,7 +41,7 @@ import (
 	"testing"
 )
 
-func ExpectUnequal[T int | int16 | int32 | int64 | string | bool](expected, actual T, t *testing.T) bool {
+func ExpectUnequal[T comparable](expected, actual T, t *testing.T) bool {
 	if expected != actual {
 		return true
 	}
@@ -49,7 +49,7 @@ func ExpectUnequal[T int | int16 | int32 | int64 | string | bool](expected, actu
 	return false
 }
 
-func ExpectEqual[T int | int16 | int32 | int64 | string | bool](expected, actual T, t *testing.T) bool {
+func ExpectEqual[T comparable](expected, actual T, t *testing.T) bool {
 	if expected == actual {
 		return true
 	}
