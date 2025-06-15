@@ -1,5 +1,12 @@
 package http
 
+/*
+
+TODO:
+  * Fix/add test coverage for Configurability; Copilot added some based on assumptions of Exported
+    properties but there is no valid data access path here
+*/
+
 import (
 	"testing"
 

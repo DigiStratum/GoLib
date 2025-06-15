@@ -3,8 +3,15 @@ package http
 /*
 
 TODO
- * Add "BodyBuilder helper for Body Data to build it up one name/value at a time
- * Fix up the SetQueryString and SetQueryParameters funcs so that they match values, cannot diverge
+  * Add "BodyBuilder helper for Body Data to build it up one name/value at a time
+  * Fix up the SetQueryString and SetQueryParameters funcs so that they match values, cannot diverge
+  * Get rid of all the URL component operations, just use SetURL(), but keep QueryString conveniences
+  * Update the URL when querystring/params are set
+  * Add support for page fragment URL component (not something that we can see for incoming requests,
+    but useful for outgoing requests)
+  * Add Factory Function(s) to convert other request types to this type
+    - PathParameters are useful to parse requests from other sources, but not for building a new request
+
 */
 
 import (
@@ -15,19 +22,23 @@ import (
 
 // Http Request public interface
 type HttpRequestBuilderIfc interface {
-	// Our own interface
+	// URL bits
 	SetProtocol(protocol string) *httpRequestBuilder
 	SetHost(host string) *httpRequestBuilder
-	SetRemoteAddr(remoteAddr string) *httpRequestBuilder
 	SetURL(urlStr string) *httpRequestBuilder
 	SetURI(uri string) *httpRequestBuilder
 	SetMethod(method HttpRequestMethod) *httpRequestBuilder
 	SetQueryString(queryString string) *httpRequestBuilder
 	SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder
+
+	// Body Bits
 	SetBody(body *string) *httpRequestBuilder
 	SetBodyData(bodyData *httpRequestBody) *httpRequestBuilder
+
+	// Headers
 	SetHeaders(headers HttpHeadersIfc) *httpRequestBuilder
-	SetPathParameters(params metadata.MetadataIfc) *httpRequestBuilder
+
+	// Build
 	GetHttpRequest() *httpRequest
 }
 
@@ -41,10 +52,7 @@ type httpRequestBuilder struct {
 
 func NewHttpRequestBuilder() *httpRequestBuilder {
 	return &httpRequestBuilder{
-		request: &httpRequest{
-			headers:  NewHttpHeaders(),
-			bodyData: NewHttpRequestBodyBuilder().GetHttpRequestBody(),
-		},
+		request: &httpRequest{},
 	}
 }
 
@@ -59,11 +67,6 @@ func (r *httpRequestBuilder) SetProtocol(protocol string) *httpRequestBuilder {
 
 func (r *httpRequestBuilder) SetHost(host string) *httpRequestBuilder {
 	r.request.host = host
-	return r
-}
-
-func (r *httpRequestBuilder) SetRemoteAddr(remoteAddr string) *httpRequestBuilder {
-	r.request.remoteAddr = remoteAddr
 	return r
 }
 
@@ -111,12 +114,6 @@ func (r *httpRequestBuilder) SetBodyData(bodyData *httpRequestBody) *httpRequest
 // Set the Request Headers
 func (r *httpRequestBuilder) SetHeaders(headers *httpHeaders) *httpRequestBuilder {
 	r.request.headers = headers
-	return r
-}
-
-// Set the path parameters (should be endpointwrapper)
-func (r *httpRequestBuilder) SetPathParameters(params metadata.MetadataIfc) *httpRequestBuilder {
-	r.request.pathParams = params
 	return r
 }
 

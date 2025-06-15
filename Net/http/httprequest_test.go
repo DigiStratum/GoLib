@@ -179,31 +179,6 @@ func TestThat_HttpRequest_BuilderCreatesRequestWithQueryParameters(t *testing.T)
 	}
 }
 
-func TestThat_HttpRequest_BuilderCreatesRequestWithPathParameters(t *testing.T) {
-	// Setup
-	builder := NewHttpRequestBuilder()
-	pathParams := metadata.NewMetadataBuilder().
-		Set("id", "123").GetMetadata()
-
-	// Test
-	sut := builder.SetPathParameters(pathParams).GetHttpRequest()
-
-	// Verify
-	if !ExpectNonNil(sut, t) {
-		return
-	}
-	if !ExpectNonNil(sut.GetPathParameters(), t) {
-		return
-	}
-	actual := sut.GetPathParameters().Get("id")
-	if !ExpectNonNil(actual, t) {
-		return
-	}
-	if !ExpectString("123", *actual, t) {
-		return
-	}
-}
-
 // Complex builder scenarios
 
 func TestThat_HttpRequest_Builder_CreatesCompleteRequest(t *testing.T) {

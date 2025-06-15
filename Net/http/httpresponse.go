@@ -44,7 +44,7 @@ func NewHttpResponseStandard(status HttpStatus, body *string, contentType string
 // Produce an HTTP response, code only, no headers/body
 func NewHttpReponseCode(status HttpStatus) *httpResponse {
 	body := ""
-	return NewHttpResponseWithHeaders(status, &body, NewHttpHeaders())
+	return NewHttpResponseWithHeaders(status, &body, NewHttpHeadersBuilder().GetHttpHeaders())
 }
 
 // Produce an HTTP response, code and default status text, JSON format

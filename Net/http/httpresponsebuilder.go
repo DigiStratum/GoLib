@@ -23,7 +23,7 @@ type httpResponseBuilder struct {
 
 func NewHttpResponseBuilder() *httpResponseBuilder {
 	r := httpResponseBuilder{
-		response: NewHttpResponse(),
+		response: &httpResponse{},
 	}
 	return &r
 }

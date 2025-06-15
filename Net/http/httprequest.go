@@ -6,6 +6,8 @@ An Immutable HTTP Request structure and programmatic interface to it.
 
 Use NewHttpRequestBuilder() to create one of these.
 
+TODO:
+  * Get rid of all the URL component operations, just use GetURL(), but keep QueryString conveniences
 */
 
 import (
@@ -17,7 +19,6 @@ import (
 type HttpRequestIfc interface {
 	GetProtocol() string
 	GetHost() string
-	GetRemoteAddr() string
 	GetScheme() string
 	GetURL() string
 	GetURI() string
@@ -33,7 +34,6 @@ type HttpRequestIfc interface {
 type httpRequest struct {
 	protocol    string
 	host        string
-	remoteAddr  string
 	scheme      string
 	url         *url.URL
 	method      HttpRequestMethod
@@ -56,10 +56,6 @@ func (r *httpRequest) GetProtocol() string {
 
 func (r *httpRequest) GetHost() string {
 	return r.host
-}
-
-func (r *httpRequest) GetRemoteAddr() string {
-	return r.remoteAddr
 }
 
 func (r *httpRequest) GetScheme() string {
