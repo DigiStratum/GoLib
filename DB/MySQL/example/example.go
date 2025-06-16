@@ -23,25 +23,29 @@ go run example.go
 */
 
 import (
-	"fmt"
-	"os"
 	"database/sql"
 	gojson "encoding/json"
+	"fmt"
+	"os"
 
 	cfg "github.com/DigiStratum/GoLib/Config"
-	dep "github.com/DigiStratum/GoLib/Dependencies"
 	db "github.com/DigiStratum/GoLib/DB"
 	mysql "github.com/DigiStratum/GoLib/DB/MySQL"
+	dep "github.com/DigiStratum/GoLib/Dependencies"
 )
 
 func main() {
 	// Load configuration
 	config := cfg.NewConfig()
 	err := config.LoadFromJsonFile("example.config.json")
-	if nil != err { dief("Error loading config JSON: %s", err) }
+	if nil != err {
+		dief("Error loading config JSON: %s", err)
+	}
 
 	dsn, err := getDSNFromConfig(config.GetSubsetConfig("db.dsn."))
-	if nil != err { dief("DSN Build error: %s", err) }
+	if nil != err {
+		dief("DSN Build error: %s", err)
+	}
 
 	example_Connection(*dsn)
 	example_ConnectionFactory(*dsn)
@@ -62,17 +66,25 @@ func example_ConnectionPool(dsn db.DSN) {
 	connPool := mysql.NewConnectionPool(dsn)
 	defer connPool.Close()
 	err := connPool.InjectDependencies(dep.NewDependencyInstance("ConnectionFactory", connFactory))
-	if nil != err { dief("Error injecting dependencies: %s\n", err) }
-	if err = connPool.Start(); nil != err { dief("Error starting ConnectionPool(): %s", err.Error()) }
+	if nil != err {
+		dief("Error injecting dependencies: %s\n", err)
+	}
+	if err = connPool.Start(); nil != err {
+		dief("Error starting ConnectionPool(): %s", err.Error())
+	}
 
 	// Lease a connection from the pool
 	conn, err := connPool.GetConnection()
-	if nil != err { dief("Error getting leased connection: %s\n", err) }
+	if nil != err {
+		dief("Error getting leased connection: %s\n", err)
+	}
 	defer conn.Release()
 
 	// Run a query through
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
-	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
+	if (nil != err) || (nil == query) {
+		dief("Query Setup Error: %s\n", err)
+	}
 
 	// Dump results
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
@@ -87,16 +99,22 @@ func example_ConnectionFactory(dsn db.DSN) {
 	// Get the connection from a MySQL connection factory
 	connFactory := mysql.NewMySQLConnectionFactory()
 	dbconn, err := connFactory.NewConnection(dsn)
-	if nil != err { dief("Error getting underlying connection: %s\n", err) }
+	if nil != err {
+		dief("Error getting underlying connection: %s\n", err)
+	}
 
 	// Wrap the raw connection
 	conn, err := mysql.NewConnection(dbconn)
-	if nil != err { dief("Error getting connection wrapper: %s\n", err) }
+	if nil != err {
+		dief("Error getting connection wrapper: %s\n", err)
+	}
 	defer conn.Close()
 
 	// Run a query through
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
-	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
+	if (nil != err) || (nil == query) {
+		dief("Query Setup Error: %s\n", err)
+	}
 
 	// Dump results
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
@@ -111,16 +129,22 @@ func example_Connection(dsn db.DSN) {
 
 	// Get the connection directly from SQL driver
 	dbconn, err := sql.Open("mysql", dsn.ToString())
-	if nil != err { dief("Error getting underlying connection: %s\n", err) }
+	if nil != err {
+		dief("Error getting underlying connection: %s\n", err)
+	}
 
 	// Wrap the raw connection
 	conn, err := mysql.NewConnection(dbconn)
-	if nil != err { dief("Error getting connection wrapper: %s\n", err) }
+	if nil != err {
+		dief("Error getting connection wrapper: %s\n", err)
+	}
 	defer conn.Close()
 
 	// Run a query through
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
-	if (nil != err ) || (nil == query) { dief("Query Setup Error: %s\n", err) }
+	if (nil != err) || (nil == query) {
+		dief("Query Setup Error: %s\n", err)
+	}
 
 	// Dump results
 	fmt.Printf("%s\n\n", runQueryReturnJson(query))
@@ -129,23 +153,27 @@ func example_Connection(dsn db.DSN) {
 // -----------------------------------------------
 
 type ResourceTask struct {
-	Id			int	`json:"id"`
-	Task			string	`json:"task"`
-	Due			string	`json:"due"`
+	Id   int    `json:"id"`
+	Task string `json:"task"`
+	Due  string `json:"due"`
 }
 
 type resourceTask struct {
-	resource		ResourceTask
-	connPool		mysql.ConnectionPoolIfc
+	resource ResourceTask
+	connPool mysql.ConnectionPoolIfc
 }
 
 func (r resourceTask) GetAll() []resourceTask {
 	conn, err := r.connPool.GetConnection()
-	if nil != err { dief("%s", fmt.Sprintf("GetConnection Error: %s\n", err.Error())) }
+	if nil != err {
+		dief("%s", fmt.Sprintf("GetConnection Error: %s\n", err.Error()))
+	}
 	defer conn.Release()
 	query, err := conn.NewQuery(mysql.NewSQLQuery("SELECT id, task, due FROM todo;"))
 	results, err := query.RunReturnAll() // No args for this example
-	if nil != err { dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error())) }
+	if nil != err {
+		dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error()))
+	}
 
 	// Collect results into []resourceTask
 	resourceTasks := make([]resourceTask, 0)
@@ -153,10 +181,10 @@ func (r resourceTask) GetAll() []resourceTask {
 	for rr := it(); nil != rr; rr = it() {
 		if resultRow, ok := rr.(mysql.ResultRowIfc); ok {
 			rt := resourceTask{
-				resource:	ResourceTask{
-					Id: int(resultRow.Get("id").GetInt64Default(0)),
+				resource: ResourceTask{
+					Id:   int(resultRow.Get("id").GetInt64Default(0)),
 					Task: resultRow.Get("task").GetStringDefault("null"),
-					Due: resultRow.Get("due").GetStringDefault("1970-01-01 00:00:00"),
+					Due:  resultRow.Get("due").GetStringDefault("1970-01-01 00:00:00"),
 				},
 				connPool: r.connPool,
 			}
@@ -167,7 +195,7 @@ func (r resourceTask) GetAll() []resourceTask {
 }
 
 func (r resourceTask) MarshalJSON() ([]byte, error) {
-        return gojson.Marshal(r.resource)
+	return gojson.Marshal(r.resource)
 }
 
 func example_ResourceObject(dsn db.DSN) {
@@ -178,20 +206,26 @@ func example_ResourceObject(dsn db.DSN) {
 	connPool := mysql.NewConnectionPool(dsn)
 	defer connPool.Close()
 	err := connPool.InjectDependencies(dep.NewDependencyInstance("ConnectionFactory", connFactory))
-	if nil != err { dief("Error injecting dependencies: %s\n", err) }
-	if err = connPool.Start(); nil != err { dief("Error starting ConnectionPool(): %s", err.Error()) }
+	if nil != err {
+		dief("Error injecting dependencies: %s\n", err)
+	}
+	if err = connPool.Start(); nil != err {
+		dief("Error starting ConnectionPool(): %s", err.Error())
+	}
 
 	// Use the Resource Object to access data, get all the records from the connection pool
 	rt := resourceTask{
-		resource:	ResourceTask{},
-		connPool:	connPool,
+		resource: ResourceTask{},
+		connPool: connPool,
 	}
 	resourceTasks := rt.GetAll()
 
 	// Convert to JSON
 	jsonBytes, err := gojson.Marshal(resourceTasks)
-	if nil != err { dief("Error Marshaling JSON: %s\n", err) }
-        jsonString := string(jsonBytes[:])
+	if nil != err {
+		dief("Error Marshaling JSON: %s\n", err)
+	}
+	jsonString := string(jsonBytes[:])
 
 	// Dump results
 	fmt.Printf("%s\n\n", jsonString)
@@ -201,10 +235,12 @@ func example_ResourceObject(dsn db.DSN) {
 // -----------------------------------------------
 
 func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
-	requiredConfigKeys := []string{ "User", "Passwd", "Net", "DBName" }
+	requiredConfigKeys := []string{"User", "Passwd", "Net", "DBName"}
 	keys := config.GetKeys()
-	if ! config.HasAll(&requiredConfigKeys) {
-		for _, key := range keys { fmt.Printf("config key: %s\n", key) }
+	if !config.HasAll(requiredConfigKeys...) {
+		for _, key := range keys {
+			fmt.Printf("config key: %s\n", key)
+		}
 		return nil, fmt.Errorf("Missing one or more required configuration keys")
 	}
 	dsnBuilder := db.BuildDSN()
@@ -219,10 +255,14 @@ func getDSNFromConfig(config cfg.ConfigIfc) (*db.DSN, error) {
 
 func runQueryReturnJson(query mysql.QueryIfc) string {
 	results, err := query.RunReturnAll() // No args for this example
-	if nil != err { dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error())) }
+	if nil != err {
+		dief("%s", fmt.Sprintf("Query Error: %s\n", err.Error()))
+	}
 
 	json, err := results.ToJson()
-	if nil != err { dief("%s", fmt.Sprintf("JSON Marshaler Error: %s\n", err.Error())) }
+	if nil != err {
+		dief("%s", fmt.Sprintf("JSON Marshaler Error: %s\n", err.Error()))
+	}
 
 	return *json
 }
