@@ -12,7 +12,11 @@ import (
 
 func TestThat_HttpRequest_NewHttpRequest_ReturnsInstance(t *testing.T) {
 	// Setup & Test
-	var sut HttpRequestIfc = NewHttpRequestBuilder().GetHttpRequest() // Verifies that result satisfies IFC
+	testUrl := "https://www.digistratum.com/index.html"
+	var sut HttpRequestIfc = NewHttpRequestBuilder(
+		METHOD_GET,
+		testUrl,
+	).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
@@ -22,35 +26,13 @@ func TestThat_HttpRequest_NewHttpRequest_ReturnsInstance(t *testing.T) {
 
 // Getters/Setters
 
-func TestThat_HttpRequest_GetURL_ReturnsEmptyWhenNotSet(t *testing.T) {
-	// Setup
-	sut := NewHttpRequestBuilder().GetHttpRequest()
-
-	// Test
-	actual := sut.GetURL()
-
-	// Verify
-	if !ExpectString("", actual, t) {
-		return
-	}
-}
-
-func TestThat_HttpRequest_GetMethod_ReturnsDefaultWhenNotSet(t *testing.T) {
-	// Setup
-	sut := NewHttpRequestBuilder().GetHttpRequest()
-
-	// Test
-	actual := sut.GetMethod()
-
-	// Verify
-	if !ExpectEqual(METHOD_GET, actual, t) {
-		return
-	}
-}
-
 func TestThat_HttpRequest_GetHeaders_ReturnsEmptyHeadersWhenNotSet(t *testing.T) {
 	// Setup
-	sut := NewHttpRequestBuilder().GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_GET,
+		testUrl,
+	).GetHttpRequest()
 
 	// Test
 	actual := sut.GetHeaders()
@@ -68,11 +50,11 @@ func TestThat_HttpRequest_GetHeaders_ReturnsEmptyHeadersWhenNotSet(t *testing.T)
 
 func TestThat_HttpRequest_BuilderCreatesRequestWithURL(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
-	testUrl := "https://example.com/test"
-
-	// Test
-	sut := builder.SetURL(testUrl).GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_GET,
+		testUrl,
+	).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
@@ -84,37 +66,39 @@ func TestThat_HttpRequest_BuilderCreatesRequestWithURL(t *testing.T) {
 	if !ExpectEqual("https", sut.GetScheme(), t) {
 		return
 	}
-	if !ExpectEqual("example.com", sut.GetHost(), t) {
+	if !ExpectEqual("www.digistratum.com", sut.GetHost(), t) {
 		return
 	}
-	if !ExpectEqual("/test", sut.GetURI(), t) {
+	if !ExpectEqual("/index.html", sut.GetURI(), t) {
 		return
 	}
 }
 
 func TestThat_HttpRequest_BuilderCreatesRequestWithMethod(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
-
-	// Test
-	sut := builder.SetMethod(METHOD_POST).GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_GET,
+		testUrl,
+	).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
 		return
 	}
-	if !ExpectEqual(METHOD_POST, sut.GetMethod(), t) {
+	if !ExpectEqual(METHOD_GET, sut.GetMethod(), t) {
 		return
 	}
 }
 
 func TestThat_HttpRequest_BuilderCreatesRequestWithBody(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
 	testBody := "test body content"
-
-	// Test
-	sut := builder.SetBody(&testBody).GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_POST,
+		testUrl,
+	).SetBody(&testBody).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
@@ -127,12 +111,13 @@ func TestThat_HttpRequest_BuilderCreatesRequestWithBody(t *testing.T) {
 
 func TestThat_HttpRequest_BuilderCreatesRequestWithHeaders(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
 	headers := NewHttpHeadersBuilder()
 	headers.Set("Content-Type", "application/json")
-
-	// Test
-	sut := builder.SetHeaders(
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_GET,
+		testUrl,
+	).SetHeaders(
 		headers.GetHttpHeaders(),
 	).GetHttpRequest()
 
@@ -157,11 +142,12 @@ func TestThat_HttpRequest_BuilderCreatesRequestWithHeaders(t *testing.T) {
 
 func TestThat_HttpRequest_BuilderCreatesRequestWithQueryParameters(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
 	queryParams := metadata.NewMetadataBuilder().Set("param1", "value1").GetMetadata()
-
-	// Test
-	sut := builder.SetQueryParameters(queryParams).GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html"
+	sut := NewHttpRequestBuilder(
+		METHOD_POST,
+		testUrl,
+	).SetQueryParameters(queryParams).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
@@ -183,20 +169,18 @@ func TestThat_HttpRequest_BuilderCreatesRequestWithQueryParameters(t *testing.T)
 
 func TestThat_HttpRequest_Builder_CreatesCompleteRequest(t *testing.T) {
 	// Setup
-	builder := NewHttpRequestBuilder()
-	testUrl := "https://example.com/api/users?sort=desc"
 	testBody := "{\"name\":\"test\"}"
-
-	headers := NewHttpHeadersBuilder().
-		Set("Content-Type", "application/json").
-		Set("Authorization", "Bearer token123")
-
-	// Test
-	sut := builder.
-		SetURL(testUrl).
-		SetMethod(METHOD_POST).
-		SetBody(&testBody).
-		SetHeaders(headers.GetHttpHeaders()).GetHttpRequest()
+	testUrl := "https://www.digistratum.com/index.html?sort=desc"
+	sut := NewHttpRequestBuilder(
+		METHOD_POST,
+		testUrl,
+	).SetBody(&testBody).
+		SetHeaders(
+			NewHttpHeadersBuilder().
+				Set("Content-Type", "application/json").
+				Set("Authorization", "Bearer token123").
+				GetHttpHeaders(),
+		).GetHttpRequest()
 
 	// Verify
 	if !ExpectNonNil(sut, t) {

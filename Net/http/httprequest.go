@@ -17,7 +17,6 @@ import (
 )
 
 type HttpRequestIfc interface {
-	GetProtocol() string
 	GetHost() string
 	GetScheme() string
 	GetURL() string
@@ -32,13 +31,8 @@ type HttpRequestIfc interface {
 }
 
 type httpRequest struct {
-	protocol    string
-	host        string
-	scheme      string
 	url         *url.URL
 	method      HttpRequestMethod
-	uri         string
-	queryString string
 	queryParams metadata.MetadataIfc
 	headers     *httpHeaders
 	body        *string
@@ -50,16 +44,12 @@ type httpRequest struct {
 // HttpRequestIfc Implementation
 // -------------------------------------------------------------------------------------------------
 
-func (r *httpRequest) GetProtocol() string {
-	return r.protocol
-}
-
 func (r *httpRequest) GetHost() string {
-	return r.host
+	return r.url.Host
 }
 
 func (r *httpRequest) GetScheme() string {
-	return r.scheme
+	return r.url.Scheme
 }
 
 func (r *httpRequest) GetURL() string {
@@ -74,11 +64,11 @@ func (r *httpRequest) GetMethod() HttpRequestMethod {
 }
 
 func (r *httpRequest) GetURI() string {
-	return r.uri
+	return r.url.Path
 }
 
 func (r *httpRequest) GetQueryString() string {
-	return r.queryString
+	return r.url.RawQuery
 }
 
 func (r *httpRequest) GetBody() *string {

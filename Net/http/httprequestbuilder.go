@@ -11,7 +11,7 @@ TODO
     but useful for outgoing requests)
   * Add Factory Function(s) to convert other request types to this type
     - PathParameters are useful to parse requests from other sources, but not for building a new request
-
+  * Reject attempts to set Body/Data for methods that do not support a body
 */
 
 import (
@@ -23,11 +23,6 @@ import (
 // Http Request public interface
 type HttpRequestBuilderIfc interface {
 	// URL bits
-	SetProtocol(protocol string) *httpRequestBuilder
-	SetHost(host string) *httpRequestBuilder
-	SetURL(urlStr string) *httpRequestBuilder
-	SetURI(uri string) *httpRequestBuilder
-	SetMethod(method HttpRequestMethod) *httpRequestBuilder
 	SetQueryString(queryString string) *httpRequestBuilder
 	SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder
 
@@ -50,54 +45,29 @@ type httpRequestBuilder struct {
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
 
-func NewHttpRequestBuilder() *httpRequestBuilder {
-	return &httpRequestBuilder{
+func NewHttpRequestBuilder(method HttpRequestMethod, url string) *httpRequestBuilder {
+	builder := httpRequestBuilder{
 		request: &httpRequest{},
 	}
+	builder.setURL(url)
+	builder.setMethod(method)
+	return &builder
 }
 
 // -------------------------------------------------------------------------------------------------
 // HttpRequestBuilderIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *httpRequestBuilder) SetProtocol(protocol string) *httpRequestBuilder {
-	r.request.protocol = protocol
-	return r
-}
-
-func (r *httpRequestBuilder) SetHost(host string) *httpRequestBuilder {
-	r.request.host = host
-	return r
-}
-
-func (r *httpRequestBuilder) SetScheme(scheme string) *httpRequestBuilder {
-	r.request.scheme = scheme
-	return r
-}
-
-func (r *httpRequestBuilder) SetURL(urlStr string) *httpRequestBuilder {
-	u, err := url.Parse(urlStr)
-	if nil != err {
-		//log.GetLogger().Warn("HttpRequest.SetUrl() - failed to parse as a URL: '%s'", u)
-		return nil
-	}
-	r.request.url = u
-	return r
-}
-
-func (r *httpRequestBuilder) SetMethod(method HttpRequestMethod) *httpRequestBuilder {
-	r.request.method = method
-	return r
-}
-
-func (r *httpRequestBuilder) SetURI(uri string) *httpRequestBuilder {
-	r.request.uri = uri
-	return r
-}
-
 func (r *httpRequestBuilder) SetQueryString(queryString string) *httpRequestBuilder {
 	// TODO: SetQueryParameters() should be called to match this
-	r.request.queryString = queryString
+	r.request.url.RawQuery = queryString
+	return r
+}
+
+// Set the query parameters
+func (r *httpRequestBuilder) SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder {
+	// TODO: SetQueryString() should be called to match this
+	r.request.queryParams = params
 	return r
 }
 
@@ -117,13 +87,25 @@ func (r *httpRequestBuilder) SetHeaders(headers *httpHeaders) *httpRequestBuilde
 	return r
 }
 
-// Set the query parameters
-func (r *httpRequestBuilder) SetQueryParameters(params metadata.MetadataIfc) *httpRequestBuilder {
-	// TODO: SetQueryString() should be called to match this
-	r.request.queryParams = params
-	return r
+func (r *httpRequestBuilder) GetHttpRequest() *httpRequest {
+	// A built request should always have headers; pick sane defaults if unset
+	builtRequest := r.request
+	if r.request.headers == nil {
+		builtRequest.headers = NewHttpHeadersBuilder().GetHttpHeaders()
+	}
+	return builtRequest
 }
 
-func (r *httpRequestBuilder) GetHttpRequest() *httpRequest {
-	return r.request
+// -------------------------------------------------------------------------------------------------
+// httpRequestBuilder
+// -------------------------------------------------------------------------------------------------
+
+func (r *httpRequestBuilder) setURL(urlStr string) {
+	if url, err := url.Parse(urlStr); err == nil {
+		r.request.url = url
+	}
+}
+
+func (r *httpRequestBuilder) setMethod(method HttpRequestMethod) {
+	r.request.method = method
 }

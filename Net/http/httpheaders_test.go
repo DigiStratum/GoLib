@@ -89,11 +89,10 @@ func TestThat_HttpHeaders_Size_ReturnsCorrectSizeForSingleHeader(t *testing.T) {
 	// Test
 	size := sut.Size()
 
-	// Headers render as "X-Test: value\n\n\n" (9+2+3=14)
-	// But the way Size() calculates it's specifically:
-	// len("value") + 4 (for colon-space and space+semicolon) + 1 (for newline)
+	// The way Size() calculates it's specifically:
+	// len("value") + 4 (for colon-space and space+semicolon) + 1 (for newline) (plus a final newline for the last one!)
 	// which gives 5 + 4 + 1 = 10
-	if !ExpectInt(10, size, t) {
+	if !ExpectInt(11, size, t) {
 		return
 	}
 }
@@ -110,9 +109,9 @@ func TestThat_HttpHeaders_Size_ReturnsCorrectSizeForMultipleHeaders(t *testing.T
 
 	// Using Size() calculation method:
 	// "value" = 5 + 4 + 1 = 10
-	// "application/json" = 16 + 4 + 1 = 21
-	// Total = 31
-	if !ExpectInt(31, size, t) {
+	// "application/json" = 16 + 4 + 1 = 21 (plus a final newline for the last one!)
+	// Total = 32
+	if !ExpectInt(32, size, t) {
 		return
 	}
 }

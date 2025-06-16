@@ -76,7 +76,7 @@ func NewHttpClient() *HttpClient {
 				return err
 			},
 		),
-		cfg.NewConfigItem("idleTimeout").SetDefault("30").CaptureWith(
+		cfg.NewConfigItem("idleTimeout").SetDefault("30s").CaptureWith(
 			func(value string) error {
 				var err error
 				r.idleTimeout, err = time.ParseDuration(value)
