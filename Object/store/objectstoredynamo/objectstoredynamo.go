@@ -33,17 +33,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
+	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	objs "github.com/DigiStratum/GoLib/Object/store"
-	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
 type ObjectStoreDynamo struct {
-	storeConfig	cfg.ConfigIfc
-	readCache	objs.MutableObjectStoreIfc
-	awsHelper	cloud.AWSHelperIfc
-	awsDynamoDB	*dynamodb.DynamoDB		// TODO: change to IFC
+	storeConfig cfg.ConfigIfc
+	readCache   objs.MutableObjectStoreIfc
+	awsHelper   cloud.AWSHelperIfc
+	awsDynamoDB *dynamodb.DynamoDB // TODO: change to IFC
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -58,7 +58,6 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 	return &r
 }
 
-
 // -------------------------------------------------------------------------------------------------
 // Satisfies ConfigurableIfc Public Interface
 // -------------------------------------------------------------------------------------------------
@@ -66,15 +65,15 @@ func NewObjectStoreDynamo() *ObjectStoreDynamo {
 func (r *ObjectStoreDynamo) Configure(config cfg.ConfigIfc) error {
 
 	// Validate that the config has what we need for AWS Dynamo!
-	requiredConfig := []string{ "awsregion", "tablename", "primarykey" }
-	if ! (config.HasAll(&requiredConfig)) {
+	requiredConfig := []string{"awsregion", "tablename", "primarykey"}
+	if !(config.HasAll(requiredConfig...)) {
 		return fmt.Errorf("Incomplete ObjectStoreDynamo configuration provided")
 	}
 	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
 	r.awsHelper = cloud.NewAWSHelper()
-	awsHelperConfigKeys := []string{ "awsregion"}
+	awsHelperConfigKeys := []string{"awsregion"}
 	r.awsHelper.Configure(config.GetSubsetKeys(&awsHelperConfigKeys))
 	return nil
 }
@@ -88,10 +87,12 @@ func (r *ObjectStoreDynamo) Configure(config cfg.ConfigIfc) error {
 // Use read-through cache which requires us to mutate state
 func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 	// Require configuration
-	if nil == r.storeConfig { return nil, fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return nil, fmt.Errorf("Not Configured!")
+	}
 
 	// If it's not yet in the cache
-	if ! r.readCache.HasObject(path) {
+	if !r.readCache.HasObject(path) {
 		// TODO: Read the Object from our Dynamo Table into cache
 		primaryKey := r.storeConfig.Get("primarykey")
 		key := map[string]*dynamodb.AttributeValue{
@@ -101,23 +102,27 @@ func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 		}
 		tableName := r.storeConfig.Get("tablename")
 		input := &dynamodb.GetItemInput{
-			Key: key,
+			Key:       key,
 			TableName: aws.String(*tableName),
 		}
 		result, err := r.awsDynamoDB.GetItem(input)
-		if nil != err {	return nil, fmt.Errorf(
-			"ObjectStoreDynamo.GetObject() : DynamoDB.GetItem() : Error: '%s'",
-			err.Error(),
-		)}
+		if nil != err {
+			return nil, fmt.Errorf(
+				"ObjectStoreDynamo.GetObject() : DynamoDB.GetItem() : Error: '%s'",
+				err.Error(),
+			)
+		}
 
 		// Unmarshall the Dynamo result into a basic map of key=value strings
 		// ref: https://stackoverflow.com/questions/11066946/partly-json-unmarshal-into-a-map-in-go
 		item := struct{ Key, Content string }{}
 		err = dynamodbattribute.UnmarshalMap(result.Item, &item)
-		if err != nil { return nil, fmt.Errorf(
-			"ObjectStoreDynamo.GetObject() JSON UnmarshallMap() : Error: '%s'",
-			err.Error(),
-		)}
+		if err != nil {
+			return nil, fmt.Errorf(
+				"ObjectStoreDynamo.GetObject() JSON UnmarshallMap() : Error: '%s'",
+				err.Error(),
+			)
+		}
 
 		rcObj := obj.NewObject()
 		rcObj.Deserialize(&item.Content)
@@ -128,10 +133,14 @@ func (r *ObjectStoreDynamo) GetObject(path string) (*obj.Object, error) {
 
 func (r ObjectStoreDynamo) HasObject(path string) (bool, error) {
 	// Require configuration
-	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return false, fmt.Errorf("Not Configured!")
+	}
 
 	// If it's already in the cache, then we know we have it!
-	if r.readCache.HasObject(path) { return true, nil }
+	if r.readCache.HasObject(path) {
+		return true, nil
+	}
 
 	// TODO: Figure out if Dynamo has this object without necessarily retrieving it
 	var err error
@@ -144,7 +153,9 @@ func (r ObjectStoreDynamo) HasObject(path string) (bool, error) {
 
 func (r *ObjectStoreDynamo) PutObject(path string, object *obj.Object) error {
 	// Require configuration
-	if nil == r.storeConfig { return fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return fmt.Errorf("Not Configured!")
+	}
 
 	// TODO: Actually implement WRITE operation to Dynamo here
 	return fmt.Errorf("Not Yet Implemented!")

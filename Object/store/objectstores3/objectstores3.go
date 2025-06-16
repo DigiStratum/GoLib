@@ -30,18 +30,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
+	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 	cfg "github.com/DigiStratum/GoLib/Config"
 	obj "github.com/DigiStratum/GoLib/Object"
 	objs "github.com/DigiStratum/GoLib/Object/store"
-	cloud "github.com/DigiStratum/GoLib/Cloud/aws"
 )
 
 type ObjectStoreS3 struct {
-	storeConfig	cfg.ConfigIfc
-	awsS3		*s3.S3
-	awsS3Downloader	*s3manager.Downloader
-	readCache	*objs.MutableObjectStore
-	awsHelper	cloud.AWSHelperIfc
+	storeConfig     cfg.ConfigIfc
+	awsS3           *s3.S3
+	awsS3Downloader *s3manager.Downloader
+	readCache       *objs.MutableObjectStore
+	awsHelper       cloud.AWSHelperIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -63,14 +63,14 @@ func NewObjectStoreS3() *ObjectStoreS3 {
 func (r *ObjectStoreS3) Configure(config cfg.ConfigIfc) error {
 
 	// Validate that the config has what we need for S3!
-	requiredConfig := []string{ "awsregion", "s3bucket", "s3folder" }
-	if ! (config.HasAll(&requiredConfig)) {
+	requiredConfig := []string{"awsregion", "s3bucket", "s3folder"}
+	if !(config.HasAll(requiredConfig...)) {
 		return fmt.Errorf("Incomplete ObjectStoreS3 configuration provided")
 	}
 	r.storeConfig = config
 
 	// Light up our AWS Helper with the region from our configuration data
-	helperConfigKeys := []string{ "awsregion" }
+	helperConfigKeys := []string{"awsregion"}
 	helperConfig := config.GetSubsetKeys(&helperConfigKeys)
 	r.awsHelper = cloud.NewAWSHelper()
 	r.awsHelper.Configure(helperConfig)
@@ -85,10 +85,12 @@ func (r *ObjectStoreS3) Configure(config cfg.ConfigIfc) error {
 // Ref: https://stackoverflow.com/questions/41645377/golang-s3-download-to-buffer-using-s3manager-downloader
 func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 	// Require configuration
-	if nil == r.storeConfig { return nil, fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return nil, fmt.Errorf("Not Configured!")
+	}
 
 	// If it's not yet in the cache
-	if ! r.readCache.HasObject(path) {
+	if !r.readCache.HasObject(path) {
 		// Read the Object from our S3 bucket into cache
 		buff := &aws.WriteAtBuffer{}
 		downloader := r.getS3Downloader()
@@ -96,26 +98,32 @@ func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 		// The S3 key is the path prefixed with our configured folder for this store, if any
 		s3Folder := r.storeConfig.Get("s3folder")
 		key := path
-		if len(*s3Folder) > 0 { key = fmt.Sprintf("%s/%s", *s3Folder, path) }
+		if len(*s3Folder) > 0 {
+			key = fmt.Sprintf("%s/%s", *s3Folder, path)
+		}
 
 		// Now try to download the object from S3
 		_, err := downloader.Download(
 			buff,
 			&s3.GetObjectInput{
-				Bucket:	aws.String(*r.storeConfig.Get("s3bucket")),
-				Key:	aws.String(key),
+				Bucket: aws.String(*r.storeConfig.Get("s3bucket")),
+				Key:    aws.String(key),
 			},
 		)
 		// Error = no Object!
-		if nil != err { return nil, fmt.Errorf(
-			"ObjectStoreS3.GetObject(%s) Error : '%s'",
-			path,
-			err.Error(),
-		)}
+		if nil != err {
+			return nil, fmt.Errorf(
+				"ObjectStoreS3.GetObject(%s) Error : '%s'",
+				path,
+				err.Error(),
+			)
+		}
 		no := obj.NewObject()
 		noSerialized := string(buff.Bytes())
 		err = no.Deserialize(&noSerialized)
-		if nil != err { return nil, err }
+		if nil != err {
+			return nil, err
+		}
 		r.readCache.PutObject(path, no)
 	}
 	return r.readCache.GetObject(path)
@@ -123,18 +131,22 @@ func (r *ObjectStoreS3) GetObject(path string) (*obj.Object, error) {
 
 func (r ObjectStoreS3) HasObject(path string) (bool, error) {
 	// Require configuration
-	if nil == r.storeConfig { return false, fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return false, fmt.Errorf("Not Configured!")
+	}
 
 	// If it's already in the cache, then we know we have it!
-	if r.readCache.HasObject(path) { return true, nil }
+	if r.readCache.HasObject(path) {
+		return true, nil
+	}
 
 	// If there's S3 metadata with no error, then there's a Object!
 	// ref: github.com/aws/aws-sdk-go/service/s3/examples_test.go ("HeadObject")
 	awsS3 := r.getS3()
 	_, err := awsS3.HeadObject(&s3.HeadObjectInput{
-			Bucket: aws.String(*r.storeConfig.Get("s3bucket")),
-			Key:	aws.String(*r.storeConfig.Get("s3folder") + "/" + path),
-		},
+		Bucket: aws.String(*r.storeConfig.Get("s3bucket")),
+		Key:    aws.String(*r.storeConfig.Get("s3folder") + "/" + path),
+	},
 	)
 	return nil == err, err
 }
@@ -145,7 +157,9 @@ func (r ObjectStoreS3) HasObject(path string) (bool, error) {
 
 func (r *ObjectStoreS3) PutObject(path string, object *obj.Object) error {
 	// Require configuration
-	if nil == r.storeConfig { return fmt.Errorf("Not Configured!") }
+	if nil == r.storeConfig {
+		return fmt.Errorf("Not Configured!")
+	}
 
 	// TODO: Actually implement WRITE operation to S3 here
 	return fmt.Errorf("Not Yet Implemented!")
@@ -158,8 +172,10 @@ func (r *ObjectStoreS3) PutObject(path string, object *obj.Object) error {
 // Get our S3 connection
 func (r ObjectStoreS3) getS3() *s3.S3 {
 	if nil == r.awsS3 {
-		sess, err := r.awsHelper.GetSession();
-		if (nil != err) || (nil == sess) { return nil }
+		sess, err := r.awsHelper.GetSession()
+		if (nil != err) || (nil == sess) {
+			return nil
+		}
 		r.awsS3 = s3.New(sess)
 	}
 	return r.awsS3
@@ -168,8 +184,10 @@ func (r ObjectStoreS3) getS3() *s3.S3 {
 // Get our S3 Downloader
 func (r ObjectStoreS3) getS3Downloader() *s3manager.Downloader {
 	if nil == r.awsS3Downloader {
-		sess, err := r.awsHelper.GetSession();
-		if (nil != err) || (nil == sess) { return nil }
+		sess, err := r.awsHelper.GetSession()
+		if (nil != err) || (nil == sess) {
+			return nil
+		}
 		r.awsS3Downloader = s3manager.NewDownloader(sess)
 	}
 	return r.awsS3Downloader
