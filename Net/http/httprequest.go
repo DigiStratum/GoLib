@@ -8,6 +8,7 @@ Use NewHttpRequestBuilder() to create one of these.
 
 TODO:
   * Get rid of all the URL component operations, just use GetURL(), but keep QueryString conveniences
+  * Add general support for request metadata, such as request ID, etc.
 */
 
 import (
