@@ -54,6 +54,14 @@ func NewHttpRequestBuilder(method HttpRequestMethod, url string) *httpRequestBui
 	return &builder
 }
 
+func NewHttpRequestBuilderFromRequest(request *httpRequest) *httpRequestBuilder {
+	requestCopy := *request
+	builder := httpRequestBuilder{
+		request: &requestCopy,
+	}
+	return &builder
+}
+
 // -------------------------------------------------------------------------------------------------
 // HttpRequestBuilderIfc
 // -------------------------------------------------------------------------------------------------
