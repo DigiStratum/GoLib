@@ -6,6 +6,10 @@ An Immutable HTTP Request structure and programmatic interface to it.
 
 Use NewHttpRequestBuilder() to create one of these.
 
+FIXME:
+ * PathParameters support is incomplete; we need to specify some sort of pattern that cna then be
+   used to match the path parameters to the request URI.
+
 TODO:
   * Get rid of all the URL component operations, just use GetURL(), but keep QueryString conveniences
   * Add general support for request metadata, such as request ID, etc.

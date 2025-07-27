@@ -49,14 +49,24 @@ func NewHttpRequestBuilder(method HttpRequestMethod, url string) *httpRequestBui
 	builder := httpRequestBuilder{
 		request: &httpRequest{},
 	}
-	builder.setURL(url)
-	builder.setMethod(method)
+	builder.SetURL(url)
+	builder.SetMethod(method)
 	return &builder
 }
 
 // -------------------------------------------------------------------------------------------------
 // HttpRequestBuilderIfc
 // -------------------------------------------------------------------------------------------------
+
+func (r *httpRequestBuilder) SetURL(urlStr string) {
+	if url, err := url.Parse(urlStr); err == nil {
+		r.request.url = url
+	}
+}
+
+func (r *httpRequestBuilder) SetMethod(method HttpRequestMethod) {
+	r.request.method = method
+}
 
 func (r *httpRequestBuilder) SetQueryString(queryString string) *httpRequestBuilder {
 	// TODO: SetQueryParameters() should be called to match this
@@ -94,18 +104,4 @@ func (r *httpRequestBuilder) GetHttpRequest() *httpRequest {
 		builtRequest.headers = NewHttpHeadersBuilder().GetHttpHeaders()
 	}
 	return builtRequest
-}
-
-// -------------------------------------------------------------------------------------------------
-// httpRequestBuilder
-// -------------------------------------------------------------------------------------------------
-
-func (r *httpRequestBuilder) setURL(urlStr string) {
-	if url, err := url.Parse(urlStr); err == nil {
-		r.request.url = url
-	}
-}
-
-func (r *httpRequestBuilder) setMethod(method HttpRequestMethod) {
-	r.request.method = method
 }
