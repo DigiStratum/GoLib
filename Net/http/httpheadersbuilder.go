@@ -56,9 +56,7 @@ func (r *httpHeadersBuilder) Append(name string, values ...string) *httpHeadersB
 		r.headers.headers[name] = make([]string, 0)
 	}
 
-	for _, value := range values {
-		r.headers.headers[name] = append(r.headers.headers[name], value)
-	}
+	r.headers.headers[name] = append(r.headers.headers[name], values...)
 	return r
 }
 
