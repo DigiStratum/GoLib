@@ -29,6 +29,7 @@ type HttpRequestIfc interface {
 	GetBody() *string
 	GetBodyData() *httpRequestBody
 	GetHeaders() *httpHeaders
+	GetBuilder() *httpRequestBuilder
 }
 
 type httpRequest struct {
@@ -93,4 +94,17 @@ func (r *httpRequest) GetPathParameters() metadata.MetadataIfc {
 // Get the query parameters
 func (r *httpRequest) GetQueryParameters() metadata.MetadataIfc {
 	return r.queryParams
+}
+
+func (r *httpRequest) GetBuilder() *httpRequestBuilder {
+	builder := NewHttpRequestBuilder(
+		r.method,
+		r.url.String(),
+	).
+		SetQueryParameters(r.queryParams).
+		SetHeaders(r.headers).
+		SetBody(r.body).
+		SetBodyData(r.bodyData)
+
+	return builder
 }
