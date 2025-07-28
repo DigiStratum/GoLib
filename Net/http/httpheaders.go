@@ -34,6 +34,7 @@ type HttpHeadersIfc interface {
 	Get(name string) *[]string
 	ToMap() *httpHeadersData
 	Size() int
+	GetBuilder() *httpHeadersBuilder
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -155,4 +156,14 @@ func (r *httpHeaders) getWeightedHeaderList(headerName string) *[]string {
 		}
 	}
 	return &values
+}
+
+func (r *httpHeaders) GetBuilder() *httpHeadersBuilder {
+	if r == nil {
+		return nil
+	}
+	builder := NewHttpHeadersBuilder()
+	builderHeaders := *r // Dereference ourselves to get a deep copy
+	builder.headers = &builderHeaders
+	return builder
 }
