@@ -17,6 +17,7 @@ type HttpResponseIfc interface {
 	GetStatus() HttpStatus
 	GetProtocolVersion() ver.VersionIfc
 	GetHeaders() HttpHeadersIfc
+	GetBuilder() *httpResponseBuilder
 }
 
 type httpResponse struct {
@@ -160,4 +161,11 @@ func (r *httpResponse) GetProtocolVersion() ver.VersionIfc {
 
 func (r *httpResponse) GetHeaders() HttpHeadersIfc {
 	return r.headers
+}
+
+func (r *httpResponse) GetBuilder() *httpResponseBuilder {
+	builder := NewHttpResponseBuilder()
+	builderResponse := *r // Dereference ourselves to deep copy
+	builder.response = &builderResponse
+	return builder
 }

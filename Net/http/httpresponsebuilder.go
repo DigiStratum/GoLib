@@ -8,7 +8,7 @@ type HttpResponseBuilderIfc interface {
 	SetBinBody(body *[]byte) *httpResponseBuilder
 	SetBody(body *string) *httpResponseBuilder
 	SetStatus(status HttpStatus) *httpResponseBuilder
-	SetProtocolVersion(version string) *httpResponseBuilder
+	SetProtocolVersion(version ver.VersionIfc) *httpResponseBuilder
 	SetHeaders(headers HttpHeadersIfc) *httpResponseBuilder
 	GetHttpResponse() *httpResponse
 }
@@ -45,10 +45,8 @@ func (r *httpResponseBuilder) SetStatus(status HttpStatus) *httpResponseBuilder 
 	return r
 }
 
-func (r *httpResponseBuilder) SetProtocolVersion(version string) *httpResponseBuilder {
-	if v := ver.NewMajorMinor(version); nil != v {
-		r.response.protocolVersion = v
-	}
+func (r *httpResponseBuilder) SetProtocolVersion(version ver.VersionIfc) *httpResponseBuilder {
+	r.response.protocolVersion = version
 	return r
 }
 
