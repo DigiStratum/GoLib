@@ -60,11 +60,18 @@ func (r *httpHeadersBuilder) Append(name string, values ...string) *httpHeadersB
 	return r
 }
 
-func (r *httpHeadersBuilder) Merge(headers *httpHeaders) *httpHeadersBuilder {
+func (r *httpHeadersBuilder) Merge(headers HttpHeadersIfc) *httpHeadersBuilder {
 	if headers != nil {
-		for name, values := range headers.headers {
-			// Use Set() to merge provided values with existing, instead of overwriting
-			r.Set(name, values...)
+		names := headers.GetNames()
+		if names != nil {
+			for _, name := range *names {
+				// Use Set() to merge provided values with existing, instead of overwriting
+				values := headers.Get(name)
+				if values == nil {
+					continue
+				}
+				r.Set(name, *values...)
+			}
 		}
 	}
 	return r
