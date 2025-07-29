@@ -51,11 +51,19 @@ func (r *httpRequestBodyBuilder) Set(name string, values ...string) *httpRequest
 	return r
 }
 
-func (r *httpRequestBodyBuilder) Merge(requestBody *httpRequestBody) *httpRequestBodyBuilder {
+func (r *httpRequestBodyBuilder) Merge(requestBody HttpRequestBodyIfc) *httpRequestBodyBuilder {
 	if requestBody != nil {
-		for name, values := range requestBody.body {
+		names := requestBody.GetNames()
+		if names == nil {
+			return r // No names to merge
+		}
+		for _, name := range *names {
+			values := requestBody.Get(name)
+			if values == nil {
+				continue // No values to merge for this name
+			}
 			// Use Set() to merge provided values with existing, instead of overwriting
-			r.Set(name, values...)
+			r.Set(name, *values...)
 		}
 	}
 	return r
