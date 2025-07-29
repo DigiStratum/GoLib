@@ -12,7 +12,7 @@ TODO:
 type HttpRequestBodyBuilderIfc interface {
 	Set(name string, values ...string)
 	Merge(requestBody HttpRequestBodyIfc)
-	GetHttpRequestBody() HttpRequestBodyIfc
+	GetHttpRequestBody() *httpRequestBody
 }
 
 // Name/value pair header map for Request or Response
