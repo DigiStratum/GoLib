@@ -10,8 +10,8 @@ TODO:
 */
 
 type HttpRequestBodyBuilderIfc interface {
-	Set(name string, values ...string)
-	Merge(requestBody HttpRequestBodyIfc)
+	Set(name string, values ...string) *httpRequestBodyBuilder
+	Merge(requestBody HttpRequestBodyIfc) *httpRequestBodyBuilder
 	GetHttpRequestBody() *httpRequestBody
 }
 
