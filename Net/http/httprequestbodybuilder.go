@@ -1,5 +1,9 @@
 package http
 
+import (
+	"net/http"
+)
+
 /*
 
 Builder for HTTP Request Body
@@ -31,6 +35,30 @@ func NewHttpRequestBodyBuilder() *httpRequestBodyBuilder {
 		},
 	}
 	return &r
+}
+
+// NewHttpRequestBodyBuilderFromRequest creates a new HttpRequestBodyBuilder from an http.Request
+// It automatically parses form data if needed and populates the body with PostForm values
+func NewHttpRequestBodyBuilderFromRequest(request *http.Request) *httpRequestBodyBuilder {
+	if request == nil {
+		return nil
+	}
+
+	// Parse form data if it hasn't been parsed yet
+	err := request.ParseForm()
+	if err != nil {
+		// If parsing fails, return nil
+		return nil
+	}
+
+	builder := NewHttpRequestBodyBuilder()
+
+	// Process all form values from the PostForm data
+	for name, values := range request.PostForm {
+		builder.Set(name, values...)
+	}
+
+	return builder
 }
 
 // -------------------------------------------------------------------------------------------------

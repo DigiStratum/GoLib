@@ -2,6 +2,9 @@
 package http
 
 import (
+	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 
 	. "github.com/DigiStratum/GoLib/Testing"
@@ -34,6 +37,107 @@ func TestThat_HttpRequestBodyBuilder_NewHttpRequestBodyBuilder_ImplementsInterfa
 
 	// Verify
 	if !ExpectNonNil(sut, t) {
+		return
+	}
+}
+
+// NewHttpRequestBodyBuilderFromRequest Tests
+
+func TestThat_HttpRequestBodyBuilder_NewHttpRequestBodyBuilderFromRequest_ReturnsNilForNilRequest(t *testing.T) {
+	// Setup & Test
+	sut := NewHttpRequestBodyBuilderFromRequest(nil)
+
+	// Verify
+	if !ExpectNil(sut, t) {
+		return
+	}
+}
+
+func TestThat_HttpRequestBodyBuilder_NewHttpRequestBodyBuilderFromRequest_HandlesEmptyFormData(t *testing.T) {
+	// Setup
+	request := &http.Request{Method: "GET"}
+
+	// Test
+	sut := NewHttpRequestBodyBuilderFromRequest(request)
+
+	// Verify
+	if !ExpectNonNil(sut, t) {
+		return
+	}
+	if !ExpectNonNil(sut.requestBody, t) {
+		return
+	}
+	if !ExpectTrue(sut.requestBody.IsEmpty(), t) {
+		return
+	}
+}
+
+func TestThat_HttpRequestBodyBuilder_NewHttpRequestBodyBuilderFromRequest_ProcessesFormData(t *testing.T) {
+	// Setup
+	formData := map[string][]string{
+		"name":    {"John Doe"},
+		"age":     {"30"},
+		"hobbies": {"reading", "coding", "hiking"},
+	}
+	request := createTestRequest("POST", formData)
+
+	// Test
+	sut := NewHttpRequestBodyBuilderFromRequest(request)
+
+	// Verify
+	if !ExpectNonNil(sut, t) {
+		return
+	}
+	if !ExpectNonNil(sut.requestBody, t) {
+		return
+	}
+
+	// Check each form field was properly set
+	if !ExpectTrue(sut.requestBody.Has("name"), t) {
+		return
+	}
+	nameValues := sut.requestBody.Get("name")
+	if !ExpectNonNil(nameValues, t) {
+		return
+	}
+	if !ExpectInt(1, len(*nameValues), t) {
+		return
+	}
+	if !ExpectString("John Doe", (*nameValues)[0], t) {
+		return
+	}
+
+	if !ExpectTrue(sut.requestBody.Has("age"), t) {
+		return
+	}
+	ageValues := sut.requestBody.Get("age")
+	if !ExpectNonNil(ageValues, t) {
+		return
+	}
+	if !ExpectInt(1, len(*ageValues), t) {
+		return
+	}
+	if !ExpectString("30", (*ageValues)[0], t) {
+		return
+	}
+
+	if !ExpectTrue(sut.requestBody.Has("hobbies"), t) {
+		return
+	}
+	hobbiesValues := sut.requestBody.Get("hobbies")
+	if !ExpectNonNil(hobbiesValues, t) {
+		return
+	}
+	if !ExpectInt(3, len(*hobbiesValues), t) {
+		return
+	}
+	if !ExpectString("reading", (*hobbiesValues)[0], t) {
+		return
+	}
+	if !ExpectString("coding", (*hobbiesValues)[1], t) {
+		return
+	}
+	if !ExpectString("hiking", (*hobbiesValues)[2], t) {
 		return
 	}
 }
@@ -272,6 +376,38 @@ func TestThat_HttpRequestBodyBuilder_GetHttpRequestBody_ReturnsBody(t *testing.T
 	if !ExpectString("value", (*values)[0], t) {
 		return
 	}
+}
+
+func TestNewHttpRequestBodyBuilder(t *testing.T) {
+	builder := NewHttpRequestBodyBuilder()
+	if builder == nil {
+		t.Fatal("Expected non-nil builder")
+	}
+
+	body := builder.GetHttpRequestBody()
+	if body == nil {
+		t.Fatal("Expected non-nil body")
+	}
+
+	if !body.IsEmpty() {
+		t.Error("Expected empty body")
+	}
+}
+
+// Helper function to create test HTTP requests with form data
+func createTestRequest(method string, formData map[string][]string) *http.Request {
+	form := url.Values{}
+	for name, values := range formData {
+		for _, value := range values {
+			form.Add(name, value)
+		}
+	}
+
+	formEncoded := form.Encode()
+	req, _ := http.NewRequest(method, "http://example.com", strings.NewReader(formEncoded))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	return req
 }
 
 // Mock for testing
