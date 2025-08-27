@@ -39,11 +39,10 @@ func DefaultPackageRunner() *PackageTestRunner {
 		Name: name,
 		// Default options - customize as needed
 		Options: &Options{
-			Verbose:    true,
-			SkipVet:    false,
-			RunLegacyT: false,
-			FailFast:   false,
-			Count:      1,
+			Verbose:  true,
+			SkipVet:  false,
+			FailFast: false,
+			Count:    1,
 			// Ignore directories that shouldn't be tested
 			IgnoreDirs: []string{"vendor", ".git", "testdata"},
 		},
@@ -68,18 +67,6 @@ func RunPackageTests(runner *PackageTestRunner, verbose, debug bool, runShellScr
 	options.Verbose = verbose
 	options.TestPattern = testPattern
 	options.CoverMode = coverMode
-
-	// If we should also run the original shell script
-	if runShellScript {
-		shellScript := filepath.Join(packageDir, "t")
-		if _, err := os.Stat(shellScript); err == nil {
-			options.RunLegacyT = true
-			// Add the script to the IgnoreDirs to prevent infinite recursion
-			options.IgnoreDirs = append(options.IgnoreDirs, shellScript)
-		}
-	} else {
-		options.RunLegacyT = false
-	}
 
 	// Debug info
 	if debug {
