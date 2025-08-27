@@ -1,8 +1,10 @@
-// filepath: /Users/skelly/Documents/GoProjects/GoLib/TestRunner/testrunner.go
+// Package TestRunner provides utilities for running Go tests across a project.
+//
+// TestRunner offers functionality to find test packages, run vetting and tests,
+// and collect test results in a structured way.
 package TestRunner
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -59,6 +61,36 @@ type TestResult struct {
 	Time    time.Duration
 }
 
+// TestRunnerIfc defines the interface for running tests across a Go project
+type TestRunnerIfc interface {
+	// FindGoDirectories finds all directories containing Go files
+	FindGoDirectories(rootDir string) ([]string, error)
+
+	// FindTestPackages finds all directories containing test files
+	FindTestPackages(rootDir string) ([]string, error)
+
+	// RunVet runs 'go vet' on each directory
+	RunVet(dirs []string) error
+
+	// RunTests runs 'go test' on each directory
+	RunTests(dirs []string) error
+
+	// RunTestPackages runs go test on each package
+	RunTestPackages(packages []string) (bool, error)
+
+	// RunAll runs the entire test suite
+	RunAll(rootDir string) error
+
+	// PrintSummary prints a summary of test results
+	PrintSummary(totalTime time.Duration)
+
+	// HasFailures returns true if any tests failed
+	HasFailures() bool
+
+	// GetOptions returns the current options
+	GetOptions() *Options
+}
+
 // TestRunner runs tests across a Go project
 type TestRunner struct {
 	Options     *Options
@@ -67,8 +99,8 @@ type TestRunner struct {
 	mu          sync.Mutex
 }
 
-// New creates a new TestRunner with the given options
-func New(options *Options) *TestRunner {
+// NewTestRunner creates a new TestRunner with the given options
+func NewTestRunner(options *Options) *TestRunner {
 	if options == nil {
 		options = DefaultOptions()
 	}
@@ -77,8 +109,20 @@ func New(options *Options) *TestRunner {
 	}
 }
 
+// GetOptions returns the current options
+func (r *TestRunner) GetOptions() *Options {
+	if r == nil {
+		return nil
+	}
+	return r.Options
+}
+
 // FindGoDirectories finds all directories containing Go files
-func (tr *TestRunner) FindGoDirectories(rootDir string) ([]string, error) {
+func (r *TestRunner) FindGoDirectories(rootDir string) ([]string, error) {
+	if r == nil {
+		return nil, fmt.Errorf("nil receiver")
+	}
+
 	var dirs []string
 	dirMap := make(map[string]bool)
 
@@ -97,7 +141,7 @@ func (tr *TestRunner) FindGoDirectories(rootDir string) ([]string, error) {
 			}
 
 			// Skip explicitly ignored dirs
-			for _, ignoreDir := range tr.Options.IgnoreDirs {
+			for _, ignoreDir := range r.Options.IgnoreDirs {
 				if base == ignoreDir {
 					return filepath.SkipDir
 				}
@@ -120,10 +164,62 @@ func (tr *TestRunner) FindGoDirectories(rootDir string) ([]string, error) {
 	return dirs, err
 }
 
+// FindTestPackages finds all directories containing test files
+func (r *TestRunner) FindTestPackages(rootDir string) ([]string, error) {
+	if r == nil {
+		return nil, fmt.Errorf("nil receiver")
+	}
+
+	var packages []string
+	packageMap := make(map[string]bool)
+
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip ignored directories
+		if info.IsDir() {
+			base := filepath.Base(path)
+
+			// Skip dirs that start with _ (Go build convention)
+			if strings.HasPrefix(base, "_") {
+				return filepath.SkipDir
+			}
+
+			// Skip explicitly ignored dirs
+			for _, ignoreDir := range r.Options.IgnoreDirs {
+				if base == ignoreDir {
+					return filepath.SkipDir
+				}
+			}
+
+			return nil
+		}
+
+		// Look for test files
+		if strings.HasSuffix(path, "_test.go") {
+			dir := filepath.Dir(path)
+			if !packageMap[dir] {
+				packageMap[dir] = true
+				packages = append(packages, dir)
+			}
+		}
+
+		return nil
+	})
+
+	return packages, err
+}
+
 // RunVet runs 'go vet' on each directory
-func (tr *TestRunner) RunVet(dirs []string) error {
-	if tr.Options.SkipVet {
-		if tr.Options.Verbose {
+func (r *TestRunner) RunVet(dirs []string) error {
+	if r == nil {
+		return fmt.Errorf("nil receiver")
+	}
+
+	if r.Options.SkipVet {
+		if r.Options.Verbose {
 			fmt.Println("Skipping go vet")
 		}
 		return nil
@@ -131,7 +227,7 @@ func (tr *TestRunner) RunVet(dirs []string) error {
 
 	var vetFailed bool
 	for _, dir := range dirs {
-		if tr.Options.Verbose {
+		if r.Options.Verbose {
 			fmt.Printf("Vetting: %s\n", dir)
 		}
 
@@ -146,27 +242,31 @@ func (tr *TestRunner) RunVet(dirs []string) error {
 			Error:   err,
 		}
 
-		tr.mu.Lock()
-		tr.VetResults = append(tr.VetResults, result)
-		tr.mu.Unlock()
+		r.mu.Lock()
+		r.VetResults = append(r.VetResults, result)
+		r.mu.Unlock()
 
 		if err != nil {
 			vetFailed = true
 			fmt.Printf("Go vet failed in %s:\n%s\n", dir, output)
-			if tr.Options.FailFast {
+			if r.Options.FailFast {
 				return fmt.Errorf("go vet failed in %s", dir)
 			}
 		}
 	}
 
 	if vetFailed {
-		return errors.New("go vet failed in one or more packages")
+		return fmt.Errorf("go vet failed in one or more packages")
 	}
 	return nil
 }
 
 // RunTests runs 'go test' on each directory
-func (tr *TestRunner) RunTests(dirs []string) error {
+func (r *TestRunner) RunTests(dirs []string) error {
+	if r == nil {
+		return fmt.Errorf("nil receiver")
+	}
+
 	var wg sync.WaitGroup
 	var testFailed bool
 	errChan := make(chan error, len(dirs))
@@ -175,24 +275,24 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 	processDir := func(dir string) {
 		defer wg.Done()
 
-		if tr.Options.Verbose {
+		if r.Options.Verbose {
 			fmt.Printf("Testing: %s\n", dir)
 		}
 
 		args := []string{"test", "-v"}
 
 		// Add count flag
-		args = append(args, "-count", fmt.Sprintf("%d", tr.Options.Count))
+		args = append(args, "-count", fmt.Sprintf("%d", r.Options.Count))
 
 		// Add test pattern if provided
-		if tr.Options.TestPattern != "" {
-			args = append(args, "-run", tr.Options.TestPattern)
+		if r.Options.TestPattern != "" {
+			args = append(args, "-run", r.Options.TestPattern)
 		}
 
 		// Add coverage if desired
-		if tr.Options.CoverMode != "" {
+		if r.Options.CoverMode != "" {
 			coverprofile := filepath.Join(dir, "coverage.out")
-			args = append(args, "-covermode", tr.Options.CoverMode, "-coverprofile", coverprofile)
+			args = append(args, "-covermode", r.Options.CoverMode, "-coverprofile", coverprofile)
 		}
 
 		// Add package specifier
@@ -212,11 +312,11 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 			Time:    elapsed,
 		}
 
-		tr.mu.Lock()
-		tr.TestResults = append(tr.TestResults, result)
-		tr.mu.Unlock()
+		r.mu.Lock()
+		r.TestResults = append(r.TestResults, result)
+		r.mu.Unlock()
 
-		if tr.Options.Verbose {
+		if r.Options.Verbose {
 			fmt.Println(string(output))
 		}
 
@@ -225,7 +325,7 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 		}
 	}
 
-	if tr.Options.Parallel {
+	if r.Options.Parallel {
 		for _, dir := range dirs {
 			wg.Add(1)
 			go processDir(dir)
@@ -238,7 +338,7 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 			// If FailFast is true and we got an error, stop processing
 			select {
 			case err := <-errChan:
-				if tr.Options.FailFast {
+				if r.Options.FailFast {
 					return err
 				}
 				testFailed = true
@@ -254,39 +354,140 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 	// Check for errors
 	for err := range errChan {
 		testFailed = true
-		if tr.Options.FailFast {
+		if r.Options.FailFast {
 			return err
 		}
 	}
 
 	if testFailed {
-		return errors.New("tests failed in one or more packages")
+		return fmt.Errorf("tests failed in one or more packages")
 	}
 	return nil
 }
 
+// RunTestPackages runs go test on each package
+func (r *TestRunner) RunTestPackages(packages []string) (bool, error) {
+	if r == nil {
+		return false, fmt.Errorf("nil receiver")
+	}
+
+	startTime := time.Now()
+	fmt.Println("=== Starting Test Run ===")
+
+	allPassed := true
+	var testCount, passCount int
+
+	for _, pkg := range packages {
+		testCount++
+
+		if r.Options.Verbose {
+			fmt.Printf("Testing package: %s\n", pkg)
+		}
+
+		// Run go vet if not skipped
+		if !r.Options.SkipVet {
+			if r.Options.Verbose {
+				fmt.Printf("Vetting: %s\n", pkg)
+			}
+
+			cmd := exec.Command("go", "vet", "./...")
+			cmd.Dir = pkg
+			vetOutput, vetErr := cmd.CombinedOutput()
+
+			if vetErr != nil {
+				fmt.Printf("Go vet failed in %s:\n%s\n", pkg, vetOutput)
+				allPassed = false
+
+				if r.Options.FailFast {
+					break
+				}
+
+				continue // Skip tests for this package
+			}
+		}
+
+		// Build test command
+		args := []string{"test", "-v"}
+
+		// Add count flag if specified
+		if r.Options.Count > 0 {
+			args = append(args, "-count", fmt.Sprintf("%d", r.Options.Count))
+		}
+
+		// Add test pattern if provided
+		if r.Options.TestPattern != "" {
+			args = append(args, "-run", r.Options.TestPattern)
+		}
+
+		// Add coverage if desired
+		if r.Options.CoverMode != "" {
+			coverprofile := filepath.Join(pkg, "coverage.out")
+			args = append(args, "-covermode", r.Options.CoverMode, "-coverprofile", coverprofile)
+		}
+
+		// Add package specifier
+		args = append(args, "./...")
+
+		// Run tests
+		cmd := exec.Command("go", args...)
+		cmd.Dir = pkg
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err := cmd.Run()
+		if err != nil {
+			fmt.Printf("Tests failed in %s: %v\n", pkg, err)
+			allPassed = false
+
+			if r.Options.FailFast {
+				break
+			}
+		} else {
+			passCount++
+		}
+	}
+
+	// Print summary
+	duration := time.Since(startTime)
+	fmt.Println("\n=== Test Summary ===")
+	fmt.Printf("Total Time: %s\n", duration)
+	fmt.Printf("Packages: %d/%d passed\n", passCount, testCount)
+
+	if allPassed {
+		fmt.Println("All tests passed!")
+	} else {
+		fmt.Println("Some tests failed.")
+	}
+
+	return allPassed, nil
+}
+
 // RunAll runs the entire test suite
-func (tr *TestRunner) RunAll(rootDir string) error {
+func (r *TestRunner) RunAll(rootDir string) error {
+	if r == nil {
+		return fmt.Errorf("nil receiver")
+	}
+
 	fmt.Println("=== Starting Test Run ===")
 	startTime := time.Now()
 
 	// Find all Go directories
-	dirs, err := tr.FindGoDirectories(rootDir)
+	dirs, err := r.FindGoDirectories(rootDir)
 	if err != nil {
 		return fmt.Errorf("failed to find Go directories: %w", err)
 	}
 
 	// Run go vet
-	vetErr := tr.RunVet(dirs)
+	vetErr := r.RunVet(dirs)
 
 	// Run tests regardless of vet errors unless FailFast is true
 	var testErr error
-	if vetErr == nil || !tr.Options.FailFast {
-		testErr = tr.RunTests(dirs)
+	if vetErr == nil || !r.Options.FailFast {
+		testErr = r.RunTests(dirs)
 	}
 
 	// Print summary
-	tr.PrintSummary(time.Since(startTime))
+	r.PrintSummary(time.Since(startTime))
 
 	// Return first error
 	if vetErr != nil {
@@ -296,39 +497,43 @@ func (tr *TestRunner) RunAll(rootDir string) error {
 }
 
 // PrintSummary prints a summary of test results
-func (tr *TestRunner) PrintSummary(totalTime time.Duration) {
+func (r *TestRunner) PrintSummary(totalTime time.Duration) {
+	if r == nil {
+		return
+	}
+
 	fmt.Println("\n=== Test Summary ===")
 	fmt.Printf("Total Time: %s\n", totalTime)
 
 	// Vet results
 	vetPassed := 0
-	for _, result := range tr.VetResults {
+	for _, result := range r.VetResults {
 		if result.Success {
 			vetPassed++
 		}
 	}
-	fmt.Printf("Go Vet: %d/%d passed\n", vetPassed, len(tr.VetResults))
+	fmt.Printf("Go Vet: %d/%d passed\n", vetPassed, len(r.VetResults))
 
 	// Test results
 	testPassed := 0
-	for _, result := range tr.TestResults {
+	for _, result := range r.TestResults {
 		if result.Success {
 			testPassed++
 		}
 	}
-	fmt.Printf("Go Tests: %d/%d passed\n", testPassed, len(tr.TestResults))
+	fmt.Printf("Go Tests: %d/%d passed\n", testPassed, len(r.TestResults))
 
 	// Failed tests
-	if vetPassed < len(tr.VetResults) || testPassed < len(tr.TestResults) {
+	if vetPassed < len(r.VetResults) || testPassed < len(r.TestResults) {
 		fmt.Println("\n=== Failed Tests ===")
 
-		for _, result := range tr.VetResults {
+		for _, result := range r.VetResults {
 			if !result.Success {
 				fmt.Printf("Vet Failed: %s\n", result.Package)
 			}
 		}
 
-		for _, result := range tr.TestResults {
+		for _, result := range r.TestResults {
 			if !result.Success {
 				fmt.Printf("Test Failed: %s (%s)\n", result.Package, result.Time)
 			}
@@ -337,14 +542,18 @@ func (tr *TestRunner) PrintSummary(totalTime time.Duration) {
 }
 
 // HasFailures returns true if any tests failed
-func (tr *TestRunner) HasFailures() bool {
-	for _, result := range tr.VetResults {
+func (r *TestRunner) HasFailures() bool {
+	if r == nil {
+		return false
+	}
+
+	for _, result := range r.VetResults {
 		if !result.Success {
 			return true
 		}
 	}
 
-	for _, result := range tr.TestResults {
+	for _, result := range r.TestResults {
 		if !result.Success {
 			return true
 		}

@@ -83,7 +83,7 @@ func RunPackageTests(runner *PackageTestRunner, verbose, debug bool, runShellScr
 	}
 
 	// Create and run the test runner
-	testRunner := New(options)
+	testRunner := NewTestRunner(options)
 	err = testRunner.RunAll(packageDir)
 
 	// Run teardown if defined
