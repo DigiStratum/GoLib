@@ -20,9 +20,6 @@ type Options struct {
 	// SkipVet skips running 'go vet' on packages
 	SkipVet bool
 
-	// RunLegacyT enables running legacy 't' shell scripts
-	RunLegacyT bool
-
 	// FailFast stops on first test failure
 	FailFast bool
 
@@ -47,7 +44,6 @@ func DefaultOptions() *Options {
 	return &Options{
 		Verbose:    true,
 		SkipVet:    false,
-		RunLegacyT: true,
 		FailFast:   false,
 		Count:      1,
 		IgnoreDirs: []string{"vendor", ".git"},
@@ -65,11 +61,10 @@ type TestResult struct {
 
 // TestRunner runs tests across a Go project
 type TestRunner struct {
-	Options       *Options
-	VetResults    []TestResult
-	TestResults   []TestResult
-	LegacyResults []TestResult
-	mu            sync.Mutex
+	Options     *Options
+	VetResults  []TestResult
+	TestResults []TestResult
+	mu          sync.Mutex
 }
 
 // New creates a new TestRunner with the given options
@@ -270,88 +265,6 @@ func (tr *TestRunner) RunTests(dirs []string) error {
 	return nil
 }
 
-// FindLegacyTScripts finds all 't' shell scripts
-func (tr *TestRunner) FindLegacyTScripts(rootDir string) ([]string, error) {
-	var tScripts []string
-
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip ignored directories
-		if info.IsDir() {
-			base := filepath.Base(path)
-			for _, ignoreDir := range tr.Options.IgnoreDirs {
-				if base == ignoreDir {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}
-
-		if filepath.Base(path) == "t" {
-			tScripts = append(tScripts, path)
-		}
-		return nil
-	})
-
-	return tScripts, err
-}
-
-// RunLegacyTScripts runs all 't' shell scripts
-func (tr *TestRunner) RunLegacyTScripts(rootDir string) error {
-	if !tr.Options.RunLegacyT {
-		if tr.Options.Verbose {
-			fmt.Println("Skipping legacy 't' scripts")
-		}
-		return nil
-	}
-
-	scripts, err := tr.FindLegacyTScripts(rootDir)
-	if err != nil {
-		return fmt.Errorf("failed to find legacy 't' scripts: %w", err)
-	}
-
-	var legacyFailed bool
-	for _, script := range scripts {
-		if tr.Options.Verbose {
-			fmt.Printf("Running legacy script: %s\n", script)
-		}
-
-		start := time.Now()
-		cmd := exec.Command("/bin/bash", script)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		elapsed := time.Since(start)
-
-		result := TestResult{
-			Package: script,
-			Success: err == nil,
-			Error:   err,
-			Time:    elapsed,
-		}
-
-		tr.mu.Lock()
-		tr.LegacyResults = append(tr.LegacyResults, result)
-		tr.mu.Unlock()
-
-		if err != nil {
-			legacyFailed = true
-			fmt.Printf("Legacy script %s failed\n", script)
-			if tr.Options.FailFast {
-				return fmt.Errorf("legacy script %s failed", script)
-			}
-		}
-	}
-
-	if legacyFailed {
-		return errors.New("one or more legacy 't' scripts failed")
-	}
-	return nil
-}
-
 // RunAll runs the entire test suite
 func (tr *TestRunner) RunAll(rootDir string) error {
 	fmt.Println("=== Starting Test Run ===")
@@ -372,12 +285,6 @@ func (tr *TestRunner) RunAll(rootDir string) error {
 		testErr = tr.RunTests(dirs)
 	}
 
-	// Run legacy scripts regardless of previous errors unless FailFast is true
-	var legacyErr error
-	if (vetErr == nil && testErr == nil) || !tr.Options.FailFast {
-		legacyErr = tr.RunLegacyTScripts(rootDir)
-	}
-
 	// Print summary
 	tr.PrintSummary(time.Since(startTime))
 
@@ -385,10 +292,7 @@ func (tr *TestRunner) RunAll(rootDir string) error {
 	if vetErr != nil {
 		return vetErr
 	}
-	if testErr != nil {
-		return testErr
-	}
-	return legacyErr
+	return testErr
 }
 
 // PrintSummary prints a summary of test results
@@ -414,17 +318,8 @@ func (tr *TestRunner) PrintSummary(totalTime time.Duration) {
 	}
 	fmt.Printf("Go Tests: %d/%d passed\n", testPassed, len(tr.TestResults))
 
-	// Legacy results
-	legacyPassed := 0
-	for _, result := range tr.LegacyResults {
-		if result.Success {
-			legacyPassed++
-		}
-	}
-	fmt.Printf("Legacy Scripts: %d/%d passed\n", legacyPassed, len(tr.LegacyResults))
-
 	// Failed tests
-	if vetPassed < len(tr.VetResults) || testPassed < len(tr.TestResults) || legacyPassed < len(tr.LegacyResults) {
+	if vetPassed < len(tr.VetResults) || testPassed < len(tr.TestResults) {
 		fmt.Println("\n=== Failed Tests ===")
 
 		for _, result := range tr.VetResults {
@@ -436,12 +331,6 @@ func (tr *TestRunner) PrintSummary(totalTime time.Duration) {
 		for _, result := range tr.TestResults {
 			if !result.Success {
 				fmt.Printf("Test Failed: %s (%s)\n", result.Package, result.Time)
-			}
-		}
-
-		for _, result := range tr.LegacyResults {
-			if !result.Success {
-				fmt.Printf("Legacy Script Failed: %s\n", result.Package)
 			}
 		}
 	}
@@ -456,12 +345,6 @@ func (tr *TestRunner) HasFailures() bool {
 	}
 
 	for _, result := range tr.TestResults {
-		if !result.Success {
-			return true
-		}
-	}
-
-	for _, result := range tr.LegacyResults {
 		if !result.Success {
 			return true
 		}
