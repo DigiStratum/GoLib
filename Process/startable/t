@@ -1,6 +1,0 @@
-#!/bin/bash
-
-TESTRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-. $TESTRUNNER_DIR/../../tools/shell.sh
-runtests $TESTRUNNER_DIR
-
