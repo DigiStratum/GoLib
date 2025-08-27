@@ -1,7 +1,7 @@
 package http
 
 import (
-	"net/http"
+	gohttp "net/http"
 )
 
 /*
@@ -39,7 +39,7 @@ func NewHttpRequestBodyBuilder() *httpRequestBodyBuilder {
 
 // NewHttpRequestBodyBuilderFromRequest creates a new HttpRequestBodyBuilder from an http.Request
 // It automatically parses form data if needed and populates the body with PostForm values
-func NewHttpRequestBodyBuilderFromRequest(request *http.Request) *httpRequestBodyBuilder {
+func NewHttpRequestBodyBuilderFromRequest(request *gohttp.Request) *httpRequestBodyBuilder {
 	if request == nil {
 		return nil
 	}
@@ -48,6 +48,7 @@ func NewHttpRequestBodyBuilderFromRequest(request *http.Request) *httpRequestBod
 	err := request.ParseForm()
 	if err != nil {
 		// If parsing fails, return nil
+		// TODO: Would be better to pass this error back
 		return nil
 	}
 

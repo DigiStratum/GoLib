@@ -23,6 +23,7 @@ import (
 
 	cfg "github.com/DigiStratum/GoLib/Config"
 	"github.com/DigiStratum/GoLib/Process/startable"
+	ver "github.com/DigiStratum/GoLib/Version"
 )
 
 type HttpClientIfc interface {
@@ -182,7 +183,7 @@ func (r *HttpClient) toHttpResponse(response *gohttp.Response) (*httpResponse, e
 
 	// Capture the protocol version from the server response
 	httpResponseBuilder.SetProtocolVersion(
-		fmt.Sprintf("%d.%d", response.ProtoMajor, response.ProtoMinor),
+		ver.NewMajorMinor(fmt.Sprintf("%d.%d", response.ProtoMajor, response.ProtoMinor)),
 	)
 
 	// Transform response headers
