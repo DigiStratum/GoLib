@@ -1,7 +1,6 @@
 package fileio
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -19,7 +18,6 @@ type FileIfc interface {
 	GetAbsBasename() (*string, error) // Absolute path without file name
 
 	Exists() bool                // Check if this file already exists on disk
-	IsFile() bool                // Check if this is a regular file (vs. Dir, etc)
 	Create() error               // Create the file if it doesn't already exist
 	Rename(newPath string) error // Rename (move) this file to a new path
 	Delete() error               // Delete this file
@@ -89,11 +87,6 @@ func (r *file) GetAbsBasename() (*string, error) {
 }
 
 func (r *file) Exists() bool {
-	_, err := r.getFileInfo()
-	return (nil == err) || !errors.Is(err, os.ErrNotExist)
-}
-
-func (r *file) IsFile() bool {
 	fi, err := r.getFileInfo()
 	if (nil != err) || (nil == fi) {
 		return false
@@ -104,14 +97,14 @@ func (r *file) IsFile() bool {
 
 func (r *file) CopyTo(path string) error {
 	// Source must be a file
-	if isFile := r.IsFile(); !isFile {
+	if isFile := r.Exists(); !isFile {
 		return fmt.Errorf("File.CopyTo(): src (%s) is not a file", r.path)
 	}
 
 	// Destination must either be a file (to be replaced) or a dir (to drop the file into)
 	var destPath string
 	destFile := File(path)
-	if ok := destFile.IsFile(); ok {
+	if ok := destFile.Exists(); ok {
 		destPath = path
 	} else if ok, err := destFile.IsDir(); ok && (nil == err) {
 		// Keep the source filename, just send it to a new destination dir
