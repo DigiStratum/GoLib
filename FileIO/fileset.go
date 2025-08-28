@@ -6,7 +6,7 @@ type FileSetIfc interface {
 }
 
 type fileSet struct {
-	files		[]*file
+	files []*file
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ type fileSet struct {
 
 func NewFileSet() *fileSet {
 	r := fileSet{
-		files:		make([]*file, 0),
+		files: make([]*file, 0),
 	}
 	return &r
 }
@@ -25,7 +25,7 @@ func NewFileSet() *fileSet {
 // -------------------------------------------------------------------------------------------------
 
 func (r *fileSet) AddFile(path string) {
-	r.files = append(r.files, NewFile(path))
+	r.files = append(r.files, File(path))
 }
 
 func (r *fileSet) Len() int {
@@ -36,15 +36,16 @@ func (r *fileSet) Len() int {
 // IterableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *fileSet) GetIterator() func () interface{} {
-        idx := 0
-        var data_len = r.Len()
-        return func () interface{} {
-                // If we're done iterating, return nothing
-                if idx >= data_len { return nil }
-                prev_idx := idx
-                idx++
-                return r.files[prev_idx]
-        }
+func (r *fileSet) GetIterator() func() interface{} {
+	idx := 0
+	var data_len = r.Len()
+	return func() interface{} {
+		// If we're done iterating, return nothing
+		if idx >= data_len {
+			return nil
+		}
+		prev_idx := idx
+		idx++
+		return r.files[prev_idx]
+	}
 }
-

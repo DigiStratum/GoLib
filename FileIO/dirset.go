@@ -14,7 +14,7 @@ type DirSetIfc interface {
 }
 
 type dirSet struct {
-	dirs		[]*dir
+	dirs []*dir
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ type dirSet struct {
 
 func NewDirSet() *dirSet {
 	r := dirSet{
-		dirs:		make([]*dir, 0),
+		dirs: make([]*dir, 0),
 	}
 	return &r
 }
@@ -33,7 +33,7 @@ func NewDirSet() *dirSet {
 // -------------------------------------------------------------------------------------------------
 
 func (r *dirSet) AddDir(path string) {
-	r.dirs = append(r.dirs, NewDir(path))
+	r.dirs = append(r.dirs, Dir(path))
 }
 
 func (r *dirSet) Len() int {
@@ -44,15 +44,16 @@ func (r *dirSet) Len() int {
 // IterableIfc
 // -------------------------------------------------------------------------------------------------
 
-func (r *dirSet) GetIterator() func () interface{} {
-        idx := 0
-        var data_len = r.Len()
-        return func () interface{} {
-                // If we're done iterating, return nothing
-                if idx >= data_len { return nil }
-                prev_idx := idx
-                idx++
-                return r.dirs[prev_idx]
-        }
+func (r *dirSet) GetIterator() func() interface{} {
+	idx := 0
+	var data_len = r.Len()
+	return func() interface{} {
+		// If we're done iterating, return nothing
+		if idx >= data_len {
+			return nil
+		}
+		prev_idx := idx
+		idx++
+		return r.dirs[prev_idx]
+	}
 }
-

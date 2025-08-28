@@ -28,28 +28,31 @@ type DirIfc interface {
 	GetMatchingFiles(pattern string) (*fileSet, error)
 	GetDirs() (*dirSet, error)
 	GetMatchingDirs(pattern string) (*dirSet, error)
+	Exists() bool
+	Create() error
+	Delete() error
+	Rename(newPath string) error
 }
 
 type dir struct {
 	path     string
 	fileInfo *fs.FileInfo
+	exists   bool
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory functions
 // -------------------------------------------------------------------------------------------------
 
-func NewDir(path string) *dir {
+func Dir(path string) *dir {
 	r := dir{
 		path: path,
 	}
 
-	// Only return an object if it is a confirmed directory, or some error (like doesn't exist)
-	// TODO: Our name suggests that we create a "new dir", but this gets upset if the dir doesn't
+	// Our name suggests that we create a "new dir", but this gets upset if the dir doesn't
 	// exist. interface/contract should be cleaned up
-	fi, err := (&r).getFileInfo()
-	if (nil != err) || (nil == fi) || (!(*fi).IsDir()) {
-		return nil
+	if fi, err := (&r).getFileInfo(); (nil == err) && (nil != fi) && (*fi).IsDir() {
+		r.exists = true
 	}
 	return &r
 }
@@ -134,6 +137,43 @@ func (r *dir) GetMatchingDirs(pattern string) (*dirSet, error) {
 		return nil, err
 	}
 	return dirs, nil
+}
+
+func (r *dir) Exists() bool {
+	return r.exists
+}
+
+func (r *dir) Create() error {
+	if r.exists {
+		return nil
+	}
+	if err := os.MkdirAll(r.path, os.ModePerm); nil != err {
+		return err
+	}
+	r.exists = true
+	return nil
+}
+
+func (r *dir) Delete() error {
+	if !r.exists {
+		return nil
+	}
+	if err := os.RemoveAll(r.path); nil != err {
+		return err
+	}
+	r.exists = false
+	return nil
+}
+
+func (r *dir) Rename(newPath string) error {
+	if !r.exists {
+		return nil
+	}
+	if err := os.Rename(r.path, newPath); nil != err {
+		return err
+	}
+	r.path = newPath
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------
