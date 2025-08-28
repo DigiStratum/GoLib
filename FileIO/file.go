@@ -19,7 +19,7 @@ type FileIfc interface {
 	GetAbsBasename() (*string, error) // Absolute path without file name
 
 	Exists() bool                // Check if this file already exists on disk
-	IsFile() (bool, error)       // Check if this is a regular file (vs. Dir, etc)
+	IsFile() bool                // Check if this is a regular file (vs. Dir, etc)
 	Create() error               // Create the file if it doesn't already exist
 	Rename(newPath string) error // Rename (move) this file to a new path
 	Delete() error               // Delete this file
@@ -93,25 +93,25 @@ func (r *file) Exists() bool {
 	return (nil == err) || !errors.Is(err, os.ErrNotExist)
 }
 
-func (r *file) IsFile() (bool, error) {
+func (r *file) IsFile() bool {
 	fi, err := r.getFileInfo()
 	if (nil != err) || (nil == fi) {
-		return false, err
+		return false
 	}
 	v := (*fi).Mode()
-	return v.IsRegular(), nil
+	return v.IsRegular()
 }
 
 func (r *file) CopyTo(path string) error {
 	// Source must be a file
-	if isFile, err := r.IsFile(); (!isFile) || (nil != err) {
+	if isFile := r.IsFile(); !isFile {
 		return fmt.Errorf("File.CopyTo(): src (%s) is not a file", r.path)
 	}
 
 	// Destination must either be a file (to be replaced) or a dir (to drop the file into)
 	var destPath string
 	destFile := File(path)
-	if ok, err := destFile.IsFile(); ok && (nil == err) {
+	if ok := destFile.IsFile(); ok {
 		destPath = path
 	} else if ok, err := destFile.IsDir(); ok && (nil == err) {
 		// Keep the source filename, just send it to a new destination dir
