@@ -165,6 +165,7 @@ func (r *Cache) Get(key string) interface{} {
 - Check errors immediately after function calls that can produce them
 - Wrap errors with context when propagating up the call stack
 - Use sentinel errors for expected error conditions that callers might want to check for
+- Error strings should not be capitalized for legible error message nesting
 
 ### Context Usage
 - Pass context.Context as the first parameter for functions that:

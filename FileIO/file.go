@@ -164,7 +164,7 @@ func (r *file) ReadString() (*string, error) {
 func (r *file) ReadBytes() (*[]byte, error) {
 	tbuf, err := ioutil.ReadFile(r.path)
 	if nil != err {
-		return nil, fmt.Errorf("Error reading '%s': %s", r.path, err.Error())
+		return nil, fmt.Errorf("error reading '%s': %s", r.path, err.Error())
 	}
 	return &tbuf, nil
 }
