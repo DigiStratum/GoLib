@@ -4,41 +4,94 @@ package oauth2
 
 Standard Oauth2 Access Token implementation using GUID style tokens as an AccessTokenIfc
 
+TODO:
+ * Add a TokenTime property and support for adjustable timesource in both the builder and the JSON
+   parser
 */
 
 import (
 	gojson "encoding/json"
+	"strings"
 
 	chrono "github.com/DigiStratum/GoLib/Chrono"
 )
 
 type GuidAccessTokenIfc interface {
+	// Embedded interface(s)
 	AccessTokenIfc
+
+	// Our own interface
 }
 
 type guidAccessToken struct {
 	// Standard OAuth2 fields
-	AccessToken  string `json:"access_token"`  // The access token issued by the authorization server
-	RefreshToken string `json:"refresh_token"` // The refresh token, which can be used to obtain new access tokens using the same authorization grant
+	AccessToken  string `json:"access_token"`            // Required
+	TokenType    string `json:"token_type"`              // Required
+	ExpiresIn    int64  `json:"expires_in,omitempty"`    // Recommended
+	RefreshToken string `json:"refresh_token,omitempty"` // Optional
+	Scopes       string `json:"scope,omitempty"`         // Optional
+	TokenId      string `json:"id_token,omitempty"`      // Optional
 
-	tokenType string
 	expiresAt *chrono.TimeStamp
-	scopes    []string
+	scopeList []string
+}
+
+// -------------------------------------------------------------------------------------------------
+// Builder
+// -------------------------------------------------------------------------------------------------
+
+type guidAccessTokenBuilder struct {
+	guidAccessToken
+}
+
+func NewGuidAccessTokenBuilder() *guidAccessTokenBuilder {
+	// TODO: leverage a token store to generate a unique token (GUID style vs JWT signed)
+	return &guidAccessTokenBuilder{
+		guidAccessToken: guidAccessToken{
+			TokenType: "Bearer",
+		},
+	}
+}
+
+func (b *guidAccessTokenBuilder) SetAccessToken(token string) *guidAccessTokenBuilder {
+	b.AccessToken = token
+	return b
+}
+
+func (b *guidAccessTokenBuilder) SetRefreshToken(token string) *guidAccessTokenBuilder {
+	b.RefreshToken = token
+	return b
+}
+
+func (b *guidAccessTokenBuilder) SetExpiresIn(seconds int64) *guidAccessTokenBuilder {
+	if seconds > 0 {
+		b.expiresAt = NewTokenTime().ExpiresAt((seconds))
+		b.ExpiresIn = seconds
+	}
+	return b
+}
+
+func (b *guidAccessTokenBuilder) SetScopes(scopes []string) *guidAccessTokenBuilder {
+	b.scopeList = scopes
+	b.Scopes = ""
+	if len(scopes) > 0 {
+		b.Scopes = strings.Join(scopes, " ")
+	}
+	return b
+}
+
+func (b *guidAccessTokenBuilder) SetTokenId(tokenId string) *guidAccessTokenBuilder {
+	b.TokenId = tokenId
+	return b
+}
+
+func (b *guidAccessTokenBuilder) Build() *guidAccessToken {
+	return &b.guidAccessToken
 }
 
 // -------------------------------------------------------------------------------------------------
 // Factory Functions
 // -------------------------------------------------------------------------------------------------
-
-func NewGuidAccessToken() *guidAccessToken {
-	// TODO: leverage a token store to generate a unique token (GUID style vs JWT signed)
-	return &guidAccessToken{
-		tokenType:    "guid",
-		AccessToken:  "TODO",
-		RefreshToken: "TODO",
-		scopes:       []string{"read"},
-	}
-}
 
 /*
 	{
@@ -62,10 +115,23 @@ func NewGuidAccessTokenFromJson(jsonData []byte) *guidAccessToken {
 }
 
 // -------------------------------------------------------------------------------------------------
-// AccessTokenIfc Public Interface
+// AccessTokenIfc
 // -------------------------------------------------------------------------------------------------
 
 func (r *guidAccessToken) IsValid() bool {
 	// TODO: Implement the logic to check if the access token is valid
 	return false
+}
+
+// -------------------------------------------------------------------------------------------------
+// GoLib/Data/json/JsonSerializableIfc
+// -------------------------------------------------------------------------------------------------
+
+func (r *guidAccessToken) ToJson() (*string, error) {
+	jsonBytes, err := gojson.Marshal(r)
+	if nil != err {
+		return nil, err
+	}
+	jsonString := string(jsonBytes[:])
+	return &jsonString, nil
 }
