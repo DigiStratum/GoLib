@@ -47,7 +47,7 @@ func NewHttpHeadersBuilder() *httpHeadersBuilder {
 func (r *httpHeadersBuilder) Set(name string, values ...string) *httpHeadersBuilder {
 	// Create the named header (and clear the value!)
 	r.headers.headers[name] = make([]string, 0)
-	return r.Append(name)
+	return r.Append(name, values...)
 }
 
 func (r *httpHeadersBuilder) Append(name string, values ...string) *httpHeadersBuilder {

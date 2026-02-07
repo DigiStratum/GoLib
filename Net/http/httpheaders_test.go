@@ -288,10 +288,10 @@ func TestThat_HttpHeaders_BuilderCreatesHeaders(t *testing.T) {
 }
 
 func TestThat_HttpHeaders_BuilderAddsMultipleValues(t *testing.T) {
-	// Setup & Test
+	// Setup & Test - use Append to add multiple values to same header
 	sut := NewHttpHeadersBuilder().
-		Set("X-Test", "value1").
-		Set("X-Test", "value2").
+		Append("X-Test", "value1").
+		Append("X-Test", "value2").
 		GetHttpHeaders()
 
 	// Verify
