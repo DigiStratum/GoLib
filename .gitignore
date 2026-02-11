@@ -1,4 +1,5 @@
 debug.log
 *.test_coverage.txt
+coverage.out
 vendor/*
 
