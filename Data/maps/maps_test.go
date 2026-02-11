@@ -7,6 +7,7 @@ Unit Tests for maps package
 */
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 
@@ -199,7 +200,7 @@ func TestThat_Strkeys_HandlesLargeMaps(t *testing.T) {
 	largeMap := make(map[string]interface{})
 	expectedSize := 1000
 	for i := 0; i < expectedSize; i++ {
-		key := string(rune('a' + (i % 26))) + string(rune('0' + (i / 26)))
+		key := fmt.Sprintf("key%d", i)
 		largeMap[key] = i
 	}
 
