@@ -65,7 +65,7 @@ func (r Serializer) Deserialize(data *string) (*string, error) {
 	matchNameEData := "edata"
 	re := regexp.MustCompile(
 		fmt.Sprintf(
-			"^ser\\[(?P<%s>\\w+):(?P<%s>\\w+):(?P<%s>\\w+\\]$",
+			"^ser\\[(?P<%s>\\w+):(?P<%s>[A-Za-z0-9+/=]*):(?P<%s>[A-Za-z0-9+/=]*)\\]$",
 			matchNameMethod, matchNameEType, matchNameEData,
 		),
 	)
