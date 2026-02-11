@@ -137,7 +137,7 @@ func TestThat_Serializer_Serialize_HandlesSpecialCharacters(t *testing.T) {
 		{"tabs", "col1\tcol2\tcol3"},
 		{"quotes", `{"message":"It's \"quoted\""}`},
 		{"unicode", "Hello 世界 🌍"},
-		{"special chars", "!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`"},
+		{"special chars", `!@#$%^&*()_+-={}[]|\:;"'<>,.?/~` + "`"},
 	}
 
 	for _, tc := range testCases {
@@ -284,6 +284,8 @@ func TestThat_Serializer_Deserialize_ReturnsError_WithWrongTypeName(t *testing.T
 
 // -------------------------------------------------------------------------------------------------
 // Roundtrip Tests (Serialize then Deserialize)
+// These tests validate the happy path for both serialization and deserialization by ensuring
+// that data can be successfully serialized and then deserialized back to its original form.
 // -------------------------------------------------------------------------------------------------
 
 func TestThat_Serializer_RoundTrip_PreservesData(t *testing.T) {
