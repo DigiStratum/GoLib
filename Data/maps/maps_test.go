@@ -160,9 +160,8 @@ func TestThat_Strkeys_ReturnsEmptySlice_WhenNonStringKeyMap(t *testing.T) {
 			// Test
 			actual := Strkeys(tt.input)
 
-			// Verify - the function uses kV.String() which converts int keys to string representation
+			// Verify - int keys are converted to their string representation
 			ExpectNonNil(actual, t)
-			// Int keys will be converted to strings "1", "2", etc
 			ExpectTrue(len(actual) > 0, t)
 		})
 	}
