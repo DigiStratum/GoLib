@@ -12,7 +12,6 @@ FIXME:
 
 TODO:
   * Get rid of all the URL component operations, just use GetURL(), but keep QueryString conveniences
-  * Add general support for request metadata, such as request ID, etc.
 */
 
 import (
@@ -20,6 +19,53 @@ import (
 
 	"github.com/DigiStratum/GoLib/Data/metadata"
 )
+
+// RequestContextIfc provides request-scoped metadata (request ID, paths, identity, etc.)
+// This is distinct from Go's context.Context - it's for HTTP request metadata.
+type RequestContextIfc interface {
+	GetRequestId() string
+	SetRequestId(requestId string)
+	GetServerPath() string
+	SetServerPath(serverPath string)
+	GetModulePath() string
+	SetModulePath(modulePath string)
+	GetPrefixPath() string
+	SetPrefixPath(prefixPath string)
+	GetModuleId() string
+	SetModuleId(moduleId string)
+	// Identity stores the authenticated identity for the request (if any)
+	// The value should implement an identity interface from the auth layer
+	GetIdentity() interface{}
+	SetIdentity(identity interface{})
+}
+
+// requestContext is the concrete implementation of RequestContextIfc
+type requestContext struct {
+	requestId  string
+	serverPath string
+	modulePath string
+	prefixPath string
+	moduleId   string
+	identity   interface{}
+}
+
+// NewRequestContext creates a new request context
+func NewRequestContext() RequestContextIfc {
+	return &requestContext{}
+}
+
+func (r *requestContext) GetRequestId() string       { return r.requestId }
+func (r *requestContext) SetRequestId(id string)     { r.requestId = id }
+func (r *requestContext) GetServerPath() string      { return r.serverPath }
+func (r *requestContext) SetServerPath(p string)     { r.serverPath = p }
+func (r *requestContext) GetModulePath() string      { return r.modulePath }
+func (r *requestContext) SetModulePath(p string)     { r.modulePath = p }
+func (r *requestContext) GetPrefixPath() string      { return r.prefixPath }
+func (r *requestContext) SetPrefixPath(p string)     { r.prefixPath = p }
+func (r *requestContext) GetModuleId() string        { return r.moduleId }
+func (r *requestContext) SetModuleId(id string)      { r.moduleId = id }
+func (r *requestContext) GetIdentity() interface{}   { return r.identity }
+func (r *requestContext) SetIdentity(id interface{}) { r.identity = id }
 
 type HttpRequestIfc interface {
 	GetHost() string
@@ -35,6 +81,9 @@ type HttpRequestIfc interface {
 	GetBodyData() *httpRequestBody
 	GetHeaders() *httpHeaders
 	GetBuilder() *httpRequestBuilder
+	// Request context for metadata (request ID, paths, etc.)
+	GetContext() RequestContextIfc
+	SetContext(ctx RequestContextIfc)
 }
 
 type httpRequest struct {
@@ -45,6 +94,7 @@ type httpRequest struct {
 	body        *string
 	bodyData    *httpRequestBody
 	pathParams  metadata.MetadataIfc
+	context     RequestContextIfc
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -114,7 +164,22 @@ func (r *httpRequest) GetBuilder() *httpRequestBuilder {
 		SetQueryParameters(r.queryParams).
 		SetHeaders(r.headers).
 		SetBody(r.body).
-		SetBodyData(r.bodyData)
+		SetBodyData(r.bodyData).
+		SetContext(r.context)
 
 	return builder
+}
+
+// Get the request context (request ID, paths, etc.)
+func (r *httpRequest) GetContext() RequestContextIfc {
+	// Lazily initialize context if nil
+	if r.context == nil {
+		r.context = NewRequestContext()
+	}
+	return r.context
+}
+
+// Set the request context
+func (r *httpRequest) SetContext(ctx RequestContextIfc) {
+	r.context = ctx
 }

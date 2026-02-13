@@ -33,6 +33,9 @@ type HttpRequestBuilderIfc interface {
 	// Headers
 	SetHeaders(headers HttpHeadersIfc) *httpRequestBuilder
 
+	// Context
+	SetContext(ctx RequestContextIfc) *httpRequestBuilder
+
 	// Build
 	GetHttpRequest() *httpRequest
 }
@@ -103,11 +106,21 @@ func (r *httpRequestBuilder) SetHeaders(headers *httpHeaders) *httpRequestBuilde
 	return r
 }
 
+// Set the request context
+func (r *httpRequestBuilder) SetContext(ctx RequestContextIfc) *httpRequestBuilder {
+	r.request.context = ctx
+	return r
+}
+
 func (r *httpRequestBuilder) GetHttpRequest() *httpRequest {
 	// A built request should always have headers; pick sane defaults if unset
 	builtRequest := r.request
 	if r.request.headers == nil {
 		builtRequest.headers = NewHttpHeadersBuilder().GetHttpHeaders()
+	}
+	// Ensure context is initialized
+	if r.request.context == nil {
+		builtRequest.context = NewRequestContext()
 	}
 	return builtRequest
 }
