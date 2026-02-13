@@ -81,6 +81,12 @@ func (r *httpRequestBuilder) SetQueryParameters(params metadata.MetadataIfc) *ht
 	return r
 }
 
+// Set the path parameters
+func (r *httpRequestBuilder) SetPathParameters(params metadata.MetadataIfc) *httpRequestBuilder {
+	r.request.pathParams = params
+	return r
+}
+
 func (r *httpRequestBuilder) SetBody(body *string) *httpRequestBuilder {
 	r.request.body = body
 	return r

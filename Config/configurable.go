@@ -75,7 +75,7 @@ func (r *Configurable) GetMissingConfigs() []string {
 	missingConfigs := []string{}
 	for name, declaredConfigItem := range r.declared {
 		if ! declaredConfigItem.IsRequired() { continue }
-		if ! r.config.Has(name) { continue }
+		if r.config.Has(name) { continue }
 		missingConfigs = append(missingConfigs, name)
 	}
 	return missingConfigs

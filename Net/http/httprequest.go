@@ -30,6 +30,7 @@ type HttpRequestIfc interface {
 	GetQueryString() string
 	GetQueryParameters() metadata.MetadataIfc
 	GetPathParameters() metadata.MetadataIfc
+	SetPathParameters(params metadata.MetadataIfc)
 	GetBody() *string
 	GetBodyData() *httpRequestBody
 	GetHeaders() *httpHeaders
@@ -93,6 +94,11 @@ func (r *httpRequest) GetHeaders() *httpHeaders {
 // Get the path parameters (should be endpoint implementation)
 func (r *httpRequest) GetPathParameters() metadata.MetadataIfc {
 	return r.pathParams
+}
+
+// Set the path parameters (used by endpoint wrappers to populate extracted values)
+func (r *httpRequest) SetPathParameters(params metadata.MetadataIfc) {
+	r.pathParams = params
 }
 
 // Get the query parameters
